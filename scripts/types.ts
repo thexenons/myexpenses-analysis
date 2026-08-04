@@ -52,3 +52,8 @@ export type ParsedData = ParsedAccount[];
 export type AccountType = 'DEFAULT' | 'DEBT'
 
 export type AccountsRegistry = Record<string, AccountType>;
+
+export type CategoriesRegistry = Record<string, {
+    children?: CategoriesRegistry;
+    categoryType: 'EXPENSE' | 'INCOME' | 'TRANSFER' | 'NEUTRAL';
+}>;

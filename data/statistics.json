@@ -1,0 +1,2073 @@
+{
+  "statistics": {
+    "all": {
+      "total": 36723.09000000031,
+      "expenses": -44044.56000000007,
+      "incomes": 79103.6600000002,
+      "transfers": 1663.990000000173
+    },
+    "categories": {
+      "Gastos": {
+        "statistics": {
+          "total": -41031.52000000009,
+          "expenses": -41031.52000000009,
+          "incomes": 0,
+          "transfers": 0
+        },
+        "subCategories": {
+          "Necesidades básicas": {
+            "statistics": {
+              "total": -29885.8399999998,
+              "expenses": -64936.40999999983,
+              "incomes": 35050.57000000003,
+              "transfers": 0
+            },
+            "subCategories": {
+              "Vivienda": {
+                "statistics": {
+                  "total": -10650.850000000011,
+                  "expenses": -21759.410000000014,
+                  "incomes": 11108.560000000003,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Alquiler": {
+                    "statistics": {
+                      "total": -7645,
+                      "expenses": -16010,
+                      "incomes": 8365,
+                      "transfers": 0
+                    }
+                  },
+                  "Suministros": {
+                    "statistics": {
+                      "total": -1373.0800000000015,
+                      "expenses": -2746.1700000000014,
+                      "incomes": 1373.09,
+                      "transfers": 0
+                    }
+                  },
+                  "Internet": {
+                    "statistics": {
+                      "total": -384.29,
+                      "expenses": -549.1399999999999,
+                      "incomes": 164.84999999999985,
+                      "transfers": 0
+                    }
+                  },
+                  "Otros": {
+                    "statistics": {
+                      "total": -753.5599999999998,
+                      "expenses": -1465.8899999999999,
+                      "incomes": 712.33,
+                      "transfers": 0
+                    }
+                  },
+                  "Mantenimiento": {
+                    "statistics": {
+                      "total": -494.92,
+                      "expenses": -988.21,
+                      "incomes": 493.29,
+                      "transfers": 0
+                    }
+                  }
+                }
+              },
+              "Supermercado": {
+                "statistics": {
+                  "total": -4577.280000000025,
+                  "expenses": -9985.05000000002,
+                  "incomes": 5407.769999999994,
+                  "transfers": 0
+                }
+              },
+              "Transporte": {
+                "statistics": {
+                  "total": -6106.0700000000015,
+                  "expenses": -12107.720000000003,
+                  "incomes": 6001.6500000000015,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Público": {
+                    "statistics": {
+                      "total": -136.07000000000028,
+                      "expenses": -479.2500000000002,
+                      "incomes": 343.17999999999995,
+                      "transfers": 0
+                    }
+                  },
+                  "Taxi": {
+                    "statistics": {
+                      "total": -161.52999999999997,
+                      "expenses": -259.84999999999997,
+                      "incomes": 98.32,
+                      "transfers": 0
+                    }
+                  },
+                  "Patinete": {
+                    "statistics": {
+                      "total": -5.25,
+                      "expenses": -269.5,
+                      "incomes": 264.25,
+                      "transfers": 0
+                    }
+                  },
+                  "Coche": {
+                    "statistics": {
+                      "total": -5803.220000000001,
+                      "expenses": -11099.120000000003,
+                      "incomes": 5295.9000000000015,
+                      "transfers": 0
+                    },
+                    "subCategories": {
+                      "Seguro": {
+                        "statistics": {
+                          "total": 0,
+                          "expenses": -1929.7800000000002,
+                          "incomes": 1929.7800000000002,
+                          "transfers": 0
+                        }
+                      },
+                      "Gasolina": {
+                        "statistics": {
+                          "total": -1537.26,
+                          "expenses": -3234.58,
+                          "incomes": 1697.32,
+                          "transfers": 0
+                        }
+                      },
+                      "Mantenimiento": {
+                        "statistics": {
+                          "total": -1735.3800000000006,
+                          "expenses": -3343.6100000000006,
+                          "incomes": 1608.23,
+                          "transfers": 0
+                        }
+                      },
+                      "Parking": {
+                        "statistics": {
+                          "total": -30.580000000000005,
+                          "expenses": -91.15,
+                          "incomes": 60.57,
+                          "transfers": 0
+                        }
+                      },
+                      "Compra": {
+                        "statistics": {
+                          "total": -2500,
+                          "expenses": -2500,
+                          "incomes": 0,
+                          "transfers": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Mascotas": {
+                "statistics": {
+                  "total": -2432.4199999999955,
+                  "expenses": -5040.839999999995,
+                  "incomes": 2608.419999999999,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Gatos": {
+                    "statistics": {
+                      "total": -1302.839999999999,
+                      "expenses": -2625.229999999999,
+                      "incomes": 1322.39,
+                      "transfers": 0
+                    },
+                    "subCategories": {
+                      "Compras": {
+                        "statistics": {
+                          "total": -155.44000000000003,
+                          "expenses": -310.85,
+                          "incomes": 155.41,
+                          "transfers": 0
+                        }
+                      },
+                      "Comida": {
+                        "statistics": {
+                          "total": -355.7299999999998,
+                          "expenses": -711.4199999999997,
+                          "incomes": 355.68999999999994,
+                          "transfers": 0
+                        }
+                      },
+                      "Veterinario": {
+                        "statistics": {
+                          "total": -608.14,
+                          "expenses": -1216.29,
+                          "incomes": 608.15,
+                          "transfers": 0
+                        }
+                      },
+                      "Arena": {
+                        "statistics": {
+                          "total": -183.5299999999999,
+                          "expenses": -386.6699999999999,
+                          "incomes": 203.14000000000001,
+                          "transfers": 0
+                        }
+                      }
+                    }
+                  },
+                  "Perros": {
+                    "statistics": {
+                      "total": -1129.5799999999992,
+                      "expenses": -2415.609999999999,
+                      "incomes": 1286.03,
+                      "transfers": 0
+                    },
+                    "subCategories": {
+                      "Compras": {
+                        "statistics": {
+                          "total": -369.13999999999993,
+                          "expenses": -738.24,
+                          "incomes": 369.1000000000001,
+                          "transfers": 0
+                        }
+                      },
+                      "Comida": {
+                        "statistics": {
+                          "total": -378.38000000000005,
+                          "expenses": -756.6600000000001,
+                          "incomes": 378.28000000000003,
+                          "transfers": 0
+                        }
+                      },
+                      "Cuidar": {
+                        "statistics": {
+                          "total": -217.95,
+                          "expenses": -435.9,
+                          "incomes": 217.95,
+                          "transfers": 0
+                        }
+                      },
+                      "Veterinario": {
+                        "statistics": {
+                          "total": -164.11,
+                          "expenses": -484.81,
+                          "incomes": 320.7,
+                          "transfers": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Estudios": {
+                "statistics": {
+                  "total": -27.98999999999978,
+                  "expenses": -2944.66,
+                  "incomes": 2916.67,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Carnet de conducir": {
+                    "statistics": {
+                      "total": -15,
+                      "expenses": -2178.67,
+                      "incomes": 2163.67,
+                      "transfers": 0
+                    }
+                  },
+                  "Inglés": {
+                    "statistics": {
+                      "total": 0,
+                      "expenses": -753,
+                      "incomes": 753,
+                      "transfers": 0
+                    }
+                  },
+                  "Cursos": {
+                    "statistics": {
+                      "total": -12.99,
+                      "expenses": -12.99,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  }
+                }
+              },
+              "Compras": {
+                "statistics": {
+                  "total": -4513.219999999995,
+                  "expenses": -9152.189999999991,
+                  "incomes": 4638.969999999997,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Ropa": {
+                    "statistics": {
+                      "total": -277.9999999999998,
+                      "expenses": -2264.9499999999994,
+                      "incomes": 1986.9499999999996,
+                      "transfers": 0
+                    }
+                  },
+                  "Otros": {
+                    "statistics": {
+                      "total": -3032.939999999996,
+                      "expenses": -4895.279999999997,
+                      "incomes": 1862.3400000000013,
+                      "transfers": 0
+                    }
+                  },
+                  "Papelería": {
+                    "statistics": {
+                      "total": -6.5,
+                      "expenses": -17.2,
+                      "incomes": 10.7,
+                      "transfers": 0
+                    }
+                  },
+                  "Deportes": {
+                    "statistics": {
+                      "total": -18.72,
+                      "expenses": -218.24999999999997,
+                      "incomes": 199.52999999999997,
+                      "transfers": 0
+                    }
+                  },
+                  "Electrónica": {
+                    "statistics": {
+                      "total": -705.97,
+                      "expenses": -797.08,
+                      "incomes": 91.11000000000001,
+                      "transfers": 0
+                    }
+                  },
+                  "Vivienda": {
+                    "statistics": {
+                      "total": -471.09000000000003,
+                      "expenses": -959.4300000000001,
+                      "incomes": 488.34000000000003,
+                      "transfers": 0
+                    }
+                  }
+                }
+              },
+              "Salud": {
+                "statistics": {
+                  "total": -1009.94,
+                  "expenses": -3199.2700000000004,
+                  "incomes": 2189.3300000000004,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Farmacia": {
+                    "statistics": {
+                      "total": -80.93999999999994,
+                      "expenses": -268.34999999999997,
+                      "incomes": 187.41000000000003,
+                      "transfers": 0
+                    }
+                  },
+                  "Terapias alternativas": {
+                    "statistics": {
+                      "total": -15,
+                      "expenses": -30,
+                      "incomes": 15,
+                      "transfers": 0
+                    }
+                  },
+                  "Psicólogo": {
+                    "statistics": {
+                      "total": -390,
+                      "expenses": -1320,
+                      "incomes": 930,
+                      "transfers": 0
+                    }
+                  },
+                  "Gimnasio": {
+                    "statistics": {
+                      "total": 0,
+                      "expenses": -323.93,
+                      "incomes": 323.93,
+                      "transfers": 0
+                    }
+                  },
+                  "Médicos": {
+                    "statistics": {
+                      "total": 0,
+                      "expenses": -605,
+                      "incomes": 605,
+                      "transfers": 0
+                    }
+                  },
+                  "Masaje": {
+                    "statistics": {
+                      "total": -524,
+                      "expenses": -651.99,
+                      "incomes": 127.99,
+                      "transfers": 0
+                    }
+                  }
+                }
+              },
+              "Peluquería": {
+                "statistics": {
+                  "total": 0,
+                  "expenses": -170,
+                  "incomes": 170,
+                  "transfers": 0
+                }
+              },
+              "Banco": {
+                "statistics": {
+                  "total": -11.42,
+                  "expenses": -15.32,
+                  "incomes": 3.9,
+                  "transfers": 0
+                }
+              },
+              "Informática": {
+                "statistics": {
+                  "total": -556.65,
+                  "expenses": -556.65,
+                  "incomes": 0,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "VPS": {
+                    "statistics": {
+                      "total": -293.12,
+                      "expenses": -293.12,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Dominios": {
+                    "statistics": {
+                      "total": -263.5300000000001,
+                      "expenses": -263.5300000000001,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "Ocio": {
+            "statistics": {
+              "total": -10457.62000000002,
+              "expenses": -25097.990000000027,
+              "incomes": 14640.370000000006,
+              "transfers": 0
+            },
+            "subCategories": {
+              "Regalo": {
+                "statistics": {
+                  "total": -1051.4299999999982,
+                  "expenses": -2845.2599999999984,
+                  "incomes": 1793.8300000000002,
+                  "transfers": 0
+                }
+              },
+              "Restaurantes": {
+                "statistics": {
+                  "total": -3781.09,
+                  "expenses": -9654.040000000003,
+                  "incomes": 5872.950000000003,
+                  "transfers": 0
+                }
+              },
+              "Cafetería": {
+                "statistics": {
+                  "total": -381.0499999999997,
+                  "expenses": -1025.4299999999998,
+                  "incomes": 644.3800000000001,
+                  "transfers": 0
+                }
+              },
+              "Actividades": {
+                "statistics": {
+                  "total": -758.7000000000023,
+                  "expenses": -1971.570000000003,
+                  "incomes": 1212.8700000000006,
+                  "transfers": 0
+                }
+              },
+              "Alcohol": {
+                "statistics": {
+                  "total": -258.81,
+                  "expenses": -621.12,
+                  "incomes": 362.31,
+                  "transfers": 0
+                }
+              },
+              "Tabaco y sustancias": {
+                "statistics": {
+                  "total": -859.8199999999998,
+                  "expenses": -1482.23,
+                  "incomes": 622.4100000000002,
+                  "transfers": 0
+                }
+              },
+              "Caprichos": {
+                "statistics": {
+                  "total": -745.5300000000004,
+                  "expenses": -1739.9900000000005,
+                  "incomes": 994.46,
+                  "transfers": 0
+                }
+              },
+              "Viajes": {
+                "statistics": {
+                  "total": -1491.76,
+                  "expenses": -3220.1099999999997,
+                  "incomes": 1728.3499999999997,
+                  "transfers": 0
+                }
+              },
+              "Libros": {
+                "statistics": {
+                  "total": -35.870000000000005,
+                  "expenses": -133.4,
+                  "incomes": 97.53,
+                  "transfers": 0
+                }
+              },
+              "Suscripciones": {
+                "statistics": {
+                  "total": -591.88,
+                  "expenses": -800.72,
+                  "incomes": 208.84000000000003,
+                  "transfers": 0
+                }
+              },
+              "Supermercado": {
+                "statistics": {
+                  "total": -359.61000000000035,
+                  "expenses": -1410.690000000001,
+                  "incomes": 1051.0800000000006,
+                  "transfers": 0
+                }
+              },
+              "Aplicaciones": {
+                "statistics": {
+                  "total": -142.07000000000002,
+                  "expenses": -143.43000000000004,
+                  "incomes": 1.36,
+                  "transfers": 0
+                }
+              },
+              "Tatuaje": {
+                "statistics": {
+                  "total": 0,
+                  "expenses": -50,
+                  "incomes": 50,
+                  "transfers": 0
+                }
+              }
+            }
+          },
+          "Multas / Impuestos": {
+            "statistics": {
+              "total": 0,
+              "expenses": -40,
+              "incomes": 40,
+              "transfers": 0
+            }
+          },
+          "Inversiones": {
+            "statistics": {
+              "total": -392.7900000000001,
+              "expenses": -544.0000000000001,
+              "incomes": 151.21,
+              "transfers": 0
+            },
+            "subCategories": {
+              "Comisiones": {
+                "statistics": {
+                  "total": -364.15000000000015,
+                  "expenses": -364.15000000000015,
+                  "incomes": 0,
+                  "transfers": 0
+                }
+              },
+              "Impuestos": {
+                "statistics": {
+                  "total": -28.640000000000004,
+                  "expenses": -29.750000000000004,
+                  "incomes": 1.1099999999999999,
+                  "transfers": 0
+                }
+              }
+            }
+          },
+          "Empresa": {
+            "statistics": {
+              "total": -292.27,
+              "expenses": -292.27,
+              "incomes": 0,
+              "transfers": 0
+            },
+            "subCategories": {
+              "Gestión": {
+                "statistics": {
+                  "total": -292.27,
+                  "expenses": -292.27,
+                  "incomes": 0,
+                  "transfers": 0
+                }
+              }
+            }
+          },
+          "Donaciones": {
+            "statistics": {
+              "total": -3,
+              "expenses": -3,
+              "incomes": 0,
+              "transfers": 0
+            }
+          }
+        }
+      },
+      "Transferencia": {
+        "statistics": {
+          "total": 1663.990000000173,
+          "expenses": 0,
+          "incomes": 0,
+          "transfers": 1663.990000000173
+        }
+      },
+      "Ingresos": {
+        "statistics": {
+          "total": 79061.02000000021,
+          "expenses": 0,
+          "incomes": 79061.02000000021,
+          "transfers": 0
+        },
+        "subCategories": {
+          "Inversiones": {
+            "statistics": {
+              "total": 2109.2499999999995,
+              "expenses": -370.7700000000001,
+              "incomes": 2480.0199999999995,
+              "transfers": 0
+            }
+          },
+          "Extraordinario": {
+            "statistics": {
+              "total": 1781.88,
+              "expenses": 0,
+              "incomes": 1781.88,
+              "transfers": 0
+            }
+          },
+          "Nómina": {
+            "statistics": {
+              "total": 74948.41999999997,
+              "expenses": 0,
+              "incomes": 74948.41999999997,
+              "transfers": 0
+            }
+          },
+          "Trabajo Extra": {
+            "statistics": {
+              "total": 221.47,
+              "expenses": 0,
+              "incomes": 221.47,
+              "transfers": 0
+            }
+          }
+        }
+      },
+      "Reajuste*": {
+        "statistics": {
+          "total": -2970.3999999999996,
+          "expenses": -3013.0399999999995,
+          "incomes": 42.63999999999999,
+          "transfers": 0
+        }
+      }
+    }
+  },
+  "statisticsWithDebts": {
+    "all": {
+      "total": -8012.409999999638,
+      "expenses": -89122.01000000002,
+      "incomes": 79103.5600000002,
+      "transfers": 2006.040000000185
+    },
+    "categories": {
+      "Gastos": {
+        "statistics": {
+          "total": -86187.47999999985,
+          "expenses": -86187.47999999985,
+          "incomes": 0,
+          "transfers": 0
+        },
+        "subCategories": {
+          "Necesidades básicas": {
+            "statistics": {
+              "total": -63453.14999999984,
+              "expenses": -64411.92999999984,
+              "incomes": 958.7800000000001,
+              "transfers": 0
+            },
+            "subCategories": {
+              "Vivienda": {
+                "statistics": {
+                  "total": -21039.410000000014,
+                  "expenses": -21519.410000000014,
+                  "incomes": 480,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Alquiler": {
+                    "statistics": {
+                      "total": -15290,
+                      "expenses": -15770,
+                      "incomes": 480,
+                      "transfers": 0
+                    }
+                  },
+                  "Suministros": {
+                    "statistics": {
+                      "total": -2746.1700000000014,
+                      "expenses": -2746.1700000000014,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Internet": {
+                    "statistics": {
+                      "total": -549.1399999999999,
+                      "expenses": -549.1399999999999,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Otros": {
+                    "statistics": {
+                      "total": -1465.8899999999999,
+                      "expenses": -1465.8899999999999,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Mantenimiento": {
+                    "statistics": {
+                      "total": -988.21,
+                      "expenses": -988.21,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  }
+                }
+              },
+              "Supermercado": {
+                "statistics": {
+                  "total": -9960.33000000002,
+                  "expenses": -9974.040000000019,
+                  "incomes": 13.71,
+                  "transfers": 0
+                }
+              },
+              "Transporte": {
+                "statistics": {
+                  "total": -11856.800000000003,
+                  "expenses": -12032.470000000003,
+                  "incomes": 175.67000000000002,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Público": {
+                    "statistics": {
+                      "total": -291.0000000000001,
+                      "expenses": -416.5000000000001,
+                      "incomes": 125.5,
+                      "transfers": 0
+                    }
+                  },
+                  "Taxi": {
+                    "statistics": {
+                      "total": -259.84999999999997,
+                      "expenses": -259.84999999999997,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Patinete": {
+                    "statistics": {
+                      "total": -269.5,
+                      "expenses": -269.5,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Coche": {
+                    "statistics": {
+                      "total": -11036.450000000003,
+                      "expenses": -11086.620000000003,
+                      "incomes": 50.17,
+                      "transfers": 0
+                    },
+                    "subCategories": {
+                      "Seguro": {
+                        "statistics": {
+                          "total": -1929.7800000000002,
+                          "expenses": -1929.7800000000002,
+                          "incomes": 0,
+                          "transfers": 0
+                        }
+                      },
+                      "Gasolina": {
+                        "statistics": {
+                          "total": -3234.58,
+                          "expenses": -3234.58,
+                          "incomes": 0,
+                          "transfers": 0
+                        }
+                      },
+                      "Mantenimiento": {
+                        "statistics": {
+                          "total": -3310.9400000000005,
+                          "expenses": -3341.1100000000006,
+                          "incomes": 30.17,
+                          "transfers": 0
+                        }
+                      },
+                      "Parking": {
+                        "statistics": {
+                          "total": -61.150000000000006,
+                          "expenses": -81.15,
+                          "incomes": 20,
+                          "transfers": 0
+                        }
+                      },
+                      "Compra": {
+                        "statistics": {
+                          "total": -2500,
+                          "expenses": -2500,
+                          "incomes": 0,
+                          "transfers": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Mascotas": {
+                "statistics": {
+                  "total": -4942.959999999994,
+                  "expenses": -5034.309999999994,
+                  "incomes": 91.35,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Gatos": {
+                    "statistics": {
+                      "total": -2605.6499999999987,
+                      "expenses": -2618.699999999999,
+                      "incomes": 13.05,
+                      "transfers": 0
+                    },
+                    "subCategories": {
+                      "Compras": {
+                        "statistics": {
+                          "total": -310.85,
+                          "expenses": -310.85,
+                          "incomes": 0,
+                          "transfers": 0
+                        }
+                      },
+                      "Comida": {
+                        "statistics": {
+                          "total": -711.4199999999997,
+                          "expenses": -711.4199999999997,
+                          "incomes": 0,
+                          "transfers": 0
+                        }
+                      },
+                      "Veterinario": {
+                        "statistics": {
+                          "total": -1216.29,
+                          "expenses": -1216.29,
+                          "incomes": 0,
+                          "transfers": 0
+                        }
+                      },
+                      "Arena": {
+                        "statistics": {
+                          "total": -367.0899999999999,
+                          "expenses": -380.13999999999993,
+                          "incomes": 13.05,
+                          "transfers": 0
+                        }
+                      }
+                    }
+                  },
+                  "Perros": {
+                    "statistics": {
+                      "total": -2337.309999999999,
+                      "expenses": -2415.609999999999,
+                      "incomes": 78.3,
+                      "transfers": 0
+                    },
+                    "subCategories": {
+                      "Compras": {
+                        "statistics": {
+                          "total": -738.24,
+                          "expenses": -738.24,
+                          "incomes": 0,
+                          "transfers": 0
+                        }
+                      },
+                      "Comida": {
+                        "statistics": {
+                          "total": -756.6600000000001,
+                          "expenses": -756.6600000000001,
+                          "incomes": 0,
+                          "transfers": 0
+                        }
+                      },
+                      "Cuidar": {
+                        "statistics": {
+                          "total": -435.9,
+                          "expenses": -435.9,
+                          "incomes": 0,
+                          "transfers": 0
+                        }
+                      },
+                      "Veterinario": {
+                        "statistics": {
+                          "total": -406.51,
+                          "expenses": -484.81,
+                          "incomes": 78.3,
+                          "transfers": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Estudios": {
+                "statistics": {
+                  "total": -2944.66,
+                  "expenses": -2944.66,
+                  "incomes": 0,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Carnet de conducir": {
+                    "statistics": {
+                      "total": -2178.67,
+                      "expenses": -2178.67,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Inglés": {
+                    "statistics": {
+                      "total": -753,
+                      "expenses": -753,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Cursos": {
+                    "statistics": {
+                      "total": -12.99,
+                      "expenses": -12.99,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  }
+                }
+              },
+              "Compras": {
+                "statistics": {
+                  "total": -8762.449999999992,
+                  "expenses": -8960.49999999999,
+                  "incomes": 198.05,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Ropa": {
+                    "statistics": {
+                      "total": -2258.5899999999992,
+                      "expenses": -2264.9499999999994,
+                      "incomes": 6.36,
+                      "transfers": 0
+                    }
+                  },
+                  "Otros": {
+                    "statistics": {
+                      "total": -4511.899999999998,
+                      "expenses": -4703.589999999997,
+                      "incomes": 191.69,
+                      "transfers": 0
+                    }
+                  },
+                  "Papelería": {
+                    "statistics": {
+                      "total": -17.2,
+                      "expenses": -17.2,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Deportes": {
+                    "statistics": {
+                      "total": -218.24999999999997,
+                      "expenses": -218.24999999999997,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Electrónica": {
+                    "statistics": {
+                      "total": -797.08,
+                      "expenses": -797.08,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Vivienda": {
+                    "statistics": {
+                      "total": -959.4300000000001,
+                      "expenses": -959.4300000000001,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  }
+                }
+              },
+              "Salud": {
+                "statistics": {
+                  "total": -3199.2700000000004,
+                  "expenses": -3199.2700000000004,
+                  "incomes": 0,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Farmacia": {
+                    "statistics": {
+                      "total": -268.34999999999997,
+                      "expenses": -268.34999999999997,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Terapias alternativas": {
+                    "statistics": {
+                      "total": -30,
+                      "expenses": -30,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Psicólogo": {
+                    "statistics": {
+                      "total": -1320,
+                      "expenses": -1320,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Gimnasio": {
+                    "statistics": {
+                      "total": -323.93,
+                      "expenses": -323.93,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Médicos": {
+                    "statistics": {
+                      "total": -605,
+                      "expenses": -605,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Masaje": {
+                    "statistics": {
+                      "total": -651.99,
+                      "expenses": -651.99,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  }
+                }
+              },
+              "Peluquería": {
+                "statistics": {
+                  "total": -170,
+                  "expenses": -170,
+                  "incomes": 0,
+                  "transfers": 0
+                }
+              },
+              "Banco": {
+                "statistics": {
+                  "total": -15.32,
+                  "expenses": -15.32,
+                  "incomes": 0,
+                  "transfers": 0
+                }
+              },
+              "Informática": {
+                "statistics": {
+                  "total": -556.65,
+                  "expenses": -556.65,
+                  "incomes": 0,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "VPS": {
+                    "statistics": {
+                      "total": -293.12,
+                      "expenses": -293.12,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Dominios": {
+                    "statistics": {
+                      "total": -263.5300000000001,
+                      "expenses": -263.5300000000001,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "Ocio": {
+            "statistics": {
+              "total": -22006.270000000015,
+              "expenses": -23909.460000000014,
+              "incomes": 1903.19,
+              "transfers": 0
+            },
+            "subCategories": {
+              "Regalo": {
+                "statistics": {
+                  "total": -2140.319999999999,
+                  "expenses": -2795.259999999999,
+                  "incomes": 654.94,
+                  "transfers": 0
+                }
+              },
+              "Restaurantes": {
+                "statistics": {
+                  "total": -8164.920000000001,
+                  "expenses": -8934.810000000001,
+                  "incomes": 769.89,
+                  "transfers": 0
+                }
+              },
+              "Cafetería": {
+                "statistics": {
+                  "total": -995.4299999999998,
+                  "expenses": -1010.4299999999998,
+                  "incomes": 15,
+                  "transfers": 0
+                }
+              },
+              "Actividades": {
+                "statistics": {
+                  "total": -1497.710000000003,
+                  "expenses": -1725.650000000003,
+                  "incomes": 227.94000000000005,
+                  "transfers": 0
+                }
+              },
+              "Alcohol": {
+                "statistics": {
+                  "total": -514.68,
+                  "expenses": -563.55,
+                  "incomes": 48.870000000000005,
+                  "transfers": 0
+                }
+              },
+              "Tabaco y sustancias": {
+                "statistics": {
+                  "total": -1433.5900000000001,
+                  "expenses": -1459.91,
+                  "incomes": 26.32,
+                  "transfers": 0
+                }
+              },
+              "Caprichos": {
+                "statistics": {
+                  "total": -1739.9900000000005,
+                  "expenses": -1739.9900000000005,
+                  "incomes": 0,
+                  "transfers": 0
+                }
+              },
+              "Viajes": {
+                "statistics": {
+                  "total": -3063.5099999999993,
+                  "expenses": -3166.2399999999993,
+                  "incomes": 102.73,
+                  "transfers": 0
+                }
+              },
+              "Libros": {
+                "statistics": {
+                  "total": -133.4,
+                  "expenses": -133.4,
+                  "incomes": 0,
+                  "transfers": 0
+                }
+              },
+              "Suscripciones": {
+                "statistics": {
+                  "total": -772.37,
+                  "expenses": -800.72,
+                  "incomes": 28.35,
+                  "transfers": 0
+                }
+              },
+              "Supermercado": {
+                "statistics": {
+                  "total": -1356.920000000001,
+                  "expenses": -1386.070000000001,
+                  "incomes": 29.150000000000002,
+                  "transfers": 0
+                }
+              },
+              "Aplicaciones": {
+                "statistics": {
+                  "total": -143.43000000000004,
+                  "expenses": -143.43000000000004,
+                  "incomes": 0,
+                  "transfers": 0
+                }
+              },
+              "Tatuaje": {
+                "statistics": {
+                  "total": -50,
+                  "expenses": -50,
+                  "incomes": 0,
+                  "transfers": 0
+                }
+              }
+            }
+          },
+          "Multas / Impuestos": {
+            "statistics": {
+              "total": -40,
+              "expenses": -40,
+              "incomes": 0,
+              "transfers": 0
+            }
+          },
+          "Inversiones": {
+            "statistics": {
+              "total": -392.7900000000001,
+              "expenses": -544.0000000000001,
+              "incomes": 151.21,
+              "transfers": 0
+            },
+            "subCategories": {
+              "Comisiones": {
+                "statistics": {
+                  "total": -364.15000000000015,
+                  "expenses": -364.15000000000015,
+                  "incomes": 0,
+                  "transfers": 0
+                }
+              },
+              "Impuestos": {
+                "statistics": {
+                  "total": -28.640000000000004,
+                  "expenses": -29.750000000000004,
+                  "incomes": 1.1099999999999999,
+                  "transfers": 0
+                }
+              }
+            }
+          },
+          "Empresa": {
+            "statistics": {
+              "total": -292.27,
+              "expenses": -292.27,
+              "incomes": 0,
+              "transfers": 0
+            },
+            "subCategories": {
+              "Gestión": {
+                "statistics": {
+                  "total": -292.27,
+                  "expenses": -292.27,
+                  "incomes": 0,
+                  "transfers": 0
+                }
+              }
+            }
+          },
+          "Donaciones": {
+            "statistics": {
+              "total": -3,
+              "expenses": -3,
+              "incomes": 0,
+              "transfers": 0
+            }
+          }
+        }
+      },
+      "Transferencia": {
+        "statistics": {
+          "total": 2006.040000000185,
+          "expenses": 0,
+          "incomes": 0,
+          "transfers": 2006.040000000185
+        }
+      },
+      "Ingresos": {
+        "statistics": {
+          "total": 79061.02000000021,
+          "expenses": 0,
+          "incomes": 79061.02000000021,
+          "transfers": 0
+        },
+        "subCategories": {
+          "Inversiones": {
+            "statistics": {
+              "total": 2109.2499999999995,
+              "expenses": -370.7700000000001,
+              "incomes": 2480.0199999999995,
+              "transfers": 0
+            }
+          },
+          "Extraordinario": {
+            "statistics": {
+              "total": 1781.88,
+              "expenses": 0,
+              "incomes": 1781.88,
+              "transfers": 0
+            }
+          },
+          "Nómina": {
+            "statistics": {
+              "total": 74948.41999999997,
+              "expenses": 0,
+              "incomes": 74948.41999999997,
+              "transfers": 0
+            }
+          },
+          "Trabajo Extra": {
+            "statistics": {
+              "total": 221.47,
+              "expenses": 0,
+              "incomes": 221.47,
+              "transfers": 0
+            }
+          }
+        }
+      },
+      "Reajuste*": {
+        "statistics": {
+          "total": -2891.99,
+          "expenses": -2934.5299999999997,
+          "incomes": 42.54,
+          "transfers": 0
+        }
+      }
+    }
+  },
+  "debtsStatistics": {
+    "all": {
+      "total": 44735.49999999995,
+      "expenses": 45077.44999999995,
+      "incomes": 0.1,
+      "transfers": -342.0500000000002
+    },
+    "categories": {
+      "Gastos": {
+        "statistics": {
+          "total": 45155.95999999995,
+          "expenses": 45155.95999999995,
+          "incomes": 0,
+          "transfers": 0
+        },
+        "subCategories": {
+          "Necesidades básicas": {
+            "statistics": {
+              "total": 33567.31000000003,
+              "expenses": -524.48,
+              "incomes": 34091.79000000003,
+              "transfers": 0
+            },
+            "subCategories": {
+              "Vivienda": {
+                "statistics": {
+                  "total": 10388.560000000003,
+                  "expenses": -240,
+                  "incomes": 10628.560000000003,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Alquiler": {
+                    "statistics": {
+                      "total": 7645,
+                      "expenses": -240,
+                      "incomes": 7885,
+                      "transfers": 0
+                    }
+                  },
+                  "Suministros": {
+                    "statistics": {
+                      "total": 1373.09,
+                      "expenses": 0,
+                      "incomes": 1373.09,
+                      "transfers": 0
+                    }
+                  },
+                  "Internet": {
+                    "statistics": {
+                      "total": 164.84999999999985,
+                      "expenses": 0,
+                      "incomes": 164.84999999999985,
+                      "transfers": 0
+                    }
+                  },
+                  "Otros": {
+                    "statistics": {
+                      "total": 712.33,
+                      "expenses": 0,
+                      "incomes": 712.33,
+                      "transfers": 0
+                    }
+                  },
+                  "Mantenimiento": {
+                    "statistics": {
+                      "total": 493.29,
+                      "expenses": 0,
+                      "incomes": 493.29,
+                      "transfers": 0
+                    }
+                  }
+                }
+              },
+              "Supermercado": {
+                "statistics": {
+                  "total": 5383.049999999994,
+                  "expenses": -11.01,
+                  "incomes": 5394.059999999994,
+                  "transfers": 0
+                }
+              },
+              "Transporte": {
+                "statistics": {
+                  "total": 5750.730000000001,
+                  "expenses": -75.25,
+                  "incomes": 5825.980000000001,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Público": {
+                    "statistics": {
+                      "total": 154.92999999999995,
+                      "expenses": -62.75,
+                      "incomes": 217.67999999999995,
+                      "transfers": 0
+                    }
+                  },
+                  "Taxi": {
+                    "statistics": {
+                      "total": 98.32,
+                      "expenses": 0,
+                      "incomes": 98.32,
+                      "transfers": 0
+                    }
+                  },
+                  "Patinete": {
+                    "statistics": {
+                      "total": 264.25,
+                      "expenses": 0,
+                      "incomes": 264.25,
+                      "transfers": 0
+                    }
+                  },
+                  "Coche": {
+                    "statistics": {
+                      "total": 5233.230000000001,
+                      "expenses": -12.5,
+                      "incomes": 5245.730000000001,
+                      "transfers": 0
+                    },
+                    "subCategories": {
+                      "Seguro": {
+                        "statistics": {
+                          "total": 1929.7800000000002,
+                          "expenses": 0,
+                          "incomes": 1929.7800000000002,
+                          "transfers": 0
+                        }
+                      },
+                      "Gasolina": {
+                        "statistics": {
+                          "total": 1697.32,
+                          "expenses": 0,
+                          "incomes": 1697.32,
+                          "transfers": 0
+                        }
+                      },
+                      "Mantenimiento": {
+                        "statistics": {
+                          "total": 1575.56,
+                          "expenses": -2.5,
+                          "incomes": 1578.06,
+                          "transfers": 0
+                        }
+                      },
+                      "Parking": {
+                        "statistics": {
+                          "total": 30.57,
+                          "expenses": -10,
+                          "incomes": 40.57,
+                          "transfers": 0
+                        }
+                      },
+                      "Compra": {
+                        "statistics": {
+                          "total": 0,
+                          "expenses": 0,
+                          "incomes": 0,
+                          "transfers": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Mascotas": {
+                "statistics": {
+                  "total": 2510.5399999999986,
+                  "expenses": -6.53,
+                  "incomes": 2517.069999999999,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Gatos": {
+                    "statistics": {
+                      "total": 1302.8100000000002,
+                      "expenses": -6.53,
+                      "incomes": 1309.3400000000001,
+                      "transfers": 0
+                    },
+                    "subCategories": {
+                      "Compras": {
+                        "statistics": {
+                          "total": 155.41,
+                          "expenses": 0,
+                          "incomes": 155.41,
+                          "transfers": 0
+                        }
+                      },
+                      "Comida": {
+                        "statistics": {
+                          "total": 355.68999999999994,
+                          "expenses": 0,
+                          "incomes": 355.68999999999994,
+                          "transfers": 0
+                        }
+                      },
+                      "Veterinario": {
+                        "statistics": {
+                          "total": 608.15,
+                          "expenses": 0,
+                          "incomes": 608.15,
+                          "transfers": 0
+                        }
+                      },
+                      "Arena": {
+                        "statistics": {
+                          "total": 183.56,
+                          "expenses": -6.53,
+                          "incomes": 190.09,
+                          "transfers": 0
+                        }
+                      }
+                    }
+                  },
+                  "Perros": {
+                    "statistics": {
+                      "total": 1207.73,
+                      "expenses": 0,
+                      "incomes": 1207.73,
+                      "transfers": 0
+                    },
+                    "subCategories": {
+                      "Compras": {
+                        "statistics": {
+                          "total": 369.1000000000001,
+                          "expenses": 0,
+                          "incomes": 369.1000000000001,
+                          "transfers": 0
+                        }
+                      },
+                      "Comida": {
+                        "statistics": {
+                          "total": 378.28000000000003,
+                          "expenses": 0,
+                          "incomes": 378.28000000000003,
+                          "transfers": 0
+                        }
+                      },
+                      "Cuidar": {
+                        "statistics": {
+                          "total": 217.95,
+                          "expenses": 0,
+                          "incomes": 217.95,
+                          "transfers": 0
+                        }
+                      },
+                      "Veterinario": {
+                        "statistics": {
+                          "total": 242.4,
+                          "expenses": 0,
+                          "incomes": 242.4,
+                          "transfers": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Estudios": {
+                "statistics": {
+                  "total": 2916.67,
+                  "expenses": 0,
+                  "incomes": 2916.67,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Carnet de conducir": {
+                    "statistics": {
+                      "total": 2163.67,
+                      "expenses": 0,
+                      "incomes": 2163.67,
+                      "transfers": 0
+                    }
+                  },
+                  "Inglés": {
+                    "statistics": {
+                      "total": 753,
+                      "expenses": 0,
+                      "incomes": 753,
+                      "transfers": 0
+                    }
+                  },
+                  "Cursos": {
+                    "statistics": {
+                      "total": 0,
+                      "expenses": 0,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  }
+                }
+              },
+              "Compras": {
+                "statistics": {
+                  "total": 4249.229999999998,
+                  "expenses": -191.69,
+                  "incomes": 4440.919999999997,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Ropa": {
+                    "statistics": {
+                      "total": 1980.5899999999997,
+                      "expenses": 0,
+                      "incomes": 1980.5899999999997,
+                      "transfers": 0
+                    }
+                  },
+                  "Otros": {
+                    "statistics": {
+                      "total": 1478.9600000000012,
+                      "expenses": -191.69,
+                      "incomes": 1670.6500000000012,
+                      "transfers": 0
+                    }
+                  },
+                  "Papelería": {
+                    "statistics": {
+                      "total": 10.7,
+                      "expenses": 0,
+                      "incomes": 10.7,
+                      "transfers": 0
+                    }
+                  },
+                  "Deportes": {
+                    "statistics": {
+                      "total": 199.52999999999997,
+                      "expenses": 0,
+                      "incomes": 199.52999999999997,
+                      "transfers": 0
+                    }
+                  },
+                  "Electrónica": {
+                    "statistics": {
+                      "total": 91.11000000000001,
+                      "expenses": 0,
+                      "incomes": 91.11000000000001,
+                      "transfers": 0
+                    }
+                  },
+                  "Vivienda": {
+                    "statistics": {
+                      "total": 488.34000000000003,
+                      "expenses": 0,
+                      "incomes": 488.34000000000003,
+                      "transfers": 0
+                    }
+                  }
+                }
+              },
+              "Salud": {
+                "statistics": {
+                  "total": 2189.3300000000004,
+                  "expenses": 0,
+                  "incomes": 2189.3300000000004,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "Farmacia": {
+                    "statistics": {
+                      "total": 187.41000000000003,
+                      "expenses": 0,
+                      "incomes": 187.41000000000003,
+                      "transfers": 0
+                    }
+                  },
+                  "Terapias alternativas": {
+                    "statistics": {
+                      "total": 15,
+                      "expenses": 0,
+                      "incomes": 15,
+                      "transfers": 0
+                    }
+                  },
+                  "Psicólogo": {
+                    "statistics": {
+                      "total": 930,
+                      "expenses": 0,
+                      "incomes": 930,
+                      "transfers": 0
+                    }
+                  },
+                  "Gimnasio": {
+                    "statistics": {
+                      "total": 323.93,
+                      "expenses": 0,
+                      "incomes": 323.93,
+                      "transfers": 0
+                    }
+                  },
+                  "Médicos": {
+                    "statistics": {
+                      "total": 605,
+                      "expenses": 0,
+                      "incomes": 605,
+                      "transfers": 0
+                    }
+                  },
+                  "Masaje": {
+                    "statistics": {
+                      "total": 127.99,
+                      "expenses": 0,
+                      "incomes": 127.99,
+                      "transfers": 0
+                    }
+                  }
+                }
+              },
+              "Peluquería": {
+                "statistics": {
+                  "total": 170,
+                  "expenses": 0,
+                  "incomes": 170,
+                  "transfers": 0
+                }
+              },
+              "Banco": {
+                "statistics": {
+                  "total": 3.9,
+                  "expenses": 0,
+                  "incomes": 3.9,
+                  "transfers": 0
+                }
+              },
+              "Informática": {
+                "statistics": {
+                  "total": 0,
+                  "expenses": 0,
+                  "incomes": 0,
+                  "transfers": 0
+                },
+                "subCategories": {
+                  "VPS": {
+                    "statistics": {
+                      "total": 0,
+                      "expenses": 0,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  },
+                  "Dominios": {
+                    "statistics": {
+                      "total": 0,
+                      "expenses": 0,
+                      "incomes": 0,
+                      "transfers": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "Ocio": {
+            "statistics": {
+              "total": 11548.650000000003,
+              "expenses": -1188.53,
+              "incomes": 12737.180000000004,
+              "transfers": 0
+            },
+            "subCategories": {
+              "Regalo": {
+                "statistics": {
+                  "total": 1088.89,
+                  "expenses": -50,
+                  "incomes": 1138.89,
+                  "transfers": 0
+                }
+              },
+              "Restaurantes": {
+                "statistics": {
+                  "total": 4383.830000000003,
+                  "expenses": -719.2299999999999,
+                  "incomes": 5103.060000000002,
+                  "transfers": 0
+                }
+              },
+              "Cafetería": {
+                "statistics": {
+                  "total": 614.3800000000001,
+                  "expenses": -15,
+                  "incomes": 629.3800000000001,
+                  "transfers": 0
+                }
+              },
+              "Actividades": {
+                "statistics": {
+                  "total": 739.0100000000004,
+                  "expenses": -245.92000000000002,
+                  "incomes": 984.9300000000004,
+                  "transfers": 0
+                }
+              },
+              "Alcohol": {
+                "statistics": {
+                  "total": 255.87,
+                  "expenses": -57.56999999999999,
+                  "incomes": 313.44,
+                  "transfers": 0
+                }
+              },
+              "Tabaco y sustancias": {
+                "statistics": {
+                  "total": 573.7700000000001,
+                  "expenses": -22.32,
+                  "incomes": 596.0900000000001,
+                  "transfers": 0
+                }
+              },
+              "Caprichos": {
+                "statistics": {
+                  "total": 994.46,
+                  "expenses": 0,
+                  "incomes": 994.46,
+                  "transfers": 0
+                }
+              },
+              "Viajes": {
+                "statistics": {
+                  "total": 1571.75,
+                  "expenses": -53.870000000000005,
+                  "incomes": 1625.62,
+                  "transfers": 0
+                }
+              },
+              "Libros": {
+                "statistics": {
+                  "total": 97.53,
+                  "expenses": 0,
+                  "incomes": 97.53,
+                  "transfers": 0
+                }
+              },
+              "Suscripciones": {
+                "statistics": {
+                  "total": 180.49000000000004,
+                  "expenses": 0,
+                  "incomes": 180.49000000000004,
+                  "transfers": 0
+                }
+              },
+              "Supermercado": {
+                "statistics": {
+                  "total": 997.3100000000007,
+                  "expenses": -24.62,
+                  "incomes": 1021.9300000000007,
+                  "transfers": 0
+                }
+              },
+              "Aplicaciones": {
+                "statistics": {
+                  "total": 1.36,
+                  "expenses": 0,
+                  "incomes": 1.36,
+                  "transfers": 0
+                }
+              },
+              "Tatuaje": {
+                "statistics": {
+                  "total": 50,
+                  "expenses": 0,
+                  "incomes": 50,
+                  "transfers": 0
+                }
+              }
+            }
+          },
+          "Multas / Impuestos": {
+            "statistics": {
+              "total": 40,
+              "expenses": 0,
+              "incomes": 40,
+              "transfers": 0
+            }
+          },
+          "Inversiones": {
+            "statistics": {
+              "total": 0,
+              "expenses": 0,
+              "incomes": 0,
+              "transfers": 0
+            },
+            "subCategories": {
+              "Comisiones": {
+                "statistics": {
+                  "total": 0,
+                  "expenses": 0,
+                  "incomes": 0,
+                  "transfers": 0
+                }
+              },
+              "Impuestos": {
+                "statistics": {
+                  "total": 0,
+                  "expenses": 0,
+                  "incomes": 0,
+                  "transfers": 0
+                }
+              }
+            }
+          },
+          "Empresa": {
+            "statistics": {
+              "total": 0,
+              "expenses": 0,
+              "incomes": 0,
+              "transfers": 0
+            },
+            "subCategories": {
+              "Gestión": {
+                "statistics": {
+                  "total": 0,
+                  "expenses": 0,
+                  "incomes": 0,
+                  "transfers": 0
+                }
+              }
+            }
+          },
+          "Donaciones": {
+            "statistics": {
+              "total": 0,
+              "expenses": 0,
+              "incomes": 0,
+              "transfers": 0
+            }
+          }
+        }
+      },
+      "Transferencia": {
+        "statistics": {
+          "total": -342.0500000000002,
+          "expenses": 0,
+          "incomes": 0,
+          "transfers": -342.0500000000002
+        }
+      },
+      "Ingresos": {
+        "statistics": {
+          "total": 0,
+          "expenses": 0,
+          "incomes": 0,
+          "transfers": 0
+        },
+        "subCategories": {
+          "Inversiones": {
+            "statistics": {
+              "total": 0,
+              "expenses": 0,
+              "incomes": 0,
+              "transfers": 0
+            }
+          },
+          "Extraordinario": {
+            "statistics": {
+              "total": 0,
+              "expenses": 0,
+              "incomes": 0,
+              "transfers": 0
+            }
+          },
+          "Nómina": {
+            "statistics": {
+              "total": 0,
+              "expenses": 0,
+              "incomes": 0,
+              "transfers": 0
+            }
+          },
+          "Trabajo Extra": {
+            "statistics": {
+              "total": 0,
+              "expenses": 0,
+              "incomes": 0,
+              "transfers": 0
+            }
+          }
+        }
+      },
+      "Reajuste*": {
+        "statistics": {
+          "total": -78.41000000000001,
+          "expenses": -78.51,
+          "incomes": 0.1,
+          "transfers": 0
+        }
+      }
+    }
+  },
+  "years": {}
+}

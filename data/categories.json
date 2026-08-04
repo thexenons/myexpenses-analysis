@@ -1,0 +1,277 @@
+{
+  "Gastos": {
+    "categoryType": "EXPENSE",
+    "children": {
+      "Necesidades básicas": {
+        "categoryType": "EXPENSE",
+        "children": {
+          "Vivienda": {
+            "categoryType": "EXPENSE",
+            "children": {
+              "Alquiler": {
+                "categoryType": "EXPENSE"
+              },
+              "Suministros": {
+                "categoryType": "EXPENSE"
+              },
+              "Internet": {
+                "categoryType": "EXPENSE"
+              },
+              "Otros": {
+                "categoryType": "EXPENSE"
+              },
+              "Mantenimiento": {
+                "categoryType": "EXPENSE"
+              }
+            }
+          },
+          "Supermercado": {
+            "categoryType": "EXPENSE"
+          },
+          "Transporte": {
+            "categoryType": "EXPENSE",
+            "children": {
+              "Público": {
+                "categoryType": "EXPENSE"
+              },
+              "Taxi": {
+                "categoryType": "EXPENSE"
+              },
+              "Patinete": {
+                "categoryType": "EXPENSE"
+              },
+              "Coche": {
+                "categoryType": "EXPENSE",
+                "children": {
+                  "Seguro": {
+                    "categoryType": "EXPENSE"
+                  },
+                  "Gasolina": {
+                    "categoryType": "EXPENSE"
+                  },
+                  "Mantenimiento": {
+                    "categoryType": "EXPENSE"
+                  },
+                  "Parking": {
+                    "categoryType": "EXPENSE"
+                  },
+                  "Compra": {
+                    "categoryType": "EXPENSE"
+                  }
+                }
+              }
+            }
+          },
+          "Mascotas": {
+            "categoryType": "EXPENSE",
+            "children": {
+              "Gatos": {
+                "categoryType": "EXPENSE",
+                "children": {
+                  "Compras": {
+                    "categoryType": "EXPENSE"
+                  },
+                  "Comida": {
+                    "categoryType": "EXPENSE"
+                  },
+                  "Veterinario": {
+                    "categoryType": "EXPENSE"
+                  },
+                  "Arena": {
+                    "categoryType": "EXPENSE"
+                  }
+                }
+              },
+              "Perros": {
+                "categoryType": "EXPENSE",
+                "children": {
+                  "Compras": {
+                    "categoryType": "EXPENSE"
+                  },
+                  "Comida": {
+                    "categoryType": "EXPENSE"
+                  },
+                  "Cuidar": {
+                    "categoryType": "EXPENSE"
+                  },
+                  "Veterinario": {
+                    "categoryType": "EXPENSE"
+                  }
+                }
+              }
+            }
+          },
+          "Estudios": {
+            "categoryType": "EXPENSE",
+            "children": {
+              "Carnet de conducir": {
+                "categoryType": "EXPENSE"
+              },
+              "Inglés": {
+                "categoryType": "EXPENSE"
+              },
+              "Cursos": {
+                "categoryType": "EXPENSE"
+              }
+            }
+          },
+          "Compras": {
+            "categoryType": "EXPENSE",
+            "children": {
+              "Ropa": {
+                "categoryType": "EXPENSE"
+              },
+              "Otros": {
+                "categoryType": "EXPENSE"
+              },
+              "Papelería": {
+                "categoryType": "EXPENSE"
+              },
+              "Deportes": {
+                "categoryType": "EXPENSE"
+              },
+              "Electrónica": {
+                "categoryType": "EXPENSE"
+              },
+              "Vivienda": {
+                "categoryType": "EXPENSE"
+              }
+            }
+          },
+          "Salud": {
+            "categoryType": "EXPENSE",
+            "children": {
+              "Farmacia": {
+                "categoryType": "EXPENSE"
+              },
+              "Terapias alternativas": {
+                "categoryType": "EXPENSE"
+              },
+              "Psicólogo": {
+                "categoryType": "EXPENSE"
+              },
+              "Gimnasio": {
+                "categoryType": "EXPENSE"
+              },
+              "Médicos": {
+                "categoryType": "EXPENSE"
+              },
+              "Masaje": {
+                "categoryType": "EXPENSE"
+              }
+            }
+          },
+          "Peluquería": {
+            "categoryType": "EXPENSE"
+          },
+          "Banco": {
+            "categoryType": "EXPENSE"
+          },
+          "Informática": {
+            "categoryType": "EXPENSE",
+            "children": {
+              "VPS": {
+                "categoryType": "EXPENSE"
+              },
+              "Dominios": {
+                "categoryType": "EXPENSE"
+              }
+            }
+          }
+        }
+      },
+      "Ocio": {
+        "categoryType": "EXPENSE",
+        "children": {
+          "Regalo": {
+            "categoryType": "EXPENSE"
+          },
+          "Restaurantes": {
+            "categoryType": "EXPENSE"
+          },
+          "Cafetería": {
+            "categoryType": "EXPENSE"
+          },
+          "Actividades": {
+            "categoryType": "EXPENSE"
+          },
+          "Alcohol": {
+            "categoryType": "EXPENSE"
+          },
+          "Tabaco y sustancias": {
+            "categoryType": "EXPENSE"
+          },
+          "Caprichos": {
+            "categoryType": "EXPENSE"
+          },
+          "Viajes": {
+            "categoryType": "EXPENSE"
+          },
+          "Libros": {
+            "categoryType": "EXPENSE"
+          },
+          "Suscripciones": {
+            "categoryType": "EXPENSE"
+          },
+          "Supermercado": {
+            "categoryType": "EXPENSE"
+          },
+          "Aplicaciones": {
+            "categoryType": "EXPENSE"
+          },
+          "Tatuaje": {
+            "categoryType": "EXPENSE"
+          }
+        }
+      },
+      "Multas / Impuestos": {
+        "categoryType": "EXPENSE"
+      },
+      "Inversiones": {
+        "categoryType": "EXPENSE",
+        "children": {
+          "Comisiones": {
+            "categoryType": "EXPENSE"
+          },
+          "Impuestos": {
+            "categoryType": "EXPENSE"
+          }
+        }
+      },
+      "Empresa": {
+        "categoryType": "EXPENSE",
+        "children": {
+          "Gestión": {
+            "categoryType": "EXPENSE"
+          }
+        }
+      },
+      "Donaciones": {
+        "categoryType": "EXPENSE"
+      }
+    }
+  },
+  "Transferencia": {
+    "categoryType": "TRANSFER"
+  },
+  "Ingresos": {
+    "categoryType": "INCOME",
+    "children": {
+      "Inversiones": {
+        "categoryType": "INCOME"
+      },
+      "Extraordinario": {
+        "categoryType": "INCOME"
+      },
+      "Nómina": {
+        "categoryType": "INCOME"
+      },
+      "Trabajo Extra": {
+        "categoryType": "INCOME"
+      }
+    }
+  },
+  "Reajuste*": {
+    "categoryType": "NEUTRAL"
+  }
+}
