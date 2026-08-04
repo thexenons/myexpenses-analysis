@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "scripts:parse-export": "tsx scripts/parse-export/index.ts",
+    "scripts:statistics": "tsx scripts/statistics/index.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
