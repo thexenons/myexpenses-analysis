@@ -6,6 +6,7 @@ Last updated: 2026-08-06
 
 ## Sources scanned
 
+- .agents/skills
 - /home/thexenons/.config/opencode/skills
 - /home/thexenons/.copilot/skills
 
@@ -19,15 +20,25 @@ Last updated: 2026-08-06
 
 | Skill | Trigger / description | Scope | Path |
 | --- | --- | --- | --- |
+| `accessibility` | Audit and improve web accessibility following WCAG 2.2 guidelines. Use when asked to "improve accessibility", "a11y audit", "WCAG compliance", "screen reader support", "keyboard navigation", or "make accessible". | project | `/home/thexenons/myexpenses-analysis/.agents/skills/accessibility/SKILL.md` |
 | `branch-pr` | Create Gentle AI pull requests with issue-first checks. Trigger: creating, opening, or preparing PRs for review. | user | `/home/thexenons/.config/opencode/skills/branch-pr/SKILL.md` |
 | `chained-pr` | Trigger: PRs over 400 lines, stacked PRs, review slices. Split oversized changes into chained PRs that protect review focus. | user | `/home/thexenons/.config/opencode/skills/chained-pr/SKILL.md` |
 | `cognitive-doc-design` | Design docs that reduce cognitive load. Trigger: writing guides, READMEs, RFCs, onboarding, architecture, or review-facing docs. | user | `/home/thexenons/.config/opencode/skills/cognitive-doc-design/SKILL.md` |
 | `comment-writer` | Write warm, direct collaboration comments. Trigger: PR feedback, issue replies, reviews, Slack messages, or GitHub comments. | user | `/home/thexenons/.config/opencode/skills/comment-writer/SKILL.md` |
+| `frontend-design` | Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, artifacts, posters, or applications (examples include websites, landing pages, dashboards, React components, HTML/CSS layouts, or when styling/beautifying any web UI). Generates creative, polished code and UI design that avoids generic AI aesthetics. | project | `/home/thexenons/myexpenses-analysis/.agents/skills/frontend-design/SKILL.md` |
 | `go-testing` | Trigger: Go tests, go test coverage, Bubbletea teatest, golden files. Apply focused Go testing patterns. | user | `/home/thexenons/.config/opencode/skills/go-testing/SKILL.md` |
 | `issue-creation` | Create and triage GitHub issues from repository evidence. Trigger: issue creation, bug reports, feature requests, or issue approval. | user | `/home/thexenons/.config/opencode/skills/issue-creation/SKILL.md` |
 | `judgment-day` | Trigger: judgment day, dual review, adversarial review, juzgar. Run explicit blind dual review with at most two scoped fix/re-judgment rounds. | user | `/home/thexenons/.config/opencode/skills/judgment-day/SKILL.md` |
+| `nodejs-backend-patterns` | Build production-ready Node.js backend services with Express/Fastify, implementing middleware patterns, error handling, authentication, database integration, and API design best practices. Use when creating Node.js servers, REST APIs, GraphQL backends, or microservices architectures. | project | `/home/thexenons/myexpenses-analysis/.agents/skills/nodejs-backend-patterns/SKILL.md` |
+| `nodejs-best-practices` | Node.js development principles and decision-making. Framework selection, async patterns, security, and architecture. Teaches thinking, not copying. | project | `/home/thexenons/myexpenses-analysis/.agents/skills/nodejs-best-practices/SKILL.md` |
+| `oxlint` | Run and configure oxlint — the high-performance JavaScript/TypeScript linter built on the Oxc compiler stack. Use this skill whenever working in a project that has oxlint installed (check for `oxlint` in package.json devDependencies or an `.oxlintrc.json` / `oxlint.config.ts` config file). This includes when you need to lint code after making changes, fix linting errors, configure oxlint rules/plugins, set up or modify `.oxlintrc.json`, or migrate from ESLint. | project | `/home/thexenons/myexpenses-analysis/.agents/skills/oxlint/SKILL.md` |
+| `seo` | Optimize for search engine visibility and ranking. Use when asked to "improve SEO", "optimize for search", "fix meta tags", "add structured data", "sitemap optimization", or "search engine optimization". | project | `/home/thexenons/myexpenses-analysis/.agents/skills/seo/SKILL.md` |
 | `skill-creator` | Trigger: new skills, agent instructions, documenting AI usage patterns. Create LLM-first skills with valid frontmatter. | user | `/home/thexenons/.config/opencode/skills/skill-creator/SKILL.md` |
 | `skill-improver` | Trigger: improve skills, audit skills, refactor skills, skill quality. Audit and upgrade existing LLM-first skills. | user | `/home/thexenons/.config/opencode/skills/skill-improver/SKILL.md` |
+| `typescript-advanced-types` | Master TypeScript's advanced type system including generics, conditional types, mapped types, template literals, and utility types for building type-safe applications. Use when implementing complex type logic, creating reusable type utilities, or ensuring compile-time type safety in TypeScript projects. | project | `/home/thexenons/myexpenses-analysis/.agents/skills/typescript-advanced-types/SKILL.md` |
+| `vercel-composition-patterns` | — | project | `/home/thexenons/myexpenses-analysis/.agents/skills/composition-patterns/SKILL.md` |
+| `vercel-react-best-practices` | React and Next.js performance optimization guidelines from Vercel Engineering. This skill should be used when writing, reviewing, or refactoring React/Next.js code to ensure optimal performance patterns. Triggers on tasks involving React components, Next.js pages, data fetching, bundle optimization, or performance improvements. | project | `/home/thexenons/myexpenses-analysis/.agents/skills/react-best-practices/SKILL.md` |
+| `vite` | Vite build tool configuration, plugin API, SSR, and Vite 8 Rolldown migration. Use when working with Vite projects, vite.config.ts, Vite plugins, or building libraries/SSR apps with Vite. | project | `/home/thexenons/myexpenses-analysis/.agents/skills/vite/SKILL.md` |
 | `work-unit-commits` | Plan commits as reviewable work units. Trigger: implementation, commit splitting, chained PRs, or keeping tests and docs with code. | user | `/home/thexenons/.config/opencode/skills/work-unit-commits/SKILL.md` |
 
 ## Loading protocol

@@ -14,6 +14,24 @@ export async function getStatistics(): Promise<Statistics> {
     return JSON.parse(await readFile(statisticsFilePath, "utf-8"));
 }
 
+// Parses 'DD/MM/YYYY ' (trim, split on '/'). Returns null on invalid → bucket skip.
+function parseExpenseDate(date: string): Date | null {
+    const [day, month, year] = date.trim().split("/");
+    const d = Number(day);
+    const m = Number(month);
+    const y = Number(year);
+    if (!Number.isInteger(d) || !Number.isInteger(m) || !Number.isInteger(y)) {
+        return null;
+    }
+
+    const parsed = new Date(y, m - 1, d);
+    if (parsed.getFullYear() !== y || parsed.getMonth() !== m - 1 || parsed.getDate() !== d) {
+        return null;
+    }
+
+    return parsed;
+}
+
 interface StatisticsAtom {
     total: number;
     expenses: number;
@@ -126,8 +144,9 @@ function generateDayStatistics(
 ): DayStatistics {
     const statistics: DayStatistics = {
         statistics: generateStatisticsMolecule(transactions.filter((transaction) => {
-            const transactionDate = new Date(transaction.date);
-            return transactionDate.getFullYear() === date.getFullYear() &&
+            const transactionDate = parseExpenseDate(transaction.date);
+            return transactionDate !== null &&
+                transactionDate.getFullYear() === date.getFullYear() &&
                 transactionDate.getMonth() === date.getMonth() &&
                 transactionDate.getDate() === date.getDate();
         }), categoriesRegistry),
@@ -143,26 +162,84 @@ interface MonthStatistics {
 function generateMonthStatistics(
     transactions: ParsedTransaction[],
     categoriesRegistry: CategoriesRegistry,
-    startDate: Date,
-    endDate: Date,
-): MonthStatistics {
-    const statistics: MonthStatistics = {
-        statistics: generateStatisticsMolecule(transactions.filter((transaction) => {
-            const transactionDate = new Date(transaction.date);
-            const transactionStartDate = new Date(transactionDate.getFullYear(), transactionDate.getMonth(), 1);
-            const transactionEndDate = new Date(transactionDate.getFullYear(), transactionDate.getMonth() + 1, 0);
+    year: number,
+    month: number,
+): MonthStatistics | null {
+    const monthTransactions = transactions.filter((transaction) => {
+        const transactionDate = parseExpenseDate(transaction.date);
+        return transactionDate !== null &&
+            transactionDate >= new Date(year, month, 1) &&
+            transactionDate < new Date(year, month + 1, 1);
+    });
 
-            return startDate >= transactionStartDate && endDate < transactionEndDate;
-        }), categoriesRegistry),
-        days: {}
+    if (monthTransactions.length === 0) {
+        return null;
+    }
+
+    const days: Record<number, DayStatistics> = {};
+    for (const transaction of monthTransactions) {
+        const transactionDate = parseExpenseDate(transaction.date);
+        if (transactionDate !== null && days[transactionDate.getDate()] === undefined) {
+            days[transactionDate.getDate()] = generateDayStatistics(monthTransactions, categoriesRegistry, transactionDate);
+        }
+    }
+
+    return {
+        statistics: generateStatisticsMolecule(monthTransactions, categoriesRegistry),
+        days,
     };
-
-    return statistics;
 }
 
 interface YearStatistics {
     months: Record<number, MonthStatistics>;
     statistics: StatisticsMolecule;
+}
+function generateYearStatistics(
+    transactions: ParsedTransaction[],
+    categoriesRegistry: CategoriesRegistry,
+    year: number,
+): YearStatistics | null {
+    const months: Record<number, MonthStatistics> = {};
+    for (let month = 0; month < 12; month++) {
+        const monthStatistics = generateMonthStatistics(transactions, categoriesRegistry, year, month);
+        if (monthStatistics !== null) {
+            months[month] = monthStatistics;
+        }
+    }
+
+    if (Object.keys(months).length === 0) {
+        return null;
+    }
+
+    return {
+        statistics: generateStatisticsMolecule(transactions.filter((transaction) => {
+            const transactionDate = parseExpenseDate(transaction.date);
+            return transactionDate !== null && transactionDate.getFullYear() === year;
+        }), categoriesRegistry),
+        months,
+    };
+}
+function generateYears(
+    transactions: ParsedTransaction[],
+    categoriesRegistry: CategoriesRegistry,
+): Record<number, YearStatistics> {
+    const years: Record<number, YearStatistics> = {};
+    const distinctYears = new Set<number>();
+    for (const transaction of transactions) {
+        const transactionDate = parseExpenseDate(transaction.date);
+        if (transactionDate !== null) {
+            distinctYears.add(transactionDate.getFullYear());
+        }
+    }
+
+    for (const year of distinctYears) {
+        const yearStatistics = generateYearStatistics(transactions, categoriesRegistry, year);
+        if (yearStatistics !== null) {
+            years[year] = yearStatistics;
+        }
+    }
+
+    return years;
 }
 
 interface StatisticsWithYears extends StatisticsMolecule {
@@ -180,28 +257,43 @@ export async function generateStatistics(
     accountsRegistry: AccountsRegistry,
     categoriesRegistry: CategoriesRegistry,
 ): Promise<Statistics> {
+    const allTransactions = parsedData.reduce<ParsedTransaction[]>((prev, curr) => {
+        return [...prev, ...curr.transactions];
+    }, []);
+    const nonDebtTransactions = parsedData.reduce<ParsedTransaction[]>((prev, curr) => {
+        const accountType = accountsRegistry[curr.label];
+        if (accountType === "DEBT") return prev;
+        return [...prev, ...curr.transactions];
+    }, []);
+    const debtTransactions = parsedData.reduce<ParsedTransaction[]>((prev, curr) => {
+        const accountType = accountsRegistry[curr.label];
+        if (accountType !== "DEBT") return prev;
+        return [...prev, ...curr.transactions];
+    }, []);
+
+    /*
+     * View semantics (intentional — do not rename):
+     * - statistics: ALL accounts, debt accounts included.
+     * - statisticsWithDebts: REAL cash flow — DEBT accounts excluded, because debt-account
+     *   mirror transactions (created via transfers) cancel the original transfer amount,
+     *   so keeping them would distort the totals; the name means "statistics as if the
+     *   debt mirrors were not cancelling the originals", i.e. true cash flow.
+     * - debtsStatistics: only debt accounts.
+     * Because of the mirror cancellation, `statistics` shows LOWER expenses than
+     * `statisticsWithDebts`. The behavior is intentional; the names are not renamed.
+     */
     let statistics: Statistics = {
         statistics: {
-            ...generateStatisticsMolecule(parsedData.reduce<ParsedTransaction[]>((prev, curr) => {
-                return [...prev, ...curr.transactions];
-            }, []), categoriesRegistry),
-            years: {}
+            ...generateStatisticsMolecule(allTransactions, categoriesRegistry),
+            years: generateYears(allTransactions, categoriesRegistry),
         },
         statisticsWithDebts: {
-            ...generateStatisticsMolecule(parsedData.reduce<ParsedTransaction[]>((prev, curr) => {
-                const accountType = accountsRegistry[curr.label];
-                if (accountType === "DEBT") return prev;
-                return [...prev, ...curr.transactions];
-            }, []), categoriesRegistry),
-            years: {}
+            ...generateStatisticsMolecule(nonDebtTransactions, categoriesRegistry),
+            years: generateYears(nonDebtTransactions, categoriesRegistry),
         },
         debtsStatistics: {
-            ...generateStatisticsMolecule(parsedData.reduce<ParsedTransaction[]>((prev, curr) => {
-                const accountType = accountsRegistry[curr.label];
-                if (accountType !== "DEBT") return prev;
-                return [...prev, ...curr.transactions];
-            }, []), categoriesRegistry),
-            years: {}
+            ...generateStatisticsMolecule(debtTransactions, categoriesRegistry),
+            years: generateYears(debtTransactions, categoriesRegistry),
         }
     }
 
@@ -210,6 +302,4 @@ export async function generateStatistics(
     return statistics;
 }
 
-console.log(
-    await generateStatistics(await getParsedData(), await getAccountsRegistry(), await getCategoriesRegistry()),
-);
+await generateStatistics(await getParsedData(), await getAccountsRegistry(), await getCategoriesRegistry());
