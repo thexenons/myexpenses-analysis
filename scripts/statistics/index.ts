@@ -2,9 +2,13 @@ import { join } from "node:path";
 import { getAccountsRegistry } from "../parse-export/accounts-registry.ts";
 import { getCategoriesRegistry } from "../parse-export/categories-registry.ts";
 import { getParsedData } from "../parse-export/parsed-data.ts";
-import type { AccountsRegistry, CategoriesRegistry, ParsedData, ParsedTransaction } from "../types.ts";
+import type {
+    AccountsRegistry,
+    CategoriesRegistry,
+    ParsedData,
+    ParsedTransaction,
+} from "../types.ts";
 import { readFile, writeFile } from "node:fs/promises";
-
 
 const rootPath = process.cwd();
 const dataPath = join(rootPath, "data");
@@ -25,7 +29,11 @@ function parseExpenseDate(date: string): Date | null {
     }
 
     const parsed = new Date(y, m - 1, d);
-    if (parsed.getFullYear() !== y || parsed.getMonth() !== m - 1 || parsed.getDate() !== d) {
+    if (
+        parsed.getFullYear() !== y ||
+        parsed.getMonth() !== m - 1 ||
+        parsed.getDate() !== d
+    ) {
         return null;
     }
 
@@ -50,13 +58,14 @@ export function generateStatisticsAtom(
     };
 
     for (const transaction of transactions) {
-        if (transaction.category[0] === 'Transferencia') {
+        if (transaction.category[0] === "Transferencia") {
             statistics.transfers += transaction.amount;
         } else {
-            const categoryType = categoriesRegistry[transaction.category[0]]?.categoryType;
-            if (categoryType === 'EXPENSE') {
+            const categoryType =
+                categoriesRegistry[transaction.category[0]]?.categoryType;
+            if (categoryType === "EXPENSE") {
                 statistics.expenses += transaction.amount;
-            } else if (categoryType === 'INCOME') {
+            } else if (categoryType === "INCOME") {
                 statistics.incomes += transaction.amount;
             } else if (transaction.amount < 0) {
                 statistics.expenses += transaction.amount;
@@ -66,7 +75,8 @@ export function generateStatisticsAtom(
         }
     }
 
-    statistics.total = statistics.incomes + statistics.expenses + statistics.transfers;
+    statistics.total =
+        statistics.incomes + statistics.expenses + statistics.transfers;
 
     return statistics;
 }
@@ -82,7 +92,9 @@ function generateCategoryStatistics(
 ): CategoryStatistics {
     let statistics: CategoryStatistics = {
         statistics: generateStatisticsAtom(
-            transactions.filter((transaction) => category.every((c, i) => transaction.category[i] === c)),
+            transactions.filter((transaction) =>
+                category.every((c, i) => transaction.category[i] === c),
+            ),
             categoriesRegistry,
         ),
     };
@@ -92,7 +104,11 @@ function generateCategoryStatistics(
         statistics.subCategories = {};
         for (const subCategory in subCategories) {
             statistics.subCategories[subCategory] = generateCategoryStatistics(
-                transactions.filter((transaction) => [...category, subCategory].every((c, i) => transaction.category[i] === c)),
+                transactions.filter((transaction) =>
+                    [...category, subCategory].every(
+                        (c, i) => transaction.category[i] === c,
+                    ),
+                ),
                 subCategories,
                 [...category, subCategory],
             );
@@ -143,13 +159,18 @@ function generateDayStatistics(
     date: Date,
 ): DayStatistics {
     const statistics: DayStatistics = {
-        statistics: generateStatisticsMolecule(transactions.filter((transaction) => {
-            const transactionDate = parseExpenseDate(transaction.date);
-            return transactionDate !== null &&
-                transactionDate.getFullYear() === date.getFullYear() &&
-                transactionDate.getMonth() === date.getMonth() &&
-                transactionDate.getDate() === date.getDate();
-        }), categoriesRegistry),
+        statistics: generateStatisticsMolecule(
+            transactions.filter((transaction) => {
+                const transactionDate = parseExpenseDate(transaction.date);
+                return (
+                    transactionDate !== null &&
+                    transactionDate.getFullYear() === date.getFullYear() &&
+                    transactionDate.getMonth() === date.getMonth() &&
+                    transactionDate.getDate() === date.getDate()
+                );
+            }),
+            categoriesRegistry,
+        ),
     };
 
     return statistics;
@@ -167,9 +188,11 @@ function generateMonthStatistics(
 ): MonthStatistics | null {
     const monthTransactions = transactions.filter((transaction) => {
         const transactionDate = parseExpenseDate(transaction.date);
-        return transactionDate !== null &&
+        return (
+            transactionDate !== null &&
             transactionDate >= new Date(year, month, 1) &&
-            transactionDate < new Date(year, month + 1, 1);
+            transactionDate < new Date(year, month + 1, 1)
+        );
     });
 
     if (monthTransactions.length === 0) {
@@ -179,13 +202,23 @@ function generateMonthStatistics(
     const days: Record<number, DayStatistics> = {};
     for (const transaction of monthTransactions) {
         const transactionDate = parseExpenseDate(transaction.date);
-        if (transactionDate !== null && days[transactionDate.getDate()] === undefined) {
-            days[transactionDate.getDate()] = generateDayStatistics(monthTransactions, categoriesRegistry, transactionDate);
+        if (
+            transactionDate !== null &&
+            days[transactionDate.getDate()] === undefined
+        ) {
+            days[transactionDate.getDate()] = generateDayStatistics(
+                monthTransactions,
+                categoriesRegistry,
+                transactionDate,
+            );
         }
     }
 
     return {
-        statistics: generateStatisticsMolecule(monthTransactions, categoriesRegistry),
+        statistics: generateStatisticsMolecule(
+            monthTransactions,
+            categoriesRegistry,
+        ),
         days,
     };
 }
@@ -201,7 +234,12 @@ function generateYearStatistics(
 ): YearStatistics | null {
     const months: Record<number, MonthStatistics> = {};
     for (let month = 0; month < 12; month++) {
-        const monthStatistics = generateMonthStatistics(transactions, categoriesRegistry, year, month);
+        const monthStatistics = generateMonthStatistics(
+            transactions,
+            categoriesRegistry,
+            year,
+            month,
+        );
         if (monthStatistics !== null) {
             months[month] = monthStatistics;
         }
@@ -212,10 +250,15 @@ function generateYearStatistics(
     }
 
     return {
-        statistics: generateStatisticsMolecule(transactions.filter((transaction) => {
-            const transactionDate = parseExpenseDate(transaction.date);
-            return transactionDate !== null && transactionDate.getFullYear() === year;
-        }), categoriesRegistry),
+        statistics: generateStatisticsMolecule(
+            transactions.filter((transaction) => {
+                const transactionDate = parseExpenseDate(transaction.date);
+                return (
+                    transactionDate !== null && transactionDate.getFullYear() === year
+                );
+            }),
+            categoriesRegistry,
+        ),
         months,
     };
 }
@@ -233,7 +276,11 @@ function generateYears(
     }
 
     for (const year of distinctYears) {
-        const yearStatistics = generateYearStatistics(transactions, categoriesRegistry, year);
+        const yearStatistics = generateYearStatistics(
+            transactions,
+            categoriesRegistry,
+            year,
+        );
         if (yearStatistics !== null) {
             years[year] = yearStatistics;
         }
@@ -257,19 +304,28 @@ export async function generateStatistics(
     accountsRegistry: AccountsRegistry,
     categoriesRegistry: CategoriesRegistry,
 ): Promise<Statistics> {
-    const allTransactions = parsedData.reduce<ParsedTransaction[]>((prev, curr) => {
-        return [...prev, ...curr.transactions];
-    }, []);
-    const nonDebtTransactions = parsedData.reduce<ParsedTransaction[]>((prev, curr) => {
-        const accountType = accountsRegistry[curr.label];
-        if (accountType === "DEBT") return prev;
-        return [...prev, ...curr.transactions];
-    }, []);
-    const debtTransactions = parsedData.reduce<ParsedTransaction[]>((prev, curr) => {
-        const accountType = accountsRegistry[curr.label];
-        if (accountType !== "DEBT") return prev;
-        return [...prev, ...curr.transactions];
-    }, []);
+    const allTransactions = parsedData.reduce<ParsedTransaction[]>(
+        (prev, curr) => {
+            return [...prev, ...curr.transactions];
+        },
+        [],
+    );
+    const nonDebtTransactions = parsedData.reduce<ParsedTransaction[]>(
+        (prev, curr) => {
+            const accountType = accountsRegistry[curr.label];
+            if (accountType === "DEBT") return prev;
+            return [...prev, ...curr.transactions];
+        },
+        [],
+    );
+    const debtTransactions = parsedData.reduce<ParsedTransaction[]>(
+        (prev, curr) => {
+            const accountType = accountsRegistry[curr.label];
+            if (accountType !== "DEBT") return prev;
+            return [...prev, ...curr.transactions];
+        },
+        [],
+    );
 
     /*
      * View semantics (intentional — do not rename):
@@ -294,12 +350,20 @@ export async function generateStatistics(
         debtsStatistics: {
             ...generateStatisticsMolecule(debtTransactions, categoriesRegistry),
             years: generateYears(debtTransactions, categoriesRegistry),
-        }
-    }
+        },
+    };
 
-    await writeFile(statisticsFilePath, JSON.stringify(statistics, null, 2), "utf-8");
+    await writeFile(
+        statisticsFilePath,
+        JSON.stringify(statistics, null, 2),
+        "utf-8",
+    );
 
     return statistics;
 }
 
-await generateStatistics(await getParsedData(), await getAccountsRegistry(), await getCategoriesRegistry());
+await generateStatistics(
+    await getParsedData(),
+    await getAccountsRegistry(),
+    await getCategoriesRegistry(),
+);
