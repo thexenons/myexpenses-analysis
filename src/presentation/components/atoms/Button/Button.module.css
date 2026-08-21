@@ -1,0 +1,101 @@
+@layer components {
+  .root {
+    position: relative;
+    display: inline-flex;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0 1rem;
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 750;
+    letter-spacing: 0.015em;
+    transition:
+      color 160ms ease,
+      background-color 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      transform 160ms ease;
+  }
+
+  .root:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+
+  .root:not(:disabled):active {
+    transform: translateY(0);
+  }
+
+  .root:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+  }
+
+  .primary {
+    color: var(--accent-ink);
+    background: var(--accent);
+    border-color: color-mix(in srgb, var(--accent-ink) 18%, transparent);
+    box-shadow: 0 0.4rem 1.1rem rgb(34 51 14 / 12%);
+  }
+
+  .primary:not(:disabled):hover {
+    background: color-mix(in srgb, var(--accent) 88%, white);
+    box-shadow: 0 0.55rem 1.35rem rgb(34 51 14 / 17%);
+  }
+
+  .secondary {
+    color: var(--ink);
+    background: var(--surface-bright);
+    border-color: var(--line);
+    box-shadow: 0 0.2rem 0.75rem rgb(23 37 31 / 5%);
+  }
+
+  .secondary:not(:disabled):hover {
+    border-color: var(--line-dark);
+    box-shadow: 0 0.35rem 1rem rgb(23 37 31 / 9%);
+  }
+
+  .ghost {
+    color: var(--ink-soft);
+  }
+
+  .ghost:not(:disabled):hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--paper-deep) 72%, transparent);
+  }
+
+  .compact {
+    min-height: 2.25rem;
+    padding-inline: 0.75rem;
+    font-size: 0.72rem;
+  }
+
+  .regular {
+    min-height: 2.75rem;
+  }
+
+  .fullWidth {
+    width: 100%;
+  }
+
+  .icon {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+  }
+
+  .label {
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transition: none;
+  }
+}

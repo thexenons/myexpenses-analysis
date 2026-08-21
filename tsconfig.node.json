@@ -21,5 +21,12 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "scripts/**/*.ts", "data/**/*.ts"],
+  "include": [
+    "vite.config.ts",
+    "vitest.config.ts",
+    "scripts/**/*.ts",
+    "tests/domain/**/*.ts",
+    "tests/architecture/**/*.ts",
+    "data/**/*.ts"
+  ],
 }

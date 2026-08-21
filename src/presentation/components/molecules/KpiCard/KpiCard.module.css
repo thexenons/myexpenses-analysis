@@ -1,0 +1,138 @@
+.root {
+  --kpi-tone: var(--ink, #16231e);
+
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 9.5rem;
+  padding: 1rem;
+  overflow: hidden;
+  background: var(--surface-bright, #fffdf8);
+  border: 1px solid var(--line, #cec9bb);
+  border-radius: var(--radius-md, 1rem);
+  box-shadow: var(--shadow-small, 0 8px 24px rgb(23 37 31 / 7%));
+}
+
+.root::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 0.22rem;
+  content: "";
+  background: var(--kpi-tone);
+}
+
+.positive,
+.cash {
+  --kpi-tone: var(--income, #286a4c);
+}
+
+.negative {
+  --kpi-tone: var(--expense, #a33f36);
+}
+
+.info {
+  --kpi-tone: var(--transfer, #35698b);
+}
+
+.warning,
+.debt {
+  --kpi-tone: var(--debt, #bd7d2f);
+}
+
+.accent {
+  --kpi-tone: var(--accent-ink, #22330e);
+}
+
+.header {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.label {
+  color: var(--muted, #5f6863);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.icon {
+  display: grid;
+  width: 1.95rem;
+  height: 1.95rem;
+  flex: none;
+  place-items: center;
+  color: var(--kpi-tone);
+  background: color-mix(in srgb, var(--kpi-tone) 11%, transparent);
+  border-radius: 50%;
+}
+
+.value {
+  align-self: end;
+  margin-top: 0.7rem;
+  overflow: hidden;
+  font-family: var(--display, Georgia, serif);
+  font-size: clamp(1.65rem, 2.7vw, 2.7rem);
+  font-weight: 560;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  text-overflow: ellipsis;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.7rem;
+  align-items: center;
+  margin-top: 0.72rem;
+  color: var(--muted, #5f6863);
+  font-size: 0.69rem;
+}
+
+.trend {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: baseline;
+  color: var(--ink-soft, #3c4a44);
+}
+
+.up {
+  color: var(--income, #286a4c);
+}
+
+.down {
+  color: var(--expense, #a33f36);
+}
+
+.flat {
+  color: var(--muted, #5f6863);
+}
+
+.trendValue {
+  font-weight: 800;
+}
+
+.trendMark {
+  font-size: 0.8rem;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.trendLabel,
+.detail {
+  min-width: 0;
+}

@@ -1,0 +1,64 @@
+@layer layout {
+  .shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    min-height: 100dvh;
+  }
+
+  .workspace {
+    min-width: 0;
+  }
+
+  .main {
+    width: min(100%, 104rem);
+    min-height: calc(100dvh - 4.85rem);
+    padding: clamp(1rem, 2.4vw, 2.5rem);
+    margin-inline: auto;
+  }
+
+  .skipLink {
+    position: fixed;
+    top: 0.65rem;
+    left: 0.65rem;
+    z-index: 100;
+    padding: 0.65rem 0.9rem;
+    color: var(--surface-bright);
+    background: var(--surface-ink);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 750;
+    box-shadow: var(--shadow-small);
+    transform: translateY(calc(-100% - 1rem));
+    transition: transform 140ms ease;
+  }
+
+  .skipLink:focus {
+    transform: translateY(0);
+  }
+}
+
+@media (width <= 56rem) {
+  .shell {
+    display: block;
+  }
+
+  .workspace {
+    padding-bottom: calc(4.6rem + env(safe-area-inset-bottom));
+  }
+
+  .main {
+    min-height: calc(100dvh - 8.8rem);
+  }
+}
+
+@media (width <= 42rem) {
+  .main {
+    padding: 0.9rem 0.75rem 1.4rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skipLink {
+    transition: none;
+  }
+}

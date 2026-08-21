@@ -1,0 +1,52 @@
+.root {
+  display: inline-grid;
+  width: 2.5rem;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  min-height: 2.5rem;
+  padding: 0;
+  place-items: center;
+  color: var(--ink-soft, #3c4a44);
+  background: color-mix(in srgb, var(--surface-bright, #fffdf8) 82%, transparent);
+  border: 1px solid var(--line, #cec9bb);
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    background 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease;
+}
+
+.root:hover:not(:disabled) {
+  color: var(--ink, #16231e);
+  background: var(--surface-bright, #fffdf8);
+  border-color: var(--line-dark, #9ca59f);
+  transform: translateY(-1px);
+}
+
+.root:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.root:focus-visible {
+  outline: 3px solid currentcolor;
+  outline-offset: 3px;
+}
+
+.root:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transition: none;
+  }
+}

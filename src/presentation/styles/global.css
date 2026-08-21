@@ -1,0 +1,155 @@
+@layer reset, tokens, base;
+
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    color-scheme: light;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  body,
+  h1,
+  h2,
+  h3,
+  p,
+  ul,
+  ol,
+  figure {
+    margin: 0;
+  }
+
+  ul,
+  ol {
+    padding: 0;
+    list-style: none;
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+
+  button {
+    color: inherit;
+  }
+
+  img,
+  svg {
+    display: block;
+    max-width: 100%;
+  }
+}
+
+@layer tokens {
+  :root {
+    --paper: #efede5;
+    --paper-deep: #e3dfd3;
+    --surface: #faf8f2;
+    --surface-bright: #fffdf8;
+    --surface-ink: #10251e;
+    --surface-ink-raised: #173128;
+    --ink: #16231e;
+    --ink-soft: #3c4a44;
+    --muted: #5f6863;
+    --line: #cec9bb;
+    --line-dark: #9ca59f;
+    --income: #286a4c;
+    --income-soft: #dcebdd;
+    --expense: #a33f36;
+    --expense-soft: #f2ded8;
+    --transfer: #35698b;
+    --transfer-soft: #d9e7ef;
+    --debt: #bd7d2f;
+    --debt-soft: #f0e2c9;
+    --accent: #c5da72;
+    --accent-ink: #22330e;
+    --shadow: 0 18px 60px rgb(23 37 31 / 8%);
+    --shadow-small: 0 8px 24px rgb(23 37 31 / 7%);
+    --radius-xs: 0.35rem;
+    --radius-sm: 0.65rem;
+    --radius-md: 1rem;
+    --radius-lg: 1.45rem;
+    --display: "Iowan Old Style", "Baskerville", "Palatino Linotype", Georgia,
+      serif;
+    --body: "Avenir Next", "Century Gothic", "Trebuchet MS", sans-serif;
+    --mono: "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
+    --sidebar-width: 15.5rem;
+  }
+}
+
+@layer base {
+  body {
+    min-width: 320px;
+    min-height: 100vh;
+    overflow-x: hidden;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at 90% -10%, rgb(197 218 114 / 26%), transparent 28rem),
+      radial-gradient(circle at 0% 70%, rgb(53 105 139 / 7%), transparent 32rem),
+      var(--paper);
+    font-family: var(--body);
+    line-height: 1.5;
+  }
+
+  body::before {
+    position: fixed;
+    z-index: -1;
+    inset: 0;
+    pointer-events: none;
+    content: "";
+    opacity: 0.32;
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 27px,
+      rgb(22 35 30 / 2.2%) 28px
+    );
+  }
+
+  button,
+  input,
+  select {
+    border: 0;
+  }
+
+  button,
+  select {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  a:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid currentColor;
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    color: var(--surface-ink);
+    background: var(--accent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

@@ -1,0 +1,232 @@
+.root {
+  width: 100%;
+  min-width: 0;
+  min-height: 15rem;
+  margin: 0;
+  color: var(--ink, #16231e);
+}
+
+.header {
+  display: grid;
+  gap: 0.2rem;
+  margin-bottom: 0.7rem;
+}
+
+.title {
+  margin: 0;
+  color: var(--ink, #16231e);
+  font-family: var(--display, Georgia, serif);
+  font-size: 1.08rem;
+  font-weight: 620;
+  letter-spacing: -0.014em;
+}
+
+.description {
+  max-width: 44rem;
+  margin: 0;
+  color: var(--muted, #5f6863);
+  font-size: 0.7rem;
+}
+
+.canvas {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  min-width: 34rem;
+  height: auto;
+  overflow: visible;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.48rem 0.85rem;
+  align-items: center;
+  padding: 0;
+  margin: 0 0 0.75rem;
+  color: var(--muted, #5f6863);
+  font-size: 0.68rem;
+  list-style: none;
+}
+
+.legendItem {
+  display: inline-flex;
+  min-width: 0;
+  gap: 0.38rem;
+  align-items: center;
+}
+
+.legendSwatch {
+  width: 0.58rem;
+  height: 0.58rem;
+  flex: none;
+  background: var(--chart-series-color, currentcolor);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--chart-series-color, currentcolor) 28%, transparent);
+}
+
+.legendLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legendValue {
+  color: var(--ink-soft, #3c4a44);
+  font-family: var(--mono, monospace);
+  font-variant-numeric: tabular-nums;
+}
+
+.legendVariant1 .legendSwatch {
+  border-radius: 0.08rem;
+}
+
+.legendVariant2 .legendSwatch {
+  background: transparent;
+  border: 2px solid var(--chart-series-color, currentcolor);
+}
+
+.legendVariant3 .legendSwatch {
+  border-radius: 0;
+  transform: rotate(45deg) scale(0.78);
+}
+
+.empty {
+  display: grid;
+  min-height: 12rem;
+  margin: 0;
+  place-items: center;
+  color: var(--muted, #5f6863);
+  text-align: center;
+}
+
+.grid {
+  pointer-events: none;
+}
+
+.gridLine {
+  stroke: var(--line, #cec9bb);
+  stroke-dasharray: 2 5;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.zeroLine {
+  stroke: var(--line-dark, #9ca59f);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.axisLabel,
+.barLabel,
+.barValue {
+  fill: var(--muted, #5f6863);
+  font-family: var(--mono, monospace);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.xAxisLabel,
+.yAxisLabel {
+  pointer-events: none;
+}
+
+.series {
+  color: var(--chart-series-color, currentcolor);
+}
+
+.line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+  vector-effect: non-scaling-stroke;
+}
+
+.seriesVariant1 .line {
+  stroke-dasharray: 8 5;
+}
+
+.seriesVariant2 .line {
+  stroke-dasharray: 2 4;
+}
+
+.seriesVariant3 .line {
+  stroke-dasharray: 12 4 2 4;
+}
+
+.seriesVariant0,
+.legendVariant0 {
+  isolation: isolate;
+}
+
+.area {
+  opacity: 0.15;
+}
+
+.point {
+  cursor: help;
+  stroke: var(--surface-bright, #fffdf8);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.point:hover {
+  r: 5.5px;
+}
+
+.barGroup {
+  color: var(--chart-series-color, currentcolor);
+}
+
+.bar {
+  cursor: help;
+  opacity: 0.88;
+  transition: opacity 140ms ease;
+}
+
+.bar:hover {
+  opacity: 1;
+}
+
+.barLabel {
+  fill: var(--ink-soft, #3c4a44);
+  font-family: var(--body, sans-serif);
+  font-size: 11px;
+  font-weight: 680;
+}
+
+.barValue {
+  fill: var(--ink-soft, #3c4a44);
+  font-size: 10px;
+}
+
+.leftBar,
+.rightBar {
+  opacity: 0.88;
+}
+
+.lineChart,
+.areaChart,
+.horizontalBars,
+.divergingBars {
+  isolation: isolate;
+}
+
+@media (max-width: 42rem) {
+  .svg {
+    min-width: 42rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    transition: none;
+  }
+}

@@ -1,0 +1,5 @@
+.root {
+  font-family: var(--mono, "SFMono-Regular", "Cascadia Code", monospace);
+  font-variant-numeric: tabular-nums slashed-zero;
+  white-space: nowrap;
+}

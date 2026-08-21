@@ -1,0 +1,57 @@
+@layer components {
+  .root {
+    display: grid;
+    min-height: 100dvh;
+    padding: 2rem;
+    place-items: center;
+  }
+
+  .content {
+    display: grid;
+    width: min(34rem, 100%);
+    gap: 0.8rem;
+    justify-items: start;
+    padding: clamp(1.5rem, 5vw, 3.5rem);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+  }
+
+  .eyebrow {
+    color: var(--expense);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    font-weight: 760;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .title {
+    font-family: var(--display);
+    font-size: clamp(2rem, 8vw, 3.5rem);
+    font-weight: 560;
+    letter-spacing: -0.045em;
+    line-height: 1;
+  }
+
+  .description {
+    max-width: 28rem;
+    color: var(--muted);
+    font-size: 0.86rem;
+  }
+
+  .link {
+    display: inline-flex;
+    min-height: 2.7rem;
+    align-items: center;
+    margin-top: 0.55rem;
+    padding: 0.65rem 0.95rem;
+    color: var(--accent-ink);
+    background: var(--accent);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 760;
+    text-decoration: none;
+  }
+}

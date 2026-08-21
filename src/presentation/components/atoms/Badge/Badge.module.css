@@ -1,0 +1,49 @@
+.root {
+  display: inline-flex;
+  gap: 0.28rem;
+  align-items: center;
+  width: fit-content;
+  min-height: 1.45rem;
+  padding: 0.22rem 0.5rem;
+  color: var(--badge-ink, var(--ink-soft, #3c4a44));
+  background: var(--badge-surface, var(--paper-deep, #e3dfd3));
+  border: 1px solid color-mix(in srgb, var(--badge-ink, #3c4a44) 14%, transparent);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 750;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.neutral {
+  --badge-ink: var(--ink-soft, #3c4a44);
+  --badge-surface: var(--paper-deep, #e3dfd3);
+}
+
+.positive,
+.cash {
+  --badge-ink: var(--income, #286a4c);
+  --badge-surface: var(--income-soft, #dcebdd);
+}
+
+.negative {
+  --badge-ink: var(--expense, #a33f36);
+  --badge-surface: var(--expense-soft, #f2ded8);
+}
+
+.warning,
+.debt {
+  --badge-ink: #815218;
+  --badge-surface: var(--debt-soft, #f0e2c9);
+}
+
+.info {
+  --badge-ink: var(--transfer, #35698b);
+  --badge-surface: var(--transfer-soft, #d9e7ef);
+}
+
+.accent {
+  --badge-ink: var(--accent-ink, #22330e);
+  --badge-surface: var(--accent, #c5da72);
+}

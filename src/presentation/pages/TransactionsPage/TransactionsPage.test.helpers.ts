@@ -1,0 +1,28 @@
+import type { NormalizedPosting } from "../../../domain/analytics/types.ts";
+
+export const TRANSACTION_POSTING_FIXTURE: NormalizedPosting = {
+  accountId: "cash",
+  accountLabel: "Cuenta diaria",
+  accountType: "DEFAULT",
+  amountEurMinor: -1_250,
+  amountNativeMinor: -1_250,
+  bucket: "expense",
+  categoryPath: ["Gastos", "Comida"],
+  categoryType: "EXPENSE",
+  comment: "Menú del día",
+  currency: "EUR",
+  date: "2026-08-20",
+  exchangeRateSource: "identity",
+  exchangeRateToEur: 1,
+  id: "cash:meal",
+  isVoid: false,
+  linked: false,
+  payee: "Restaurante",
+  searchIndex: "restaurante menú del día",
+  sourceTransactionId: "meal",
+  splitCount: null,
+  splitIndex: null,
+  status: "RECONCILED",
+  tags: ["Trabajo"],
+  transactionId: "meal",
+};

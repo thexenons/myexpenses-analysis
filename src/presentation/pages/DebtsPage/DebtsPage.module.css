@@ -1,0 +1,98 @@
+.chartPanel {
+  min-height: 26rem;
+}
+
+.debtSummary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: end;
+  padding: 1.2rem;
+  color: #f7f3e7;
+  background:
+    radial-gradient(circle at 90% 0%, rgb(197 218 114 / 17%), transparent 18rem),
+    var(--surface-ink);
+  border-radius: var(--radius-lg);
+}
+
+.debtSummaryLabel {
+  color: rgb(247 243 231 / 58%);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.debtSummaryValue {
+  margin-top: 0.25rem;
+  font-family: var(--display);
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.accountGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.accountCard {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem;
+  color: var(--ink);
+  background: var(--surface-bright);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-small);
+  text-align: left;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 170px;
+}
+
+.accountHeader {
+  display: flex;
+  gap: 0.8rem;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.accountName {
+  font-family: var(--display);
+  font-size: 1rem;
+}
+
+.accountMeta {
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.accountBalance {
+  font-family: var(--display);
+  font-size: 1.55rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+}
+
+.accountFooter {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 1180px) {
+  .accountGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .accountGrid,
+  .debtSummary {
+    grid-template-columns: 1fr;
+  }
+}

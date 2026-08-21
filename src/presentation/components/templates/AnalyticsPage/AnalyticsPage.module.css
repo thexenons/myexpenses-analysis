@@ -1,0 +1,75 @@
+.page {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 100rem);
+  margin-inline: auto;
+  padding: 1.25rem clamp(0.8rem, 3vw, 2.75rem) 3rem;
+  animation: pageEnter 380ms cubic-bezier(0.2, 0.72, 0.2, 1) both;
+}
+
+.intro {
+  display: flex;
+  gap: 2rem;
+  align-items: end;
+  justify-content: space-between;
+  min-height: 5.6rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.heading {
+  display: grid;
+  gap: 0.16rem;
+}
+
+.eyebrow {
+  color: var(--muted);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.title {
+  font-family: var(--display);
+  font-size: clamp(2rem, 4vw, 3.6rem);
+  font-weight: 520;
+  line-height: 0.98;
+  letter-spacing: -0.048em;
+}
+
+.description {
+  max-width: 48rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.introMeta {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.notice {
+  color: var(--transfer);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding: 0.8rem 0.7rem 1.8rem;
+  }
+
+  .intro {
+    display: grid;
+    gap: 0.4rem;
+  }
+}

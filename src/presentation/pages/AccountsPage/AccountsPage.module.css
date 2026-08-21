@@ -1,0 +1,81 @@
+.chartPanel {
+  min-height: 26rem;
+}
+
+.accountGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.accountCard {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem;
+  color: var(--ink);
+  background: var(--surface-bright);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-small);
+  content-visibility: auto;
+  contain-intrinsic-size: 0 170px;
+}
+
+.accountActions {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: start;
+  padding-top: 0.15rem;
+}
+
+.accountHeader {
+  display: flex;
+  gap: 0.8rem;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.accountName {
+  font-family: var(--display);
+  font-size: 1rem;
+}
+
+.accountMeta {
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.accountBalance {
+  font-family: var(--display);
+  font-size: 1.55rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+}
+
+.accountFooter {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 1180px) {
+  .accountGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .accountGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 440px) {
+  .accountActions {
+    grid-template-columns: 1fr;
+  }
+}

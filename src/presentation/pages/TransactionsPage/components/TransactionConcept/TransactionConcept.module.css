@@ -1,0 +1,22 @@
+.main {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 12rem;
+}
+
+.title {
+  overflow: hidden;
+  max-width: 28rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note {
+  overflow: hidden;
+  max-width: 28rem;
+  color: var(--muted);
+  font-size: 0.6rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

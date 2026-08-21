@@ -1,0 +1,17 @@
+.numeric {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.positive {
+  color: var(--income);
+}
+
+.negative {
+  color: var(--expense);
+}
+
+.neutral {
+  color: var(--ink-soft);
+}

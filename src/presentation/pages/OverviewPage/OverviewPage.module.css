@@ -1,0 +1,120 @@
+.chartPanel {
+  min-height: 26rem;
+}
+
+.statsStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.stat {
+  padding: 0.8rem 0.9rem;
+  background: rgb(250 248 242 / 72%);
+  border-right: 1px solid var(--line);
+}
+
+.stat:last-child {
+  border-right: 0;
+}
+
+.statLabel {
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.statValue {
+  display: block;
+  margin-top: 0.15rem;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+}
+
+.statContext {
+  display: block;
+  margin-top: 0.16rem;
+  color: var(--muted);
+  font-size: 0.52rem;
+}
+
+.rankList {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.rankRow {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1fr) minmax(6rem, 1.35fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+  font-size: 0.7rem;
+}
+
+.rankLabel {
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rankTrack {
+  height: 0.42rem;
+  overflow: hidden;
+  background: var(--paper-deep);
+  border-radius: 999px;
+}
+
+.rankFill {
+  width: var(--bar-width, 0%);
+  height: 100%;
+  background: var(--bar-color, var(--expense));
+  border-radius: inherit;
+}
+
+.rankValue {
+  min-width: 5.8rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  text-align: right;
+}
+
+.compositionList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.compositionRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.8rem;
+  align-items: center;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.compositionRow:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.compositionLabel {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.compositionValue {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .rankRow {
+    grid-template-columns: minmax(6rem, 1fr) minmax(4rem, 0.7fr) auto;
+  }
+}

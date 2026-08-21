@@ -1,0 +1,42 @@
+.root {
+  display: grid;
+  min-height: 15rem;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  place-content: center;
+  justify-items: center;
+  color: var(--muted, #5f6863);
+  text-align: center;
+}
+
+.icon {
+  display: grid;
+  width: 3.25rem;
+  height: 3.25rem;
+  place-items: center;
+  color: var(--ink-soft, #3c4a44);
+  background: var(--paper-deep, #e3dfd3);
+  border: 1px solid var(--line, #cec9bb);
+  border-radius: 50% 50% 50% 0.75rem;
+}
+
+.title {
+  margin: 0.85rem 0 0;
+  color: var(--ink, #16231e);
+  font-family: var(--display, Georgia, serif);
+  font-size: 1.25rem;
+  font-weight: 620;
+}
+
+.description {
+  max-width: 27rem;
+  margin: 0.32rem 0 0;
+  font-size: 0.76rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 1rem;
+}

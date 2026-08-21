@@ -1,0 +1,121 @@
+@layer components {
+  .fieldset {
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    border: 0;
+  }
+
+  .legend {
+    padding: 0;
+    margin: 0 0 0.35rem;
+    color: var(--ink-soft);
+    font-size: 0.67rem;
+    font-weight: 760;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .visuallyHidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .options {
+    display: inline-grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    gap: 0.16rem;
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.2rem;
+    background: var(--paper-deep);
+    border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+    border-radius: 999px;
+  }
+
+  .option {
+    position: relative;
+    display: grid;
+    min-width: 0;
+    cursor: pointer;
+    place-items: center;
+  }
+
+  .input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+
+  .label {
+    display: grid;
+    width: 100%;
+    min-width: 2.7rem;
+    min-height: 2.2rem;
+    padding: 0.45rem 0.68rem;
+    color: var(--muted);
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 760;
+    line-height: 1.15;
+    text-align: center;
+    white-space: nowrap;
+    place-items: center;
+    transition:
+      color 150ms ease,
+      background-color 150ms ease,
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+
+  .input:checked + .label {
+    color: var(--surface-ink);
+    background: var(--surface-bright);
+    border-color: rgb(156 165 159 / 42%);
+    box-shadow: 0 0.2rem 0.65rem rgb(23 37 31 / 8%);
+  }
+
+  .input:focus-visible + .label {
+    outline: 3px solid currentcolor;
+    outline-offset: 2px;
+  }
+
+  .input:disabled + .label {
+    cursor: not-allowed;
+    opacity: 0.46;
+  }
+
+  .option:hover .input:not(:checked, :disabled) + .label {
+    color: var(--ink-soft);
+  }
+
+  .shortLabel {
+    display: none;
+  }
+}
+
+@media (width <= 34rem) {
+  .shortLabel {
+    display: inline;
+  }
+
+  .option:has(.shortLabel) .longLabel {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .label {
+    transition: none;
+  }
+}
