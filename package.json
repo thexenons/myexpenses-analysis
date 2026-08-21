@@ -9,8 +9,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "scripts:parse-export": "tsx scripts/parse-export/index.ts",
-    "scripts:statistics": "tsx scripts/statistics/index.ts",
-    "type-check": "tsc --noEmit"
+    "scripts:statistics": "tsx scripts/statistics/cli.ts",
+    "test": "tsx --test scripts/**/*.test.ts",
+    "type-check": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.app.json --noEmit"
   },
   "dependencies": {
     "react": "19.2.8",

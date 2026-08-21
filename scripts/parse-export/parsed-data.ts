@@ -1,64 +1,130 @@
-import { join } from "node:path";
-import type { ExportData, ParsedAccount, ParsedData } from "../types.ts";
-import { readFile, writeFile } from "node:fs/promises";
+import type {
+    DefaultExportTransaction,
+    ExportData,
+    ParsedAccount,
+    ParsedData,
+    ParsedDirectTransaction,
+    ParsedParentTransactionContext,
+    ParsedSplitTransaction,
+    ParsedTransaction,
+    SplitExportTransaction,
+    SplitExportTransactionDefaultSplit,
+} from "../types.ts";
+import {
+    PARSED_DATA_FILE_PATH,
+    writeJsonAtomically,
+} from "../files.ts";
+import { parseExportDate } from "./validation.ts";
 
-const rootPath = process.cwd();
-const dataPath = join(rootPath, "data");
-const parsedDataFilePath = join(dataPath, "parsed-data.json");
-
-export async function getParsedData(): Promise<ParsedData> {
-    const parsedData = JSON.parse(await readFile(parsedDataFilePath, "utf-8"));
-    return parsedData;
+interface OptionalTransactionFields {
+    comment?: string;
+    tags?: string[];
+    payee?: string;
 }
 
-export async function updateParsedData(
-    exportData: ExportData,
-): Promise<ParsedData> {
-    let parsedData: ParsedData = [];
+function getOptionalFields(
+    primary: {
+        comment?: string;
+        tags?: string[];
+        payee?: string;
+    },
+    fallback?: {
+        comment?: string;
+        tags?: string[];
+        payee?: string;
+    },
+): OptionalTransactionFields {
+    const comment = primary.comment ?? fallback?.comment;
+    const tags = primary.tags ?? fallback?.tags;
+    const payee = primary.payee ?? fallback?.payee;
+    return {
+        ...(comment === undefined ? {} : { comment }),
+        ...(tags === undefined ? {} : { tags: [...tags] }),
+        ...(payee === undefined ? {} : { payee }),
+    };
+}
 
-    for (const exportAccount of exportData) {
-        const { transactions: exportTransactions, ...rest } = exportAccount;
+function parseDirectTransaction(
+    transaction: DefaultExportTransaction,
+): ParsedDirectTransaction {
+    return {
+        uuid: transaction.uuid,
+        date: parseExportDate(transaction.date),
+        amount: transaction.amount,
+        category: [...transaction.category],
+        ...getOptionalFields(transaction),
+        ...(transaction.transferAccount === undefined
+            ? {}
+            : { transferAccount: transaction.transferAccount }),
+        sourceTransactionUuid: transaction.uuid,
+        sourceStatus: transaction.status,
+        splitIndex: null,
+        splitCount: null,
+    };
+}
 
-        let parsedAccount: ParsedAccount = {
-            ...rest,
-            transactions: [],
-        };
-        let newTransactionsCount = 0;
-        let deletedTransactionsCount = 0;
-        for (const exportTransaction of exportTransactions) {
-            if (exportTransaction.status === "VOID") {
-                deletedTransactionsCount++;
+function parseParentContext(
+    transaction: SplitExportTransaction,
+): ParsedParentTransactionContext {
+    return {
+        date: parseExportDate(transaction.date),
+        amount: transaction.amount,
+        ...getOptionalFields(transaction),
+    };
+}
+
+function parseSplitTransaction(
+    parent: SplitExportTransaction,
+    split: SplitExportTransactionDefaultSplit,
+    splitIndex: number,
+): ParsedSplitTransaction {
+    return {
+        uuid: split.uuid,
+        date: parseExportDate(split.date),
+        amount: split.amount,
+        category: [...split.category],
+        ...getOptionalFields(split, parent),
+        ...(split.transferAccount === undefined
+            ? {}
+            : { transferAccount: split.transferAccount }),
+        sourceTransactionUuid: parent.uuid,
+        sourceStatus: parent.status,
+        splitIndex,
+        splitCount: parent.splits.length,
+        parent: parseParentContext(parent),
+    };
+}
+
+/** Pure transformation from validated export accounts to auditable postings. */
+export function parseExportData(exportData: ExportData): ParsedData {
+    return exportData.map<ParsedAccount>((exportAccount) => {
+        const transactions: ParsedTransaction[] = [];
+        for (const transaction of exportAccount.transactions) {
+            if (!("splits" in transaction)) {
+                transactions.push(parseDirectTransaction(transaction));
                 continue;
             }
-            if (!("splits" in exportTransaction)) {
-                const { status: _status, ...parsedTransaction } = exportTransaction;
-                parsedAccount.transactions.push(parsedTransaction);
-                continue;
-            }
 
-            const {
-                splits: exportSplits,
-                status: _status,
-                ...parsedTransaction
-            } = exportTransaction;
-            newTransactionsCount--;
-            for (const split of exportSplits) {
-                newTransactionsCount++;
-                parsedAccount.transactions.push({
-                    ...parsedTransaction,
-                    ...split,
-                });
+            for (const [splitIndex, split] of transaction.splits.entries()) {
+                transactions.push(
+                    parseSplitTransaction(transaction, split, splitIndex),
+                );
             }
         }
 
-        parsedData.push(parsedAccount);
-    }
+        return {
+            uuid: exportAccount.uuid,
+            label: exportAccount.label,
+            currency: exportAccount.currency,
+            openingBalance: exportAccount.openingBalance,
+            transactions,
+        };
+    });
+}
 
-    await writeFile(
-        parsedDataFilePath,
-        JSON.stringify(parsedData, null, 2),
-        "utf-8",
-    );
-
-    return parsedData;
+export async function saveParsedData(
+    parsedData: ParsedData,
+    filePath = PARSED_DATA_FILE_PATH,
+): Promise<void> {
+    await writeJsonAtomically(filePath, parsedData);
 }

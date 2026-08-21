@@ -1,34 +1,46 @@
-# React + TypeScript + Vite
+# My Expenses Analysis
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Herramientas TypeScript para validar un export de My Expenses y generar
+estadísticas compatibles con la aplicación, junto con vistas adicionales de
+deudas y flujo real.
 
-Currently, two official plugins are available:
+## Flujo de datos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+`data/export.ts` es la fuente canónica. El export JSON más reciente se conserva
+como referencia y un test exige que ambos sean semánticamente idénticos.
 
-## React Compiler
-
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
-
-Note: This will impact Vite dev & build performances.
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+pnpm install
+pnpm scripts:parse-export
+pnpm scripts:statistics
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+El primer comando valida el export y genera:
+
+- `data/accounts.json`: registro por UUID; contiene tipos `DEBT` y configuración
+  manual de moneda;
+- `data/categories.json`: árbol y tipos de categoría;
+- `data/parsed-data.json`: apuntes normalizados con procedencia de splits y
+  estados.
+
+El segundo genera `data/statistics.json`. Si existe alguna cuenta dinámica, su
+caché histórica de Frankfurter v1 se crea de forma perezosa en
+`data/exchange-rates.json`.
+
+No se deben editar manualmente los artefactos generados salvo
+`data/accounts.json`, que completa información que My Expenses no exporta.
+
+## Verificación
+
+```sh
+pnpm test
+pnpm type-check
+pnpm lint
+pnpm build
+```
+
+La interfaz React de desarrollo se inicia con `pnpm dev`.
+
+Consulta [el contrato de estadísticas](docs/statistics.md) para las reglas de
+clasificación, conversión de moneda, significado de cada vista, limitaciones y
+cifras de referencia actuales.

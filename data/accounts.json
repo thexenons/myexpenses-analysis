@@ -1,37 +1,165 @@
 {
-  "Joanna": "DEBT",
-  "Trade Republic": "DEFAULT",
-  "Trade Republic Acciones": "DEFAULT",
-  "Mediolanum Nómina": "DEFAULT",
-  "Billetera": "DEFAULT",
-  "Mediolanum Crédito": "DEFAULT",
-  "Revolut": "DEFAULT",
-  "BBVA": "DEFAULT",
-  "Bogdan": "DEBT",
-  "October": "DEFAULT",
-  "Mediolanum Ahorro": "DEFAULT",
-  "Oscar": "DEBT",
-  "Emi": "DEBT",
-  "Robert": "DEBT",
-  "Garcia": "DEBT",
-  "Aitana": "DEBT",
-  "Natalia": "DEBT",
-  "Rut": "DEBT",
-  "Alfredo (WBO)": "DEBT",
-  "Dani (WBO)": "DEBT",
-  "Víctor (WBO)": "DEBT",
-  "Alba": "DEBT",
-  "Néstor (WBO)": "DEBT",
-  "Juan Estrada": "DEBT",
-  "Arturo Letieri": "DEBT",
-  "Djamel": "DEBT",
-  "Vanessa": "DEBT",
-  "Revolut Ahorro": "DEFAULT",
-  "Revolut Ahorro (GBP)": "DEFAULT",
-  "Revolut Acciones": "DEFAULT",
-  "Mediolanum Double Chance": "DEFAULT",
-  "Revolut Ahorro (USD)": "DEFAULT",
-  "Mediolanum Compromiso L": "DEFAULT",
-  "Mediolanum Renta Variable Global L": "DEFAULT",
-  "Revolut Roboadvisor": "DEFAULT"
+  "version": 2,
+  "accounts": {
+    "5efd95d8-2f31-4af4-910d-3bff4ba7320c": {
+      "label": "Joanna",
+      "type": "DEBT"
+    },
+    "e16a365b-435c-4587-a96b-aad09ea3e6fc": {
+      "label": "Trade Republic",
+      "type": "DEFAULT"
+    },
+    "384b82de-57fd-4cf2-9893-878b9e16b26c": {
+      "label": "Trade Republic Acciones",
+      "type": "DEFAULT"
+    },
+    "510eff2b-3a9f-4c0b-9a2e-5dafbe322231": {
+      "label": "Mediolanum Nómina",
+      "type": "DEFAULT"
+    },
+    "294595fb-2342-4344-9aed-9c38b8a80aa1": {
+      "label": "Billetera",
+      "type": "DEFAULT"
+    },
+    "ae580de7-f43f-4119-8cdf-c44bb1026b20": {
+      "label": "Mediolanum Crédito",
+      "type": "DEFAULT"
+    },
+    "f6cc1ecf-4518-47c3-9c13-7d6654ada930": {
+      "label": "Revolut",
+      "type": "DEFAULT"
+    },
+    "81822665-2864-416b-9860-8aefae095774": {
+      "label": "BBVA",
+      "type": "DEFAULT"
+    },
+    "0ddec4da-6319-4a90-9b5f-13e8452d52d8": {
+      "label": "Bogdan",
+      "type": "DEBT"
+    },
+    "87416a64-dbbd-4de4-a031-6af4fd7622d6": {
+      "label": "October",
+      "type": "DEFAULT"
+    },
+    "93fc9aec-50d9-4544-a7bb-55c0b1f6f114": {
+      "label": "Mediolanum Ahorro",
+      "type": "DEFAULT"
+    },
+    "4c76ce08-bc69-4c15-9420-3c5b8d1848b6": {
+      "label": "Oscar",
+      "type": "DEBT"
+    },
+    "7095941e-fa5c-44df-b854-00020232b731": {
+      "label": "Emi",
+      "type": "DEBT"
+    },
+    "428546f9-a762-4f05-b14c-29c712de7175": {
+      "label": "Robert",
+      "type": "DEBT"
+    },
+    "af9adde8-7a14-4a78-a1e2-2ecbc1d1e5af": {
+      "label": "Garcia",
+      "type": "DEBT"
+    },
+    "8db96f81-a517-4897-804b-95607e102e27": {
+      "label": "Aitana",
+      "type": "DEBT"
+    },
+    "faf2dd8c-1a30-4fd9-8c31-c8dd93a5ae02": {
+      "label": "Natalia",
+      "type": "DEBT"
+    },
+    "cfbbdf2b-d3d8-406a-a6b5-6b1e322cd4be": {
+      "label": "Rut",
+      "type": "DEBT"
+    },
+    "fc73d3a9-8a87-403e-b47f-9bfed8fbb906": {
+      "label": "Alfredo (WBO)",
+      "type": "DEBT"
+    },
+    "0bc662dc-5a43-4336-b822-798bc0a935a8": {
+      "label": "Dani (WBO)",
+      "type": "DEBT"
+    },
+    "89e99849-1862-4e78-b645-7ed72757e5a3": {
+      "label": "Víctor (WBO)",
+      "type": "DEBT"
+    },
+    "1f2ab92a-730b-4ad3-9efa-5c22fdcb073c": {
+      "label": "Alba",
+      "type": "DEBT"
+    },
+    "2818c241-d022-42a6-8e8f-ece025494f70": {
+      "label": "Néstor (WBO)",
+      "type": "DEBT"
+    },
+    "bc81d418-f49c-4c69-979d-56caa4368127": {
+      "label": "Juan Estrada",
+      "type": "DEBT"
+    },
+    "6fa06614-77c1-4e73-8edd-8355fc6440a5": {
+      "label": "Arturo Letieri",
+      "type": "DEBT"
+    },
+    "c1b7a8da-55ac-4e23-bbd0-3821cce36f8b": {
+      "label": "Djamel",
+      "type": "DEBT"
+    },
+    "7671beb3-ab55-4934-8df8-833a30a129e9": {
+      "label": "Vanessa",
+      "type": "DEBT"
+    },
+    "9ab05213-51ab-4b97-bf4a-2b0aa7e9b92b": {
+      "label": "Revolut Ahorro",
+      "type": "DEFAULT"
+    },
+    "b14101dc-8244-4b5d-93a3-4dfa418679b4": {
+      "exchangeRateMode": "STATIC",
+      "exchangeRateToEur": 1.170923624555049,
+      "label": "Revolut Ahorro (GBP)",
+      "type": "DEFAULT"
+    },
+    "ee32e38f-f1a7-422b-a70e-e6a735b0de9a": {
+      "label": "Revolut Acciones",
+      "type": "DEFAULT"
+    },
+    "bffa649b-5648-4c00-8489-965f3f3105fc": {
+      "label": "Mediolanum Double Chance",
+      "type": "DEFAULT"
+    },
+    "0e6f68dc-0a8f-4225-bea8-ca12482e06ea": {
+      "exchangeRateMode": "STATIC",
+      "exchangeRateToEur": 0.9193317071376914,
+      "label": "Revolut Ahorro (USD)",
+      "type": "DEFAULT"
+    },
+    "3daf6bfe-d749-40ae-93b5-6b46e513f924": {
+      "label": "Mediolanum Compromiso L",
+      "type": "DEFAULT"
+    },
+    "611eca45-bd70-432b-b406-96189a05ac4d": {
+      "label": "Mediolanum Renta Variable Global L",
+      "type": "DEFAULT"
+    },
+    "f637994b-4692-4f66-96ba-bb3a2430c2de": {
+      "label": "Revolut Roboadvisor",
+      "type": "DEFAULT"
+    },
+    "1ae99e34-fed6-4836-86a9-2d5733267c58": {
+      "label": "Mike",
+      "type": "DEBT"
+    },
+    "ebf2e1fb-fa44-40e3-a21f-01e5add879cb": {
+      "label": "Gabi",
+      "type": "DEBT"
+    },
+    "413cf24d-8831-40f1-9241-82e8900b9631": {
+      "label": "Sara",
+      "type": "DEBT"
+    },
+    "812159aa-c6de-43ac-a213-6e68f3d0b112": {
+      "label": "Alex (Alba)",
+      "type": "DEBT"
+    }
+  }
 }

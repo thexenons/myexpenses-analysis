@@ -1,51 +1,64 @@
-import { join } from "node:path";
-import type { CategoriesRegistry, ParsedData } from "../types.ts";
-import { readFile, writeFile } from "node:fs/promises";
+import type {
+    CategoriesRegistry,
+    CategoryType,
+    ParsedData,
+} from "../types.ts";
+import {
+    CATEGORIES_REGISTRY_FILE_PATH,
+    writeJsonAtomically,
+} from "../files.ts";
 
-const rootPath = process.cwd();
-const dataPath = join(rootPath, "data");
-const categoriesRegistryFilePath = join(dataPath, "categories.json");
-
-export async function getCategoriesRegistry(): Promise<CategoriesRegistry> {
-    return JSON.parse(await readFile(categoriesRegistryFilePath, "utf-8"));
+function createRegistry(): CategoriesRegistry {
+    return Object.create(null) as CategoriesRegistry;
 }
 
-export async function updateCategoriesRegistry(
-    data: ParsedData,
-): Promise<CategoriesRegistry> {
-    let categoriesRegistry: CategoriesRegistry = {};
+function categoryTypeForRoot(category: string): CategoryType {
+    if (category === "Transferencia") {
+        return "TRANSFER";
+    }
+    if (category === "Gastos") {
+        return "EXPENSE";
+    }
+    if (category === "Ingresos") {
+        return "INCOME";
+    }
+    return "NEUTRAL";
+}
 
-    for (const exportAccount of data) {
-        for (const transaction of exportAccount.transactions) {
-            let parentCategory: CategoriesRegistry | undefined = categoriesRegistry;
-            let categoryType: 'EXPENSE' | 'INCOME' | 'TRANSFER' | 'NEUTRAL' = 'NEUTRAL';
+/** Pure derivation that never uses externally controlled keys on prototypes. */
+export function buildCategoriesRegistry(data: ParsedData): CategoriesRegistry {
+    const categoriesRegistry = createRegistry();
+
+    for (const account of data) {
+        for (const transaction of account.transactions) {
+            let parentRegistry = categoriesRegistry;
+            const rootCategory = transaction.category[0];
+            if (rootCategory === undefined) {
+                throw new Error(`Transaction ${transaction.uuid} has no category`);
+            }
+            const categoryType = categoryTypeForRoot(rootCategory);
             for (const [index, category] of transaction.category.entries()) {
-                if (categoryType === 'NEUTRAL') {
-                    if (category === 'Transferencia') {
-                        categoryType = 'TRANSFER';
-                    } else if (category === 'Gastos') {
-                        categoryType = 'EXPENSE';
-                    } else if (category === 'Ingresos') {
-                        categoryType = 'INCOME';
+                if (!Object.hasOwn(parentRegistry, category)) {
+                    parentRegistry[category] = { categoryType };
+                }
+                if (index < transaction.category.length - 1) {
+                    const entry = parentRegistry[category];
+                    if (entry === undefined) {
+                        throw new Error("Category entry disappeared during construction");
                     }
-                }
-                if (!parentCategory[category]) {
-                    parentCategory[category] = {
-                        categoryType,
-                    };
-                }
-                if (index !== transaction.category.length - 1) {
-                    parentCategory = parentCategory[category].children ??= {};
+                    entry.children ??= createRegistry();
+                    parentRegistry = entry.children;
                 }
             }
         }
     }
 
-    await writeFile(
-        categoriesRegistryFilePath,
-        JSON.stringify(categoriesRegistry, null, 2),
-        "utf-8",
-    );
-
     return categoriesRegistry;
+}
+
+export async function saveCategoriesRegistry(
+    categoriesRegistry: CategoriesRegistry,
+    filePath = CATEGORIES_REGISTRY_FILE_PATH,
+): Promise<void> {
+    await writeJsonAtomically(filePath, categoriesRegistry);
 }
