@@ -33,7 +33,7 @@
 
   .eyebrow {
     color: var(--muted);
-    font-size: 0.57rem;
+    font-size: 0.68rem;
     font-weight: 780;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -54,7 +54,7 @@
     min-height: 2.75rem;
     padding: 0.35rem 0.68rem;
     background: var(--surface-bright);
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-dark);
     border-radius: 999px;
   }
 
@@ -69,7 +69,7 @@
 
   .dateRange label span {
     color: var(--muted);
-    font-size: 0.52rem;
+    font-size: 0.65rem;
     font-weight: 760;
     letter-spacing: 0.06em;
     line-height: 1;
@@ -111,7 +111,7 @@
     background: var(--surface-ink-raised);
     border-radius: 999px;
     font-family: var(--mono);
-    font-size: 0.62rem;
+    font-size: 0.68rem;
     place-items: center;
   }
 }
@@ -171,6 +171,6 @@
     min-width: 1.12rem;
     height: 1.12rem;
     border: 2px solid var(--paper);
-    font-size: 0.52rem;
+    font-size: 0.65rem;
   }
 }

@@ -48,6 +48,15 @@ export function createRouteTree() {
     path: "deudas",
   });
 
+  const budgetsRoute = createRoute({
+    component: lazyRouteComponent(
+      () => import("../pages/BudgetsPage/index.ts"),
+      "BudgetsPage",
+    ),
+    getParentRoute: () => rootRoute,
+    path: "presupuestos",
+  });
+
   const categoriesRoute = createRoute({
     component: lazyRouteComponent(
       () => import("../pages/CategoriesPage/index.ts"),
@@ -76,13 +85,24 @@ export function createRouteTree() {
     validateSearch: validateTransactionsSearch,
   });
 
+  const insightsRoute = createRoute({
+    component: lazyRouteComponent(
+      () => import("../pages/InsightsPage/index.ts"),
+      "InsightsPage",
+    ),
+    getParentRoute: () => rootRoute,
+    path: "patrones",
+  });
+
   return rootRoute.addChildren([
     indexRoute,
     overviewRoute,
     cashFlowRoute,
     debtsRoute,
+    budgetsRoute,
     categoriesRoute,
     accountsRoute,
+    insightsRoute,
     transactionsRoute,
   ]);
 }

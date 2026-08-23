@@ -1,3 +1,4 @@
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The generated SVG itself is the image and supplies title, description and an exact-data table. */
 import { cx, formatNumber } from "../../../utils/component.helpers.ts";
 import { ChartDataTable } from "../ChartDataTable/index.ts";
 import { ChartFrame } from "../ChartFrame/index.ts";

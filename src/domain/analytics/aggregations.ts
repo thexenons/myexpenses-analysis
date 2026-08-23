@@ -1,4 +1,9 @@
 import { metricPostings } from "./filters.ts";
+import {
+  addIsoDays,
+  monthPeriodForDate,
+  weekPeriodForDate,
+} from "./periods.ts";
 import type {
   AccountBreakdownItem,
   AmountSummary,
@@ -46,6 +51,16 @@ interface Period {
   readonly startDate: IsoDate;
   readonly endDate: IsoDate;
 }
+
+interface PeriodPreferences {
+  readonly monthStart: number;
+  readonly weekStart: number;
+}
+
+const DEFAULT_PERIOD_PREFERENCES: PeriodPreferences = {
+  monthStart: 1,
+  weekStart: 1,
+};
 
 interface MutableCategoryNode {
   readonly name: string;
@@ -138,7 +153,7 @@ function addPostingToSummary(
   }
 }
 
-export function summarizePostings(
+function summarizePostings(
   postings: readonly NormalizedPosting[],
 ): AmountSummary {
   const summary = createMutableSummary();
@@ -267,6 +282,7 @@ export function aggregateStatusCounts(
 ): StatusCounts {
   const result: Record<TransactionStatus, StatusSummary> = {
     UNRECONCILED: emptyStatusSummary(),
+    CLEARED: emptyStatusSummary(),
     RECONCILED: emptyStatusSummary(),
     VOID: emptyStatusSummary(),
   };
@@ -292,65 +308,20 @@ function parseDateParts(date: IsoDate): { year: number; month: number; day: numb
   };
 }
 
-function dateToEpoch(date: IsoDate): number {
-  const { year, month, day } = parseDateParts(date);
-  const value = new Date(0);
-  value.setUTCFullYear(year, month - 1, day);
-  value.setUTCHours(0, 0, 0, 0);
-  return value.getTime();
-}
-
-function epochToDate(epoch: number): IsoDate {
-  return new Date(epoch).toISOString().slice(0, 10) as IsoDate;
-}
-
-function addDays(date: IsoDate, days: number): IsoDate {
-  return epochToDate(dateToEpoch(date) + days * 86_400_000);
-}
-
-function monthEnd(year: number, month: number): IsoDate {
-  const firstNextMonth = new Date(0);
-  firstNextMonth.setUTCFullYear(year, month, 1);
-  firstNextMonth.setUTCHours(0, 0, 0, 0);
-  return epochToDate(firstNextMonth.getTime() - 86_400_000);
-}
-
-function isoWeekPeriod(date: IsoDate): Period {
-  const epoch = dateToEpoch(date);
-  const utcDay = new Date(epoch).getUTCDay();
-  const daysSinceMonday = (utcDay + 6) % 7;
-  const monday = epochToDate(epoch - daysSinceMonday * 86_400_000);
-  const thursday = new Date(dateToEpoch(monday) + 3 * 86_400_000);
-  const weekYear = thursday.getUTCFullYear();
-  const januaryFourth = new Date(0);
-  januaryFourth.setUTCFullYear(weekYear, 0, 4);
-  januaryFourth.setUTCHours(0, 0, 0, 0);
-  const januaryFourthDay = (januaryFourth.getUTCDay() + 6) % 7;
-  const firstMonday = januaryFourth.getTime() - januaryFourthDay * 86_400_000;
-  const weekNumber =
-    Math.floor((dateToEpoch(monday) - firstMonday) / (7 * 86_400_000)) + 1;
-  return {
-    key: `${weekYear}-W${String(weekNumber).padStart(2, "0")}`,
-    startDate: monday,
-    endDate: addDays(monday, 6),
-  };
-}
-
-function periodFor(date: IsoDate, granularity: TimeGranularity): Period {
+function periodFor(
+  date: IsoDate,
+  granularity: TimeGranularity,
+  preferences: PeriodPreferences,
+): Period {
   if (granularity === "day") {
     return { key: date, startDate: date, endDate: date };
   }
   if (granularity === "week") {
-    return isoWeekPeriod(date);
+    return weekPeriodForDate(date, preferences.weekStart);
   }
-  const { year, month } = parseDateParts(date);
+  const { year } = parseDateParts(date);
   if (granularity === "month") {
-    const key = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}`;
-    return {
-      key,
-      startDate: `${key}-01` as IsoDate,
-      endDate: monthEnd(year, month),
-    };
+    return monthPeriodForDate(date, preferences.monthStart);
   }
   const yearText = String(year).padStart(4, "0");
   return {
@@ -358,22 +329,6 @@ function periodFor(date: IsoDate, granularity: TimeGranularity): Period {
     startDate: `${yearText}-01-01` as IsoDate,
     endDate: `${yearText}-12-31` as IsoDate,
   };
-}
-
-function nextPeriodStart(period: Period, granularity: TimeGranularity): IsoDate {
-  if (granularity === "day") {
-    return addDays(period.startDate, 1);
-  }
-  if (granularity === "week") {
-    return addDays(period.startDate, 7);
-  }
-  const { year, month } = parseDateParts(period.startDate);
-  if (granularity === "month") {
-    const nextYear = month === 12 ? year + 1 : year;
-    const nextMonth = month === 12 ? 1 : month + 1;
-    return `${String(nextYear).padStart(4, "0")}-${String(nextMonth).padStart(2, "0")}-01` as IsoDate;
-  }
-  return `${String(year + 1).padStart(4, "0")}-01-01` as IsoDate;
 }
 
 function timePoint(period: Period, summary: MutableAmountSummary): TimeSeriesPoint {
@@ -395,10 +350,12 @@ export function aggregateTimeSeries(
   }
   const groups = new Map<string, { period: Period; summary: MutableAmountSummary }>();
   const periodByDate = new Map<IsoDate, Period>();
+  const preferences =
+    filtered.source.backup?.preferences ?? DEFAULT_PERIOD_PREFERENCES;
   for (const posting of metricPostings(filtered)) {
     let period = periodByDate.get(posting.date);
     if (period === undefined) {
-      period = periodFor(posting.date, granularity);
+      period = periodFor(posting.date, granularity, preferences);
       periodByDate.set(posting.date, period);
     }
     let group = groups.get(period.key);
@@ -421,12 +378,16 @@ export function aggregateTimeSeries(
     return [];
   }
   const points: TimeSeriesPoint[] = [];
-  let period = periodFor(firstDate, granularity);
-  const lastPeriod = periodFor(lastDate, granularity);
+  let period = periodFor(firstDate, granularity, preferences);
+  const lastPeriod = periodFor(lastDate, granularity, preferences);
   while (period.startDate <= lastPeriod.startDate) {
     const group = groups.get(period.key);
     points.push(timePoint(period, group?.summary ?? createMutableSummary()));
-    period = periodFor(nextPeriodStart(period, granularity), granularity);
+    period = periodFor(
+      addIsoDays(period.endDate, 1),
+      granularity,
+      preferences,
+    );
   }
   return points;
 }

@@ -5,12 +5,17 @@ import { afterEach, vi } from "vitest";
 
 afterEach(() => cleanup());
 
-configure({ asyncUtilTimeout: 3_000 });
+// Lazy route transforms are substantially slower under V8 coverage and on
+// constrained CI runners. Assertions still resolve immediately in normal runs.
+configure({ asyncUtilTimeout: 10_000 });
+
+// Mirror the production document shell from index.html for document-level a11y checks.
+document.documentElement.lang = "es";
 
 class ResizeObserverStub implements ResizeObserver {
-  readonly observe = vi.fn();
-  readonly unobserve = vi.fn();
-  readonly disconnect = vi.fn();
+  readonly observe = vi.fn<ResizeObserver["observe"]>();
+  readonly unobserve = vi.fn<ResizeObserver["unobserve"]>();
+  readonly disconnect = vi.fn<ResizeObserver["disconnect"]>();
 }
 
 Object.defineProperty(window, "ResizeObserver", {
@@ -24,15 +29,15 @@ Object.defineProperty(window, "matchMedia", {
     matches: false,
     media: query,
     onchange: null,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    dispatchEvent: vi.fn(),
+    addEventListener: vi.fn<MediaQueryList["addEventListener"]>(),
+    removeEventListener: vi.fn<MediaQueryList["removeEventListener"]>(),
+    addListener: vi.fn<MediaQueryList["addListener"]>(),
+    removeListener: vi.fn<MediaQueryList["removeListener"]>(),
+    dispatchEvent: vi.fn<MediaQueryList["dispatchEvent"]>(),
   }),
 });
 
 Object.defineProperty(window, "scrollTo", {
   configurable: true,
-  value: vi.fn(),
+  value: vi.fn<typeof window.scrollTo>(),
 });

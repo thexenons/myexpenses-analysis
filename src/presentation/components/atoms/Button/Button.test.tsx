@@ -5,7 +5,7 @@ import { expect, it, vi } from "vitest";
 import { Button } from "./Button.tsx";
 
 it("renders a safe button and forwards interaction", async () => {
-  const onClick = vi.fn();
+  const onClick = vi.fn<() => void>();
   const user = userEvent.setup();
   render(<Button onClick={onClick}>Aplicar</Button>);
 

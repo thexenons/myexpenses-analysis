@@ -5,4 +5,5 @@ export interface SidebarViewProps {
   currentPath: string
   maxDate: IsoDate | null
   minDate: IsoDate | null
+  onLock: () => void
 }

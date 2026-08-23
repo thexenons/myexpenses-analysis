@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { Badge } from "../../components/atoms/Badge/index.ts";
 import { Icon } from "../../components/atoms/Icon/index.ts";
 import { KpiCard } from "../../components/molecules/KpiCard/index.ts";
+import { EmptyState } from "../../components/molecules/EmptyState/index.ts";
 import { Panel } from "../../components/molecules/Panel/index.ts";
 import { AreaChart } from "../../components/organisms/AreaChart/index.ts";
 import { AnalyticsPage } from "../../components/templates/AnalyticsPage/index.ts";
@@ -126,7 +127,14 @@ export function OverviewPageView({
           description="Actividad neta por raíz"
           title="Categorías dominantes"
         >
-          <div className={styles.rankList}>
+          {topCategories.length === 0 ? (
+            <EmptyState
+              description="No hay actividad categorizada dentro del periodo y los filtros actuales."
+              icon={<Icon name="category" />}
+              title="Sin categorías dominantes"
+            />
+          ) : (
+            <div className={styles.rankList}>
             {topCategories.map(({ activityPercent, category }) => (
               <div className={styles.rankRow} key={category.id}>
                 <span className={styles.rankLabel}>{category.name}</span>
@@ -151,7 +159,8 @@ export function OverviewPageView({
                 </span>
               </div>
             ))}
-          </div>
+            </div>
+          )}
         </Panel>
       </AnalyticsPageGrid>
 
@@ -186,6 +195,12 @@ export function OverviewPageView({
               <span className={styles.compositionLabel}>Sin reconciliar</span>
               <Badge tone="warning">
                 {countFormatter.format(status.UNRECONCILED.count)}
+              </Badge>
+            </div>
+            <div className={styles.compositionRow}>
+              <span className={styles.compositionLabel}>Compensados</span>
+              <Badge tone="info">
+                {countFormatter.format(status.CLEARED.count)}
               </Badge>
             </div>
             <div className={styles.compositionRow}>

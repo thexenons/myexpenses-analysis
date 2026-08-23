@@ -2,6 +2,7 @@ import { Badge } from "../../components/atoms/Badge/index.ts";
 import { Button } from "../../components/atoms/Button/index.ts";
 import { Icon } from "../../components/atoms/Icon/index.ts";
 import { KpiCard } from "../../components/molecules/KpiCard/index.ts";
+import { EmptyState } from "../../components/molecules/EmptyState/index.ts";
 import { Panel } from "../../components/molecules/Panel/index.ts";
 import { HorizontalBarChart } from "../../components/organisms/HorizontalBarChart/index.ts";
 import { AnalyticsPage } from "../../components/templates/AnalyticsPage/index.ts";
@@ -15,6 +16,17 @@ import {
 } from "../../utils/format.ts";
 import styles from "./AccountsPage.module.css";
 import type { AccountsPageViewProps } from "./AccountsPage.types.ts";
+
+const EXCHANGE_MODE_LABELS = {
+  DYNAMIC: "Conversión dinámica",
+  IDENTITY: "Sin conversión",
+  STATIC: "Conversión estática",
+} as const;
+
+const ACCOUNT_SCOPE_LABELS = {
+  DEBT: "Deuda",
+  DEFAULT: "Operativa",
+} as const;
 
 export function AccountsPageView({
   accountBars,
@@ -76,7 +88,14 @@ export function AccountsPageView({
         description="Selecciona una cuenta para convertirla en filtro global"
         title="Inventario de cuentas"
       >
-        <div className={styles.accountGrid}>
+        {accounts.length === 0 ? (
+          <EmptyState
+            description="Amplía el periodo o revisa los filtros globales de cuentas."
+            icon={<Icon name="bank" />}
+            title="No hay cuentas en este ámbito"
+          />
+        ) : (
+          <div className={styles.accountGrid}>
           {accounts.map((item) => (
             <article
               aria-label={`Cuenta ${item.account.label}`}
@@ -87,11 +106,11 @@ export function AccountsPageView({
                 <div>
                   <h3 className={styles.accountName}>{item.account.label}</h3>
                   <p className={styles.accountMeta}>
-                    {item.account.currency} · {item.account.exchangeRateMode}
+                    {item.account.currency} · {EXCHANGE_MODE_LABELS[item.account.exchangeRateMode]}
                   </p>
                 </div>
                 <Badge tone={item.account.type === "DEBT" ? "debt" : "cash"}>
-                  {item.account.type}
+                  {ACCOUNT_SCOPE_LABELS[item.account.type]}
                 </Badge>
               </div>
               <strong className={styles.accountBalance}>
@@ -122,7 +141,8 @@ export function AccountsPageView({
               </div>
             </article>
           ))}
-        </div>
+          </div>
+        )}
       </Panel>
     </AnalyticsPage>
   );

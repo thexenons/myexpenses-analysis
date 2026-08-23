@@ -7,9 +7,13 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { appStore } from "../../composition/app-store.ts";
+import { INSECURE_CONTEXT_MESSAGE } from "../../application/store/app-store/app-store.helpers.ts";
 import { AppStoreProvider } from "../providers/AppStoreProvider/index.ts";
 import { createAppRouter } from "../router/app-router.ts";
-import { installAppFetchMock } from "./App.test.helpers.ts";
+import {
+  APP_TEST_PASSPHRASE,
+  installAppFetchMock,
+} from "./App.test.helpers.ts";
 
 function renderAppAt(pathname = "/resumen") {
   const history = createMemoryHistory({ initialEntries: [pathname] });
@@ -29,15 +33,23 @@ async function waitForRouterReady(
   router: ReturnType<typeof createAppRouter>,
   pathname?: string,
 ) {
+  const expectedPathname = pathname ?? router.state.location.pathname;
   await waitFor(
     () => {
-      if (pathname !== undefined) {
-        expect(router.state.location.pathname).toBe(pathname);
-      }
+      expect(router.state.location.pathname).toBe(expectedPathname);
       expect(router.state.matches.at(-1)?.status).toBe("success");
     },
     { timeout: 3_000 },
   );
+}
+
+async function unlockApp(
+  user: ReturnType<typeof userEvent.setup>,
+  passphrase = APP_TEST_PASSPHRASE,
+) {
+  const input = await screen.findByLabelText("Frase de desbloqueo");
+  await user.type(input, passphrase);
+  await user.click(screen.getByRole("button", { name: "Abrir bóveda" }));
 }
 
 describe("App integration", () => {
@@ -48,12 +60,28 @@ describe("App integration", () => {
 
   afterEach(() => vi.unstubAllGlobals());
 
+  it("does not fetch when the UI is blocked outside HTTPS or localhost", async () => {
+    const fetchMock = installAppFetchMock();
+    appStore.setState({ unlockBlockedReason: INSECURE_CONTEXT_MESSAGE });
+    const { router } = renderAppAt();
+
+    await waitForRouterReady(router, "/resumen");
+    expect(screen.getByRole("alert")).toHaveTextContent(/necesita HTTPS/);
+    expect(screen.getByRole("button", { name: "Abrir bóveda" })).toBeDisabled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("loads the dataset and navigates through every analytical screen", async () => {
-    installAppFetchMock();
+    const fetchMock = installAppFetchMock();
     const user = userEvent.setup();
     const { router } = renderAppAt();
 
     await waitForRouterReady(router, "/resumen");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("heading", { name: "Abrir el libro cifrado" }),
+    ).toBeVisible();
+    await unlockApp(user);
     expect(
       await screen.findByRole("heading", { name: "Resumen general" }),
     ).toBeVisible();
@@ -75,17 +103,32 @@ describe("App integration", () => {
     expect(router.state.location.pathname).toBe("/resumen");
     await navigateTo("Flujo de caja", "/flujo-de-caja", "Flujo de caja");
     await navigateTo("Deudas", "/deudas", "Deudas");
+    await navigateTo("Presupuestos", "/presupuestos", "Presupuestos");
     await navigateTo("Categorías", "/categorias", "Categorías");
     await navigateTo("Cuentas", "/cuentas", "Cuentas");
+    await navigateTo(
+      "Patrones y calidad",
+      "/patrones",
+      "Patrones y calidad",
+    );
     await navigateTo("Transacciones", "/transacciones", "Transacciones");
     await navigateTo("Resumen", "/resumen", "Resumen general");
-  }, 15_000);
+
+    await user.click(screen.getByRole("button", { name: "Bloquear bóveda" }));
+    expect(
+      await screen.findByRole("heading", { name: "Abrir el libro cifrado" }),
+    ).toBeVisible();
+    expect(screen.getByLabelText("Frase de desbloqueo")).toHaveFocus();
+    expect(appStore.getState().analytics).toBeNull();
+    expect(fetchMock).toHaveBeenCalledOnce();
+  }, 60_000);
 
   it("applies a global search to statistics and transaction data", async () => {
     installAppFetchMock();
     const user = userEvent.setup();
     const { router } = renderAppAt();
     await waitForRouterReady(router, "/resumen");
+    await unlockApp(user);
     await screen.findByRole("heading", { name: "Resumen general" });
 
     await user.type(
@@ -110,35 +153,38 @@ describe("App integration", () => {
     expect(screen.queryByText("Empresa")).not.toBeInTheDocument();
   });
 
-  it("shows load failures and retries the complete application flow", async () => {
-    const fetchMock = installAppFetchMock({ failOnceFor: "accounts.json" });
+  it("uses the same error for a wrong phrase and allows a clean retry", async () => {
+    const fetchMock = installAppFetchMock();
     const user = userEvent.setup();
     const { router } = renderAppAt();
     await waitForRouterReady(router, "/resumen");
 
+    await unlockApp(user, "this phrase is definitely wrong");
+
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: "No pudimos abrir los datos",
+        name: "Abrir el libro cifrado",
       }),
     ).toBeVisible();
-    expect(screen.getByText(/accounts data: HTTP 503/)).toBeVisible();
-
-    await user.click(
-      screen.getByRole("button", { name: "Volver a intentarlo" }),
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "No se pudo abrir la bóveda",
     );
+    expect(screen.getByLabelText("Frase de desbloqueo")).toHaveValue("");
+    expect(screen.getByLabelText("Frase de desbloqueo")).toHaveFocus();
+    const requestsAfterWrongPhrase = fetchMock.mock.calls.length;
+
+    await unlockApp(user);
 
     expect(
       await screen.findByRole("heading", { level: 1, name: "Resumen general" }),
     ).toBeVisible();
-    const accountRequests = fetchMock.mock.calls.filter(([input]) =>
-      String(input).endsWith("/accounts.json"),
-    );
-    expect(accountRequests).toHaveLength(2);
+    expect(fetchMock).toHaveBeenCalledTimes(requestsAfterWrongPhrase);
   });
 
   it("opens a direct URL below a Vite base path", async () => {
     installAppFetchMock();
+    const user = userEvent.setup();
     const history = createMemoryHistory({
       initialEntries: ["/finanzas/deudas"],
     });
@@ -151,6 +197,7 @@ describe("App integration", () => {
     );
 
     await waitForRouterReady(router);
+    await unlockApp(user);
     expect(
       await screen.findByRole("heading", { level: 1, name: "Deudas" }),
     ).toBeVisible();
@@ -166,6 +213,7 @@ describe("App integration", () => {
     const { router } = renderAppAt("/resumen");
 
     await waitForRouterReady(router, "/resumen");
+    await unlockApp(user);
     await screen.findByRole("heading", { name: "Resumen general" });
     await user.click(screen.getByRole("link", { name: "Deudas" }));
     await waitForRouterReady(router, "/deudas");
@@ -195,6 +243,7 @@ describe("App integration", () => {
     );
 
     await waitForRouterReady(router, "/transacciones");
+    await unlockApp(user);
     await screen.findByRole("heading", { level: 1, name: "Transacciones" });
     expect(router.state.matches.at(-1)?.search).toEqual({
       direction: "desc",

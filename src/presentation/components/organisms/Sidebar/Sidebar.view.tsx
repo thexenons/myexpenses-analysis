@@ -13,8 +13,10 @@ interface NavigationItem {
     | "/resumen"
     | "/flujo-de-caja"
     | "/deudas"
+    | "/presupuestos"
     | "/categorias"
     | "/cuentas"
+    | "/patrones"
     | "/transacciones"
 }
 
@@ -28,12 +30,24 @@ const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   },
   { to: "/deudas", label: "Deudas", mobileLabel: "Deudas", icon: "debt" },
   {
+    to: "/presupuestos",
+    label: "Presupuestos",
+    mobileLabel: "Planes",
+    icon: "wallet",
+  },
+  {
     to: "/categorias",
     label: "Categorías",
     mobileLabel: "Categorías",
     icon: "category",
   },
   { to: "/cuentas", label: "Cuentas", mobileLabel: "Cuentas", icon: "bank" },
+  {
+    to: "/patrones",
+    label: "Patrones y calidad",
+    mobileLabel: "Patrones",
+    icon: "trend",
+  },
   {
     to: "/transacciones",
     label: "Transacciones",
@@ -47,12 +61,17 @@ export function SidebarView({
   currentPath,
   maxDate,
   minDate,
+  onLock,
 }: SidebarViewProps) {
   const currentPageLabel =
-    NAVIGATION_ITEMS.find((item) => item.to === currentPath)?.label ?? "Resumen"
+    NAVIGATION_ITEMS.find((item) => item.to === currentPath)?.label ??
+    "Página no encontrada"
 
   return (
-    <aside className={styles.sidebar}>
+    <aside
+      aria-label="Navegación y estado de la aplicación"
+      className={styles.sidebar}
+    >
       <div className={styles.brand}>
         <span aria-hidden="true" className={styles.brandMark}>
           €
@@ -116,6 +135,18 @@ export function SidebarView({
           <span>{compactSidebarDate(maxDate)}</span>
         </p>
       </div>
+      <button
+        aria-describedby="automatic-lock-note"
+        className={styles.lockButton}
+        onClick={onLock}
+        type="button"
+      >
+        <span aria-hidden="true" className={styles.lockMark} />
+        <span className={styles.lockLabel}>Bloquear bóveda</span>
+      </button>
+      <p className={styles.visuallyHidden} id="automatic-lock-note">
+        La bóveda también se bloquea tras 15 minutos sin actividad.
+      </p>
     </aside>
   )
 }

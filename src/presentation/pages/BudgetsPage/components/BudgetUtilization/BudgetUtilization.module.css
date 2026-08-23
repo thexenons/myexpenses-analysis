@@ -1,0 +1,87 @@
+.root {
+  --budget-tone: var(--income);
+
+  display: grid;
+  gap: 0.34rem;
+  min-width: 8rem;
+}
+
+.heading {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.label {
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
+.value {
+  color: var(--budget-tone);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.track {
+  display: block;
+  width: 100%;
+  height: 0.38rem;
+  overflow: hidden;
+  appearance: none;
+  background: color-mix(in srgb, var(--budget-tone) 13%, var(--paper));
+  border: 0;
+  border-radius: 999px;
+}
+
+.track::-webkit-meter-bar {
+  background: color-mix(in srgb, var(--budget-tone) 13%, var(--paper));
+  border: 0;
+  border-radius: 999px;
+}
+
+.track::-webkit-meter-optimum-value,
+.track::-webkit-meter-suboptimum-value,
+.track::-webkit-meter-even-less-good-value,
+.track::-moz-meter-bar {
+  background: var(--budget-tone);
+  border-radius: inherit;
+  transition: inline-size 260ms ease;
+}
+
+.hero {
+  gap: 0.7rem;
+}
+
+.hero .track {
+  height: 0.72rem;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--budget-tone) 15%, transparent);
+}
+
+.hero .label,
+.hero .value {
+  font-size: 0.72rem;
+}
+
+.watch {
+  --budget-tone: var(--debt-ink);
+}
+
+.exceeded {
+  --budget-tone: var(--expense);
+}
+
+.unallocated {
+  --budget-tone: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track::-webkit-meter-optimum-value,
+  .track::-webkit-meter-suboptimum-value,
+  .track::-webkit-meter-even-less-good-value,
+  .track::-moz-meter-bar {
+    transition: none;
+  }
+}

@@ -40,6 +40,7 @@ describe("OverviewPageView", () => {
         kpis={kpis}
         searchPending
         status={{
+          CLEARED: { amountEurMinor: 0, count: 0 },
           RECONCILED: { amountEurMinor: 5_300, count: 3 },
           UNRECONCILED: { amountEurMinor: 0, count: 0 },
           VOID: { amountEurMinor: 0, count: 0 },
@@ -51,6 +52,7 @@ describe("OverviewPageView", () => {
 
     expect(screen.getByText("Flujo del periodo")).toBeVisible();
     expect(screen.getByText("Pulso financiero")).toBeVisible();
+    expect(screen.getByText("Compensados")).toBeVisible();
     expect(screen.getByText("Actualizando resultados…")).toHaveAttribute(
       "aria-live",
       "polite",

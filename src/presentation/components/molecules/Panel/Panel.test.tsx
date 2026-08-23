@@ -24,4 +24,16 @@ describe("Panel", () => {
     expect(screen.getByRole("button", { name: "Ver detalle" })).toBeVisible();
     expect(screen.getByText("Datos convertidos a EUR")).toBeVisible();
   });
+
+  it("preserves an explicit accessible label when a visual title exists", () => {
+    render(
+      <Panel aria-label="Balance consolidado" title="Balance">
+        Contenido
+      </Panel>,
+    );
+
+    expect(
+      screen.getByRole("region", { name: "Balance consolidado" }),
+    ).toBeVisible();
+  });
 });

@@ -8,7 +8,7 @@
   place-items: center;
   color: var(--ink-soft, #3c4a44);
   background: color-mix(in srgb, var(--surface-bright, #fffdf8) 82%, transparent);
-  border: 1px solid var(--line, #cec9bb);
+  border: 1px solid var(--line-dark, #748079);
   border-radius: 50%;
   cursor: pointer;
   transition:

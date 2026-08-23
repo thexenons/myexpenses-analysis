@@ -1,0 +1,94 @@
+.controlsPanel {
+  background:
+    linear-gradient(112deg, color-mix(in srgb, var(--debt) 7%, transparent), transparent 42%),
+    var(--surface-bright);
+}
+
+.progressPanel {
+  position: relative;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      transparent 0,
+      transparent 1.25rem,
+      color-mix(in srgb, var(--debt) 4%, transparent) 1.25rem,
+      color-mix(in srgb, var(--debt) 4%, transparent) 1.32rem
+    ),
+    var(--surface-bright);
+}
+
+.progressPanel::after {
+  position: absolute;
+  inset: auto -2.5rem -3.4rem auto;
+  width: 9rem;
+  aspect-ratio: 1;
+  pointer-events: none;
+  content: "";
+  border: 1px solid color-mix(in srgb, var(--debt) 22%, transparent);
+  border-radius: 50%;
+}
+
+.progressLayout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(18rem, 1.1fr) minmax(24rem, 1fr);
+  gap: clamp(1rem, 4vw, 3rem);
+  align-items: center;
+  min-height: 8rem;
+}
+
+.ledger {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin: 0;
+}
+
+.ledger div {
+  display: grid;
+  gap: 0.16rem;
+  padding: 0.65rem 0.7rem;
+  background: color-mix(in srgb, var(--paper) 64%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
+  border-radius: var(--radius-sm);
+}
+
+.ledger dt {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.ledger dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.73rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.allocationsPanel {
+  min-width: 0;
+}
+
+.technicalNote {
+  max-width: 58rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
+@media (max-width: 900px) {
+  .progressLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .ledger {
+    grid-template-columns: 1fr;
+  }
+}

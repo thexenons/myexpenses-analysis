@@ -1,65 +1,36 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-
-export const ACCOUNTS_REGISTRY_FILE_PATH = fileURLToPath(
-    new URL("../data/accounts.json", import.meta.url),
-);
-export const CATEGORIES_REGISTRY_FILE_PATH = fileURLToPath(
-    new URL("../data/categories.json", import.meta.url),
-);
-export const PARSED_DATA_FILE_PATH = fileURLToPath(
-    new URL("../data/parsed-data.json", import.meta.url),
-);
-
-function isFileNotFoundError(error: unknown): boolean {
-    return (
-        error instanceof Error &&
-        "code" in error &&
-        (error as NodeJS.ErrnoException).code === "ENOENT"
-    );
-}
-
-export async function readJsonFile(filePath: string): Promise<unknown> {
-    let source: string;
-    try {
-        source = await readFile(filePath, "utf8");
-    } catch (error) {
-        throw new Error(`Could not read JSON file ${filePath}`, { cause: error });
-    }
-
-    try {
-        return JSON.parse(source) as unknown;
-    } catch (error) {
-        throw new Error(`Invalid JSON in ${filePath}`, { cause: error });
-    }
-}
-
-export async function readOptionalJsonFile(
-    filePath: string,
-): Promise<unknown | undefined> {
-    try {
-        return await readJsonFile(filePath);
-    } catch (error) {
-        if (
-            error instanceof Error &&
-            error.cause !== undefined &&
-            isFileNotFoundError(error.cause)
-        ) {
-            return undefined;
-        }
-        throw error;
-    }
-}
 
 export async function writeJsonAtomically(
     filePath: string,
     value: unknown,
     pretty = true,
+    maximumBytes?: number,
 ): Promise<void> {
+    if (
+        maximumBytes !== undefined &&
+        (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1)
+    ) {
+        throw new Error("JSON output size limit must be a positive safe integer");
+    }
+    const source = JSON.stringify(value, null, pretty ? 2 : undefined);
+    if (source === undefined) {
+        throw new Error("JSON output value is not serializable");
+    }
+    if (
+        maximumBytes !== undefined &&
+        Buffer.byteLength(source, "utf8") > maximumBytes
+    ) {
+        throw new Error("JSON output exceeds its size limit");
+    }
+
     const directoryPath = dirname(filePath);
     await mkdir(directoryPath, { recursive: true });
+    const directory = await lstat(directoryPath);
+    if (!directory.isDirectory() || directory.isSymbolicLink()) {
+        throw new Error("JSON output parent must be a real directory");
+    }
     const temporaryPath = join(
         directoryPath,
         `.${basename(filePath)}.${process.pid}.${randomUUID()}.tmp`,
@@ -68,10 +39,11 @@ export async function writeJsonAtomically(
     try {
         await writeFile(
             temporaryPath,
-            JSON.stringify(value, null, pretty ? 2 : undefined),
+            source,
             {
                 encoding: "utf8",
                 flag: "wx",
+                mode: 0o600,
             },
         );
         await rename(temporaryPath, filePath);

@@ -1,6 +1,7 @@
 import { Badge } from "../../components/atoms/Badge/index.ts";
 import { Icon } from "../../components/atoms/Icon/index.ts";
 import { KpiCard } from "../../components/molecules/KpiCard/index.ts";
+import { EmptyState } from "../../components/molecules/EmptyState/index.ts";
 import { Panel } from "../../components/molecules/Panel/index.ts";
 import { HorizontalBarChart } from "../../components/organisms/HorizontalBarChart/index.ts";
 import { LineChart } from "../../components/organisms/LineChart/index.ts";
@@ -104,7 +105,14 @@ export function DebtsPageView({
         description="Apertura, movimiento del periodo y saldo resultante"
         title="Detalle por cuenta"
       >
-        <div className={styles.accountGrid}>
+        {debts.length === 0 ? (
+          <EmptyState
+            description="El ámbito y los filtros actuales no contienen cuentas marcadas como deuda."
+            icon={<Icon name="debt" />}
+            title="No hay deudas en este ámbito"
+          />
+        ) : (
+          <div className={styles.accountGrid}>
           {debts.map((debt) => (
             <article className={styles.accountCard} key={debt.account.id}>
               <div className={styles.accountHeader}>
@@ -114,7 +122,7 @@ export function DebtsPageView({
                     {countFormatter.format(debt.postingCount)} apuntes
                   </p>
                 </div>
-                <Badge tone="debt">DEBT</Badge>
+                <Badge tone="debt">Deuda</Badge>
               </div>
               <strong className={styles.accountBalance}>
                 {formatEuroMinor(debt.periodClosingBalanceEurMinor)}
@@ -129,7 +137,8 @@ export function DebtsPageView({
               </div>
             </article>
           ))}
-        </div>
+          </div>
+        )}
       </Panel>
     </AnalyticsPage>
   );

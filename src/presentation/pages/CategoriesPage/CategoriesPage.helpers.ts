@@ -29,7 +29,7 @@ function appendCategoryTree(
   }
 }
 
-export function flattenCategories(
+function flattenCategories(
   nodes: readonly CategoryBreakdownNode[],
 ): readonly CategoryBreakdownNode[] {
   const result: CategoryBreakdownNode[] = [];

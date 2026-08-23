@@ -15,6 +15,7 @@ describe("KpiCard", () => {
     )
 
     expect(screen.getByText("149.20 €")).toBeVisible()
+    expect(screen.getByRole("article", { name: "Flujo de caja" })).toBeVisible()
     expect(screen.getByText("Sube")).toBeInTheDocument()
     expect(screen.getByText("frente al periodo anterior")).toBeVisible()
   })

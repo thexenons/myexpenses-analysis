@@ -21,7 +21,7 @@ describe("Sidebar", () => {
 
   it("navigates with links and announces click and history changes", async () => {
     const user = userEvent.setup()
-    const scrollIntoView = vi.fn()
+    const scrollIntoView = vi.fn<() => void>()
     HTMLElement.prototype.scrollIntoView = scrollIntoView
     vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
       callback(0)
@@ -39,7 +39,7 @@ describe("Sidebar", () => {
       name: "Secciones principales",
     })
     expect(navigation).toBeVisible()
-    expect(within(navigation).getAllByRole("link")).toHaveLength(6)
+    expect(within(navigation).getAllByRole("link")).toHaveLength(8)
     expect(screen.getByRole("link", { name: "Resumen" })).toHaveAttribute(
       "aria-current",
       "page",
@@ -63,5 +63,9 @@ describe("Sidebar", () => {
 
     expect(document.getElementById("main-content")).toHaveFocus()
     expect(screen.getByText("Sección actual: Resumen")).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Bloquear bóveda" }))
+    expect(appStore.getState().loadPhase).toBe("locked")
+    expect(appStore.getState().analytics).toBeNull()
   })
 })

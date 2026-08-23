@@ -1,3 +1,4 @@
+/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- The named overflow region must receive focus so keyboard users can pan the exact-data table. */
 import { useMemo } from "react";
 
 import { formatNumber } from "../../../utils/component.helpers.ts";
@@ -32,10 +33,9 @@ export function ChartDataTable({
     >
       <summary className={styles.summary}>{summary}</summary>
       {open ? (
-        <div
+        <section
           aria-label={`Tabla: ${caption}`}
           className={styles.scroller}
-          role="region"
           tabIndex={0}
         >
           <table className={styles.table}>
@@ -67,7 +67,7 @@ export function ChartDataTable({
               ))}
             </tbody>
           </table>
-        </div>
+        </section>
       ) : null}
     </details>
   );

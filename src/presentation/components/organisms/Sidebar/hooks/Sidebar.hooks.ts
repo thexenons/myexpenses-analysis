@@ -10,6 +10,7 @@ export function useSidebar(): SidebarViewProps {
   const currentPath = useLocation({ select: (location) => location.pathname })
   const maxDate = useAppStore((state) => state.analytics?.maxDate ?? null)
   const minDate = useAppStore((state) => state.analytics?.minDate ?? null)
+  const onLock = useAppStore((state) => state.actions.lock)
   const previousPath = useRef(currentPath)
 
   useEffect(() => {
@@ -19,5 +20,5 @@ export function useSidebar(): SidebarViewProps {
     focusSidebarMainContent()
   }, [currentPath])
 
-  return { accountCount, currentPath, maxDate, minDate }
+  return { accountCount, currentPath, maxDate, minDate, onLock }
 }

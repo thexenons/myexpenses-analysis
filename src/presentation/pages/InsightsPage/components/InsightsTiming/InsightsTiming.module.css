@@ -1,0 +1,14 @@
+.deferredPanel {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 27rem;
+}
+
+.chartPanel {
+  min-height: 27rem;
+}
+
+@media (max-width: 48rem) {
+  .chartPanel {
+    min-height: 23rem;
+  }
+}

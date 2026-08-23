@@ -24,7 +24,7 @@
 
 .eyebrow {
   color: var(--muted);
-  font-size: 0.6rem;
+  font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -53,7 +53,7 @@
 .notice {
   color: var(--transfer);
   font-family: var(--mono);
-  font-size: 0.62rem;
+  font-size: 0.68rem;
 }
 
 @keyframes pageEnter {

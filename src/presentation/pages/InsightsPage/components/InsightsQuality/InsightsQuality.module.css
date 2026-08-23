@@ -1,0 +1,114 @@
+.deferredPanel {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 36rem;
+}
+
+.qualityGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(16rem, 0.7fr);
+  gap: 1rem;
+  min-width: 0;
+}
+
+.qualityGrid[data-single="true"] {
+  grid-template-columns: 1fr;
+}
+
+.qualityPanel {
+  min-width: 0;
+}
+
+.qualityMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.qualityMetrics > div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.62rem;
+  background: var(--surface-bright);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+}
+
+.qualityMetrics span {
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
+.qualityMetrics strong {
+  font-family: var(--display);
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.lagChart {
+  min-height: 22rem;
+}
+
+.methodHero {
+  display: grid;
+  padding: 0.8rem 0.9rem;
+  color: var(--surface-bright);
+  background:
+    radial-gradient(circle at 86% 15%, rgb(197 218 114 / 30%), transparent 8rem),
+    var(--surface-ink-raised);
+  border-radius: var(--radius-sm);
+}
+
+.methodHero strong {
+  font-family: var(--display);
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 520;
+  line-height: 1;
+}
+
+.methodHero span {
+  margin-top: 0.2rem;
+  color: color-mix(in srgb, var(--surface-bright) 72%, transparent);
+  font-size: 0.68rem;
+}
+
+.methodList {
+  display: grid;
+  margin-top: 0.72rem;
+}
+
+.methodList li {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 0.62rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.methodList li > span {
+  display: grid;
+}
+
+.methodList small {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+@media (max-width: 48rem) {
+  .qualityGrid,
+  .qualityGrid[data-single="true"] {
+    grid-template-columns: 1fr;
+  }
+
+  .qualityMetrics {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (forced-colors: active) {
+  .qualityMetrics > div {
+    border: 1px solid CanvasText;
+  }
+}

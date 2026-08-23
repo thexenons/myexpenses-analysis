@@ -22,7 +22,7 @@
 
 .statLabel {
   color: var(--muted);
-  font-size: 0.58rem;
+  font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -39,7 +39,7 @@
   display: block;
   margin-top: 0.16rem;
   color: var(--muted);
-  font-size: 0.52rem;
+  font-size: 0.65rem;
 }
 
 .rankList {

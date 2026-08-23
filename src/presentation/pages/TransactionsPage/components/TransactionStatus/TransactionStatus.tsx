@@ -5,6 +5,9 @@ export function TransactionStatus({ posting }: TransactionStatusProps) {
   if (posting.status === "RECONCILED") {
     return <Badge tone="positive">Conciliado</Badge>;
   }
+  if (posting.status === "CLEARED") {
+    return <Badge tone="info">Compensado</Badge>;
+  }
   if (posting.status === "VOID") {
     return <Badge tone="negative">Anulado</Badge>;
   }

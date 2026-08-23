@@ -1,13 +1,19 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { AnalyticsDataset } from "../../../domain/analytics/types.ts";
+import type { DatasetRepository } from "../../../application/ports/dataset-repository.ts";
+import type {
+  AnalyticsDataset,
+  FilterState,
+} from "../../../domain/analytics/types.ts";
 import { createAppStore } from "../../../application/store/app-store/app-store.ts";
 import { AppStoreProvider } from "../../providers/AppStoreProvider/index.ts";
 import { useFilteredAnalytics } from "./filtered-analytics.hooks.ts";
 
 const { applyFiltersSpy } = vi.hoisted(() => ({
-  applyFiltersSpy: vi.fn(),
+  applyFiltersSpy: vi.fn<
+    (dataset: AnalyticsDataset, filters: FilterState) => void
+  >(),
 }));
 
 vi.mock("../../../domain/analytics/filters.ts", async (importOriginal) => {
@@ -46,7 +52,10 @@ function FilteredAnalyticsProbe() {
 
 describe("useFilteredAnalytics", () => {
   it("does not recompute analytics in the urgent render of a search update", async () => {
-    const store = createAppStore({ load: vi.fn() }, window.localStorage);
+    const store = createAppStore(
+      { load: vi.fn<DatasetRepository["load"]>() },
+      window.localStorage,
+    );
     store.setState({ analytics: EMPTY_ANALYTICS, loadPhase: "ready" });
     render(
       <AppStoreProvider store={store}>

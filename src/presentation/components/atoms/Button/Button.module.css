@@ -51,7 +51,7 @@
   .secondary {
     color: var(--ink);
     background: var(--surface-bright);
-    border-color: var(--line);
+    border-color: var(--line-dark);
     box-shadow: 0 0.2rem 0.75rem rgb(23 37 31 / 5%);
   }
 

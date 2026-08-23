@@ -6,6 +6,7 @@ import type { PanelProps } from "./Panel.types.ts";
 
 export function Panel({
   actions,
+  "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
   children,
   className,
@@ -26,8 +27,10 @@ export function Panel({
   return (
     <section
       {...props}
+      aria-label={ariaLabel}
       aria-labelledby={
-        ariaLabelledBy ?? (hasTitle ? titleId : undefined)
+        ariaLabelledBy ??
+        (ariaLabel === undefined && hasTitle ? titleId : undefined)
       }
       className={cx(styles.root, className)}
       ref={ref}

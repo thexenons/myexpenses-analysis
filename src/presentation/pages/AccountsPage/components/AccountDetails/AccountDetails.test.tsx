@@ -11,14 +11,21 @@ const item: AccountBreakdownItem = {
     currency: "USD",
     currentBalanceNativeMinor: 25_000,
     exchangeRateMode: "STATIC",
+    fractionDigits: 2,
     historicalBalanceEurMinor: 22_700,
     id: "cash-usd",
     label: "Cuenta USD",
+    description: "Reserva operativa",
+    excludedFromTotals: false,
+    includedInAll: true,
+    nativeType: "BANK",
     openingBalanceEurMinor: 18_400,
     openingBalanceNativeMinor: 20_000,
     postingCount: 9,
     type: "DEFAULT",
+    supportsReconciliation: true,
     valuationBalanceEurMinor: 23_000,
+    visible: false,
   },
   debtFlowEurMinor: 0,
   expensesEurMinor: -2_000,
@@ -47,6 +54,9 @@ describe("AccountDetails", () => {
     expect(screen.getByText("227,00 €")).toBeVisible();
     expect(screen.getByText("230,00 €")).toBeVisible();
     expect(screen.getByText("Estática (STATIC)")).toBeVisible();
+    expect(screen.getByText("Cuenta bancaria (BANK)")).toBeVisible();
+    expect(screen.getByText("Oculta")).toBeVisible();
+    expect(screen.getByText("Reserva operativa")).toBeVisible();
     expect(screen.getByText("1 USD = 0,92 EUR")).toBeVisible();
     expect(screen.getByText(/7 \/\s+9/)).toBeVisible();
   });

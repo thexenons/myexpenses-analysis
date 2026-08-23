@@ -8,7 +8,7 @@ import { TransactionTable } from "./TransactionTable.tsx";
 describe("TransactionTable", () => {
   it("renders posting cells and forwards column sorting", async () => {
     const user = userEvent.setup();
-    const onSort = vi.fn();
+    const onSort = vi.fn<(key: "amount" | "date") => void>();
     render(
       <TransactionTable
         descending

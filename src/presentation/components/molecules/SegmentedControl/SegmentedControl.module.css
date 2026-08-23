@@ -37,7 +37,7 @@
     min-height: 2.75rem;
     padding: 0.2rem;
     background: var(--paper-deep);
-    border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+    border: 1px solid var(--line-dark);
     border-radius: 999px;
   }
 

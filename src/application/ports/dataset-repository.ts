@@ -1,5 +1,9 @@
-import type { AppDataset } from "../../domain/analytics/types.ts";
+import type { BackupDatasetV1 } from "../../domain/analytics/backup-dataset.types.ts";
+
+export class DatasetTransportError extends Error {
+  override readonly name = "DatasetTransportError";
+}
 
 export interface DatasetRepository {
-  load(signal?: AbortSignal): Promise<AppDataset>;
+  load(passphrase: string, signal?: AbortSignal): Promise<BackupDatasetV1>;
 }

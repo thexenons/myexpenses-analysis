@@ -1,4 +1,4 @@
-import { assertIsoDate, normalizeSearchText } from "./normalize.ts";
+import { assertIsoDate, normalizeSearchText } from "./validation.ts";
 import type {
   AnalyticsScope,
   AnalyticsDataset,
@@ -13,6 +13,7 @@ import type {
 
 const VALID_STATUSES = new Set<TransactionStatus>([
   "UNRECONCILED",
+  "CLEARED",
   "RECONCILED",
   "VOID",
 ]);
@@ -28,6 +29,7 @@ const VALID_LINKED_FILTERS = new Set<LinkedFilter>([
   "linked",
   "unlinked",
 ]);
+const derivedSearchIndexes = new WeakMap<NormalizedPosting, string>();
 
 export function createDefaultFilterState(): FilterState {
   return {
@@ -240,7 +242,43 @@ function matchesPostingWithoutDate(
   if (filters.linked === "unlinked" && posting.linked) {
     return false;
   }
-  return matcher.searchTokens.every((token) => posting.searchIndex.includes(token));
+  if (matcher.searchTokens.length === 0) return true;
+  const searchIndex = postingSearchIndex(posting);
+  return matcher.searchTokens.every((token) => searchIndex.includes(token));
+}
+
+function postingSearchIndex(posting: NormalizedPosting): string {
+  if (posting.searchIndex !== undefined) return posting.searchIndex;
+  const cached = derivedSearchIndexes.get(posting);
+  if (cached !== undefined) return cached;
+  const result = normalizeSearchText(
+    [
+      posting.id,
+      posting.transactionId,
+      posting.sourceTransactionId,
+      posting.accountLabel,
+      posting.currency,
+      posting.date,
+      posting.localTime ?? "",
+      String(posting.amountNativeMinor),
+      String(posting.amountEurMinor),
+      ...posting.categoryPath,
+      ...posting.tags,
+      posting.comment ?? "",
+      posting.referenceNumber ?? "",
+      posting.payee ?? "",
+      posting.paymentMethod ?? "",
+      posting.transferAccount ?? "",
+      posting.backupStatus ?? posting.status,
+      posting.parent?.comment ?? "",
+      posting.parent?.payee ?? "",
+      posting.parent?.paymentMethod ?? posting.parentPaymentMethod ?? "",
+      ...(posting.parent?.tags ?? []),
+      ...(posting.searchAliases ?? []),
+    ].join(" "),
+  );
+  derivedSearchIndexes.set(posting, result);
+  return result;
 }
 
 function matchesDate(posting: NormalizedPosting, filters: FilterState): boolean {
@@ -276,6 +314,7 @@ export function applyFilters(
   );
   const matcher = createMatcherState(accounts, filters);
   const postings: NormalizedPosting[] = [];
+  const activePostings: NormalizedPosting[] = [];
   const periodOpeningByAccount: Record<string, number> = Object.create(null);
   for (const account of accounts) {
     periodOpeningByAccount[account.id] = account.openingBalanceEurMinor;
@@ -301,6 +340,7 @@ export function applyFilters(
     }
     if (matchesDate(posting, filters)) {
       postings.push(posting);
+      if (!posting.isVoid) activePostings.push(posting);
     }
   }
 
@@ -318,6 +358,7 @@ export function applyFilters(
     filters,
     accounts,
     postings,
+    activePostings,
     periodOpeningEurMinorByAccountId: periodOpeningByAccount,
     periodOpeningBalanceEurMinor,
   };
@@ -326,5 +367,5 @@ export function applyFilters(
 export function metricPostings(
   filtered: FilteredAnalyticsDataset,
 ): readonly NormalizedPosting[] {
-  return filtered.postings.filter((posting) => !posting.isVoid);
+  return filtered.activePostings;
 }

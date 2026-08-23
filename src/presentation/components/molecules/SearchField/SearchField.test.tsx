@@ -5,7 +5,7 @@ import { expect, it, vi } from "vitest";
 import { SearchField } from "./SearchField.tsx";
 
 it("reports typing and exposes an accessible clear action", async () => {
-  const onValueChange = vi.fn();
+  const onValueChange = vi.fn<(value: string) => void>();
   const user = userEvent.setup();
   const { rerender } = render(
     <SearchField label="Buscar" onValueChange={onValueChange} value="" />,

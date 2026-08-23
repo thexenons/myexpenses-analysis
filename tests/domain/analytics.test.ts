@@ -11,6 +11,10 @@ import {
   aggregateTimeSeries,
 } from "../../src/domain/analytics/aggregations.ts";
 import {
+  analyzeBudgetPeriod,
+  flattenBudgetAllocationNodes,
+} from "../../src/domain/analytics/budgets.ts";
+import {
   applyFilters,
   createDefaultFilterState,
 } from "../../src/domain/analytics/filters.ts";
@@ -20,12 +24,46 @@ import {
   postingIdFor,
 } from "../../src/domain/analytics/normalize.ts";
 import type {
+  AnalyticsDataset,
   AnalyticsSourceData,
+  AnalyticsInputData,
   CategoriesRegistry,
   FilterState,
   ParsedDirectTransaction,
   TransactionStatus,
 } from "../../src/domain/analytics/types.ts";
+
+function withPeriodPreferences(
+  dataset: AnalyticsDataset,
+  monthStart: number,
+  weekStart: number,
+): AnalyticsDataset {
+  return {
+    ...dataset,
+    backup: {
+      source: {
+        format: "myexpenses-backup",
+        schemaVersion: 189,
+        backupSha256: "a".repeat(64),
+        databaseSha256: "b".repeat(64),
+      },
+      preferences: {
+        homeCurrency: "EUR",
+        timeZone: "Europe/Madrid",
+        monthStart,
+        weekStart,
+        includeTransfers: false,
+      },
+      currencies: [],
+      accounts: [],
+      categories: [],
+      payees: [],
+      paymentMethods: [],
+      tags: [],
+      budgets: [],
+    },
+  };
+}
 
 interface TransactionExtras {
   readonly comment?: string;
@@ -405,6 +443,7 @@ test("global filters compose scope, period, category, status, tags, search and l
 
   const voidOnly = applyFilters(dataset, withFilters({ statuses: ["VOID"] }));
   assert.equal(voidOnly.postings.length, 1);
+  assert.equal(voidOnly.activePostings.length, 0);
   assert.equal(aggregateKpis(voidOnly).postingCount, 0);
   assert.equal(aggregateKpis(voidOnly).netEurMinor, 0);
 });
@@ -460,12 +499,13 @@ test("KPIs expose net flows, gross/refunds/reversals and status counts in cents"
   );
   assert.deepEqual(aggregateStatusCounts(filtered), {
     UNRECONCILED: { count: 10, amountEurMinor: 8_600 },
+    CLEARED: { count: 0, amountEurMinor: 0 },
     RECONCILED: { count: 1, amountEurMinor: 200 },
     VOID: { count: 1, amountEurMinor: -99_900 },
   });
 });
 
-test("time series fill empty periods and use correct ISO week-year boundaries", () => {
+test("time series fill empty periods and use official start-year week boundaries", () => {
   const filtered = applyFilters(
     normalizeDataset(fixtureSource()),
     createDefaultFilterState(),
@@ -517,7 +557,7 @@ test("time series fill empty periods and use correct ISO week-year boundaries", 
     normalizeDataset(boundarySource),
     createDefaultFilterState(),
   );
-  assert.equal(aggregateTimeSeries(boundary, "week")[0]?.key, "2025-W01");
+  assert.equal(aggregateTimeSeries(boundary, "week")[0]?.key, "2024-W53");
   assert.deepEqual(
     aggregateTimeSeries(filtered, "month").map(({ key, postingCount }) => ({
       key,
@@ -531,6 +571,105 @@ test("time series fill empty periods and use correct ISO week-year boundaries", 
       postingCount,
     })),
     [{ key: "2024", postingCount: 11 }],
+  );
+});
+
+test("time series honor backup week and month starts across year and leap boundaries", () => {
+  const periodSource: AnalyticsSourceData = {
+    accounts: {
+      version: 2,
+      accounts: { cash: { label: "Cash", type: "DEFAULT" } },
+    },
+    categories,
+    parsedData: [
+      {
+        uuid: "cash",
+        label: "Cash",
+        currency: "EUR",
+        openingBalance: 0,
+        transactions: [
+          direct("december-tuesday", "2024-12-31", 1, ["Ingresos"]),
+          direct("new-year-wednesday", "2025-01-01", 1, ["Ingresos"]),
+          direct("next-tuesday", "2025-01-07", 1, ["Ingresos"]),
+          direct("next-wednesday", "2025-01-08", 1, ["Ingresos"]),
+          direct("month-start", "2024-01-31", 1, ["Ingresos"]),
+          direct("leap-end", "2024-02-29", 1, ["Ingresos"]),
+          direct("march-boundary", "2024-03-31", 1, ["Ingresos"]),
+        ],
+      },
+    ],
+  };
+  const source = withPeriodPreferences(normalizeDataset(periodSource), 31, 3);
+  const weekly = aggregateTimeSeries(
+    applyFilters(source, {
+      ...createDefaultFilterState(),
+      dateRange: { from: "2024-12-31", to: "2025-01-08" },
+    }),
+    "week",
+  );
+  assert.deepEqual(
+    weekly.map(({ key, startDate, endDate, postingCount }) => ({
+      key,
+      startDate,
+      endDate,
+      postingCount,
+    })),
+    [
+      {
+        key: "2024-W52",
+        startDate: "2024-12-25",
+        endDate: "2024-12-31",
+        postingCount: 1,
+      },
+      {
+        key: "2025-W01",
+        startDate: "2025-01-01",
+        endDate: "2025-01-07",
+        postingCount: 2,
+      },
+      {
+        key: "2025-W02",
+        startDate: "2025-01-08",
+        endDate: "2025-01-14",
+        postingCount: 1,
+      },
+    ],
+  );
+
+  const monthly = aggregateTimeSeries(
+    applyFilters(source, {
+      ...createDefaultFilterState(),
+      dateRange: { from: "2024-01-31", to: "2024-04-30" },
+    }),
+    "month",
+  );
+  assert.deepEqual(
+    monthly.map(({ key, startDate, endDate, postingCount }) => ({
+      key,
+      startDate,
+      endDate,
+      postingCount,
+    })),
+    [
+      {
+        key: "2024-01",
+        startDate: "2024-01-31",
+        endDate: "2024-02-29",
+        postingCount: 2,
+      },
+      {
+        key: "2024-02",
+        startDate: "2024-03-01",
+        endDate: "2024-03-30",
+        postingCount: 0,
+      },
+      {
+        key: "2024-03",
+        startDate: "2024-03-31",
+        endDate: "2024-04-30",
+        postingCount: 1,
+      },
+    ],
   );
 });
 
@@ -573,37 +712,53 @@ test("category, account and debt breakdowns reconcile to the filtered totals", (
   );
 });
 
-async function readJson(relativePath: string): Promise<unknown> {
-  return JSON.parse(
-    await readFile(new URL(relativePath, import.meta.url), "utf8"),
-  ) as unknown;
+async function readOptionalJson(relativePath: string): Promise<unknown | undefined> {
+  try {
+    return JSON.parse(
+      await readFile(new URL(relativePath, import.meta.url), "utf8"),
+    ) as unknown;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      (error as NodeJS.ErrnoException).code === "ENOENT"
+    ) {
+      return undefined;
+    }
+    throw error;
+  }
 }
 
-test("current export reproduces the official base My Expenses figures", async () => {
-  const [accounts, categoriesRegistry, parsedData] = await Promise.all([
-    readJson("../../data/accounts.json"),
-    readJson("../../data/categories.json"),
-    readJson("../../data/parsed-data.json"),
-  ]);
-  const dataset = normalizeDataset({
-    accounts: accounts as AnalyticsSourceData["accounts"],
-    categories: categoriesRegistry as AnalyticsSourceData["categories"],
-    parsedData: parsedData as AnalyticsSourceData["parsedData"],
-  });
+test("current local backup dataset reproduces the official MyExpenses figures", async (context) => {
+  const source = await readOptionalJson("../../data/app-dataset.json");
+  if (source === undefined) {
+    context.skip("Import a local backup to run the private-data golden test");
+    return;
+  }
+  const dataset = normalizeDataset(source as AnalyticsInputData);
   const filtered = applyFilters(dataset, createDefaultFilterState());
   const kpis = aggregateKpis(filtered);
 
+  assert.equal(dataset.accounts.length, 39);
+  assert.equal(dataset.postings.length, 13_022);
+  assert.equal(dataset.postings.filter((posting) => posting.isVoid).length, 4);
+  assert.equal(dataset.backup?.categories.length, 81);
+  assert.equal(dataset.backup?.budgets.length, 1);
+  assert.equal(
+    dataset.backup?.source.backupSha256,
+    "ec6e298ea1075e089770ac678603500f5f71f8e5f894b190fda1e5f06e435ab4",
+  );
   assert.equal(kpis.periodOpeningBalanceEurMinor, 3_921_091);
   assert.equal(kpis.incomesEurMinor, 8_763_405);
-  assert.equal(kpis.expensesEurMinor, -4_991_031);
+  assert.equal(kpis.expensesEurMinor, -5_001_652);
   assert.equal(kpis.transfersEurMinor, 182_096);
-  assert.equal(kpis.periodClosingBalanceEurMinor, 7_875_561);
+  assert.equal(kpis.periodClosingBalanceEurMinor, 7_864_940);
   assert.equal(
     dataset.accounts.reduce(
       (total, account) => total + account.valuationBalanceEurMinor,
       0,
     ),
-    7_875_560,
+    7_864_939,
     "account valuation reproduces the alternate official total",
   );
   const realCashFlow = aggregateKpis(
@@ -621,7 +776,7 @@ test("current export reproduces the official base My Expenses figures", async ()
       flow: realCashFlow.netEurMinor,
       closing: realCashFlow.periodClosingBalanceEurMinor,
     },
-    { opening: 1_567_029, flow: -1_134_363, closing: 432_666 },
+    { opening: 1_567_029, flow: -1_154_919, closing: 412_110 },
   );
   assert.deepEqual(
     {
@@ -629,7 +784,34 @@ test("current export reproduces the official base My Expenses figures", async ()
       flow: debtsOnly.netEurMinor,
       closing: debtsOnly.periodClosingBalanceEurMinor,
     },
-    { opening: 2_354_062, flow: 5_088_833, closing: 7_442_895 },
+    { opening: 2_354_062, flow: 5_098_768, closing: 7_452_830 },
   );
-  assert.ok(dataset.postings.length > 13_000);
+  const budget = dataset.backup?.budgets[0];
+  assert.ok(budget !== undefined);
+  const budgetResult = analyzeBudgetPeriod(dataset, filtered, budget);
+  assert.equal(budgetResult.status, "ready");
+  if (budgetResult.status === "ready") {
+    assert.deepEqual(
+      {
+        period: budgetResult.analysis.period.key,
+        assigned: budgetResult.analysis.global.assignedMinor,
+        consumed: budgetResult.analysis.global.consumedMinor,
+        available: budgetResult.analysis.global.availableMinor,
+        postingCount: budgetResult.analysis.filteredPostingCount,
+        allocationRows: flattenBudgetAllocationNodes(
+          budgetResult.analysis.allocations,
+        ).length,
+        unallocated: budgetResult.analysis.unallocatedConsumedMinor,
+      },
+      {
+        period: "MONTH:2026:7",
+        assigned: 281_530,
+        consumed: 234_036,
+        available: 47_494,
+        postingCount: 117,
+        allocationRows: 33,
+        unallocated: 0,
+      },
+    );
+  }
 });

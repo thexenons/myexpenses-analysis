@@ -10,7 +10,15 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+coverage
 *.local
+
+# Private My Expenses backups stay local. The importer emits the reviewed,
+# browser-facing dataset instead of publishing the original archive/database.
+data/myexpenses-backup-*.zip
+data/app-dataset.json
+data/app-dataset.vault.json
+data/.*.tmp
 
 # Editor directories and files
 .vscode/*

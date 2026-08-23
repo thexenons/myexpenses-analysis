@@ -14,6 +14,7 @@ export const TRANSACTION_POSTING_FIXTURE: NormalizedPosting = {
   date: "2026-08-20",
   exchangeRateSource: "identity",
   exchangeRateToEur: 1,
+  fractionDigits: 2,
   id: "cash:meal",
   isVoid: false,
   linked: false,

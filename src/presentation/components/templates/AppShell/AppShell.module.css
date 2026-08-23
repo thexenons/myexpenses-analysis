@@ -52,6 +52,10 @@
 }
 
 @media (width <= 42rem) {
+  .workspace {
+    padding-bottom: calc(7.5rem + env(safe-area-inset-bottom));
+  }
+
   .main {
     padding: 0.9rem 0.75rem 1.4rem;
   }

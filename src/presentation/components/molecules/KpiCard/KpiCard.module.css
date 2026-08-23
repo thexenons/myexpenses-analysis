@@ -36,7 +36,7 @@
 
 .warning,
 .debt {
-  --kpi-tone: var(--debt, #bd7d2f);
+  --kpi-tone: var(--debt-ink, #875318);
 }
 
 .accent {

@@ -230,3 +230,33 @@
     transition: none;
   }
 }
+
+@media (forced-colors: active) {
+  .gridLine,
+  .zeroLine {
+    stroke: GrayText;
+  }
+
+  .line {
+    color: CanvasText;
+    stroke: CanvasText;
+  }
+
+  .bar,
+  .leftBar,
+  .rightBar {
+    color: CanvasText;
+    fill: CanvasText;
+  }
+
+  .point {
+    fill: Canvas;
+    stroke: CanvasText;
+  }
+
+  .legendSwatch {
+    background: CanvasText;
+    border: 1px solid CanvasText;
+    box-shadow: none;
+  }
+}

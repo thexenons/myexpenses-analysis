@@ -11,6 +11,7 @@ const account: AccountBreakdownItem = {
     currency: "EUR",
     currentBalanceNativeMinor: 25_000,
     exchangeRateMode: "IDENTITY",
+    fractionDigits: 2,
     historicalBalanceEurMinor: 25_000,
     id: "cash",
     label: "Cuenta diaria",
@@ -34,7 +35,7 @@ const account: AccountBreakdownItem = {
 describe("AccountsPageView", () => {
   it("turns an account card into a global account-filter action", async () => {
     const user = userEvent.setup();
-    const onSelectAccount = vi.fn();
+    const onSelectAccount = vi.fn<(accountId: string) => void>();
     render(
       <AccountsPageView
         accountBars={[]}

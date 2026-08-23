@@ -13,6 +13,13 @@ describe("TransactionStatus", () => {
 
     rerender(
       <TransactionStatus
+        posting={{ ...TRANSACTION_POSTING_FIXTURE, status: "CLEARED" }}
+      />,
+    );
+    expect(screen.getByText("Compensado")).toBeVisible();
+
+    rerender(
+      <TransactionStatus
         posting={{ ...TRANSACTION_POSTING_FIXTURE, status: "VOID" }}
       />,
     );

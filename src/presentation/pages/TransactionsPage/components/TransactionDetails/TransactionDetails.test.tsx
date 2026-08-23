@@ -14,23 +14,33 @@ describe("TransactionDetails", () => {
       accountLabel: "Cuenta USD",
       amountEurMinor: -1_150,
       amountNativeMinor: -1_250,
+      backupStatus: "CLEARED" as const,
       currency: "USD" as const,
       exchangeRateSource: "static" as const,
       exchangeRateToEur: 0.92,
       linked: true,
+      localTime: "19:42:03",
+      paymentMethod: "Tarjeta",
       parent: {
         amount: -25,
+        amountNativeMinor: -2_500,
         comment: "Compra conjunta",
         date: "2026-08-20" as const,
+        localTime: "19:40:00",
         payee: "Tienda del padre",
+        paymentMethod: "Método padre",
         tags: ["Familia", "Revisar"],
       },
+      referenceNumber: "REF-42",
+      sourceRowId: 42,
       sourceTransactionId: "parent-uuid",
       splitCount: 2,
       splitIndex: 0,
       tags: ["Trabajo", "Comida"],
       transactionId: "leaf-uuid",
       transferAccount: "Cuenta destino",
+      valueDate: "2026-08-21" as const,
+      valueTime: "00:00:00",
     };
     const { container } = render(<TransactionDetails posting={posting} />);
     const disclosure = container.querySelector("details");
@@ -47,6 +57,11 @@ describe("TransactionDetails", () => {
     expect(screen.getByText("Sí · Cuenta destino")).toBeVisible();
     expect(screen.getByText("Trabajo · Comida")).toBeVisible();
     expect(screen.getByText("Tienda del padre")).toBeVisible();
+    expect(screen.getByText(/21 ago 2026 · 00:00:00/i)).toBeVisible();
+    expect(screen.getByText("Compensada (CLEARED)")).toBeVisible();
+    expect(screen.getByText("Tarjeta")).toBeVisible();
+    expect(screen.getByText("REF-42")).toBeVisible();
+    expect(screen.getByText("Método padre")).toBeVisible();
     expect(screen.getByText("Compra conjunta")).toBeVisible();
     expect(screen.getByText("Familia · Revisar")).toBeVisible();
   });

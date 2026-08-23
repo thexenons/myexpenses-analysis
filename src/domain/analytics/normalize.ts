@@ -1,7 +1,7 @@
 import type {
   AccountRegistryEntry,
   AnalyticsDataset,
-  AnalyticsSourceData,
+  AnalyticsInputData,
   CategoriesRegistry,
   CategoryRegistryEntry,
   CategoryType,
@@ -17,12 +17,14 @@ import type {
   PostingBucket,
   TransactionStatus,
 } from "./types.ts";
+import { normalizeBackupDataset } from "./normalize-backup-dataset.ts";
+import { assertIsoDate, normalizeSearchText } from "./validation.ts";
 
 const BASE_CURRENCY = "EUR" as const;
-const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const CURRENCY_PATTERN = /^[A-Z]{3}$/;
 const VALID_STATUSES = new Set<TransactionStatus>([
   "UNRECONCILED",
+  "CLEARED",
   "RECONCILED",
   "VOID",
 ]);
@@ -44,7 +46,7 @@ export function dynamicRateKey(
   return `${date}|${currency}|${BASE_CURRENCY}`;
 }
 
-export function toMinorUnits(value: number, context = "Amount"): number {
+function toMinorUnits(value: number, context = "Amount"): number {
   if (!Number.isFinite(value)) {
     throw new Error(`${context}: expected a finite number`);
   }
@@ -56,7 +58,7 @@ export function toMinorUnits(value: number, context = "Amount"): number {
   return rounded === 0 ? 0 : rounded;
 }
 
-export function minorToMajor(value: number): number {
+function minorToMajor(value: number): number {
   assertMinorUnits(value, "Minor-unit amount");
   return value / 100;
 }
@@ -93,34 +95,6 @@ function convertMinorUnits(
     throw new Error(`${context}: exchange rate must be a positive finite number`);
   }
   return roundHalfAwayFromZero(amountMinor * exchangeRateToEur, context);
-}
-
-function daysInMonth(year: number, month: number): number {
-  if (month === 2) {
-    const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
-    return leap ? 29 : 28;
-  }
-  return month === 4 || month === 6 || month === 9 || month === 11 ? 30 : 31;
-}
-
-export function assertIsoDate(value: string, context = "Date"): IsoDate {
-  const match = ISO_DATE_PATTERN.exec(value);
-  if (match === null) {
-    throw new Error(`${context}: invalid ISO date ${JSON.stringify(value)}`);
-  }
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  if (
-    year < 1 ||
-    month < 1 ||
-    month > 12 ||
-    day < 1 ||
-    day > daysInMonth(year, month)
-  ) {
-    throw new Error(`${context}: invalid calendar date ${value}`);
-  }
-  return value as IsoDate;
 }
 
 function assertCurrency(value: string, context: string): CurrencyCode {
@@ -172,20 +146,9 @@ function categoryDetails(
   } else if (rootType === "INCOME") {
     bucket = "income";
   } else {
-    bucket = amountNativeMinor < 0 ? "expense" : "income";
+    bucket = amountNativeMinor > 0 ? "income" : "expense";
   }
   return { categoryType: rootType, bucket };
-}
-
-function normalizeSearchPart(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("es");
-}
-
-export function normalizeSearchText(value: string): string {
-  return normalizeSearchPart(value.trim()).replace(/\s+/g, " ");
 }
 
 function earliestDate(current: IsoDate | null, candidate: IsoDate): IsoDate {
@@ -452,6 +415,7 @@ function normalizePosting(
     accountLabel: account.label,
     accountType: entry.type,
     currency: account.currency,
+    fractionDigits: 2,
     date,
     amountNativeMinor,
     amountEurMinor,
@@ -471,7 +435,7 @@ function normalizePosting(
     ...(transaction.payee === undefined ? {} : { payee: transaction.payee }),
     splitIndex: transaction.splitIndex,
     splitCount: transaction.splitCount,
-    ...(transaction.parent === undefined
+      ...(transaction.parent === undefined
       ? {}
       : {
           parent: {
@@ -548,9 +512,12 @@ function accountValuationInEur(
  * metric aggregators deliberately ignore them.
  */
 export function normalizeDataset(
-  source: AnalyticsSourceData,
+  source: AnalyticsInputData,
   options: NormalizeDatasetOptions = {},
 ): AnalyticsDataset {
+  if ("version" in source) {
+    return normalizeBackupDataset(source);
+  }
   if (source.accounts.version !== 2) {
     throw new Error("Unsupported accounts registry: expected version 2");
   }
@@ -631,6 +598,7 @@ export function normalizeDataset(
       id: account.uuid,
       label: account.label,
       currency,
+      fractionDigits: 2,
       type: entry.type,
       exchangeRateMode: mode,
       openingBalanceNativeMinor,

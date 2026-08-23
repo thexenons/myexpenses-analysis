@@ -13,6 +13,15 @@ const exchangeModeLabels = {
   STATIC: "Estática",
 } as const;
 
+const nativeAccountTypeLabels = {
+  ASSET: "Activo",
+  BANK: "Cuenta bancaria",
+  CASH: "Efectivo",
+  CCARD: "Tarjeta de crédito",
+  INVST: "Inversión",
+  LIABILITY: "Pasivo",
+} as const;
+
 export function resolveAccountExchangeRate(
   account: NormalizedAccount,
   registryEntry: AccountRegistryEntry | undefined,
@@ -35,6 +44,14 @@ export function exchangeModeLabel(
   mode: NormalizedAccount["exchangeRateMode"],
 ): string {
   return `${exchangeModeLabels[mode]} (${mode})`;
+}
+
+export function nativeAccountTypeLabel(
+  type: NormalizedAccount["nativeType"],
+): string {
+  return type === undefined
+    ? "No disponible en el export antiguo"
+    : `${nativeAccountTypeLabels[type]} (${type})`;
 }
 
 export function formatAccountExchangeRate(

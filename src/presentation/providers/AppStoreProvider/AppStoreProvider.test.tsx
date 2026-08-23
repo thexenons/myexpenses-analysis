@@ -14,7 +14,9 @@ function StoreProbe() {
 beforeEach(() => window.localStorage.clear());
 
 it("provides an injected Zustand store to presentation hooks", () => {
-  const repository: DatasetRepository = { load: vi.fn() };
+  const repository: DatasetRepository = {
+    load: vi.fn<DatasetRepository["load"]>(),
+  };
   const store = createAppStore(repository, window.localStorage);
   store.getState().actions.setGranularity("year");
 

@@ -7,7 +7,7 @@ import { Pagination } from "./Pagination"
 describe("Pagination", () => {
   it("announces the current page and requests keyboard navigation", async () => {
     const user = userEvent.setup()
-    const onPageChange = vi.fn()
+    const onPageChange = vi.fn<(page: number) => void>()
     render(
       <Pagination
         onPageChange={onPageChange}
@@ -28,7 +28,7 @@ describe("Pagination", () => {
 
   it("does not render controls for a single page", () => {
     const { container } = render(
-      <Pagination onPageChange={vi.fn()} page={1} pageCount={1} />,
+      <Pagination onPageChange={vi.fn<(page: number) => void>()} page={1} pageCount={1} />,
     )
 
     expect(container).toBeEmptyDOMElement()

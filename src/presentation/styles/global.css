@@ -57,9 +57,9 @@
     --surface-ink-raised: #173128;
     --ink: #16231e;
     --ink-soft: #3c4a44;
-    --muted: #5f6863;
+    --muted: #59635e;
     --line: #cec9bb;
-    --line-dark: #9ca59f;
+    --line-dark: #748079;
     --income: #286a4c;
     --income-soft: #dcebdd;
     --expense: #a33f36;
@@ -67,6 +67,7 @@
     --transfer: #35698b;
     --transfer-soft: #d9e7ef;
     --debt: #bd7d2f;
+    --debt-ink: #875318;
     --debt-soft: #f0e2c9;
     --accent: #c5da72;
     --accent-ink: #22330e;
@@ -88,7 +89,6 @@
   body {
     min-width: 320px;
     min-height: 100vh;
-    overflow-x: hidden;
     color: var(--ink);
     background:
       radial-gradient(circle at 90% -10%, rgb(197 218 114 / 26%), transparent 28rem),
@@ -131,10 +131,20 @@
   button:focus-visible,
   input:focus-visible,
   select:focus-visible,
+  summary:focus-visible,
   a:focus-visible,
   [tabindex]:focus-visible {
     outline: 3px solid currentColor;
     outline-offset: 3px;
+  }
+
+  :where(a, button, input, select, summary, [tabindex]) {
+    scroll-margin-block-start: 5.75rem;
+    scroll-margin-block-end: calc(8rem + env(safe-area-inset-bottom));
+  }
+
+  :where(h1, h2, h3, p, dd) {
+    overflow-wrap: anywhere;
   }
 
   ::selection {
@@ -150,6 +160,50 @@
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
+    }
+  }
+
+  @media (forced-colors: active) {
+    :root {
+      --paper: Canvas;
+      --paper-deep: Canvas;
+      --surface: Canvas;
+      --surface-bright: Canvas;
+      --surface-ink: CanvasText;
+      --surface-ink-raised: CanvasText;
+      --ink: CanvasText;
+      --ink-soft: CanvasText;
+      --muted: CanvasText;
+      --line: GrayText;
+      --line-dark: CanvasText;
+      --income: CanvasText;
+      --income-soft: Canvas;
+      --expense: CanvasText;
+      --expense-soft: Canvas;
+      --transfer: LinkText;
+      --transfer-soft: Canvas;
+      --debt: CanvasText;
+      --debt-ink: CanvasText;
+      --debt-soft: Canvas;
+      --accent: Highlight;
+      --accent-ink: HighlightText;
+    }
+
+    body {
+      background: Canvas;
+    }
+
+    body::before {
+      display: none;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    summary:focus-visible,
+    a:focus-visible,
+    [tabindex]:focus-visible {
+      outline-color: Highlight !important;
     }
   }
 }

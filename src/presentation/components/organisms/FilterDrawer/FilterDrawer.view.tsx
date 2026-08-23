@@ -39,6 +39,7 @@ const STATUS_OPTIONS: readonly {
   value: TransactionStatus
 }[] = [
   { value: "UNRECONCILED", label: "Sin conciliar" },
+  { value: "CLEARED", label: "Compensadas" },
   { value: "RECONCILED", label: "Conciliadas" },
   { value: "VOID", label: "Anuladas" },
 ]

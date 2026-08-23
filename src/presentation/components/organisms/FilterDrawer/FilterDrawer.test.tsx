@@ -95,6 +95,24 @@ describe("FilterDrawer", () => {
     expect(appStore.getState().granularity).toBe("month")
   })
 
+  it("exposes the cleared audit status without flattening it into reconciled", async () => {
+    const user = userEvent.setup()
+    appStore.setState({ filterDrawerOpen: true })
+    render(
+      <AppStoreProvider store={appStore}>
+        <FilterDrawer />
+      </AppStoreProvider>,
+    )
+
+    await user.click(screen.getByRole("checkbox", { name: "Compensadas" }))
+
+    expect(appStore.getState().filters.statuses).toEqual([
+      "UNRECONCILED",
+      "RECONCILED",
+      "VOID",
+    ])
+  })
+
   it("closes when the non-panel overlay is pressed", async () => {
     const user = userEvent.setup()
     appStore.setState({ filterDrawerOpen: true })

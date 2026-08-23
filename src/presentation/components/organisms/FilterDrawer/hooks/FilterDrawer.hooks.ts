@@ -22,6 +22,7 @@ import type {
 
 const STATUS_VALUES: readonly TransactionStatus[] = [
   "UNRECONCILED",
+  "CLEARED",
   "RECONCILED",
   "VOID",
 ]

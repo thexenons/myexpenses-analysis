@@ -57,7 +57,7 @@
 
 .term {
   color: var(--muted);
-  font-size: 0.54rem;
+  font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -67,7 +67,7 @@
   margin: 0.08rem 0 0;
   color: var(--ink);
   font-family: var(--mono);
-  font-size: 0.64rem;
+  font-size: 0.68rem;
   font-variant-numeric: tabular-nums;
   line-height: 1.4;
 }

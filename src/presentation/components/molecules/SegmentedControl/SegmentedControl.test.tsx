@@ -5,7 +5,7 @@ import { expect, it, vi } from "vitest";
 import { SegmentedControl } from "./SegmentedControl.tsx";
 
 it("behaves as an accessible single-choice group", async () => {
-  const onChange = vi.fn();
+  const onChange = vi.fn<(value: string) => void>();
   const user = userEvent.setup();
   render(
     <SegmentedControl

@@ -26,7 +26,11 @@ describe("ChartDataTable", () => {
 
   it("does not build lazy rows until the exact-data table is opened", async () => {
     const user = userEvent.setup();
-    const createRows = vi.fn(() => [
+    const createRows = vi.fn<() => Array<{
+      id: string;
+      label: string;
+      values: number[];
+    }>>(() => [
       { id: "jan", label: "Enero", values: [125.5] },
     ]);
     render(

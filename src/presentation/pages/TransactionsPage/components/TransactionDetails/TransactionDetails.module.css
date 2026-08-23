@@ -10,9 +10,9 @@
   gap: 0.35rem;
   align-items: center;
   width: fit-content;
-  min-height: 1.5rem;
+  min-height: 2.25rem;
   color: var(--transfer);
-  font-size: 0.62rem;
+  font-size: 0.68rem;
   font-weight: 750;
   cursor: pointer;
   list-style: none;
@@ -61,7 +61,7 @@
 
 .term {
   color: var(--muted);
-  font-size: 0.54rem;
+  font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.065em;
   text-transform: uppercase;
@@ -71,13 +71,13 @@
   overflow-wrap: anywhere;
   margin: 0.08rem 0 0;
   color: var(--ink);
-  font-size: 0.64rem;
+  font-size: 0.68rem;
   line-height: 1.4;
 }
 
 .code {
   font-family: var(--mono);
-  font-size: 0.6rem;
+  font-size: 0.65rem;
 }
 
 @media (max-width: 620px) {

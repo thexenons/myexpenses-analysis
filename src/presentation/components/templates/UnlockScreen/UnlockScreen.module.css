@@ -1,0 +1,407 @@
+.root {
+  display: grid;
+  min-height: 100dvh;
+  padding: clamp(1rem, 4vw, 3.5rem);
+  overflow: hidden;
+  place-items: center;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 16% 18%, rgb(189 125 47 / 13%), transparent 25rem),
+    linear-gradient(145deg, var(--paper-deep), var(--paper) 52%, var(--surface-bright));
+}
+
+.card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(15rem, 0.72fr) minmax(22rem, 1.28fr);
+  width: min(100%, 64rem);
+  min-height: 37rem;
+  overflow: hidden;
+  background: var(--surface-bright);
+  border: 1px solid var(--line-dark);
+  border-radius: clamp(1rem, 2.5vw, 2rem);
+  box-shadow: 0 2rem 6rem rgb(22 35 30 / 18%);
+  animation: vaultEnter 480ms cubic-bezier(0.2, 0.72, 0.2, 1) both;
+}
+
+.vaultPanel {
+  position: relative;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  min-height: 100%;
+  padding: 2rem;
+  color: var(--paper);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 2.9rem,
+      rgb(255 255 255 / 4%) 2.9rem,
+      rgb(255 255 255 / 4%) 3rem
+    ),
+    var(--surface-ink);
+  border-inline-end: 1px solid rgb(255 255 255 / 12%);
+}
+
+.vaultPanel::before,
+.vaultPanel::after {
+  position: absolute;
+  width: 0.45rem;
+  aspect-ratio: 1;
+  content: "";
+  background: var(--debt);
+  border-radius: 50%;
+  box-shadow:
+    0 calc(37rem - 3rem) 0 var(--debt),
+    calc(15rem - 3rem) 0 0 var(--debt),
+    calc(15rem - 3rem) calc(37rem - 3rem) 0 var(--debt);
+}
+
+.vaultPanel::before {
+  inset: 1.3rem auto auto 1.3rem;
+}
+
+.vaultPanel::after {
+  display: none;
+}
+
+.seal {
+  position: relative;
+  display: grid;
+  width: clamp(8rem, 16vw, 11rem);
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 0.55rem rgb(255 255 255 / 4%),
+    inset 0 0 0 0.65rem rgb(255 255 255 / 18%),
+    0 1.2rem 3rem rgb(0 0 0 / 28%);
+}
+
+.seal::before {
+  width: 3.7rem;
+  height: 3rem;
+  content: "";
+  border: 0.42rem solid var(--debt);
+  border-bottom: 0;
+  border-radius: 2rem 2rem 0 0;
+  transform: translateY(-1.9rem);
+}
+
+.seal::after {
+  position: absolute;
+  width: 5.4rem;
+  height: 4.5rem;
+  content: "";
+  background: var(--debt);
+  border-radius: 0.7rem;
+  transform: translateY(1.3rem);
+}
+
+.keyhole {
+  position: absolute;
+  z-index: 1;
+  width: 0.85rem;
+  height: 1.7rem;
+  background: var(--surface-ink);
+  border-radius: 999px 999px 0.2rem 0.2rem;
+  transform: translateY(1.2rem);
+}
+
+.vaultIndex {
+  margin: 2.4rem 0 0;
+  color: var(--debt);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+}
+
+.vaultCaption {
+  margin: 0.32rem 0 0;
+  color: rgb(255 255 255 / 64%);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.content {
+  display: grid;
+  align-content: center;
+  gap: 1.2rem;
+  padding: clamp(1.5rem, 5vw, 4rem);
+}
+
+.header {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.eyebrow {
+  color: var(--debt-ink);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(2.2rem, 5vw, 4.4rem);
+  font-weight: 520;
+  line-height: 0.94;
+  letter-spacing: -0.052em;
+}
+
+.description {
+  max-width: 34rem;
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.7rem;
+  align-items: end;
+}
+
+.field {
+  display: grid;
+  gap: 0.32rem;
+  min-width: 0;
+}
+
+.label {
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fieldHint {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.inputFrame {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--paper);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius-sm);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.inputFrame:focus-within {
+  border-color: var(--accent-ink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-ink) 13%, transparent);
+}
+
+.input {
+  min-width: 0;
+  min-height: 3rem;
+  padding: 0.7rem 0.8rem;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+}
+
+.visibility {
+  align-self: stretch;
+  padding: 0.5rem 0.75rem;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-inline-start: 1px solid var(--line);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.visibility:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--paper-deep);
+}
+
+.submit {
+  display: inline-flex;
+  gap: 0.55rem;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0.7rem 1rem;
+  color: var(--surface-bright);
+  white-space: nowrap;
+  background: var(--surface-ink);
+  border: 1px solid var(--surface-ink);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 800;
+  transition: transform 140ms ease, background 140ms ease;
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--accent-ink);
+  transform: translateY(-1px);
+}
+
+.submit:disabled,
+.visibility:disabled,
+.input:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.submitMark {
+  width: 0.5rem;
+  aspect-ratio: 1;
+  background: var(--debt);
+  border-radius: 50%;
+}
+
+.warning {
+  padding: 0.8rem 0.9rem;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--debt) 8%, var(--paper));
+  border-inline-start: 0.2rem solid var(--debt-ink);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.warning strong,
+.blocked strong {
+  display: block;
+  color: var(--ink);
+  font-size: 0.66rem;
+}
+
+.warning p {
+  margin: 0.22rem 0 0;
+  font-size: 0.65rem;
+}
+
+.error,
+.blocked {
+  padding: 0.7rem 0.8rem;
+  margin: 0;
+  color: var(--expense);
+  background: color-mix(in srgb, var(--expense) 7%, var(--surface-bright));
+  border: 1px solid color-mix(in srgb, var(--expense) 28%, var(--line));
+  border-radius: var(--radius-sm);
+  font-size: 0.68rem;
+}
+
+.blocked {
+  display: grid;
+  gap: 0.2rem;
+  color: var(--ink-soft);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 1rem;
+  padding-top: 0.8rem;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes vaultEnter {
+  from {
+    opacity: 0;
+    transform: translateY(0.7rem) scale(0.992);
+  }
+}
+
+@media (max-width: 760px) {
+  .root {
+    padding: 0;
+    place-items: stretch;
+  }
+
+  .card {
+    grid-template-columns: 1fr;
+    min-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .vaultPanel {
+    min-height: 10rem;
+  }
+
+  .seal {
+    width: 5.6rem;
+  }
+
+  .seal::before {
+    width: 2.4rem;
+    height: 2rem;
+    border-width: 0.3rem;
+    transform: translateY(-1.25rem);
+  }
+
+  .seal::after {
+    width: 3.5rem;
+    height: 2.8rem;
+    transform: translateY(0.85rem);
+  }
+
+  .keyhole {
+    width: 0.55rem;
+    height: 1.1rem;
+    transform: translateY(0.8rem);
+  }
+
+  .vaultIndex,
+  .vaultCaption {
+    display: none;
+  }
+
+  .content {
+    align-content: start;
+    padding: 1.5rem 1rem 2rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .form {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+
+  .inputFrame,
+  .submit {
+    transition: none;
+  }
+}

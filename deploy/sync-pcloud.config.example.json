@@ -1,0 +1,9 @@
+{
+  "apiHost": "eapi.pcloud.com",
+  "folderId": "123456789012345678",
+  "tokenFile": "/etc/myexpenses/pcloud.token",
+  "vaultPassphraseFile": "/etc/myexpenses/vault.passphrase",
+  "deployRoot": "/srv/myexpenses",
+  "repositoryRoot": "/opt/myexpenses-analysis",
+  "timeZone": "Europe/Madrid"
+}

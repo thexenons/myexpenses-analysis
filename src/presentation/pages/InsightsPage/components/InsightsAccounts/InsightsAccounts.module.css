@@ -1,0 +1,112 @@
+.deferredPanel {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 27rem;
+}
+
+.chartPanel {
+  min-height: 27rem;
+}
+
+.accountSection {
+  display: grid;
+  gap: 1rem;
+}
+
+.visibilityHero {
+  display: grid;
+  padding: 0.8rem 0.9rem;
+  color: var(--surface-bright);
+  background:
+    radial-gradient(circle at 86% 15%, rgb(197 218 114 / 30%), transparent 8rem),
+    var(--surface-ink-raised);
+  border-radius: var(--radius-sm);
+}
+
+.visibilityHero strong {
+  font-family: var(--display);
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 520;
+  line-height: 1;
+}
+
+.visibilityHero span {
+  margin-top: 0.2rem;
+  color: color-mix(in srgb, var(--surface-bright) 72%, transparent);
+  font-size: 0.68rem;
+}
+
+.compactFacts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+
+.compactFacts > div,
+.provenanceGrid > div {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 0;
+  padding: 0.58rem;
+  background: color-mix(in srgb, var(--paper-deep) 48%, transparent);
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+}
+
+.compactFacts dt,
+.provenanceGrid dt {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.compactFacts dd,
+.provenanceGrid dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.provenanceGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.provenanceGrid code {
+  overflow-wrap: anywhere;
+  color: var(--transfer);
+}
+
+@media (max-width: 70rem) {
+  .provenanceGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 48rem) {
+  .provenanceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .chartPanel {
+    min-height: 23rem;
+  }
+}
+
+@media (max-width: 30rem) {
+  .compactFacts {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (forced-colors: active) {
+  .compactFacts > div,
+  .provenanceGrid > div {
+    border-color: CanvasText;
+  }
+}

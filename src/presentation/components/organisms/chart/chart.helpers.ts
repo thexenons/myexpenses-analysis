@@ -12,7 +12,7 @@ import type {
 
 export const CHART_WIDTH = 1_000
 export const SERIES_CHART_HEIGHT = 360
-export const SERIES_MARGIN = {
+const SERIES_MARGIN = {
   top: 20,
   right: 26,
   bottom: 58,
@@ -50,7 +50,7 @@ function niceStep(rawStep: number): number {
   return factor * magnitude
 }
 
-export function createScale(
+function createScale(
   values: ReadonlyArray<number>,
   tickCount = DEFAULT_TICK_COUNT,
 ): Scale {

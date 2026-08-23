@@ -35,8 +35,8 @@ const category: CategoryBreakdownNode = {
 describe("CategoriesPageView", () => {
   it("applies and clears a category through global-filter callbacks", async () => {
     const user = userEvent.setup();
-    const onClearCategory = vi.fn();
-    const onSelectCategory = vi.fn();
+    const onClearCategory = vi.fn<() => void>();
+    const onSelectCategory = vi.fn<(path: readonly string[]) => void>();
     render(
       <CategoriesPageView
         activityEurMinor={-2_500}
@@ -52,7 +52,9 @@ describe("CategoriesPageView", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /Gastos/ }));
+    const selectedButton = screen.getByRole("button", { name: /Gastos/ });
+    expect(selectedButton).toHaveAttribute("aria-pressed", "true");
+    await user.click(selectedButton);
     expect(onSelectCategory).toHaveBeenCalledWith(["Gastos"]);
     expect(screen.getByText("Gasto")).toBeVisible();
     expect(screen.getByText("4 dir. / 4 total")).toBeVisible();
@@ -135,8 +137,8 @@ describe("createCategoriesPageModel", () => {
       filtered,
       selectedPath,
       "year",
-      vi.fn(),
-      vi.fn(),
+      vi.fn<() => void>(),
+      vi.fn<(path: readonly string[]) => void>(),
     );
 
     expect(model.categorySeries).toHaveLength(1);
@@ -156,8 +158,8 @@ describe("createCategoriesPageModel", () => {
       applyFilters(analytics, createDefaultFilterState()),
       [],
       "year",
-      vi.fn(),
-      vi.fn(),
+      vi.fn<() => void>(),
+      vi.fn<(path: readonly string[]) => void>(),
     );
     expect(completeTreeModel.directPostingCount).toBe(1);
   });

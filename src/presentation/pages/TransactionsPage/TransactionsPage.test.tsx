@@ -10,13 +10,13 @@ const posting = TRANSACTION_POSTING_FIXTURE;
 describe("TransactionsPageView", () => {
   it("renders rows and forwards sorting and export actions", async () => {
     const user = userEvent.setup();
-    const onDownload = vi.fn();
-    const onSort = vi.fn();
+    const onDownload = vi.fn<() => void>();
+    const onSort = vi.fn<(key: "amount" | "date") => void>();
     render(
       <TransactionsPageView
         descending
         onDownload={onDownload}
-        onPageChange={vi.fn()}
+        onPageChange={vi.fn<(page: number) => void>()}
         onSort={onSort}
         page={1}
         pageCount={1}
@@ -39,9 +39,9 @@ describe("TransactionsPageView", () => {
     render(
       <TransactionsPageView
         descending
-        onDownload={vi.fn()}
-        onPageChange={vi.fn()}
-        onSort={vi.fn()}
+        onDownload={vi.fn<() => void>()}
+        onPageChange={vi.fn<(page: number) => void>()}
+        onSort={vi.fn<(key: "amount" | "date") => void>()}
         page={1}
         pageCount={1}
         postings={[]}
@@ -59,9 +59,9 @@ describe("TransactionsPageView", () => {
     render(
       <TransactionsPageView
         descending
-        onDownload={vi.fn()}
-        onPageChange={vi.fn()}
-        onSort={vi.fn()}
+        onDownload={vi.fn<() => void>()}
+        onPageChange={vi.fn<(page: number) => void>()}
+        onSort={vi.fn<(key: "amount" | "date") => void>()}
         page={1}
         pageCount={1}
         postings={[{ ...posting, isVoid: true, status: "VOID" }]}

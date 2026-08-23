@@ -12,7 +12,7 @@ export const euroFormatter = new Intl.NumberFormat("es-ES", {
 
 export const countFormatter = new Intl.NumberFormat("es-ES");
 
-const currencyFormatters = new Map<CurrencyCode, Intl.NumberFormat>();
+const currencyFormatters = new Map<string, Intl.NumberFormat>();
 
 const monthFormatter = new Intl.DateTimeFormat("es-ES", {
   month: "short",
@@ -44,18 +44,20 @@ export function formatEuroMinor(amountEurMinor: number): string {
 export function formatCurrencyMinor(
   amountMinor: number,
   currency: CurrencyCode,
+  fractionDigits: number,
 ): string {
-  let formatter = currencyFormatters.get(currency);
+  const formatterKey = `${currency}:${fractionDigits}`;
+  let formatter = currencyFormatters.get(formatterKey);
   if (formatter === undefined) {
     formatter = new Intl.NumberFormat("es-ES", {
       currency,
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 2,
+      maximumFractionDigits: fractionDigits,
+      minimumFractionDigits: fractionDigits,
       style: "currency",
     });
-    currencyFormatters.set(currency, formatter);
+    currencyFormatters.set(formatterKey, formatter);
   }
-  return formatter.format(amountMinor / 100);
+  return formatter.format(amountMinor / 10 ** fractionDigits);
 }
 
 export function formatDate(date: IsoDate): string {

@@ -6,6 +6,7 @@ import {
 import {
   exchangeModeLabel,
   formatAccountExchangeRate,
+  nativeAccountTypeLabel,
 } from "./AccountDetails.helpers.ts";
 import styles from "./AccountDetails.module.css";
 import type { AccountDetailsProps } from "./AccountDetails.types.ts";
@@ -23,6 +24,36 @@ export function AccountDetails({
       </summary>
       <dl className={styles.content}>
         <div className={styles.item}>
+          <dt className={styles.term}>Tipo nativo</dt>
+          <dd className={styles.description}>
+            {nativeAccountTypeLabel(account.nativeType)}
+          </dd>
+        </div>
+        <div className={styles.item}>
+          <dt className={styles.term}>Visibilidad en MyExpenses</dt>
+          <dd className={styles.description}>
+            {account.visible === false ? "Oculta" : "Visible"}
+          </dd>
+        </div>
+        <div className={styles.item}>
+          <dt className={styles.term}>Incluida en totales</dt>
+          <dd className={styles.description}>
+            {account.excludedFromTotals === true ? "No" : "Sí"}
+          </dd>
+        </div>
+        <div className={styles.item}>
+          <dt className={styles.term}>Admite conciliación</dt>
+          <dd className={styles.description}>
+            {account.supportsReconciliation === true ? "Sí" : "No"}
+          </dd>
+        </div>
+        {account.description ? (
+          <div className={`${styles.item} ${styles.wide}`}>
+            <dt className={styles.term}>Descripción</dt>
+            <dd className={styles.description}>{account.description}</dd>
+          </div>
+        ) : null}
+        <div className={styles.item}>
           <dt className={styles.term}>Apertura del periodo</dt>
           <dd className={styles.description}>
             {formatEuroMinor(item.periodOpeningBalanceEurMinor)}
@@ -34,6 +65,7 @@ export function AccountDetails({
             {formatCurrencyMinor(
               account.openingBalanceNativeMinor,
               account.currency,
+              account.fractionDigits,
             )}
           </dd>
         </div>
@@ -43,6 +75,7 @@ export function AccountDetails({
             {formatCurrencyMinor(
               account.currentBalanceNativeMinor,
               account.currency,
+              account.fractionDigits,
             )}
           </dd>
         </div>

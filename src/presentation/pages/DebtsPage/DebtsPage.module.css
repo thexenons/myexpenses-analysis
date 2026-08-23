@@ -17,7 +17,7 @@
 
 .debtSummaryLabel {
   color: rgb(247 243 231 / 58%);
-  font-size: 0.64rem;
+  font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -65,7 +65,7 @@
 
 .accountMeta {
   color: var(--muted);
-  font-size: 0.62rem;
+  font-size: 0.68rem;
 }
 
 .accountBalance {

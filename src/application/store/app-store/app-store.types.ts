@@ -4,7 +4,12 @@ import type {
   TimeGranularity,
 } from "../../../domain/analytics/types.ts";
 
-export type LoadPhase = "idle" | "loading" | "ready" | "error";
+export type LoadPhase = "locked" | "unlocking" | "ready" | "error";
+
+export interface AppStoreEnvironment {
+  readonly hostname: string;
+  readonly isSecureContext: boolean;
+}
 
 export interface AppStoreStorage {
   getItem(name: string): string | null | Promise<string | null>;
@@ -15,7 +20,7 @@ export interface AppStoreStorage {
 export interface AppStoreActions {
   clearFilters(): void;
   closeFilterDrawer(): void;
-  initialize(force?: boolean): Promise<void>;
+  lock(): void;
   openFilterDrawer(): void;
   patchFilters(patch: Partial<FilterState>): void;
   setAccountIds(accountIds: readonly string[]): void;
@@ -23,6 +28,7 @@ export interface AppStoreActions {
   setGranularity(granularity: TimeGranularity): void;
   setStatuses(statuses: FilterState["statuses"]): void;
   setTags(tags: readonly string[]): void;
+  unlock(passphrase: string): Promise<void>;
 }
 
 export interface AppStoreState {
@@ -33,9 +39,9 @@ export interface AppStoreState {
   filters: FilterState;
   granularity: TimeGranularity;
   loadPhase: LoadPhase;
+  unlockBlockedReason: string | null;
 }
 
 export interface AppStorePersistedState {
-  readonly filters: FilterState;
   readonly granularity: TimeGranularity;
 }

@@ -3,5 +3,6 @@ import type { LoadPhase } from "../../application/store/app-store/app-store.type
 export interface AppViewProps {
   error: string | null;
   loadPhase: LoadPhase;
-  onRetry: () => void;
+  onUnlock: (passphrase: string) => Promise<void>;
+  unlockBlockedReason: string | null;
 }

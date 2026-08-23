@@ -1,6 +1,5 @@
 import {
   accountMatchesScope,
-  restoreFilterState,
 } from "../../../domain/analytics/filters.ts";
 import type {
   AnalyticsDataset,
@@ -8,9 +7,16 @@ import type {
   TimeGranularity,
 } from "../../../domain/analytics/types.ts";
 import type { AppStorePersistedState } from "./app-store.types.ts";
+import type { AppStoreEnvironment } from "./app-store.types.ts";
 
 export const APP_STORE_STORAGE_NAME = "myexpenses-analysis:ui:v1";
-export const APP_STORE_STORAGE_VERSION = 3;
+export const APP_STORE_STORAGE_VERSION = 4;
+export const VAULT_UNLOCK_ERROR_MESSAGE =
+  "No se pudo abrir la bóveda. Comprueba la frase e inténtalo de nuevo.";
+export const VAULT_TRANSPORT_ERROR_MESSAGE =
+  "No se pudo descargar la bóveda cifrada. Comprueba la conexión y que el archivo esté publicado.";
+export const INSECURE_CONTEXT_MESSAGE =
+  "Esta bóveda necesita HTTPS para usar Web Crypto. Ábrela mediante HTTPS o desde localhost.";
 
 const VALID_GRANULARITIES = new Set<TimeGranularity>([
   "day",
@@ -35,7 +41,6 @@ export function restoreAppStorePersistedState(
 ): AppStorePersistedState {
   const persisted = isObject(value) ? value : {};
   return {
-    filters: restoreFilterState(persisted.filters),
     granularity: isTimeGranularity(persisted.granularity)
       ? persisted.granularity
       : "month",
@@ -62,8 +67,26 @@ export function reconcileFilterAccounts(
     : { ...filters, accountIds };
 }
 
-export function appStoreErrorMessage(error: unknown): string {
-  return error instanceof Error
-    ? error.message
-    : "No se pudieron cargar los datos.";
+export function defaultAppStoreEnvironment(): AppStoreEnvironment {
+  return {
+    hostname: globalThis.location?.hostname ?? "",
+    isSecureContext: globalThis.isSecureContext === true,
+  };
+}
+
+function isLocalHostname(hostname: string): boolean {
+  return (
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
+    hostname === "127.0.0.1" ||
+    hostname === "[::1]"
+  );
+}
+
+export function unlockBlockedReason(
+  environment: AppStoreEnvironment,
+): string | null {
+  return environment.isSecureContext || isLocalHostname(environment.hostname)
+    ? null
+    : INSECURE_CONTEXT_MESSAGE;
 }

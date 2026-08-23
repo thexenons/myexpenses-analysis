@@ -1,4 +1,15 @@
-export type TransactionStatus = "UNRECONCILED" | "RECONCILED" | "VOID";
+import type {
+  BackupDatasetV1,
+  BackupFxSource,
+  BackupNativeAccountType,
+  BackupTransactionStatus,
+} from "./backup-dataset.types.ts";
+
+export type TransactionStatus =
+  | "UNRECONCILED"
+  | "CLEARED"
+  | "RECONCILED"
+  | "VOID";
 
 export type CurrencyCode = Uppercase<string>;
 export type IsoDate = `${number}-${number}-${number}`;
@@ -29,9 +40,12 @@ export type CategoriesRegistry = Readonly<Record<string, CategoryRegistryEntry>>
 export interface ParsedParentTransactionContext {
   readonly date: IsoDate;
   readonly amount: number;
+  readonly amountNativeMinor?: number;
+  readonly localTime?: string;
   readonly comment?: string;
   readonly tags?: readonly string[];
   readonly payee?: string;
+  readonly paymentMethod?: string;
 }
 
 interface ParsedTransactionFields {
@@ -84,6 +98,8 @@ export type AnalyticsSourceData = Pick<
   "accounts" | "categories" | "parsedData"
 >;
 
+export type AnalyticsInputData = AnalyticsSourceData | BackupDatasetV1;
+
 export type AnalyticsRegistries = Pick<AppDataset, "accounts" | "categories">;
 
 export type PostingBucket = "expense" | "income" | "transfer";
@@ -97,6 +113,7 @@ export interface NormalizedAccount {
   readonly id: string;
   readonly label: string;
   readonly currency: CurrencyCode;
+  readonly fractionDigits: number;
   readonly type: AccountType;
   readonly exchangeRateMode: ExchangeRateMode | "IDENTITY";
   readonly openingBalanceNativeMinor: number;
@@ -108,6 +125,13 @@ export interface NormalizedAccount {
   readonly valuationBalanceEurMinor: number;
   readonly postingCount: number;
   readonly activePostingCount: number;
+  readonly sourceRowId?: number;
+  readonly nativeType?: BackupNativeAccountType;
+  readonly description?: string;
+  readonly visible?: boolean;
+  readonly excludedFromTotals?: boolean;
+  readonly includedInAll?: boolean;
+  readonly supportsReconciliation?: boolean;
 }
 
 export interface NormalizedPosting {
@@ -119,26 +143,52 @@ export interface NormalizedPosting {
   readonly accountLabel: string;
   readonly accountType: AccountType;
   readonly currency: CurrencyCode;
+  readonly fractionDigits: number;
   readonly date: IsoDate;
+  readonly sourceRowId?: number;
+  readonly epochSeconds?: number;
+  readonly localTime?: string;
+  readonly valueDate?: IsoDate;
+  readonly valueTime?: string;
   readonly amountNativeMinor: number;
   readonly amountEurMinor: number;
   readonly exchangeRateToEur: number;
   readonly exchangeRateSource: ExchangeRateSource;
+  /** Exact v1 source, including the zero-amount case without an invented rate. */
+  readonly backupFxSource?: BackupFxSource;
+  readonly categoryUuid?: string;
   readonly categoryPath: readonly string[];
   readonly categoryType: CategoryType;
   readonly bucket: PostingBucket;
   readonly status: TransactionStatus;
+  /** Exact MyExpenses reconciliation status retained for source-level display. */
+  readonly backupStatus?: BackupTransactionStatus;
   readonly isVoid: boolean;
+  readonly isArchivedContent?: boolean;
   readonly linked: boolean;
+  readonly transferPeerPostingId?: string;
   readonly transferAccount?: string;
   readonly tags: readonly string[];
+  readonly tagSourceIds?: readonly number[];
   readonly comment?: string;
   readonly payee?: string;
+  readonly payeeSourceId?: number;
+  readonly paymentMethod?: string;
+  readonly paymentMethodSourceId?: number;
+  readonly referenceNumber?: string;
+  readonly originalAmountMinor?: number;
+  readonly originalCurrency?: CurrencyCode;
+  readonly originalFractionDigits?: number;
   readonly splitIndex: number | null;
   readonly splitCount: number | null;
+  readonly splitParentSourceId?: number;
+  readonly splitParentPostingId?: string;
+  readonly parentPaymentMethod?: string;
   readonly parent?: ParsedParentTransactionContext;
-  /** Pre-normalized, accent-insensitive text used by the global search filter. */
-  readonly searchIndex: string;
+  /** Pre-normalized index for legacy rows; backup rows derive and cache it lazily. */
+  readonly searchIndex?: string;
+  /** Search-only aliases that are not represented by the display fields. */
+  readonly searchAliases?: readonly string[];
 }
 
 export interface AnalyticsDataset {
@@ -149,6 +199,19 @@ export interface AnalyticsDataset {
   readonly postings: readonly NormalizedPosting[];
   readonly minDate: IsoDate | null;
   readonly maxDate: IsoDate | null;
+  /** Rich backup metadata and registries retained by reference for future screens. */
+  readonly backup?: Pick<
+    BackupDatasetV1,
+    | "source"
+    | "preferences"
+    | "currencies"
+    | "accounts"
+    | "categories"
+    | "payees"
+    | "paymentMethods"
+    | "tags"
+    | "budgets"
+  >;
 }
 
 export interface NormalizeDatasetOptions {
@@ -190,6 +253,8 @@ export interface FilteredAnalyticsDataset {
   readonly accounts: readonly NormalizedAccount[];
   /** Includes matching VOID rows for transaction tables. */
   readonly postings: readonly NormalizedPosting[];
+  /** Matching non-VOID rows, retained once for every metric consumer. */
+  readonly activePostings: readonly NormalizedPosting[];
   /** Per-account opening at the start of the selected period and filters. */
   readonly periodOpeningEurMinorByAccountId: Readonly<Record<string, number>>;
   readonly periodOpeningBalanceEurMinor: number;

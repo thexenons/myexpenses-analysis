@@ -1,0 +1,144 @@
+.deferredPanel {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 31rem;
+}
+
+.rankGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.rankGroup {
+  --rank-accent: var(--transfer);
+
+  min-width: 0;
+  padding: 0.82rem;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--rank-accent) 9%, var(--surface-bright)),
+      var(--surface-bright) 44%
+    );
+  border: 1px solid color-mix(in srgb, var(--rank-accent) 22%, var(--line));
+  border-radius: var(--radius-sm);
+}
+
+.rankGroup[data-tone="expense"] {
+  --rank-accent: var(--expense);
+}
+
+.rankGroup[data-tone="income"] {
+  --rank-accent: var(--income);
+}
+
+.rankTitle {
+  padding-bottom: 0.55rem;
+  color: var(--rank-accent);
+  border-bottom: 2px solid color-mix(in srgb, var(--rank-accent) 36%, transparent);
+  font-family: var(--display);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.rankList {
+  display: grid;
+  margin-top: 0.2rem;
+}
+
+.rankItem {
+  display: grid;
+  grid-template-columns: 1.7rem minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: center;
+  min-height: 3.4rem;
+  padding-block: 0.56rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  content-visibility: auto;
+  contain-intrinsic-size: 0 3.4rem;
+}
+
+.rankItem:last-child {
+  border-bottom: 0;
+}
+
+.rankIndex {
+  color: var(--rank-accent);
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  font-weight: 750;
+}
+
+.rankIdentity {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.rankIdentity strong {
+  overflow: hidden;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rankIdentity small {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.rankAmount {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.emptyCopy {
+  padding-block: 1rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.coverageFooter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+@media (max-width: 70rem) {
+  .rankGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rankGroup:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 48rem) {
+  .rankGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rankGroup:last-child {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 30rem) {
+  .rankItem {
+    grid-template-columns: 1.5rem minmax(0, 1fr);
+  }
+
+  .rankAmount {
+    grid-column: 2;
+  }
+}
+
+@media (forced-colors: active) {
+  .rankGroup {
+    border: 1px solid CanvasText;
+  }
+}

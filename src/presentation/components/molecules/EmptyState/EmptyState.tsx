@@ -6,11 +6,14 @@ export function EmptyState({
   actions,
   className,
   description,
+  headingLevel = 3,
   icon,
   ref,
   title,
   ...props
 }: EmptyStateProps) {
+  const Heading = headingLevel === 2 ? "h2" : "h3"
+
   return (
     <div
       {...props}
@@ -22,7 +25,7 @@ export function EmptyState({
           {icon}
         </div>
       ) : null}
-      <h3 className={styles.title}>{title}</h3>
+      <Heading className={styles.title}>{title}</Heading>
       {description ? (
         <p className={styles.description}>{description}</p>
       ) : null}

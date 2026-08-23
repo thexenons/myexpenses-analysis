@@ -9,11 +9,12 @@ const projectPath = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 
 test("Vite blocks normalized /@fs variants that resolve inside private data", () => {
   const privateRoutes = [
-    `/@fs${projectPath}/data/export.ts`,
-    `/@fs/${projectPath}/data/export.ts`,
-    `/@fs/${projectPath}//data/export-20260821-092252.json`,
-    `/@fs//${projectPath.replace(/^\//, "")}///data/statistics.json`,
-    `/@fs/${projectPath}/data/../data/exchange-rates.json`,
+    `/@fs${projectPath}/data/myexpenses-backup-private.zip`,
+    `/@fs/${projectPath}/data/BACKUP`,
+    `/@fs/${projectPath}//data/BACKUP_PREF`,
+    `/@fs//${projectPath.replace(/^\//, "")}///data/app-dataset.json`,
+    `/@fs/${projectPath}/data/app-dataset.vault.json`,
+    `/@fs/${projectPath}/data/../data/ui_settings.preferences_pb`,
   ];
 
   for (const route of privateRoutes) {

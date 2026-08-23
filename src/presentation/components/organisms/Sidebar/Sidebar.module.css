@@ -76,7 +76,7 @@
   .brandCopy small,
   .sectionLabel {
     color: rgb(245 243 233 / 62%);
-    font-size: 0.61rem;
+    font-size: 0.68rem;
     font-weight: 760;
     letter-spacing: 0.13em;
     text-transform: uppercase;
@@ -177,7 +177,7 @@
 
   .snapshotHeading {
     color: rgb(245 243 233 / 62%);
-    font-size: 0.59rem;
+    font-size: 0.68rem;
     font-weight: 760;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -196,7 +196,7 @@
 
   .snapshotGrid dt {
     color: rgb(245 243 233 / 62%);
-    font-size: 0.6rem;
+    font-size: 0.68rem;
   }
 
   .snapshotGrid dd {
@@ -213,7 +213,59 @@
     justify-content: space-between;
     color: rgb(245 243 233 / 62%);
     font-family: var(--mono);
-    font-size: 0.55rem;
+    font-size: 0.65rem;
+  }
+
+  .lockButton {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0.48rem 0.65rem;
+    margin-top: 0.6rem;
+    color: rgb(245 243 233 / 72%);
+    background: transparent;
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: var(--radius-sm);
+    font: inherit;
+    font-size: 0.68rem;
+    font-weight: 720;
+    transition: color 140ms ease, background 140ms ease, border-color 140ms ease;
+  }
+
+  .lockButton:hover {
+    color: #fffef9;
+    background: rgb(255 255 255 / 7%);
+    border-color: rgb(197 218 114 / 30%);
+  }
+
+  .lockButton:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .lockMark {
+    position: relative;
+    width: 0.68rem;
+    height: 0.58rem;
+    border: 1px solid currentcolor;
+    border-radius: 0.12rem;
+  }
+
+  .lockMark::before {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    width: 0.38rem;
+    height: 0.3rem;
+    content: "";
+    border: 1px solid currentcolor;
+    border-bottom: 0;
+    border-radius: 0.3rem 0.3rem 0 0;
+    transform: translateX(-50%);
   }
 }
 
@@ -232,6 +284,10 @@
     border-right: 0;
     box-shadow: 0 -0.8rem 2.4rem rgb(10 28 22 / 16%);
     backdrop-filter: blur(16px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.3rem;
+    align-items: center;
   }
 
   .sidebar::after,
@@ -241,9 +297,12 @@
     display: none;
   }
 
+  .navigation {
+    overflow: visible;
+  }
+
   .navigationList {
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(8, minmax(0, 1fr));
     gap: 0.16rem;
   }
 
@@ -254,7 +313,7 @@
     justify-content: center;
     min-height: 3.7rem;
     padding: 0.32rem 0.16rem;
-    font-size: 0.6rem;
+    font-size: 0.66rem;
     text-align: center;
   }
 
@@ -282,18 +341,75 @@
     width: 1.15rem;
     height: 1.15rem;
   }
+
+  .lockButton {
+    min-width: 3.8rem;
+    min-height: 3.7rem;
+    padding: 0.3rem 0.4rem;
+    margin: 0;
+    flex-direction: column;
+    gap: 0.16rem;
+  }
+
+  .lockLabel {
+    max-width: 4rem;
+    overflow: hidden;
+    font-size: 0.65rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (width <= 42rem) {
+  .sidebar {
+    grid-template-columns: minmax(0, 1fr) 4rem;
+  }
+
+  .navigationList {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .navigationButton {
+    min-height: 3.2rem;
+  }
+
+  .lockButton {
+    align-self: stretch;
+    min-width: 4rem;
+    min-height: 6.56rem;
+  }
 }
 
 @media (width <= 28rem) {
   .mobileLabel {
-    font-size: 0.52rem;
+    font-size: 0.65rem;
     letter-spacing: -0.02em;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .navigationButton,
-  .navigationIcon {
+  .navigationIcon,
+  .lockButton {
     transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .sidebar {
+    color: CanvasText;
+    background: Canvas;
+    border-color: CanvasText;
+  }
+
+  .navigationButton[aria-current="page"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+    box-shadow: none;
+  }
+
+  .snapshot,
+  .lockButton {
+    border-color: CanvasText;
   }
 }

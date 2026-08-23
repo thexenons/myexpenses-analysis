@@ -1,9 +1,13 @@
+import { useId } from "react"
+
 import { FormattedNumber } from "../../atoms/FormattedNumber"
 import styles from "./KpiCard.module.css"
 import { cx } from "../../../utils/component.helpers.ts"
 import type { KpiCardProps } from "./KpiCard.types"
 
 export function KpiCard({
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
   className,
   detail,
   formatValue,
@@ -15,14 +19,20 @@ export function KpiCard({
   value,
   ...props
 }: KpiCardProps) {
+  const labelId = useId()
+
   return (
     <article
       {...props}
+      aria-label={ariaLabel}
+      aria-labelledby={
+        ariaLabelledBy ?? (ariaLabel === undefined ? labelId : undefined)
+      }
       className={cx(styles.root, styles[tone], className)}
       ref={ref}
     >
       <div className={styles.header}>
-        <span className={styles.label}>{label}</span>
+        <span className={styles.label} id={labelId}>{label}</span>
         {icon ? (
           <span aria-hidden="true" className={styles.icon}>
             {icon}

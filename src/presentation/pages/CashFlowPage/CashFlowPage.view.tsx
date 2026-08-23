@@ -1,5 +1,6 @@
 import { Icon } from "../../components/atoms/Icon/index.ts";
 import { KpiCard } from "../../components/molecules/KpiCard/index.ts";
+import { EmptyState } from "../../components/molecules/EmptyState/index.ts";
 import { Panel } from "../../components/molecules/Panel/index.ts";
 import { DivergingBarChart } from "../../components/organisms/DivergingBarChart/index.ts";
 import { LineChart } from "../../components/organisms/LineChart/index.ts";
@@ -92,7 +93,14 @@ export function CashFlowPageView({
           description="Gasto neto de las raíces activas"
           title="Presión por categoría"
         >
-          <div className={styles.rankList}>
+          {expenseCategories.length === 0 ? (
+            <EmptyState
+              description="No hay gasto categorizado dentro del periodo y los filtros actuales."
+              icon={<Icon name="receipt" />}
+              title="Sin presión por categoría"
+            />
+          ) : (
+            <div className={styles.rankList}>
             {expenseCategories.map((category) => (
               <div className={styles.compositionRow} key={category.id}>
                 <span className={styles.compositionLabel}>{category.name}</span>
@@ -101,7 +109,8 @@ export function CashFlowPageView({
                 </strong>
               </div>
             ))}
-          </div>
+            </div>
+          )}
         </Panel>
         <Panel
           description="Entradas y salidas internas"

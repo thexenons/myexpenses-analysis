@@ -77,7 +77,7 @@
 
   .eyebrow {
     color: var(--income);
-    font-size: 0.59rem;
+    font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.15em;
     text-transform: uppercase;
@@ -158,7 +158,7 @@
     padding: 0.65rem 0.8rem;
     color: var(--ink);
     background: var(--surface-bright);
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-dark);
     border-radius: var(--radius-sm);
     font-family: var(--body);
     font-size: 0.77rem;
@@ -214,7 +214,7 @@
     padding: 0.52rem 0.62rem;
     color: var(--ink-soft);
     background: var(--surface-bright);
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-dark);
     border-radius: var(--radius-sm);
     font-size: 0.7rem;
     cursor: pointer;
@@ -255,7 +255,7 @@
 
   .choiceCopy small {
     color: var(--muted);
-    font-size: 0.57rem;
+    font-size: 0.65rem;
   }
 
   .tagList {
@@ -287,7 +287,7 @@
     padding: 0.4rem 0.72rem;
     color: var(--ink-soft);
     background: var(--surface-bright);
-    border: 1px solid var(--line);
+    border: 1px solid var(--line-dark);
     border-radius: 999px;
     font-size: 0.66rem;
     font-weight: 650;
@@ -337,8 +337,18 @@
   }
 
   .choiceList,
-  .compactChoices {
+  .compactChoices,
+  .dateFields {
     grid-template-columns: 1fr;
+  }
+
+  .footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .footer > * {
+    width: 100%;
   }
 }
 
@@ -349,5 +359,19 @@
 
   .choice {
     transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .sheet,
+  .header,
+  .footer {
+    background: Canvas;
+  }
+
+  .choice:has(input:checked),
+  .tag input:checked + span {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
   }
 }

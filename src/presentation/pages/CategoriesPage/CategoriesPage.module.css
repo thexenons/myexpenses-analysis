@@ -17,7 +17,7 @@
   color: var(--ink);
   text-align: left;
   background: var(--surface-bright);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-dark);
   border-radius: var(--radius-sm);
   transition: transform 140ms ease, border-color 140ms ease;
 }
@@ -25,6 +25,12 @@
 .categoryNode:hover {
   border-color: var(--line-dark);
   transform: translateX(2px);
+}
+
+.categoryNode[aria-pressed="true"] {
+  background: var(--income-soft);
+  border-color: var(--income);
+  box-shadow: inset 0.2rem 0 0 var(--income);
 }
 
 .categoryName {
@@ -37,7 +43,7 @@
 .categoryPath {
   display: block;
   color: var(--muted);
-  font-size: 0.58rem;
+  font-size: 0.65rem;
 }
 
 .categoryAmount {
@@ -54,7 +60,7 @@
 .categoryCounts {
   color: var(--muted);
   font-family: var(--mono);
-  font-size: 0.58rem;
+  font-size: 0.65rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

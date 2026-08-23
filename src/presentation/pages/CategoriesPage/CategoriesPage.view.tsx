@@ -2,6 +2,7 @@ import { Badge } from "../../components/atoms/Badge/index.ts";
 import { Button } from "../../components/atoms/Button/index.ts";
 import { Icon } from "../../components/atoms/Icon/index.ts";
 import { KpiCard } from "../../components/molecules/KpiCard/index.ts";
+import { EmptyState } from "../../components/molecules/EmptyState/index.ts";
 import { Panel } from "../../components/molecules/Panel/index.ts";
 import { HorizontalBarChart } from "../../components/organisms/HorizontalBarChart/index.ts";
 import { LineChart } from "../../components/organisms/LineChart/index.ts";
@@ -113,9 +114,17 @@ export function CategoriesPageView({
         description="Selecciona una ruta para aplicarla a toda la aplicación"
         title="Explorador jerárquico"
       >
-        <div className={styles.categoryTree}>
+        {flattenedCategories.length === 0 ? (
+          <EmptyState
+            description="Amplía el periodo o revisa los filtros que limitan la actividad."
+            icon={<Icon name="category" />}
+            title="No hay categorías con actividad"
+          />
+        ) : (
+          <div className={styles.categoryTree}>
           {flattenedCategories.map((category) => (
             <button
+              aria-pressed={selectedCategory?.id === category.id}
               className={styles.categoryNode}
               key={category.id}
               onClick={() => onSelectCategory(category.path)}
@@ -150,7 +159,8 @@ export function CategoriesPageView({
               </span>
             </button>
           ))}
-        </div>
+          </div>
+        )}
       </Panel>
     </AnalyticsPage>
   );

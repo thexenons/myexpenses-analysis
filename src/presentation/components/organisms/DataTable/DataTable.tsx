@@ -1,3 +1,4 @@
+/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- The named overflow region must receive focus so keyboard users can pan the table. */
 import { useId } from "react"
 
 import styles from "./DataTable.module.css"
@@ -27,11 +28,10 @@ export function DataTable<Row>({
       className={cx(styles.root, className)}
       ref={ref}
     >
-      <div
+      <section
         aria-label={hasCaption ? undefined : "Tabla desplazable"}
         aria-labelledby={hasCaption ? captionId : undefined}
         className={styles.scroller}
-        role="region"
         tabIndex={0}
       >
         <table className={styles.table}>
@@ -117,7 +117,7 @@ export function DataTable<Row>({
             )}
           </tbody>
         </table>
-      </div>
+      </section>
     </div>
   )
 }

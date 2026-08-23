@@ -8,7 +8,7 @@ import { IconButton } from "./IconButton"
 describe("IconButton", () => {
   it("has an accessible name and activates from the keyboard", async () => {
     const user = userEvent.setup()
-    const onClick = vi.fn()
+    const onClick = vi.fn<() => void>()
     render(
       <IconButton
         icon={<Icon name="search" />}

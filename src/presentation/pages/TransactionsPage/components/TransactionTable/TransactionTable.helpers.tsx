@@ -16,7 +16,8 @@ export function createTransactionTableColumns(
     {
       key: "date",
       header: "Fecha",
-      cell: (posting) => formatDate(posting.date),
+      cell: (posting) =>
+        `${formatDate(posting.date)}${posting.localTime ? ` · ${posting.localTime.slice(0, 5)}` : ""}`,
       onSort: () => onSort("date"),
       sortDirection:
         sortKey === "date" ? (descending ? "descending" : "ascending") : "none",

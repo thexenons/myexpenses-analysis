@@ -1,0 +1,95 @@
+.table {
+  min-height: 10rem;
+}
+
+.table :global(tbody tr) {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 54px;
+}
+
+.category {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 12rem;
+  border-inline-start: 1px solid color-mix(in srgb, var(--debt) 24%, transparent);
+}
+
+.category[data-depth="1"] {
+  padding-inline-start: 1.1rem;
+}
+
+.category[data-depth="2"] {
+  padding-inline-start: 2.2rem;
+}
+
+.category[data-depth="3"] {
+  padding-inline-start: 3.3rem;
+}
+
+.category[data-depth="4"] {
+  padding-inline-start: 4.4rem;
+}
+
+.category[data-depth="5"] {
+  padding-inline-start: 5.5rem;
+}
+
+.category[data-depth="6"] {
+  padding-inline-start: 6.6rem;
+}
+
+.category[data-depth="7"] {
+  padding-inline-start: 7.7rem;
+}
+
+.category[data-depth="8"] {
+  padding-inline-start: 8.8rem;
+}
+
+.categoryName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.path {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+.badges {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.rollover {
+  display: grid;
+  justify-items: end;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.nextRollover {
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
+.on-trackAmount {
+  color: var(--income);
+}
+
+.watchAmount {
+  color: var(--debt-ink);
+}
+
+.exceededAmount {
+  color: var(--expense);
+}
+
+.unallocatedAmount {
+  color: var(--muted);
+}
