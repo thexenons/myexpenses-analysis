@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it } from "vitest"
 
@@ -52,5 +52,25 @@ describe("GlobalFilters", () => {
     await user.click(openButton)
 
     expect(appStore.getState().filterDrawerOpen).toBe(true)
+  })
+
+  it("selects a concrete month independently from chart granularity", async () => {
+    const user = userEvent.setup()
+    render(
+      <AppStoreProvider store={appStore}>
+        <GlobalFilters />
+      </AppStoreProvider>,
+    )
+
+    await user.selectOptions(screen.getByLabelText("Tipo de periodo"), "month")
+    fireEvent.change(screen.getByLabelText("Mes seleccionado"), {
+      target: { value: "2026-04" },
+    })
+
+    expect(appStore.getState().filters).toMatchObject({
+      periodMode: "month",
+      dateRange: { from: "2026-04-01", to: "2026-04-30" },
+    })
+    expect(appStore.getState().granularity).toBe("auto")
   })
 })

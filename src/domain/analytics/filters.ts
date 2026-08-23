@@ -2,6 +2,7 @@ import { assertIsoDate, normalizeSearchText } from "./validation.ts";
 import type {
   AnalyticsScope,
   AnalyticsDataset,
+  DatePeriodMode,
   FilteredAnalyticsDataset,
   FilterState,
   IsoDate,
@@ -29,11 +30,20 @@ const VALID_LINKED_FILTERS = new Set<LinkedFilter>([
   "linked",
   "unlinked",
 ]);
+const VALID_PERIOD_MODES = new Set<DatePeriodMode>([
+  "all",
+  "day",
+  "week",
+  "month",
+  "year",
+  "custom",
+]);
 const derivedSearchIndexes = new WeakMap<NormalizedPosting, string>();
 
 export function createDefaultFilterState(): FilterState {
   return {
     scope: "all",
+    periodMode: "all",
     dateRange: { from: null, to: null },
     accountIds: [],
     categoryPrefixes: [],
@@ -60,6 +70,13 @@ function isLinkedFilter(value: unknown): value is LinkedFilter {
   return (
     isNonEmptyString(value) &&
     VALID_LINKED_FILTERS.has(value as LinkedFilter)
+  );
+}
+
+function isDatePeriodMode(value: unknown): value is DatePeriodMode {
+  return (
+    isNonEmptyString(value) &&
+    VALID_PERIOD_MODES.has(value as DatePeriodMode)
   );
 }
 
@@ -129,6 +146,9 @@ export function restoreFilterState(value: unknown): FilterState {
   const legacyCategoryPrefix = restoreCategoryPath(value.categoryPrefix);
   return {
     scope: isAnalyticsScope(value.scope) ? value.scope : "all",
+    periodMode: isDatePeriodMode(value.periodMode)
+      ? value.periodMode
+      : "all",
     dateRange: { from, to },
     accountIds: restoreStringList(value.accountIds),
     categoryPrefixes:
@@ -188,6 +208,11 @@ function snapshotFilters(filters: FilterState): FilterState {
   ) {
     throw new Error(`Unknown linked filter ${JSON.stringify(filters.linked)}`);
   }
+  if (!VALID_PERIOD_MODES.has(filters.periodMode)) {
+    throw new Error(
+      `Unknown date period mode ${JSON.stringify(filters.periodMode)}`,
+    );
+  }
   const from =
     filters.dateRange.from === null
       ? null
@@ -211,6 +236,7 @@ function snapshotFilters(filters: FilterState): FilterState {
 
   return {
     scope: filters.scope,
+    periodMode: filters.periodMode,
     dateRange: { from, to },
     accountIds: [...new Set(filters.accountIds)],
     categoryPrefixes,

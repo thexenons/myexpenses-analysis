@@ -1,0 +1,12 @@
+@layer components {
+  .root {
+    display: grid;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
+  .detail {
+    color: var(--muted);
+    font-size: 0.67rem;
+  }
+}

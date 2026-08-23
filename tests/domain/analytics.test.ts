@@ -467,7 +467,7 @@ test("global filters compose scope, period, category, status, tags, search and l
   );
 });
 
-test("restores multiple category paths and migrates the previous single path", () => {
+test("restores period mode and migrates the previous single category path", () => {
   assert.deepEqual(
     restoreFilterState({
       categoryPrefixes: [
@@ -482,9 +482,15 @@ test("restores multiple category paths and migrates the previous single path", (
     ],
   );
   assert.deepEqual(
-    restoreFilterState({ categoryPrefix: ["Gastos", "Comida"] })
-      .categoryPrefixes,
-    [["Gastos", "Comida"]],
+    restoreFilterState({
+      categoryPrefix: ["Gastos", "Comida"],
+      periodMode: "month",
+    }),
+    {
+      ...createDefaultFilterState(),
+      categoryPrefixes: [["Gastos", "Comida"]],
+      periodMode: "month",
+    },
   );
 });
 

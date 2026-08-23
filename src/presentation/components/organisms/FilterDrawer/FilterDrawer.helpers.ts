@@ -3,15 +3,10 @@ import type {
   AnalyticsScope,
   AnalyticsDataset,
   FilterState,
-  IsoDate,
-  TimeGranularity,
+  TimeGranularitySetting,
 } from "../../../../domain/analytics/types"
 
 const SPANISH_COLLATOR = new Intl.Collator("es", { sensitivity: "base" })
-
-export function readFilterDrawerDate(value: string): IsoDate | null {
-  return value === "" ? null : (value as IsoDate)
-}
 
 export function sortFilterDrawerAccounts(
   dataset: AnalyticsDataset | null,
@@ -72,7 +67,7 @@ export function toggleFilterDrawerOptionalValue(
 
 export function hasActiveDrawerFilters(
   filters: FilterState,
-  granularity: TimeGranularity,
+  granularity: TimeGranularitySetting,
 ): boolean {
   return (
     filters.scope !== "all" ||
@@ -84,6 +79,6 @@ export function hasActiveDrawerFilters(
     filters.tags.length > 0 ||
     filters.search.trim().length > 0 ||
     filters.linked !== "all" ||
-    granularity !== "month"
+    granularity !== "auto"
   )
 }

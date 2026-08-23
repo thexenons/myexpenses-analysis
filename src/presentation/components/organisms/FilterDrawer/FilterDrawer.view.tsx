@@ -1,7 +1,6 @@
 import type {
   AnalyticsScope,
   LinkedFilter,
-  TimeGranularity,
   TransactionStatus,
 } from "../../../../domain/analytics/types"
 import { categoryPathsEqual } from "../../../../domain/analytics/filters.ts"
@@ -13,6 +12,8 @@ import {
   SegmentedControl,
   type SegmentedControlOption,
 } from "../../molecules/SegmentedControl"
+import { GranularityControl } from "../GranularityControl/index.ts"
+import { PeriodSelector } from "../PeriodSelector/index.ts"
 import styles from "./FilterDrawer.module.css"
 import type { FilterDrawerViewProps } from "./FilterDrawer.types"
 
@@ -20,13 +21,6 @@ const SCOPE_OPTIONS: readonly SegmentedControlOption<AnalyticsScope>[] = [
   { value: "all", label: "Todas" },
   { value: "realCashFlow", label: "Flujo real", shortLabel: "Real" },
   { value: "debtsOnly", label: "Solo deudas", shortLabel: "Deudas" },
-]
-
-const GRANULARITY_OPTIONS: readonly SegmentedControlOption<TimeGranularity>[] = [
-  { value: "day", label: "Día" },
-  { value: "week", label: "Semana", shortLabel: "Sem." },
-  { value: "month", label: "Mes" },
-  { value: "year", label: "Año" },
 ]
 
 const LINKED_OPTIONS: readonly SegmentedControlOption<LinkedFilter>[] = [
@@ -53,15 +47,10 @@ export function FilterDrawerView({
   closeButtonRef,
   dialogRef,
   filters,
-  granularity,
   hasActiveFilters,
-  maxDate,
-  minDate,
   onAccountToggle,
   onCategoryToggle,
   onClose,
-  onDateChange,
-  onGranularityChange,
   onLinkedChange,
   onReset,
   onScopeChange,
@@ -126,37 +115,11 @@ export function FilterDrawerView({
               <span aria-hidden="true">02</span>
               <div>
                 <h3>Periodo</h3>
-                <p>Acota las fechas y decide la resolución de las gráficas.</p>
+                <p>Acota las fechas sin limitar la resolución de las gráficas.</p>
               </div>
             </div>
-            <div className={styles.dateFields}>
-              <label className={styles.fieldLabel}>
-                <span>Desde</span>
-                <input
-                  max={filters.dateRange.to ?? maxDate ?? undefined}
-                  min={minDate ?? undefined}
-                  onChange={(event) => onDateChange("from", event.currentTarget.value)}
-                  type="date"
-                  value={filters.dateRange.from ?? ""}
-                />
-              </label>
-              <label className={styles.fieldLabel}>
-                <span>Hasta</span>
-                <input
-                  max={maxDate ?? undefined}
-                  min={filters.dateRange.from ?? minDate ?? undefined}
-                  onChange={(event) => onDateChange("to", event.currentTarget.value)}
-                  type="date"
-                  value={filters.dateRange.to ?? ""}
-                />
-              </label>
-            </div>
-            <SegmentedControl
-              label="Agrupar por"
-              onChange={onGranularityChange}
-              options={GRANULARITY_OPTIONS}
-              value={granularity}
-            />
+            <PeriodSelector />
+            <GranularityControl />
           </section>
 
           <section className={styles.section}>

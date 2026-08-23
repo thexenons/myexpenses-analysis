@@ -68,6 +68,14 @@ export function createAppStore(
                 state.analytics,
               ),
             })),
+          setDatePeriod: (periodMode, dateRange) =>
+            set((state) => ({
+              filters: {
+                ...state.filters,
+                periodMode,
+                dateRange: { ...dateRange },
+              },
+            })),
           setCategoryPrefixes: (categoryPrefixes) =>
             set((state) => ({
               filters: {
@@ -129,7 +137,7 @@ export function createAppStore(
           error: null,
           filterDrawerOpen: false,
           filters: createDefaultFilterState(),
-          granularity: "month",
+          granularity: "auto",
           loadPhase: "locked",
           unlockBlockedReason: blockedReason,
         };
@@ -138,8 +146,10 @@ export function createAppStore(
         name: APP_STORE_STORAGE_NAME,
         version: APP_STORE_STORAGE_VERSION,
         storage: createJSONStorage(() => storage),
-        migrate: (persistedState) =>
-          restoreAppStorePersistedState(persistedState),
+        migrate: (persistedState, version) =>
+          version < APP_STORE_STORAGE_VERSION
+            ? { granularity: "auto" }
+            : restoreAppStorePersistedState(persistedState),
         merge: (persistedState, currentState) => ({
           ...currentState,
           ...restoreAppStorePersistedState(persistedState),

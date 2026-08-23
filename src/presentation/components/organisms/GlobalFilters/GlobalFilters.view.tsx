@@ -1,7 +1,4 @@
-import type {
-  AnalyticsScope,
-  TimeGranularity,
-} from "../../../../domain/analytics/types"
+import type { AnalyticsScope } from "../../../../domain/analytics/types"
 import { Button } from "../../atoms/Button"
 import { Icon } from "../../atoms/Icon"
 import { SearchField } from "../../molecules/SearchField"
@@ -9,6 +6,8 @@ import {
   SegmentedControl,
   type SegmentedControlOption,
 } from "../../molecules/SegmentedControl"
+import { GranularityControl } from "../GranularityControl/index.ts"
+import { PeriodSelector } from "../PeriodSelector/index.ts"
 import styles from "./GlobalFilters.module.css"
 import type { GlobalFiltersViewProps } from "./GlobalFilters.types"
 
@@ -18,21 +17,9 @@ const SCOPE_OPTIONS: readonly SegmentedControlOption<AnalyticsScope>[] = [
   { value: "debtsOnly", label: "Deudas" },
 ]
 
-const GRANULARITY_OPTIONS: readonly SegmentedControlOption<TimeGranularity>[] = [
-  { value: "day", label: "Día" },
-  { value: "week", label: "Semana", shortLabel: "Sem." },
-  { value: "month", label: "Mes" },
-  { value: "year", label: "Año" },
-]
-
 export function GlobalFiltersView({
   activeFilterCount,
   filters,
-  granularity,
-  maxDate,
-  minDate,
-  onDateChange,
-  onGranularityChange,
   onOpenDrawer,
   onScopeChange,
   onSearchChange,
@@ -61,41 +48,9 @@ export function GlobalFiltersView({
         value={filters.scope}
       />
 
-      <div className={styles.dateRange}>
-        <Icon className={styles.calendarIcon} name="calendar" size={17} />
-        <label>
-          <span>Desde</span>
-          <input
-            max={filters.dateRange.to ?? maxDate ?? undefined}
-            min={minDate ?? undefined}
-            onChange={(event) => onDateChange("from", event.currentTarget.value)}
-            type="date"
-            value={filters.dateRange.from ?? ""}
-          />
-        </label>
-        <span aria-hidden="true" className={styles.dateSeparator}>
-          →
-        </span>
-        <label>
-          <span>Hasta</span>
-          <input
-            max={maxDate ?? undefined}
-            min={filters.dateRange.from ?? minDate ?? undefined}
-            onChange={(event) => onDateChange("to", event.currentTarget.value)}
-            type="date"
-            value={filters.dateRange.to ?? ""}
-          />
-        </label>
-      </div>
+      <PeriodSelector className={styles.period} variant="compact" />
 
-      <SegmentedControl
-        className={styles.granularity}
-        hideLabel
-        label="Agrupar estadísticas por periodo"
-        onChange={onGranularityChange}
-        options={GRANULARITY_OPTIONS}
-        value={granularity}
-      />
+      <GranularityControl className={styles.granularity} compact />
 
       <Button
         aria-label={

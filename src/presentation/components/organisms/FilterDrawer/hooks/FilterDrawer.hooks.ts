@@ -11,15 +11,11 @@ import {
   collectFilterDrawerRootCategories,
   collectFilterDrawerTags,
   hasActiveDrawerFilters,
-  readFilterDrawerDate,
   sortFilterDrawerAccounts,
   toggleFilterDrawerOptionalValue,
   toggleFilterDrawerUniversalValue,
 } from "../FilterDrawer.helpers"
-import type {
-  FilterDrawerDateBoundary,
-  FilterDrawerViewProps,
-} from "../FilterDrawer.types"
+import type { FilterDrawerViewProps } from "../FilterDrawer.types"
 
 const STATUS_VALUES: readonly TransactionStatus[] = [
   "UNRECONCILED",
@@ -84,15 +80,6 @@ export function useFilterDrawer(): FilterDrawerViewProps {
     }
   }, [open])
 
-  const onDateChange = (boundary: FilterDrawerDateBoundary, value: string) => {
-    patchFilters({
-      dateRange: {
-        ...filters.dateRange,
-        [boundary]: readFilterDrawerDate(value),
-      },
-    })
-  }
-
   return {
     accounts,
     allAccountsSelected: filters.accountIds.length === 0,
@@ -101,10 +88,7 @@ export function useFilterDrawer(): FilterDrawerViewProps {
     closeButtonRef,
     dialogRef,
     filters,
-    granularity,
     hasActiveFilters: hasActiveDrawerFilters(filters, granularity),
-    maxDate: analytics?.maxDate ?? null,
-    minDate: analytics?.minDate ?? null,
     onAccountToggle: (accountId) =>
       setAccountIds(
         toggleFilterDrawerUniversalValue(filters.accountIds, accountId, accountIds),
@@ -112,12 +96,10 @@ export function useFilterDrawer(): FilterDrawerViewProps {
     onCategoryToggle: (path) =>
       setCategoryPrefixes(toggleCategoryPath(filters.categoryPrefixes, path)),
     onClose,
-    onDateChange,
-    onGranularityChange,
     onLinkedChange: (linked) => patchFilters({ linked }),
     onReset: () => {
       clearFilters()
-      onGranularityChange("month")
+      onGranularityChange("auto")
     },
     onScopeChange: (scope) => patchFilters({ scope }),
     onSearchChange: (search) => patchFilters({ search }),

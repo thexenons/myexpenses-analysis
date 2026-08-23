@@ -39,6 +39,22 @@ inicio configurado— y no el week-year ISO: el lunes `2024-12-30` pertenece a
 los rangos con inicio de mes mayor que su longitud siguen
 [`Grouping.getMonthRange`](https://github.com/mtotschnig/MyExpenses/blob/bc3e660b1074e956130f8b9164ffd99e7512f567/myExpenses/src/main/java/org/totschnig/myexpenses/model/Grouping.kt#L145-L159).
 
+## Periodo y granularidad
+
+El filtro temporal y la resolución de las series son independientes. El filtro
+permite incluir todo el historial o seleccionar un día, una semana de lunes a
+domingo, un mes natural, un año natural o un rango personalizado. Los periodos
+históricos incluyen todos sus días; si se selecciona el periodo que contiene la
+fecha actual, termina hoy para no representar días futuros como huecos reales.
+
+La granularidad puede fijarse en día, semana, mes o año, o dejarse en modo
+automático. El modo automático usa día para un día o semana seleccionados,
+semana para un mes y mes para un año. En un rango personalizado resuelve la
+duración inclusiva con límites de calendario: menos de siete días usa día,
+menos de un mes usa semana, menos de un año usa mes y el resto usa año. Un
+límite personalizado vacío se completa con el extremo disponible del dataset
+sólo para elegir la granularidad; el filtro continúa siendo abierto.
+
 ## Conversión a EUR
 
 MyExpenses distingue cuentas con tasa estática y dinámica. La copia sí incluye

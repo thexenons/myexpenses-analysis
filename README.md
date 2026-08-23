@@ -47,6 +47,12 @@ La interfaz ofrece ocho rutas coordinadas por filtros globales:
 
 Los filtros de ámbito, periodo, granularidad, cuentas, categorías, estado,
 etiquetas, búsqueda y transferencias enlazadas afectan a todas las vistas. El
+periodo puede abarcar todo el historial o elegirse como un día, semana de lunes
+a domingo, mes, año o rango personalizado; el periodo actual se limita a hoy.
+La granularidad de gráficas y
+estadísticas es independiente y admite modo automático o una resolución manual.
+En automático se usan días para una semana, semanas para un mes, meses para un
+año y una resolución proporcional para los rangos personalizados. El
 estado vive en Zustand; por privacidad, sólo la granularidad se conserva en
 `localStorage`, mientras cuentas, categorías, fechas, etiquetas y búsquedas
 permanecen en memoria. TanStack Router gestiona URLs tipadas, historial,

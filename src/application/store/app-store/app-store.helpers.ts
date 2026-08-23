@@ -4,13 +4,13 @@ import {
 import type {
   AnalyticsDataset,
   FilterState,
-  TimeGranularity,
+  TimeGranularitySetting,
 } from "../../../domain/analytics/types.ts";
 import type { AppStorePersistedState } from "./app-store.types.ts";
 import type { AppStoreEnvironment } from "./app-store.types.ts";
 
 export const APP_STORE_STORAGE_NAME = "myexpenses-analysis:ui:v1";
-export const APP_STORE_STORAGE_VERSION = 4;
+export const APP_STORE_STORAGE_VERSION = 5;
 export const VAULT_UNLOCK_ERROR_MESSAGE =
   "No se pudo abrir la bóveda. Comprueba la frase e inténtalo de nuevo.";
 export const VAULT_TRANSPORT_ERROR_MESSAGE =
@@ -18,7 +18,8 @@ export const VAULT_TRANSPORT_ERROR_MESSAGE =
 export const INSECURE_CONTEXT_MESSAGE =
   "Esta bóveda necesita HTTPS para usar Web Crypto. Ábrela mediante HTTPS o desde localhost.";
 
-const VALID_GRANULARITIES = new Set<TimeGranularity>([
+const VALID_GRANULARITIES = new Set<TimeGranularitySetting>([
+  "auto",
   "day",
   "week",
   "month",
@@ -29,10 +30,10 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isTimeGranularity(value: unknown): value is TimeGranularity {
+function isTimeGranularity(value: unknown): value is TimeGranularitySetting {
   return (
     typeof value === "string" &&
-    VALID_GRANULARITIES.has(value as TimeGranularity)
+    VALID_GRANULARITIES.has(value as TimeGranularitySetting)
   );
 }
 
@@ -43,7 +44,7 @@ export function restoreAppStorePersistedState(
   return {
     granularity: isTimeGranularity(persisted.granularity)
       ? persisted.granularity
-      : "month",
+      : "auto",
   };
 }
 

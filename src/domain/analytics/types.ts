@@ -225,6 +225,13 @@ export interface NormalizeDatasetOptions {
 
 export type AnalyticsScope = "all" | "realCashFlow" | "debtsOnly";
 export type LinkedFilter = "all" | "linked" | "unlinked";
+export type DatePeriodMode =
+  | "all"
+  | "day"
+  | "week"
+  | "month"
+  | "year"
+  | "custom";
 
 export interface DateRangeFilter {
   readonly from: IsoDate | null;
@@ -234,6 +241,8 @@ export interface DateRangeFilter {
 /** Serializable state suitable for context, URL params, or local storage. */
 export interface FilterState {
   readonly scope: AnalyticsScope;
+  /** Describes how the user selected dateRange; filtering always uses dateRange. */
+  readonly periodMode: DatePeriodMode;
   readonly dateRange: DateRangeFilter;
   /** Empty means every account allowed by scope. */
   readonly accountIds: readonly string[];
@@ -298,6 +307,7 @@ export interface StatusSummary {
 export type StatusCounts = Readonly<Record<TransactionStatus, StatusSummary>>;
 
 export type TimeGranularity = "day" | "week" | "month" | "year";
+export type TimeGranularitySetting = "auto" | TimeGranularity;
 
 export interface TimeSeriesPoint extends AmountSummary {
   readonly key: string;

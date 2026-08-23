@@ -1,7 +1,9 @@
 import type {
   AnalyticsDataset,
+  DatePeriodMode,
+  DateRangeFilter,
   FilterState,
-  TimeGranularity,
+  TimeGranularitySetting,
 } from "../../../domain/analytics/types.ts";
 
 export type LoadPhase = "locked" | "unlocking" | "ready" | "error";
@@ -23,9 +25,10 @@ export interface AppStoreActions {
   lock(): void;
   openFilterDrawer(): void;
   patchFilters(patch: Partial<FilterState>): void;
+  setDatePeriod(periodMode: DatePeriodMode, dateRange: DateRangeFilter): void;
   setAccountIds(accountIds: readonly string[]): void;
   setCategoryPrefixes(categoryPrefixes: readonly (readonly string[])[]): void;
-  setGranularity(granularity: TimeGranularity): void;
+  setGranularity(granularity: TimeGranularitySetting): void;
   setStatuses(statuses: FilterState["statuses"]): void;
   setTags(tags: readonly string[]): void;
   unlock(passphrase: string): Promise<void>;
@@ -37,11 +40,11 @@ export interface AppStoreState {
   error: string | null;
   filterDrawerOpen: boolean;
   filters: FilterState;
-  granularity: TimeGranularity;
+  granularity: TimeGranularitySetting;
   loadPhase: LoadPhase;
   unlockBlockedReason: string | null;
 }
 
 export interface AppStorePersistedState {
-  readonly granularity: TimeGranularity;
+  readonly granularity: TimeGranularitySetting;
 }

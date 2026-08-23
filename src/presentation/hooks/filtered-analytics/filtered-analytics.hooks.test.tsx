@@ -42,10 +42,11 @@ const EMPTY_ANALYTICS: AnalyticsDataset = {
 };
 
 function FilteredAnalyticsProbe() {
-  const { filtered, searchPending } = useFilteredAnalytics();
+  const { filtered, granularity, searchPending } = useFilteredAnalytics();
   return (
     <output data-testid="probe">
-      {searchPending ? "pending" : "ready"}:{filtered?.filters.search ?? "missing"}
+      {searchPending ? "pending" : "ready"}:{filtered?.filters.search ?? "missing"}:
+      {granularity}
     </output>
   );
 }
@@ -71,5 +72,26 @@ describe("useFilteredAnalytics", () => {
     );
     expect(applyFiltersSpy).toHaveBeenCalledOnce();
     expect(applyFiltersSpy.mock.calls[0]?.[1].search).toBe("mercado");
+  });
+
+  it("resolves automatic granularity before page models consume it", () => {
+    const store = createAppStore(
+      { load: vi.fn<DatasetRepository["load"]>() },
+      window.localStorage,
+    );
+    store.setState({ analytics: EMPTY_ANALYTICS, loadPhase: "ready" });
+    store.getState().actions.setDatePeriod("year", {
+      from: "2026-01-01",
+      to: "2026-12-31",
+    });
+    render(
+      <AppStoreProvider store={store}>
+        <FilteredAnalyticsProbe />
+      </AppStoreProvider>,
+    );
+
+    expect(screen.getByTestId("probe")).toHaveTextContent("ready::month");
+    act(() => store.getState().actions.setGranularity("week"));
+    expect(screen.getByTestId("probe")).toHaveTextContent("ready::week");
   });
 });

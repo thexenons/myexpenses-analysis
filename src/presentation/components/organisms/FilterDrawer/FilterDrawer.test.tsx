@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it } from "vitest"
 
@@ -83,7 +83,13 @@ describe("FilterDrawer", () => {
       "viaje",
     )
     await user.click(screen.getByRole("radio", { name: "Solo deudas" }))
-    await user.click(screen.getByRole("radio", { name: "Año" }))
+    await user.click(
+      within(
+        screen.getByRole("group", {
+          name: "Granularidad de estadísticas y gráficas",
+        }),
+      ).getByRole("radio", { name: "Año" }),
+    )
 
     expect(appStore.getState().filters.search).toBe("viaje")
     expect(appStore.getState().filters.scope).toBe("debtsOnly")
@@ -93,7 +99,7 @@ describe("FilterDrawer", () => {
 
     expect(appStore.getState().filters.search).toBe("")
     expect(appStore.getState().filters.scope).toBe("all")
-    expect(appStore.getState().granularity).toBe("month")
+    expect(appStore.getState().granularity).toBe("auto")
   })
 
   it("exposes the cleared audit status without flattening it into reconciled", async () => {

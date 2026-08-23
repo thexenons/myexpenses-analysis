@@ -163,6 +163,7 @@ describe("AppStore", () => {
     const store = createSecureStore(repository);
 
     expect(store.getState().loadPhase).toBe("locked");
+    expect(store.getState().granularity).toBe("auto");
     expect(repository.load).not.toHaveBeenCalled();
 
     const unlock = store.getState().actions.unlock("frase robusta");
@@ -228,14 +229,26 @@ describe("AppStore", () => {
 
     store.getState().actions.patchFilters({ search: "mercado" });
     store.getState().actions.setAccountIds(["one", "two"]);
+    store.getState().actions.setDatePeriod("month", {
+      from: "2026-04-01",
+      to: "2026-04-30",
+    });
     store.getState().actions.openFilterDrawer();
 
     expect(store.getState().filters.search).toBe("mercado");
     expect(store.getState().filters.accountIds).toEqual(["one", "two"]);
+    expect(store.getState().filters).toMatchObject({
+      periodMode: "month",
+      dateRange: { from: "2026-04-01", to: "2026-04-30" },
+    });
     expect(store.getState().filterDrawerOpen).toBe(true);
 
     store.getState().actions.clearFilters();
     expect(store.getState().filters.search).toBe("");
+    expect(store.getState().filters).toMatchObject({
+      periodMode: "all",
+      dateRange: { from: null, to: null },
+    });
   });
 
   it("prunes stale and scope-incompatible account filters after unlock", async () => {
@@ -288,7 +301,7 @@ describe("AppStore", () => {
       search: "",
       linked: "all",
     });
-    expect(store.getState().granularity).toBe("week");
+    expect(store.getState().granularity).toBe("auto");
     expect(window.localStorage.getItem(APP_STORE_STORAGE_NAME) ?? "").not.toMatch(
       /debt|2026-01|VOID/u,
     );

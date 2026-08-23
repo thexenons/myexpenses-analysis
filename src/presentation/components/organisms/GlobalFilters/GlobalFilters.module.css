@@ -41,61 +41,9 @@
 
   .search,
   .scope,
+  .period,
   .granularity {
     min-width: 0;
-  }
-
-  .dateRange {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
-    gap: 0.45rem;
-    align-items: center;
-    min-width: 0;
-    min-height: 2.75rem;
-    padding: 0.35rem 0.68rem;
-    background: var(--surface-bright);
-    border: 1px solid var(--line-dark);
-    border-radius: 999px;
-  }
-
-  .calendarIcon {
-    color: var(--muted);
-  }
-
-  .dateRange label {
-    display: grid;
-    min-width: 0;
-  }
-
-  .dateRange label span {
-    color: var(--muted);
-    font-size: 0.65rem;
-    font-weight: 760;
-    letter-spacing: 0.06em;
-    line-height: 1;
-    text-transform: uppercase;
-  }
-
-  .dateRange input {
-    width: 100%;
-    min-width: 0;
-    padding: 0;
-    color: var(--ink-soft);
-    background: transparent;
-    font-family: var(--mono);
-    font-size: 0.65rem;
-    outline: none;
-  }
-
-  .dateRange input:focus-visible {
-    outline: 2px solid currentcolor;
-    outline-offset: 2px;
-    border-radius: 0.2rem;
-  }
-
-  .dateSeparator {
-    color: var(--line-dark);
-    font-size: 0.72rem;
   }
 
   .drawerButton {
@@ -122,7 +70,7 @@
   }
 
   .filterIdentity,
-  .dateRange {
+  .period {
     display: none;
   }
 }

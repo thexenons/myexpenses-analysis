@@ -1,0 +1,126 @@
+@layer components {
+  .root {
+    display: grid;
+    gap: 0.7rem;
+    min-width: 0;
+  }
+
+  .root[data-variant="expanded"] {
+    padding: 0.75rem;
+    background: color-mix(in srgb, var(--surface-bright) 78%, transparent);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+  }
+
+  .root[data-variant="compact"] {
+    grid-template-columns: minmax(5.2rem, auto) minmax(8rem, 1fr);
+    gap: 0.4rem;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.28rem 0.55rem;
+    background: var(--surface-bright);
+    border: 1px solid var(--line-dark);
+    border-radius: 999px;
+  }
+
+  .compactMode,
+  .field {
+    display: grid;
+    gap: 0.18rem;
+    min-width: 0;
+  }
+
+  .compactMode > span,
+  .field > span {
+    color: var(--muted);
+    font-size: 0.62rem;
+    font-weight: 760;
+    letter-spacing: 0.055em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .compactMode select,
+  .field input,
+  .field select {
+    width: 100%;
+    min-width: 0;
+    min-height: 2.25rem;
+    padding: 0.42rem 0.55rem;
+    color: var(--ink);
+    background: var(--surface-bright);
+    border: 1px solid var(--line-dark);
+    border-radius: var(--radius-xs);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+  }
+
+  .root[data-variant="compact"] .compactMode select,
+  .root[data-variant="compact"] .field input,
+  .root[data-variant="compact"] .field select {
+    min-height: 1.45rem;
+    padding: 0;
+    background: transparent;
+    border: 0;
+  }
+
+  .customFields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 0.5rem;
+    align-items: end;
+  }
+
+  .separator {
+    padding-bottom: 0.62rem;
+    color: var(--muted);
+  }
+
+  .summary {
+    color: var(--muted);
+    font-size: 0.67rem;
+  }
+
+  .allPeriod {
+    align-self: center;
+    color: var(--ink-soft);
+    font-size: 0.7rem;
+    font-weight: 650;
+  }
+
+  .root[data-variant="compact"] .summary {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .root[data-variant="compact"] .customFields {
+    gap: 0.25rem;
+  }
+
+  .root[data-variant="compact"] .separator {
+    padding-bottom: 0.35rem;
+  }
+}
+
+@media (width <= 32rem) {
+  .customFields {
+    grid-template-columns: 1fr;
+  }
+
+  .separator {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .root[data-variant="expanded"],
+  .root[data-variant="compact"] {
+    border-color: CanvasText;
+  }
+}

@@ -1,16 +1,11 @@
 import type {
   FilterState,
-  IsoDate,
-  TimeGranularity,
+  TimeGranularitySetting,
 } from "../../../../domain/analytics/types"
-
-export function readGlobalFilterDate(value: string): IsoDate | null {
-  return value === "" ? null : (value as IsoDate)
-}
 
 export function countGlobalFilters(
   filters: FilterState,
-  granularity: TimeGranularity,
+  granularity: TimeGranularitySetting,
 ): number {
   let count = 0
   if (filters.scope !== "all") count += 1
@@ -21,6 +16,6 @@ export function countGlobalFilters(
   if (filters.tags.length > 0) count += 1
   if (filters.search.trim().length > 0) count += 1
   if (filters.linked !== "all") count += 1
-  if (granularity !== "month") count += 1
+  if (granularity !== "auto") count += 1
   return count
 }
