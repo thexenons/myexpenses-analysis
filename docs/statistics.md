@@ -81,12 +81,13 @@ Cada vista contiene:
 - `accountValuationBalance`: suma de saldos nativos finales convertidos una vez;
 - totales globales, categorías y años/meses/días.
 
-MyExpenses utiliza ambas fórmulas de balance. Con la copia actual,
+MyExpenses utiliza ambas fórmulas de balance. Con la copia de referencia
+`20260822-210453`,
 `historicalFlowBalance` es `78.649,40 EUR` y `accountValuationBalance` es
 `78.649,39 EUR`. La diferencia de un céntimo procede de redondear apuntes
 individuales frente a convertir el saldo nativo final por cuenta.
 
-## Referencia de la copia actual
+## Referencia validada `20260822-210453`
 
 ```text
 openingBalance:          39.210,91 EUR

@@ -11,9 +11,7 @@ Requiere Node `^20.19`, `^22.12` o `>=24` y pnpm 10.
 
 ```sh
 pnpm install
-pnpm data:import-backup -- \
-  --input data/myexpenses-backup-AAAAMMDD-HHMMSS.zip \
-  --time-zone Europe/Madrid
+pnpm data:import-backup
 pnpm data:encrypt
 pnpm dev
 ```
@@ -81,15 +79,14 @@ lee directamente su SQLite, reproduce las reglas de MyExpenses y genera un
 
 ```sh
 pnpm install
-pnpm data:import-backup -- \
-  --input data/myexpenses-backup-AAAAMMDD-HHMMSS.zip \
-  --time-zone Europe/Madrid
+pnpm data:import-backup
 ```
 
-La salida por defecto es `data/app-dataset.json`. El comando exige el archivo y
-la zona horaria de forma explícita; puede cambiarse la salida con `--output`.
-Sólo se admite actualmente el esquema SQLite 189 de MyExpenses 4.1.0.2, y una
-versión distinta falla antes de consultar datos.
+La salida por defecto es `data/app-dataset.json`; puede cambiarse con
+`--output`. Sin `--input`, el comando selecciona el nombre válido más reciente
+de `data/`, y la zona predeterminada es `Europe/Madrid`. Sólo se admite
+actualmente el esquema SQLite 189 de MyExpenses 4.1.0.2, y una versión distinta
+falla antes de consultar datos.
 
 El dataset contiene, con importes enteros en unidades menores:
 

@@ -2,9 +2,10 @@
 
 ## Contrato soportado
 
-El importador acepta una ruta explícita a un ZIP de copia de seguridad de
-MyExpenses y genera un único `data/app-dataset.json`. La copia original, la base
-SQLite y las preferencias no se publican ni se extraen al disco.
+El importador busca por defecto en `data/` el ZIP de MyExpenses con el timestamp
+válido más reciente en su nombre y genera un único `data/app-dataset.json`. La
+copia original, la base SQLite y las preferencias no se publican ni se extraen
+al disco.
 
 La implementación actual admite de forma deliberada únicamente el esquema
 SQLite `189`, correspondiente a MyExpenses `4.1.0.2` (`versionCode 871`). Una
@@ -14,17 +15,31 @@ contrato distinto.
 
 ```sh
 pnpm data:import-backup -- \
-  --input data/myexpenses-backup-AAAAMMDD-HHMMSS.zip \
-  --time-zone Europe/Madrid
+  --input-directory data
 ```
 
+Sin opciones basta con `pnpm data:import-backup`. La selección usa exclusivamente
+`myexpenses-backup-AAAAMMDD-HHMMSS.zip`, valida la fecha civil y no desciende a
+subdirectorios. `--input` permite fijar una copia concreta y es incompatible con
+`--input-directory`.
+
 La salida predeterminada es `data/app-dataset.json`; `--output` permite elegir
-otra ruta. El archivo y la zona IANA son obligatorios porque el ZIP no contiene
-una zona horaria canónica.
+otra ruta. La zona predeterminada es siempre `Europe/Madrid`; `--time-zone`
+queda disponible como override explícito.
 
 Este JSON es una entrada privada, no un asset web. Antes de iniciar o construir
 la aplicación hay que ejecutar `pnpm data:encrypt`; consulta
 [protección de la build estática](static-authentication.md).
+
+Para un proceso no interactivo, `data:encrypt` recibe la frase fija desde un
+fichero privado:
+
+```sh
+pnpm data:encrypt -- --passphrase-file /ruta/privada/vault.passphrase
+```
+
+El pipeline pCloud no invoca el prompt: selecciona el backup remoto más reciente
+y lee siempre `vaultPassphraseFile` de su configuración.
 
 La relación entre la versión y el esquema está declarada en el código oficial:
 
@@ -108,7 +123,7 @@ de los mismos apuntes que `ALL` y el importador verifica para cada subtotal:
 ALL = DEBT + REAL_CASH
 ```
 
-## Oráculo de la copia actual
+## Oráculo de la copia de referencia
 
 La copia `myexpenses-backup-20260822-210453.zip` tiene SHA-256
 `ec6e298ea1075e089770ac678603500f5f71f8e5f894b190fda1e5f06e435ab4`; su

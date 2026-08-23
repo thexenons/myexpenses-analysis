@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { createPostingsCsv } from "./TransactionsPage.helpers.ts";
+import {
+  createPostingsCsv,
+  sortPostings,
+} from "./TransactionsPage.helpers.ts";
 import { TRANSACTION_POSTING_FIXTURE } from "./TransactionsPage.test.helpers.ts";
 
 describe("createPostingsCsv", () => {
@@ -150,5 +153,50 @@ describe("createPostingsCsv", () => {
     ]);
 
     expect(csv).toContain('"línea uno\rlínea dos"');
+  });
+});
+
+describe("sortPostings", () => {
+  it("orders same-day transactions by their exact operation time", () => {
+    const early = {
+      ...TRANSACTION_POSTING_FIXTURE,
+      epochSeconds: 1_777_008_600,
+      id: "early",
+      localTime: "08:30:00",
+      transactionId: "early",
+    };
+    const late = {
+      ...TRANSACTION_POSTING_FIXTURE,
+      epochSeconds: 1_777_045_500,
+      id: "late",
+      localTime: "18:45:00",
+      transactionId: "late",
+    };
+
+    expect(sortPostings([late, early], "date", false).map(({ id }) => id)).toEqual([
+      "early",
+      "late",
+    ]);
+    expect(sortPostings([early, late], "date", true).map(({ id }) => id)).toEqual([
+      "late",
+      "early",
+    ]);
+  });
+
+  it("falls back to local date and time for legacy postings", () => {
+    const morning = {
+      ...TRANSACTION_POSTING_FIXTURE,
+      id: "morning",
+      localTime: "09:00:00",
+    };
+    const afternoon = {
+      ...TRANSACTION_POSTING_FIXTURE,
+      id: "afternoon",
+      localTime: "15:00:00",
+    };
+
+    expect(
+      sortPostings([afternoon, morning], "date", false).map(({ id }) => id),
+    ).toEqual(["morning", "afternoon"]);
   });
 });

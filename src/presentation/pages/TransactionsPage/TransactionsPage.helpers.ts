@@ -134,6 +134,25 @@ export function downloadPostingsCsv(
   URL.revokeObjectURL(url);
 }
 
+function comparePostingsByDate(
+  left: NormalizedPosting,
+  right: NormalizedPosting,
+): number {
+  if (
+    left.epochSeconds !== undefined &&
+    right.epochSeconds !== undefined &&
+    left.epochSeconds !== right.epochSeconds
+  ) {
+    return left.epochSeconds - right.epochSeconds;
+  }
+  const byDate = left.date.localeCompare(right.date);
+  if (byDate !== 0) return byDate;
+  const byTime = (left.localTime ?? "00:00:00").localeCompare(
+    right.localTime ?? "00:00:00",
+  );
+  return byTime !== 0 ? byTime : left.id.localeCompare(right.id);
+}
+
 export function sortPostings(
   postings: readonly NormalizedPosting[],
   sortKey: TransactionSortKey,
@@ -142,8 +161,9 @@ export function sortPostings(
   return postings.toSorted((left, right) => {
     const comparison =
       sortKey === "date"
-        ? left.date.localeCompare(right.date)
-        : left.amountEurMinor - right.amountEurMinor;
+        ? comparePostingsByDate(left, right)
+        : left.amountEurMinor - right.amountEurMinor ||
+          comparePostingsByDate(left, right);
     return descending ? -comparison : comparison;
   });
 }

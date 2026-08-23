@@ -47,7 +47,7 @@ La auditoría combinó:
 - Los fallos de red/publicación se confundían con una frase incorrecta. La UI
   diferencia el transporte accionable, pero mantiene indistinguibles frase,
   tag autenticado, gzip y dataset cifrado para no crear un oráculo.
-- La copia actual sigue reproduciendo exactamente apertura, gastos, ingresos,
+- La copia de referencia sigue reproduciendo exactamente apertura, gastos, ingresos,
   transferencias, ambos balances, partición deuda/flujo real y presupuesto.
 
 ### Seguridad y privacidad
@@ -121,7 +121,7 @@ La auditoría combinó:
 
 | Comprobación | Resultado |
 |---|---:|
-| `pnpm test` | 112 Node + 143 UI, todas correctas |
+| `pnpm test` | 121 Node (2 golden privados omitidos para el snapshot nuevo) + 145 UI, sin fallos |
 | Cobertura Node | 116 pruebas; 85,08 % líneas, 73,46 % ramas, 89,44 % funciones |
 | Cobertura V8 UI | 79,51 % statements, 63,53 % ramas, 87,32 % funciones, 86,71 % líneas |
 | Umbrales V8 | 75 / 60 / 85 / 85, superados |

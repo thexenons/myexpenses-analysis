@@ -78,7 +78,7 @@ test("hidden prompt requires a strong matching confirmation", async () => {
     );
 });
 
-test("TTY entry does not echo secret characters and restores raw mode", async () => {
+test("TTY entry does not echo secrets and releases an initially idle stream", async () => {
     const input = new PassThrough();
     const rawModes: boolean[] = [];
     let isRaw = false;
@@ -109,10 +109,11 @@ test("TTY entry does not echo secret characters and restores raw mode", async ()
     );
     input.write(`${PASSPHRASE}\r`);
     const result = await resultPromise;
-    input.destroy();
 
     assert.equal(result, PASSPHRASE);
     assert.equal(outputChunks.join(""), "Secret: \n");
     assert.doesNotMatch(outputChunks.join(""), /correct horse/u);
     assert.deepEqual(rawModes, [true, false]);
+    assert.equal(input.readableFlowing, false);
+    input.destroy();
 });

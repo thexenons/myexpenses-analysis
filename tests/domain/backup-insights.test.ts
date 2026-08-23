@@ -284,7 +284,7 @@ test("uses exactly the postings and accounts selected by global filters", () => 
   assert.equal(debtOnly.accounts.hiddenCount, 1);
 });
 
-test("matches the enriched-data coverage of the current local backup", async (context) => {
+test("matches the enriched-data coverage of the reference backup", async (context) => {
   let source: string;
   try {
     source = await readFile(
@@ -303,6 +303,13 @@ test("matches the enriched-data coverage of the current local backup", async (co
     throw error;
   }
   const raw = JSON.parse(source) as BackupDatasetV1;
+  if (
+    raw.source.backupSha256 !==
+    "ec6e298ea1075e089770ac678603500f5f71f8e5f894b190fda1e5f06e435ab4"
+  ) {
+    context.skip("The local dataset is not the documented reference backup");
+    return;
+  }
   const dataset = normalizeBackupDataset(raw);
   const insights = aggregateBackupInsights(
     applyFilters(dataset, createDefaultFilterState()),

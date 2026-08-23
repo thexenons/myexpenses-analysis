@@ -77,7 +77,7 @@ export function readHiddenPassphrase(
     emitKeypressEvents(input);
     const characters: string[] = [];
     const wasRaw = input.isRaw;
-    const wasPaused = input.isPaused();
+    const wasFlowing = input.readableFlowing;
     input.setRawMode(true);
     input.resume();
 
@@ -92,7 +92,7 @@ export function readHiddenPassphrase(
             } catch {
                 // Best effort after terminal errors; secret characters are still cleared.
             }
-            if (wasPaused) input.pause();
+            if (wasFlowing !== true && !input.destroyed) input.pause();
             characters.fill("");
         };
         const complete = (): void => {

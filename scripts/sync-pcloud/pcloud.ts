@@ -2,9 +2,12 @@ import { createHash, randomUUID } from "node:crypto";
 import { lstat, open, rename, rm } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 
+import {
+    BackupFileNameError,
+    parseBackupFileName,
+} from "../backup-file.ts";
+
 const API_HOSTS = new Set(["api.pcloud.com", "eapi.pcloud.com"]);
-const BACKUP_NAME_PATTERN =
-    /^myexpenses-backup-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})\.zip$/;
 const DECIMAL_PATTERN = /^(?:0|[1-9]\d*)$/;
 const MAX_UINT64 = (1n << 64n) - 1n;
 const MAX_BACKUP_BYTES = 64 * 1024 * 1024;
@@ -130,31 +133,6 @@ export function validateFolderPath(value: string): string {
     return value;
 }
 
-function validCalendarTimestamp(match: RegExpExecArray): string {
-    const [, yearText, monthText, dayText, hourText, minuteText, secondText] =
-        match;
-    const year = Number(yearText);
-    const month = Number(monthText);
-    const day = Number(dayText);
-    const hour = Number(hourText);
-    const minute = Number(minuteText);
-    const second = Number(secondText);
-    const date = new Date(0);
-    date.setUTCFullYear(year, month - 1, day);
-    date.setUTCHours(hour, minute, second, 0);
-    if (
-        date.getUTCFullYear() !== year ||
-        date.getUTCMonth() !== month - 1 ||
-        date.getUTCDate() !== day ||
-        hour > 23 ||
-        minute > 59 ||
-        second > 59
-    ) {
-        throw new PCloudError("pCloud backup filename contains an invalid timestamp");
-    }
-    return `${yearText}${monthText}${dayText}${hourText}${minuteText}${secondText}`;
-}
-
 function fileIdFromMetadata(metadata: JsonObject, context: string): string {
     let idFromString: string | undefined;
     if (metadata.id !== undefined) {
@@ -228,9 +206,19 @@ function parseBackupMetadata(value: unknown, index: number): PCloudBackupFile | 
         throw new PCloudError(`pCloud metadata ${index}: invalid deletion marker`);
     }
     const name = stringValue(metadata.name, `pCloud metadata ${index}.name`);
-    const nameMatch = BACKUP_NAME_PATTERN.exec(name);
-    if (nameMatch === null) return null;
-    const nameTimestamp = validCalendarTimestamp(nameMatch);
+    let parsedName: ReturnType<typeof parseBackupFileName>;
+    try {
+        parsedName = parseBackupFileName(name);
+    } catch (error) {
+        if (error instanceof BackupFileNameError) {
+            throw new PCloudError(
+                "pCloud backup filename contains an invalid timestamp",
+                { cause: error },
+            );
+        }
+        throw error;
+    }
+    if (parsedName === null) return null;
     const size =
         typeof metadata.size === "string" && DECIMAL_PATTERN.test(metadata.size)
             ? Number(metadata.size)
@@ -247,7 +235,7 @@ function parseBackupMetadata(value: unknown, index: number): PCloudBackupFile | 
             `pCloud metadata ${index}.modified`,
         ),
         name,
-        nameTimestamp,
+        nameTimestamp: parsedName.timestamp,
         size,
     };
 }

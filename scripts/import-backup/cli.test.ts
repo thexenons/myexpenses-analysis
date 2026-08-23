@@ -10,7 +10,12 @@ import type {
     ImportBackupResult,
 } from "./import-backup.ts";
 
-test("parses required CLI options and applies only the documented output default", () => {
+test("defaults to the latest data backup and Europe/Madrid", () => {
+    assert.deepEqual(parseImportBackupArguments([]), {
+        inputDirectoryPath: "data",
+        outputPath: "data/app-dataset.json",
+        timeZone: "Europe/Madrid",
+    });
     assert.deepEqual(
         parseImportBackupArguments([
             "--",
@@ -38,12 +43,16 @@ test("parses required CLI options and applies only the documented output default
         },
     );
     assert.throws(
-        () => parseImportBackupArguments(["--time-zone", "UTC"]),
-        /--input is required/iu,
+        () =>
+            parseImportBackupArguments([
+                "--input=backup.zip",
+                "--input-directory=data",
+            ]),
+        /either --input or --input-directory/iu,
     );
     assert.throws(
-        () => parseImportBackupArguments(["--input", "backup.zip"]),
-        /--time-zone is required/iu,
+        () => parseImportBackupArguments(["--time-zone", ""]),
+        /--time-zone must not be empty/iu,
     );
 });
 
@@ -65,13 +74,8 @@ test("runs the importer and emits only a non-sensitive count summary", async () 
     };
 
     const exitCode = await runImportBackupCli(
-        [
-            "--input",
-            "/private/path/backup.zip",
-            "--time-zone",
-            "Europe/Madrid",
-        ],
-        implementation,
+        ["--input", "/private/path/backup.zip"],
+        { importBackup: implementation },
         {
             stdout: (message) => stdout.push(message),
             stderr: (message) => stderr.push(message),
@@ -97,10 +101,12 @@ test("returns failure without invoking the importer for invalid arguments", asyn
     const stdout: string[] = [];
     const stderr: string[] = [];
     const exitCode = await runImportBackupCli(
-        ["--input", "backup.zip"],
-        async () => {
-            calls++;
-            throw new Error("must not run");
+        ["--input", "backup.zip", "--input-directory", "data"],
+        {
+            importBackup: async () => {
+                calls++;
+                throw new Error("must not run");
+            },
         },
         {
             stdout: (message) => stdout.push(message),
@@ -111,15 +117,53 @@ test("returns failure without invoking the importer for invalid arguments", asyn
     assert.equal(exitCode, 1);
     assert.equal(calls, 0);
     assert.deepEqual(stdout, []);
-    assert.match(stderr.join(""), /--time-zone is required/iu);
+    assert.match(stderr.join(""), /either --input or --input-directory/iu);
+});
+
+test("resolves the latest backup before importing without disclosing its path", async () => {
+    const stdout: string[] = [];
+    let received: ImportBackupOptions | undefined;
+    const exitCode = await runImportBackupCli(
+        [],
+        {
+            findLatestBackup: async (directoryPath) => {
+                assert.equal(directoryPath, "data");
+                return "/private/latest.zip";
+            },
+            importBackup: async (options) => {
+                received = options;
+                return {
+                    accountCount: 1,
+                    budgetCount: 0,
+                    categoryCount: 2,
+                    outputPath: options.outputPath,
+                    postingCount: 3,
+                };
+            },
+        },
+        {
+            stdout: (message) => stdout.push(message),
+            stderr: () => undefined,
+        },
+    );
+
+    assert.deepEqual(received, {
+        inputPath: "/private/latest.zip",
+        outputPath: "data/app-dataset.json",
+        timeZone: "Europe/Madrid",
+    });
+    assert.equal(exitCode, 0);
+    assert.doesNotMatch(stdout.join(""), /private|latest\.zip/iu);
 });
 
 test("redacts unknown importer errors", async () => {
     const stderr: string[] = [];
     const exitCode = await runImportBackupCli(
-        ["--input", "backup.zip", "--time-zone", "Europe/Madrid"],
-        async () => {
-            throw new Error("private payee /home/person/backup.zip");
+        ["--input", "backup.zip"],
+        {
+            importBackup: async () => {
+                throw new Error("private payee /home/person/backup.zip");
+            },
         },
         {
             stdout: () => undefined,
