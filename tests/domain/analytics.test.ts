@@ -17,6 +17,8 @@ import {
 import {
   applyFilters,
   createDefaultFilterState,
+  restoreFilterState,
+  toggleCategoryPath,
 } from "../../src/domain/analytics/filters.ts";
 import {
   dynamicRateKey,
@@ -412,7 +414,7 @@ test("global filters compose scope, period, category, status, tags, search and l
       scope: "realCashFlow",
       dateRange: { from: "2024-01-02", to: "2024-01-04" },
       accountIds: ["cash"],
-      categoryPrefix: ["Gastos"],
+      categoryPrefixes: [["Gastos"]],
       statuses: ["RECONCILED"],
       tags: ["Casa"],
       search: "devolucion CAFE",
@@ -446,6 +448,44 @@ test("global filters compose scope, period, category, status, tags, search and l
   assert.equal(voidOnly.activePostings.length, 0);
   assert.equal(aggregateKpis(voidOnly).postingCount, 0);
   assert.equal(aggregateKpis(voidOnly).netEurMinor, 0);
+
+  const multipleCategories = applyFilters(
+    dataset,
+    withFilters({
+      categoryPrefixes: [["Gastos"], ["Ingresos"]],
+    }),
+  );
+  assert.deepEqual(
+    new Set(
+      multipleCategories.postings.map((posting) => posting.categoryPath[0]),
+    ),
+    new Set(["Gastos", "Ingresos"]),
+  );
+  assert.deepEqual(
+    toggleCategoryPath([["Gastos"], ["Ingresos"]], ["Gastos"]),
+    [["Ingresos"]],
+  );
+});
+
+test("restores multiple category paths and migrates the previous single path", () => {
+  assert.deepEqual(
+    restoreFilterState({
+      categoryPrefixes: [
+        ["Gastos", "Casa"],
+        ["Gastos", "Casa"],
+        ["Repetida", "Repetida"],
+      ],
+    }).categoryPrefixes,
+    [
+      ["Gastos", "Casa"],
+      ["Repetida", "Repetida"],
+    ],
+  );
+  assert.deepEqual(
+    restoreFilterState({ categoryPrefix: ["Gastos", "Comida"] })
+      .categoryPrefixes,
+    [["Gastos", "Comida"]],
+  );
 });
 
 test("KPIs expose net flows, gross/refunds/reversals and status counts in cents", () => {

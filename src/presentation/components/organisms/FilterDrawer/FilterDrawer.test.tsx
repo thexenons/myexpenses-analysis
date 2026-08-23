@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { appStore } from "../../../../composition/app-store.ts"
+import { createDefaultFilterState } from "../../../../domain/analytics/filters.ts"
 import { normalizeDataset } from "../../../../domain/analytics/normalize.ts"
 import { AppStoreProvider } from "../../../providers/AppStoreProvider/index.ts"
 import { FilterDrawer } from "./FilterDrawer"
@@ -111,6 +112,28 @@ describe("FilterDrawer", () => {
       "RECONCILED",
       "VOID",
     ])
+  })
+
+  it("removes an exact nested category from the shared global filter", async () => {
+    const user = userEvent.setup()
+    appStore.setState({
+      filterDrawerOpen: true,
+      filters: {
+        ...createDefaultFilterState(),
+        categoryPrefixes: [["Gastos", "Comida"]],
+      },
+    })
+    render(
+      <AppStoreProvider store={appStore}>
+        <FilterDrawer />
+      </AppStoreProvider>,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "Quitar Gastos › Comida" }),
+    )
+
+    expect(appStore.getState().filters.categoryPrefixes).toEqual([])
   })
 
   it("closes when the non-panel overlay is pressed", async () => {

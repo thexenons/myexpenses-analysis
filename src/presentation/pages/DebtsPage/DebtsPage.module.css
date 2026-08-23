@@ -51,6 +51,12 @@
   contain-intrinsic-size: 0 170px;
 }
 
+.accountCard[data-selected="true"] {
+  background: color-mix(in srgb, var(--debt-soft) 46%, var(--surface-bright));
+  border-color: var(--debt-ink);
+  box-shadow: inset 0.2rem 0 0 var(--debt-ink), var(--shadow-small);
+}
+
 .accountHeader {
   display: flex;
   gap: 0.8rem;

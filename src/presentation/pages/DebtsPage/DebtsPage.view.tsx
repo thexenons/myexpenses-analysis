@@ -1,4 +1,5 @@
 import { Badge } from "../../components/atoms/Badge/index.ts";
+import { Button } from "../../components/atoms/Button/index.ts";
 import { Icon } from "../../components/atoms/Icon/index.ts";
 import { KpiCard } from "../../components/molecules/KpiCard/index.ts";
 import { EmptyState } from "../../components/molecules/EmptyState/index.ts";
@@ -19,8 +20,13 @@ import type { DebtsPageViewProps } from "./DebtsPage.types.ts";
 
 export function DebtsPageView({
   accountBars,
+  availableDebts,
   debtSeries,
   debts,
+  onClearAccounts,
+  onToggleAccount,
+  selectedAccountIds,
+  showClearAccounts,
   totals,
 }: DebtsPageViewProps) {
   const balanceVariation =
@@ -29,6 +35,13 @@ export function DebtsPageView({
   return (
     <AnalyticsPage
       description="Evolución de las cuentas marcadas como deuda, separada del dinero que realmente entra y sale de las cuentas operativas."
+      introAction={
+        showClearAccounts ? (
+          <Button onClick={onClearAccounts} variant="secondary">
+            Ver todas las deudas
+          </Button>
+        ) : undefined
+      }
       title="Deudas"
     >
       <div className={styles.debtSummary}>
@@ -41,7 +54,7 @@ export function DebtsPageView({
           </div>
         </div>
         <Badge tone="warning">
-          {countFormatter.format(debts.length)} cuentas seleccionadas
+          {countFormatter.format(debts.length)} cuentas incluidas
         </Badge>
       </div>
 
@@ -83,11 +96,11 @@ export function DebtsPageView({
       <AnalyticsPageGrid variant="two">
         <Panel className={styles.chartPanel}>
           <LineChart
-            description="Contrasta el movimiento de las cuentas de deuda con el flujo real."
+            description="Movimiento y saldo acumulado de las cuentas incluidas por el filtro global."
             formatLabel={formatPeriodLabel}
             formatValue={euroFormatter}
             series={debtSeries}
-            title="Deuda frente a caja"
+            title="Evolución de la selección"
           />
         </Panel>
         <Panel className={styles.chartPanel}>
@@ -102,10 +115,10 @@ export function DebtsPageView({
       </AnalyticsPageGrid>
 
       <Panel
-        description="Apertura, movimiento del periodo y saldo resultante"
-        title="Detalle por cuenta"
+        description="Selecciona una o varias cuentas mediante el filtro global existente"
+        title="Seleccionar cuentas de deuda"
       >
-        {debts.length === 0 ? (
+        {availableDebts.length === 0 ? (
           <EmptyState
             description="El ámbito y los filtros actuales no contienen cuentas marcadas como deuda."
             icon={<Icon name="debt" />}
@@ -113,30 +126,46 @@ export function DebtsPageView({
           />
         ) : (
           <div className={styles.accountGrid}>
-          {debts.map((debt) => (
-            <article className={styles.accountCard} key={debt.account.id}>
-              <div className={styles.accountHeader}>
-                <div>
-                  <h3 className={styles.accountName}>{debt.account.label}</h3>
-                  <p className={styles.accountMeta}>
-                    {countFormatter.format(debt.postingCount)} apuntes
-                  </p>
-                </div>
-                <Badge tone="debt">Deuda</Badge>
-              </div>
-              <strong className={styles.accountBalance}>
-                {formatEuroMinor(debt.periodClosingBalanceEurMinor)}
-              </strong>
-              <div className={styles.accountFooter}>
-                <span className={styles.accountMeta}>
-                  Periodo {formatEuroMinor(debt.netEurMinor)}
-                </span>
-                <span className={styles.accountMeta}>
-                  Apertura {formatEuroMinor(debt.periodOpeningBalanceEurMinor)}
-                </span>
-              </div>
-            </article>
-          ))}
+            {availableDebts.map((debt) => {
+              const selected = selectedAccountIds.has(debt.account.id);
+              return (
+                <article
+                  className={styles.accountCard}
+                  data-selected={selected}
+                  key={debt.account.id}
+                >
+                  <div className={styles.accountHeader}>
+                    <div>
+                      <h3 className={styles.accountName}>{debt.account.label}</h3>
+                      <p className={styles.accountMeta}>
+                        {countFormatter.format(debt.postingCount)} apuntes
+                      </p>
+                    </div>
+                    <Badge tone="debt">Deuda</Badge>
+                  </div>
+                  <strong className={styles.accountBalance}>
+                    {formatEuroMinor(debt.periodClosingBalanceEurMinor)}
+                  </strong>
+                  <div className={styles.accountFooter}>
+                    <span className={styles.accountMeta}>
+                      Periodo {formatEuroMinor(debt.netEurMinor)}
+                    </span>
+                    <span className={styles.accountMeta}>
+                      Apertura {formatEuroMinor(debt.periodOpeningBalanceEurMinor)}
+                    </span>
+                  </div>
+                  <Button
+                    aria-label={`${selected ? "Quitar filtro de" : "Filtrar por"} ${debt.account.label}`}
+                    aria-pressed={selected}
+                    onClick={() => onToggleAccount(debt.account.id)}
+                    size="compact"
+                    variant={selected ? "primary" : "secondary"}
+                  >
+                    {selected ? "Incluida" : "Incluir"}
+                  </Button>
+                </article>
+              );
+            })}
           </div>
         )}
       </Panel>

@@ -10,8 +10,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { STATIC_VAULT_MAX_ENVELOPE_BYTES } from "../../src/domain/security/static-vault.ts";
-import { readValidatedVaultFile } from "../../vite.config.ts";
+import {
+  encryptCompressedDataset,
+  serializeStaticVaultEnvelope,
+  STATIC_VAULT_MAX_ENVELOPE_BYTES,
+} from "../../src/domain/security/static-vault.ts";
+import {
+  assertVaultRequiresPassphrase,
+  readValidatedVaultFile,
+} from "../../vite.config.ts";
 
 function structuralVaultFixture(): string {
   return JSON.stringify({
@@ -61,4 +68,35 @@ test("Vite validates and caches only a bounded regular vault file", async () => 
   } finally {
     await rm(directory, { force: true, recursive: true });
   }
+});
+
+test("production rejects a development vault encrypted with an empty phrase", async () => {
+  const compressed = Uint8Array.of(
+    31, 139, 8, 0, 0, 0, 0, 0, 2, 3, 171, 86, 74, 203, 172, 40, 41,
+    45, 74, 85, 178, 42, 41, 42, 77, 173, 5, 0, 66, 143, 28, 218, 16,
+    0, 0, 0,
+  );
+  const protectedEnvelope = await encryptCompressedDataset(
+    compressed,
+    "correct horse battery staple",
+    globalThis.crypto,
+  );
+  const developmentEnvelope = await encryptCompressedDataset(
+    compressed,
+    "",
+    globalThis.crypto,
+    { allowEmptyPassphraseForDevelopment: true },
+  );
+
+  await assert.doesNotReject(
+    assertVaultRequiresPassphrase(
+      new TextEncoder().encode(serializeStaticVaultEnvelope(protectedEnvelope)),
+    ),
+  );
+  await assert.rejects(
+    assertVaultRequiresPassphrase(
+      new TextEncoder().encode(serializeStaticVaultEnvelope(developmentEnvelope)),
+    ),
+    /refuses a development vault/iu,
+  );
 });

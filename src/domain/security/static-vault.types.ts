@@ -28,6 +28,11 @@ export interface StaticVaultEnvelopeV1 extends StaticVaultHeaderV1 {
 /** Resolves to the platform Web Crypto implementation in browsers and Node. */
 export type StaticVaultCrypto = typeof globalThis.crypto;
 
+export interface StaticVaultPassphraseOptions {
+  /** Explicitly permits an empty key only for local development tooling. */
+  readonly allowEmptyPassphraseForDevelopment?: boolean;
+}
+
 export type StaticVaultErrorCode =
   | "INVALID_PASSPHRASE"
   | "INVALID_VAULT"

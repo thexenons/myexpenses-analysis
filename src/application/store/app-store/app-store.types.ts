@@ -24,7 +24,7 @@ export interface AppStoreActions {
   openFilterDrawer(): void;
   patchFilters(patch: Partial<FilterState>): void;
   setAccountIds(accountIds: readonly string[]): void;
-  setCategoryPrefix(categoryPrefix: readonly string[]): void;
+  setCategoryPrefixes(categoryPrefixes: readonly (readonly string[])[]): void;
   setGranularity(granularity: TimeGranularity): void;
   setStatuses(statuses: FilterState["statuses"]): void;
   setTags(tags: readonly string[]): void;

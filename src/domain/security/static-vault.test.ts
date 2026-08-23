@@ -172,6 +172,27 @@ describe("static dataset vault", () => {
     ).rejects.toMatchObject({ code: "INVALID_PASSPHRASE" });
   });
 
+  it("permits an empty passphrase only behind the explicit development option", async () => {
+    await expect(
+      encryptCompressedDataset(COMPRESSED_FIXTURE, "", globalThis.crypto),
+    ).rejects.toMatchObject({ code: "INVALID_PASSPHRASE" });
+
+    const envelope = await encryptCompressedDataset(
+      COMPRESSED_FIXTURE,
+      "",
+      globalThis.crypto,
+      { allowEmptyPassphraseForDevelopment: true },
+    );
+    await expect(
+      decryptCompressedDataset(envelope, "", globalThis.crypto),
+    ).rejects.toMatchObject({ code: "INVALID_PASSPHRASE" });
+    await expect(
+      decryptCompressedDataset(envelope, "", globalThis.crypto, {
+        allowEmptyPassphraseForDevelopment: true,
+      }),
+    ).resolves.toEqual(COMPRESSED_FIXTURE);
+  });
+
   it("canonicalizes only header serialization, independent of object key order", async () => {
     const envelope = await encryptCompressedDataset(
       COMPRESSED_FIXTURE,

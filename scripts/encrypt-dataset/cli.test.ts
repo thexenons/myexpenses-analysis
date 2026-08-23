@@ -11,6 +11,7 @@ const PASSPHRASE = "correct horse battery staple";
 
 test("parses defaults, passphrase file and pnpm's forwarded separator", () => {
     assert.deepEqual(parseEncryptDatasetArguments([]), {
+        allowEmptyPassphraseForDevelopment: false,
         inputPath: "data/app-dataset.json",
         outputPath: "data/app-dataset.vault.json",
     });
@@ -22,6 +23,7 @@ test("parses defaults, passphrase file and pnpm's forwarded separator", () => {
             "--passphrase-file=secret.txt",
         ]),
         {
+            allowEmptyPassphraseForDevelopment: false,
             inputPath: "input.json",
             outputPath: "output.json",
             passphraseFilePath: "secret.txt",
@@ -30,6 +32,26 @@ test("parses defaults, passphrase file and pnpm's forwarded separator", () => {
     assert.throws(
         () => parseEncryptDatasetArguments(["--passphrase=forbidden"]),
         /invalid command-line options/iu,
+    );
+    assert.deepEqual(
+        parseEncryptDatasetArguments([
+            "--allow-empty-passphrase-for-development",
+            "--",
+            "--output=development-vault.json",
+        ]),
+        {
+            allowEmptyPassphraseForDevelopment: true,
+            inputPath: "data/app-dataset.json",
+            outputPath: "development-vault.json",
+        },
+    );
+    assert.throws(
+        () =>
+            parseEncryptDatasetArguments([
+                "--allow-empty-passphrase-for-development",
+                "--passphrase-file=secret.txt",
+            ]),
+        /cannot be combined/iu,
     );
 });
 
@@ -88,6 +110,35 @@ test("prompts when no file exists and never accepts a passphrase argument", asyn
     assert.equal(forbidden, 1);
     assert.match(errors.join(""), /invalid command-line options/iu);
     assert.doesNotMatch(errors.join(""), /visible/u);
+});
+
+test("creates a development vault with an empty phrase without prompting", async () => {
+    let received: EncryptDatasetOptions | undefined;
+    let promptCalls = 0;
+    const exitCode = await runEncryptDatasetCli(
+        ["--allow-empty-passphrase-for-development"],
+        {
+            encrypt: async (options) => {
+                received = options;
+                return { compressedBytes: 1, inputBytes: 1, outputBytes: 1 };
+            },
+            promptForPassphrase: async () => {
+                promptCalls++;
+                return PASSPHRASE;
+            },
+            stderr: () => undefined,
+            stdout: () => undefined,
+        },
+    );
+
+    assert.equal(exitCode, 0);
+    assert.equal(promptCalls, 0);
+    assert.deepEqual(received, {
+        allowEmptyPassphraseForDevelopment: true,
+        inputPath: "data/app-dataset.json",
+        outputPath: "data/app-dataset.vault.json",
+        passphrase: "",
+    });
 });
 
 test("redacts unknown encryption errors", async () => {

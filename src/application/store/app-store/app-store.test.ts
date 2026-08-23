@@ -307,7 +307,7 @@ describe("AppStore", () => {
 
     store.getState().actions.patchFilters({
       accountIds: ["private-account"],
-      categoryPrefix: ["Salud", "Tratamiento"],
+      categoryPrefixes: [["Salud", "Tratamiento"]],
       dateRange: { from: "2026-01-01", to: "2026-01-31" },
       search: "diagnóstico privado",
       tags: ["confidencial"],

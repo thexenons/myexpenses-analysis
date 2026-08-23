@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 
+import { toggleCategoryPath } from "../../../../domain/analytics/filters.ts";
 import { useFilteredAnalytics } from "../../../hooks/filtered-analytics/filtered-analytics.hooks.ts";
 import { useAppStore } from "../../../providers/AppStoreProvider/index.ts";
 import { createCategoriesPageModel } from "../CategoriesPage.helpers.ts";
@@ -7,16 +8,17 @@ import type { CategoriesPageViewProps } from "../CategoriesPage.types.ts";
 
 export function useCategoriesPage(): CategoriesPageViewProps | null {
   const { analytics, filtered, filters, granularity } = useFilteredAnalytics();
-  const setCategoryPrefix = useAppStore(
-    (state) => state.actions.setCategoryPrefix,
+  const setCategoryPrefixes = useAppStore(
+    (state) => state.actions.setCategoryPrefixes,
   );
   const onClearCategory = useCallback(
-    () => setCategoryPrefix([]),
-    [setCategoryPrefix],
+    () => setCategoryPrefixes([]),
+    [setCategoryPrefixes],
   );
-  const onSelectCategory = useCallback(
-    (path: readonly string[]) => setCategoryPrefix(path),
-    [setCategoryPrefix],
+  const onToggleCategory = useCallback(
+    (path: readonly string[]) =>
+      setCategoryPrefixes(toggleCategoryPath(filters.categoryPrefixes, path)),
+    [filters.categoryPrefixes, setCategoryPrefixes],
   );
 
   return useMemo(
@@ -26,18 +28,18 @@ export function useCategoriesPage(): CategoriesPageViewProps | null {
         : createCategoriesPageModel(
             analytics,
             filtered,
-            filters.categoryPrefix,
+            filters.categoryPrefixes,
             granularity,
             onClearCategory,
-            onSelectCategory,
+            onToggleCategory,
           ),
     [
       analytics,
       filtered,
-      filters.categoryPrefix,
+      filters.categoryPrefixes,
       granularity,
       onClearCategory,
-      onSelectCategory,
+      onToggleCategory,
     ],
   );
 }

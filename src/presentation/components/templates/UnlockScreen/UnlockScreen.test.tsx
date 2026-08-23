@@ -56,6 +56,26 @@ describe("UnlockScreen", () => {
     );
   });
 
+  it("submits an empty phrase only when development mode explicitly allows it", async () => {
+    const user = userEvent.setup();
+    const onUnlock = vi.fn<(passphrase: string) => Promise<void>>();
+    render(
+      <UnlockScreen
+        allowEmptyPassphrase
+        blockedReason={null}
+        error={null}
+        onUnlock={onUnlock}
+        phase="locked"
+      />,
+    );
+
+    const input = screen.getByLabelText("Frase de desbloqueo");
+    expect(input).not.toBeRequired();
+    expect(input).toHaveAccessibleDescription(/puedes dejarla vacía/iu);
+    await user.click(screen.getByRole("button", { name: "Abrir bóveda" }));
+    expect(onUnlock).toHaveBeenCalledWith("");
+  });
+
   it("renders the same generic unlock error and a pending state", () => {
     const { rerender } = render(
       <UnlockScreen

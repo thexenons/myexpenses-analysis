@@ -237,8 +237,8 @@ export interface FilterState {
   readonly dateRange: DateRangeFilter;
   /** Empty means every account allowed by scope. */
   readonly accountIds: readonly string[];
-  /** A transaction matches when its category begins with this complete path. */
-  readonly categoryPrefix: readonly string[];
+  /** Empty means all; otherwise a transaction starts with any selected path. */
+  readonly categoryPrefixes: readonly (readonly string[])[];
   /** Empty means every status. VOID can remain visible in tables. */
   readonly statuses: readonly TransactionStatus[];
   /** Empty means every tag; otherwise a transaction matching any selected tag. */

@@ -105,9 +105,9 @@ La auditoría combinó:
   primer uso mediante `WeakMap`, y los apuntes activos se retienen una sola vez.
 - La rama legacy de exportación quedó fuera del grafo de desbloqueo cliente; se
   conserva únicamente como oráculo de pruebas financieras.
-- El frontend mantiene chunks lazy por URL. El build final midió 340,10 KB
-  (109,37 KB gzip) en el chunk principal y 7,25 KB (2,69 KB gzip) en crypto
-  diferido. Todos los chunks JS suman 181,29 KB gzip y CSS 20,76 KB gzip.
+- El frontend mantiene chunks lazy por URL. El build final midió 341,38 KB
+  (109,77 KB gzip) en el chunk principal y 7,35 KB (2,74 KB gzip) en crypto
+  diferido. Todos los chunks JS suman 183,81 KB gzip y CSS 21,33 KB gzip.
 - Las pruebas de arquitectura prohíben dependencias inversas entre capas,
   wildcard exports, nombres técnicos PascalCase, múltiples componentes por TSX
   y componentes sin carpeta, `index.ts` o test colocados. Madge no encontró
@@ -121,16 +121,16 @@ La auditoría combinó:
 
 | Comprobación | Resultado |
 |---|---:|
-| `pnpm test` | 121 Node (2 golden privados omitidos para el snapshot nuevo) + 145 UI, sin fallos |
-| Cobertura Node | 116 pruebas; 85,08 % líneas, 73,46 % ramas, 89,44 % funciones |
-| Cobertura V8 UI | 79,51 % statements, 63,53 % ramas, 87,32 % funciones, 86,71 % líneas |
+| `pnpm test` | 122 Node correctas + 2 golden privados omitidos para el snapshot nuevo + 151 UI, sin fallos |
+| Cobertura Node | 124 pruebas; 81,72 % líneas, 73,92 % ramas, 87,23 % funciones |
+| Cobertura V8 UI | 79,61 % statements, 63,89 % ramas, 87,22 % funciones, 86,53 % líneas |
 | Umbrales V8 | 75 / 60 / 85 / 85, superados |
 | `pnpm type-check` | Correcto |
 | `pnpm lint` | Correcto, cero warnings |
-| `pnpm audit --audit-level=moderate` | Cero vulnerabilidades conocidas |
+| `pnpm audit` | Cero vulnerabilidades conocidas |
 | `pnpm install --frozen-lockfile` | Correcto |
-| Build completa | 320 módulos, correcta en 5,10 s |
-| Dataset de build | 1.296.895 bytes, único archivo bajo `dist/data` |
+| Build completa | 325 módulos, correcta en 5,71 s |
+| Dataset de build | 1.298.491 bytes, único archivo bajo `dist/data` |
 | Preview | `/` y `/presupuestos` 200, fallback SPA idéntico, vault JSON 200 |
 | `git diff --check` | Correcto |
 

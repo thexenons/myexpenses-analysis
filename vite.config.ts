@@ -8,8 +8,10 @@ import { defineConfig } from "vite";
 import type { Plugin } from "vite";
 
 import {
+  decryptCompressedDataset,
   parseStaticVaultEnvelopeJson,
   STATIC_VAULT_MAX_ENVELOPE_BYTES,
+  StaticVaultUnlockError,
 } from "./src/domain/security/static-vault.ts";
 
 const DATA_FILES = ["app-dataset.vault.json"] as const;
@@ -117,8 +119,38 @@ export async function readValidatedVaultFile(
   }
 }
 
-async function readClientDataFile(fileName: DataFile): Promise<Buffer> {
-  return await readValidatedVaultFile(dataFileSource(fileName));
+async function readClientDataFile(
+  fileName: DataFile,
+  productionBuild = false,
+): Promise<Buffer> {
+  const source = await readValidatedVaultFile(dataFileSource(fileName));
+  if (productionBuild) await assertVaultRequiresPassphrase(source);
+  return source;
+}
+
+export async function assertVaultRequiresPassphrase(
+  source: Uint8Array,
+): Promise<void> {
+  const envelope = parseStaticVaultEnvelopeJson(
+    new TextDecoder("utf-8", { fatal: true }).decode(source),
+  );
+  let decrypted: Uint8Array | undefined;
+  try {
+    decrypted = await decryptCompressedDataset(
+      envelope,
+      "",
+      globalThis.crypto,
+      { allowEmptyPassphraseForDevelopment: true },
+    );
+  } catch (error) {
+    if (error instanceof StaticVaultUnlockError) return;
+    throw error;
+  } finally {
+    decrypted?.fill(0);
+  }
+  throw new Error(
+    "Production build refuses a development vault with an empty passphrase",
+  );
 }
 
 export function isPrivateDataFileSystemRoute(pathname: string): boolean {
@@ -223,7 +255,7 @@ function clientDataPlugin(): Plugin {
       const assets = await Promise.all(
         DATA_FILES.map(async (fileName) => ({
           fileName: `${DATA_ROUTE_PREFIX.slice(1)}${fileName}`,
-          source: await readClientDataFile(fileName),
+          source: await readClientDataFile(fileName, true),
         })),
       );
 

@@ -11,7 +11,12 @@ export interface DebtTotals {
 
 export interface DebtsPageViewProps {
   readonly accountBars: readonly ChartBarDatum[];
+  readonly availableDebts: readonly DebtBreakdownItem[];
   readonly debtSeries: readonly ChartSeries[];
   readonly debts: readonly DebtBreakdownItem[];
+  readonly onClearAccounts: () => void;
+  readonly onToggleAccount: (accountId: string) => void;
+  readonly selectedAccountIds: ReadonlySet<string>;
+  readonly showClearAccounts: boolean;
   readonly totals: DebtTotals;
 }

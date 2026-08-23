@@ -4,6 +4,7 @@ import type {
   TimeGranularity,
   TransactionStatus,
 } from "../../../../domain/analytics/types"
+import { categoryPathsEqual } from "../../../../domain/analytics/filters.ts"
 import { Button } from "../../atoms/Button"
 import { Icon } from "../../atoms/Icon"
 import { IconButton } from "../../atoms/IconButton"
@@ -57,7 +58,7 @@ export function FilterDrawerView({
   maxDate,
   minDate,
   onAccountToggle,
-  onCategoryChange,
+  onCategoryToggle,
   onClose,
   onDateChange,
   onGranularityChange,
@@ -69,8 +70,6 @@ export function FilterDrawerView({
   onTagToggle,
   rootCategories,
 }: FilterDrawerViewProps) {
-  const rootCategory = filters.categoryPrefix[0] ?? ""
-
   return (
     <dialog
       aria-labelledby="filter-drawer-title"
@@ -173,20 +172,47 @@ export function FilterDrawerView({
               onValueChange={onSearchChange}
               value={filters.search}
             />
-            <label className={styles.fieldLabel}>
-              <span>Categoría raíz</span>
-              <select
-                onChange={(event) => onCategoryChange(event.currentTarget.value)}
-                value={rootCategory}
-              >
-                <option value="">Todas las categorías</option>
+            <fieldset className={styles.choiceGroup}>
+              <legend>Categorías raíz</legend>
+              <p>
+                {filters.categoryPrefixes.length === 0
+                  ? "Todas las categorías incluidas"
+                  : `${filters.categoryPrefixes.length} rutas seleccionadas`}
+              </p>
+              <div className={styles.compactChoices}>
                 {rootCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
+                  <label className={styles.choice} key={category}>
+                    <input
+                      checked={filters.categoryPrefixes.some((path) =>
+                        categoryPathsEqual(path, [category]),
+                      )}
+                      onChange={() => onCategoryToggle([category])}
+                      type="checkbox"
+                    />
+                    <span>{category}</span>
+                  </label>
                 ))}
-              </select>
-            </label>
+              </div>
+              {filters.categoryPrefixes.length > 0 ? (
+                <ul
+                  aria-label="Rutas de categoría seleccionadas"
+                  className={styles.selectedCategories}
+                >
+                  {filters.categoryPrefixes.map((path) => (
+                    <li key={JSON.stringify(path)}>
+                      <button
+                        aria-label={`Quitar ${path.join(" › ")}`}
+                        onClick={() => onCategoryToggle(path)}
+                        type="button"
+                      >
+                        <span>{path.join(" › ")}</span>
+                        <span aria-hidden="true">×</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </fieldset>
 
             <fieldset className={styles.choiceGroup}>
               <legend>Cuentas</legend>

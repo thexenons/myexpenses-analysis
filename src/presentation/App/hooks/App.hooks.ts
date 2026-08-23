@@ -10,6 +10,7 @@ export function useApp(): AppViewProps {
   );
 
   return {
+    allowEmptyPassphrase: import.meta.env.DEV,
     error,
     loadPhase,
     onUnlock,

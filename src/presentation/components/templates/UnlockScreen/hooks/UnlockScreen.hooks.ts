@@ -6,6 +6,7 @@ import type { UnlockScreenProps } from "../UnlockScreen.types.ts";
 export function useUnlockScreen(
   onUnlock: UnlockScreenProps["onUnlock"],
   phase: UnlockScreenProps["phase"],
+  allowEmptyPassphrase: boolean,
 ) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showPassphrase, setShowPassphrase] = useState(false);
@@ -22,7 +23,10 @@ export function useUnlockScreen(
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const input = inputRef.current;
-    if (input === null || input.value.length === 0) {
+    if (
+      input === null ||
+      (input.value.length === 0 && !allowEmptyPassphrase)
+    ) {
       input?.focus();
       return;
     }

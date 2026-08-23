@@ -52,6 +52,18 @@ pnpm dev
 pnpm build
 ```
 
+Sólo para desarrollo local puede omitirse la frase:
+
+```sh
+pnpm data:encrypt:dev
+pnpm dev
+```
+
+El formulario admite entonces el campo vacío exclusivamente bajo `vite dev`.
+`pnpm build` detecta y rechaza esta bóveda de desarrollo para impedir que se
+publique por accidente; antes de construir hay que regenerarla con
+`pnpm data:encrypt` o con el fichero privado usado por la automatización.
+
 Para automatización se admite exclusivamente un fichero de frase privado:
 
 ```sh
@@ -141,11 +153,11 @@ reemplazar todas sus garantías, especialmente `frame-ancestors` y HSTS.
 
 ## Rendimiento medido
 
-Con el dataset actual, la entrada de 16.973.875 bytes queda en 972.432 bytes
-gzip y 1.296.895 bytes de envelope base64 cifrado. En la máquina de desarrollo,
+Con el dataset actual, la entrada de 16.992.243 bytes queda en 973.631 bytes
+gzip y 1.298.491 bytes de envelope base64 cifrado. En la máquina de desarrollo,
 el camino Node medido quedó alrededor de 1,26 s: unos 120 ms para parsear el
 envelope, 387 ms para derivar/descifrar, 288 ms para gunzip/UTF-8 y 75–96 ms
 para normalizar; JSON, validación y freeze completan el resto. Son cifras
 orientativas: Web Crypto, CPU y navegador cambian el resultado. El código
-criptográfico se carga en un chunk diferido de 2,69 KB gzip y no aumenta el
+criptográfico se carga en un chunk diferido de 2,74 KB gzip y no aumenta el
 camino inicial hasta que se envía la frase.

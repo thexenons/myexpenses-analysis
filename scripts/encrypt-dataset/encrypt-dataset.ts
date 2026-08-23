@@ -16,6 +16,7 @@ import {
 } from "./files.ts";
 
 export interface EncryptDatasetOptions {
+    readonly allowEmptyPassphraseForDevelopment?: boolean;
     readonly cryptoProvider?: StaticVaultCrypto;
     readonly inputPath: string;
     readonly outputPath: string;
@@ -95,6 +96,10 @@ export async function encryptDataset(
             compressed,
             options.passphrase,
             options.cryptoProvider ?? (webcrypto as unknown as StaticVaultCrypto),
+            {
+                allowEmptyPassphraseForDevelopment:
+                    options.allowEmptyPassphraseForDevelopment,
+            },
         );
         const serialized = serializeStaticVaultEnvelope(envelope);
         const outputBytes = new TextEncoder().encode(serialized).byteLength;

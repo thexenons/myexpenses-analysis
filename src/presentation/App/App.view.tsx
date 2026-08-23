@@ -7,6 +7,7 @@ import { UnlockScreen } from "../components/templates/UnlockScreen/index.ts";
 import type { AppViewProps } from "./App.types.ts";
 
 export function AppView({
+  allowEmptyPassphrase,
   error,
   loadPhase,
   onUnlock,
@@ -15,6 +16,7 @@ export function AppView({
   if (loadPhase !== "ready") {
     return (
       <UnlockScreen
+        allowEmptyPassphrase={allowEmptyPassphrase}
         blockedReason={unlockBlockedReason}
         error={error}
         onUnlock={onUnlock}

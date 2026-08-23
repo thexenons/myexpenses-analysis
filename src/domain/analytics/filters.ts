@@ -36,7 +36,7 @@ export function createDefaultFilterState(): FilterState {
     scope: "all",
     dateRange: { from: null, to: null },
     accountIds: [],
-    categoryPrefix: [],
+    categoryPrefixes: [],
     statuses: [],
     tags: [],
     search: "",
@@ -75,6 +75,28 @@ function restoreStringList(value: unknown): readonly string[] {
     : [];
 }
 
+function restoreCategoryPath(value: unknown): readonly string[] {
+  return Array.isArray(value) && value.length > 0 && value.every(isNonEmptyString)
+    ? [...value]
+    : [];
+}
+
+function restoreCategoryPrefixes(value: unknown): readonly (readonly string[])[] {
+  if (!Array.isArray(value)) return [];
+  const result: string[][] = [];
+  const seen = new Set<string>();
+  for (const candidate of value) {
+    const path = restoreCategoryPath(candidate);
+    if (path.length === 0) continue;
+    const key = JSON.stringify(path);
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push([...path]);
+    }
+  }
+  return result;
+}
+
 function restoreIsoDate(value: unknown): IsoDate | null {
   if (typeof value !== "string") {
     return null;
@@ -103,11 +125,18 @@ export function restoreFilterState(value: unknown): FilterState {
     to = null;
   }
 
+  const categoryPrefixes = restoreCategoryPrefixes(value.categoryPrefixes);
+  const legacyCategoryPrefix = restoreCategoryPath(value.categoryPrefix);
   return {
     scope: isAnalyticsScope(value.scope) ? value.scope : "all",
     dateRange: { from, to },
     accountIds: restoreStringList(value.accountIds),
-    categoryPrefix: restoreStringList(value.categoryPrefix),
+    categoryPrefixes:
+      categoryPrefixes.length > 0
+        ? categoryPrefixes
+        : legacyCategoryPrefix.length > 0
+          ? [legacyCategoryPrefix]
+          : [],
     statuses: Array.isArray(value.statuses)
       ? [...new Set(value.statuses.filter(isTransactionStatus))]
       : [],
@@ -123,6 +152,25 @@ function validateStringList(values: readonly string[], context: string): void {
       throw new Error(`${context}[${index}] must be a non-empty string`);
     }
   }
+}
+
+function snapshotCategoryPrefixes(
+  values: readonly (readonly string[])[],
+): readonly (readonly string[])[] {
+  const result: string[][] = [];
+  const seen = new Set<string>();
+  for (const [index, path] of values.entries()) {
+    if (!Array.isArray(path) || path.length === 0) {
+      throw new Error(`categoryPrefixes[${index}] must be a non-empty path`);
+    }
+    validateStringList(path, `categoryPrefixes[${index}]`);
+    const key = JSON.stringify(path);
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push([...path]);
+    }
+  }
+  return result;
 }
 
 function snapshotFilters(filters: FilterState): FilterState {
@@ -153,7 +201,7 @@ function snapshotFilters(filters: FilterState): FilterState {
   }
 
   validateStringList(filters.accountIds, "accountIds");
-  validateStringList(filters.categoryPrefix, "categoryPrefix");
+  const categoryPrefixes = snapshotCategoryPrefixes(filters.categoryPrefixes);
   validateStringList(filters.tags, "tags");
   for (const status of filters.statuses) {
     if (!VALID_STATUSES.has(status)) {
@@ -165,7 +213,7 @@ function snapshotFilters(filters: FilterState): FilterState {
     scope: filters.scope,
     dateRange: { from, to },
     accountIds: [...new Set(filters.accountIds)],
-    categoryPrefix: [...filters.categoryPrefix],
+    categoryPrefixes,
     statuses: [...new Set(filters.statuses)],
     tags: [...new Set(filters.tags)],
     search: filters.search.trim(),
@@ -194,6 +242,38 @@ function categoryStartsWith(
     return false;
   }
   return prefix.every((name, index) => categoryPath[index] === name);
+}
+
+export function categoryPathsEqual(
+  left: readonly string[],
+  right: readonly string[],
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every((segment, index) => segment === right[index])
+  );
+}
+
+export function toggleCategoryPath(
+  selectedPaths: readonly (readonly string[])[],
+  path: readonly string[],
+): readonly (readonly string[])[] {
+  const selected = selectedPaths.some((candidate) =>
+    categoryPathsEqual(candidate, path),
+  );
+  return selected
+    ? selectedPaths.filter((candidate) => !categoryPathsEqual(candidate, path))
+    : [...selectedPaths.map((candidate) => [...candidate]), [...path]];
+}
+
+function categoryMatchesPrefixes(
+  categoryPath: readonly string[],
+  prefixes: readonly (readonly string[])[],
+): boolean {
+  return (
+    prefixes.length === 0 ||
+    prefixes.some((prefix) => categoryStartsWith(categoryPath, prefix))
+  );
 }
 
 interface MatcherState {
@@ -227,7 +307,7 @@ function matchesPostingWithoutDate(
   if (matcher.statuses.size > 0 && !matcher.statuses.has(posting.status)) {
     return false;
   }
-  if (!categoryStartsWith(posting.categoryPath, filters.categoryPrefix)) {
+  if (!categoryMatchesPrefixes(posting.categoryPath, filters.categoryPrefixes)) {
     return false;
   }
   if (

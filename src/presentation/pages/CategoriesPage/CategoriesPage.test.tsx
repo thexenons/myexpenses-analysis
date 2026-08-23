@@ -36,26 +36,30 @@ describe("CategoriesPageView", () => {
   it("applies and clears a category through global-filter callbacks", async () => {
     const user = userEvent.setup();
     const onClearCategory = vi.fn<() => void>();
-    const onSelectCategory = vi.fn<(path: readonly string[]) => void>();
+    const onToggleCategory = vi.fn<(path: readonly string[]) => void>();
     render(
       <CategoriesPageView
         activityEurMinor={-2_500}
         categoryBars={[]}
+        categoryCount={1}
         categorySeries={[]}
+        categoryTree={[category]}
         directPostingCount={4}
         expenseEurMinor={2_500}
-        flattenedCategories={[category]}
         onClearCategory={onClearCategory}
-        onSelectCategory={onSelectCategory}
-        selectedCategory={category}
+        onToggleCategory={onToggleCategory}
+        selectedCategoryIds={new Set([category.id])}
+        selectionDetail="Gastos"
         showClearCategory
       />,
     );
 
-    const selectedButton = screen.getByRole("button", { name: /Gastos/ });
+    const selectedButton = screen.getByRole("button", {
+      name: "Quitar filtro: Gastos",
+    });
     expect(selectedButton).toHaveAttribute("aria-pressed", "true");
     await user.click(selectedButton);
-    expect(onSelectCategory).toHaveBeenCalledWith(["Gastos"]);
+    expect(onToggleCategory).toHaveBeenCalledWith(["Gastos"]);
     expect(screen.getByText("Gasto")).toBeVisible();
     expect(screen.getByText("4 dir. / 4 total")).toBeVisible();
 
@@ -129,13 +133,13 @@ describe("createCategoriesPageModel", () => {
     const selectedPath = ["Gastos", "Comida"] as const;
     const filtered = applyFilters(analytics, {
       ...createDefaultFilterState(),
-      categoryPrefix: selectedPath,
+      categoryPrefixes: [selectedPath],
     });
 
     const model = createCategoriesPageModel(
       analytics,
       filtered,
-      selectedPath,
+      [selectedPath],
       "year",
       vi.fn<() => void>(),
       vi.fn<(path: readonly string[]) => void>(),
@@ -152,6 +156,11 @@ describe("createCategoriesPageModel", () => {
         value: 10,
       }),
     ]);
+    expect(model.categoryTree[0]?.children.map(({ name }) => name)).toEqual([
+      "Casa",
+      "Comida",
+    ]);
+    expect(model.selectedCategoryIds.has('["Gastos","Comida"]')).toBe(true);
 
     const completeTreeModel = createCategoriesPageModel(
       analytics,
@@ -161,6 +170,6 @@ describe("createCategoriesPageModel", () => {
       vi.fn<() => void>(),
       vi.fn<(path: readonly string[]) => void>(),
     );
-    expect(completeTreeModel.directPostingCount).toBe(1);
+    expect(completeTreeModel.directPostingCount).toBe(3);
   });
 });

@@ -265,6 +265,31 @@
     margin-top: 0.65rem;
   }
 
+  .selectedCategories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.65rem;
+  }
+
+  .selectedCategories button {
+    display: inline-flex;
+    gap: 0.45rem;
+    align-items: center;
+    min-height: 2.25rem;
+    padding: 0.4rem 0.7rem;
+    color: var(--accent-ink);
+    background: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent-ink) 28%, transparent);
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 700;
+  }
+
+  .selectedCategories button:hover {
+    filter: brightness(0.96);
+  }
+
   .tag {
     position: relative;
     display: inline-flex;

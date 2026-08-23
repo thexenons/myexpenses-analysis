@@ -1,4 +1,3 @@
-import { Badge } from "../../components/atoms/Badge/index.ts";
 import { Button } from "../../components/atoms/Button/index.ts";
 import { Icon } from "../../components/atoms/Icon/index.ts";
 import { KpiCard } from "../../components/molecules/KpiCard/index.ts";
@@ -8,34 +7,28 @@ import { HorizontalBarChart } from "../../components/organisms/HorizontalBarChar
 import { LineChart } from "../../components/organisms/LineChart/index.ts";
 import { AnalyticsPage } from "../../components/templates/AnalyticsPage/index.ts";
 import { AnalyticsPageGrid } from "../../components/templates/AnalyticsPageGrid/index.ts";
-import type { CategoryType } from "../../../domain/analytics/types.ts";
 import {
   countFormatter,
   euroFormatter,
   euroFromMinor,
-  formatEuroMinor,
   formatPeriodLabel,
 } from "../../utils/format.ts";
+import { CategoryTreeNode } from "./components/CategoryTreeNode/index.ts";
 import styles from "./CategoriesPage.module.css";
 import type { CategoriesPageViewProps } from "./CategoriesPage.types.ts";
-
-const CATEGORY_TYPE_LABELS: Readonly<Record<CategoryType, string>> = {
-  EXPENSE: "Gasto",
-  INCOME: "Ingreso",
-  NEUTRAL: "Neutral",
-  TRANSFER: "Transferencia",
-};
 
 export function CategoriesPageView({
   activityEurMinor,
   categoryBars,
+  categoryCount,
   categorySeries,
+  categoryTree,
   directPostingCount,
   expenseEurMinor,
-  flattenedCategories,
   onClearCategory,
-  onSelectCategory,
-  selectedCategory,
+  onToggleCategory,
+  selectedCategoryIds,
+  selectionDetail,
   showClearCategory,
 }: CategoriesPageViewProps) {
   return (
@@ -53,9 +46,7 @@ export function CategoriesPageView({
       <AnalyticsPageGrid variant="kpis">
         <KpiCard
           detail={
-            selectedCategory
-              ? selectedCategory.path.join(" › ")
-              : "Árbol completo"
+            selectionDetail
           }
           formatValue={euroFormatter}
           icon={<Icon name="category" />}
@@ -77,7 +68,7 @@ export function CategoriesPageView({
           icon={<Icon name="trend" />}
           label="Categorías visibles"
           tone="accent"
-          value={flattenedCategories.length}
+          value={categoryCount}
         />
         <KpiCard
           detail="Asignados directamente"
@@ -111,55 +102,27 @@ export function CategoriesPageView({
       </AnalyticsPageGrid>
 
       <Panel
-        description="Selecciona una ruta para aplicarla a toda la aplicación"
+        description="Despliega ramas y combina varias rutas en el filtro global"
         title="Explorador jerárquico"
       >
-        {flattenedCategories.length === 0 ? (
+        {categoryTree.length === 0 ? (
           <EmptyState
             description="Amplía el periodo o revisa los filtros que limitan la actividad."
             icon={<Icon name="category" />}
             title="No hay categorías con actividad"
           />
         ) : (
-          <div className={styles.categoryTree}>
-          {flattenedCategories.map((category) => (
-            <button
-              aria-pressed={selectedCategory?.id === category.id}
-              className={styles.categoryNode}
+          <ul className={styles.categoryTree}>
+          {categoryTree.map((category) => (
+            <CategoryTreeNode
+              category={category}
+              depth={0}
               key={category.id}
-              onClick={() => onSelectCategory(category.path)}
-              type="button"
-            >
-              <span>
-                <span className={styles.categoryName}>{category.name}</span>
-                <span className={styles.categoryPath}>
-                  {category.path.join(" › ")}
-                </span>
-              </span>
-              <span className={styles.categoryDetails}>
-                <Badge
-                  tone={
-                    category.categoryType === "EXPENSE"
-                      ? "negative"
-                      : category.categoryType === "INCOME"
-                        ? "positive"
-                        : "info"
-                  }
-                >
-                  {CATEGORY_TYPE_LABELS[category.categoryType]}
-                </Badge>
-                <span className={styles.categoryCounts}>
-                  {countFormatter.format(category.directSummary.postingCount)} dir.
-                  {" / "}
-                  {countFormatter.format(category.summary.postingCount)} total
-                </span>
-              </span>
-              <span className={styles.categoryAmount}>
-                {formatEuroMinor(category.summary.netEurMinor)}
-              </span>
-            </button>
+              onToggleCategory={onToggleCategory}
+              selectedCategoryIds={selectedCategoryIds}
+            />
           ))}
-          </div>
+          </ul>
         )}
       </Panel>
     </AnalyticsPage>

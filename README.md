@@ -21,6 +21,17 @@ puede consumir el navegador. La aplicación arranca bloqueada, no hace ningún
 fetch antes del submit, vuelve a bloquearse tras cada recarga y se bloquea
 automáticamente después de 15 minutos sin actividad.
 
+Para desarrollo local puede generarse deliberadamente una bóveda sin frase:
+
+```sh
+pnpm data:encrypt:dev
+pnpm dev
+```
+
+En ese modo basta con pulsar «Abrir bóveda» con el campo vacío. Esta excepción
+sólo existe durante `vite dev`: una build de producción rechaza la bóveda vacía
+y exige regenerarla con `pnpm data:encrypt` o mediante el pipeline automatizado.
+
 La interfaz ofrece ocho rutas coordinadas por filtros globales:
 
 - `/resumen`: resumen general y valoración de cuentas;
@@ -34,7 +45,7 @@ La interfaz ofrece ocho rutas coordinadas por filtros globales:
   calidad/procedencia de los datos;
 - `/transacciones`: buscador, ordenación, paginación, trazabilidad y CSV.
 
-Los filtros de ámbito, periodo, granularidad, cuenta, categoría, estado,
+Los filtros de ámbito, periodo, granularidad, cuentas, categorías, estado,
 etiquetas, búsqueda y transferencias enlazadas afectan a todas las vistas. El
 estado vive en Zustand; por privacidad, sólo la granularidad se conserva en
 `localStorage`, mientras cuentas, categorías, fechas, etiquetas y búsquedas

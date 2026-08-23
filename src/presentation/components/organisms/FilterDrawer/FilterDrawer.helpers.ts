@@ -79,7 +79,7 @@ export function hasActiveDrawerFilters(
     filters.dateRange.from !== null ||
     filters.dateRange.to !== null ||
     filters.accountIds.length > 0 ||
-    filters.categoryPrefix.length > 0 ||
+    filters.categoryPrefixes.length > 0 ||
     filters.statuses.length > 0 ||
     filters.tags.length > 0 ||
     filters.search.trim().length > 0 ||

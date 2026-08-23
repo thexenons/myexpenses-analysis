@@ -25,7 +25,7 @@ export interface FilterDrawerViewProps {
   maxDate: IsoDate | null
   minDate: IsoDate | null
   onAccountToggle(accountId: string): void
-  onCategoryChange(category: string): void
+  onCategoryToggle(path: readonly string[]): void
   onClose(): void
   onDateChange(boundary: FilterDrawerDateBoundary, value: string): void
   onGranularityChange(granularity: TimeGranularity): void

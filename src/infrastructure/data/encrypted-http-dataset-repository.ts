@@ -155,6 +155,7 @@ async function decryptVaultResponse(
     envelope,
     passphrase,
     cryptoProvider,
+    { allowEmptyPassphraseForDevelopment: import.meta.env.DEV },
   );
   try {
     abortIfNeeded(signal);

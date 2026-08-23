@@ -3,6 +3,7 @@ import type {
   StaticVaultErrorCode,
   StaticVaultCrypto,
   StaticVaultHeaderV1,
+  StaticVaultPassphraseOptions,
 } from "./static-vault.types.ts";
 
 export const STATIC_VAULT_FORMAT = "myexpenses-static-vault" as const;
@@ -335,7 +336,10 @@ function utf8Bytes(value: string, context: string): OwnedBytes {
   return bytes;
 }
 
-function passphraseBytes(passphrase: string): OwnedBytes {
+function passphraseBytes(
+  passphrase: string,
+  options: StaticVaultPassphraseOptions = {},
+): OwnedBytes {
   if (typeof passphrase !== "string") {
     throw new StaticVaultValidationError(
       "INVALID_PASSPHRASE",
@@ -343,6 +347,12 @@ function passphraseBytes(passphrase: string): OwnedBytes {
     );
   }
   const bytes = utf8Bytes(passphrase, "Passphrase");
+  if (
+    bytes.byteLength === 0 &&
+    options.allowEmptyPassphraseForDevelopment === true
+  ) {
+    return bytes;
+  }
   if (
     bytes.byteLength < STATIC_VAULT_MIN_PASSPHRASE_BYTES ||
     bytes.byteLength > STATIC_VAULT_MAX_PASSPHRASE_BYTES
@@ -383,8 +393,9 @@ async function deriveAesKey(
   salt: OwnedBytes,
   cryptoProvider: StaticVaultCrypto,
   usage: "decrypt" | "encrypt",
+  options: StaticVaultPassphraseOptions,
 ) {
-  const encoded = passphraseBytes(passphrase);
+  const encoded = passphraseBytes(passphrase, options);
   try {
     const keyMaterial = await cryptoProvider.subtle.importKey(
       "raw",
@@ -460,6 +471,7 @@ export async function encryptCompressedDataset(
   bytes: Uint8Array,
   passphrase: string,
   cryptoProvider: StaticVaultCrypto,
+  options: StaticVaultPassphraseOptions = {},
 ): Promise<StaticVaultEnvelopeV1> {
   assertCompressedDataset(bytes);
   const salt = cryptoProvider.getRandomValues(
@@ -492,7 +504,13 @@ export async function encryptCompressedDataset(
   const plaintext = new Uint8Array(bytes.byteLength);
   plaintext.set(bytes);
   try {
-    const key = await deriveAesKey(passphrase, salt, cryptoProvider, "encrypt");
+    const key = await deriveAesKey(
+      passphrase,
+      salt,
+      cryptoProvider,
+      "encrypt",
+      options,
+    );
     const encrypted = new Uint8Array(
       await cryptoProvider.subtle.encrypt(
         {
@@ -521,9 +539,16 @@ export async function decryptCompressedDataset(
   value: unknown,
   passphrase: string,
   cryptoProvider: StaticVaultCrypto,
+  options: StaticVaultPassphraseOptions = {},
 ): Promise<Uint8Array<ArrayBuffer>> {
   const { aad, ciphertext, envelope, iv, salt } = parseEnvelopeParts(value);
-  const key = await deriveAesKey(passphrase, salt, cryptoProvider, "decrypt");
+  const key = await deriveAesKey(
+    passphrase,
+    salt,
+    cryptoProvider,
+    "decrypt",
+    options,
+  );
   let decrypted: Uint8Array<ArrayBuffer>;
   try {
     decrypted = new Uint8Array(

@@ -121,6 +121,23 @@ describe("encryptedHttpDatasetRepository", () => {
     expect(dataset).toMatchObject({ version: 1 });
   });
 
+  it("opens an explicitly empty development vault without persisting a phrase", async () => {
+    const developmentEnvelope = await encryptCompressedDataset(
+      await gzip(JSON.stringify(datasetFixture())),
+      "",
+      globalThis.crypto,
+      { allowEmptyPassphraseForDevelopment: true },
+    );
+    const repository = createEncryptedHttpDatasetRepository({
+      crypto: globalThis.crypto,
+      fetch: vi.fn<typeof fetch>(async () =>
+        envelopeResponse(developmentEnvelope),
+      ),
+    });
+
+    await expect(repository.load("")).resolves.toMatchObject({ version: 1 });
+  });
+
   it("preserves the indistinguishable authenticated-unlock error", async () => {
     const repository = createEncryptedHttpDatasetRepository({
       crypto: globalThis.crypto,

@@ -377,7 +377,7 @@ describe("budget analysis", () => {
     const analytics = analyticsFixture();
     const categoryFiltered = applyFilters(analytics, {
       ...createDefaultFilterState(),
-      categoryPrefix: ["Gastos", "Comida"],
+      categoryPrefixes: [["Gastos", "Comida"]],
     });
     const categoryResult = analyzeBudgetPeriod(
       analytics,

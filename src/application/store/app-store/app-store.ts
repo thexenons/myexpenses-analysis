@@ -68,11 +68,11 @@ export function createAppStore(
                 state.analytics,
               ),
             })),
-          setCategoryPrefix: (categoryPrefix) =>
+          setCategoryPrefixes: (categoryPrefixes) =>
             set((state) => ({
               filters: {
                 ...state.filters,
-                categoryPrefix: [...categoryPrefix],
+                categoryPrefixes: categoryPrefixes.map((path) => [...path]),
               },
             })),
           setGranularity: (granularity) => set({ granularity }),

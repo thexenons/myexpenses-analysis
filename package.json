@@ -15,6 +15,7 @@
     "preview": "vite preview",
     "data:import-backup": "tsx scripts/import-backup/cli.ts",
     "data:encrypt": "tsx scripts/encrypt-dataset/cli.ts",
+    "data:encrypt:dev": "tsx scripts/encrypt-dataset/cli.ts --allow-empty-passphrase-for-development",
     "deploy:sync-pcloud": "tsx scripts/sync-pcloud/main.ts",
     "test": "pnpm test:node && pnpm test:ui",
     "test:coverage": "pnpm test:node:coverage && pnpm test:ui:coverage",

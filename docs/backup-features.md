@@ -124,8 +124,8 @@ campos y los IDs estables de payee, método y tags.
 
 ## Decisiones de rendimiento y límites versionados
 
-El JSON claro ocupa 16.973.875 bytes; gzip lo reduce a 972.432 bytes y la bóveda
-base64 completa a 1.296.895 bytes. La carga evita copias del buffer de 17 MB,
+El JSON claro ocupa 16.992.243 bytes; gzip lo reduce a 973.631 bytes y la bóveda
+base64 completa a 1.298.491 bytes. La carga evita copias del buffer de 17 MB,
 retiene los apuntes activos una sola vez y crea el índice de búsqueda bajo
 demanda. En la medición final, la normalización añadió unos 7,1 MB de heap y el
 camino crítico quedó alrededor de 1,26 s en Node.

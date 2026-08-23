@@ -11,7 +11,7 @@ export function useFilteredAnalytics() {
   const deferredFilters = useMemo(
     () => ({
       accountIds: filters.accountIds,
-      categoryPrefix: filters.categoryPrefix,
+      categoryPrefixes: filters.categoryPrefixes,
       dateRange: filters.dateRange,
       linked: filters.linked,
       scope: filters.scope,
@@ -22,7 +22,7 @@ export function useFilteredAnalytics() {
     [
       deferredSearch,
       filters.accountIds,
-      filters.categoryPrefix,
+      filters.categoryPrefixes,
       filters.dateRange,
       filters.linked,
       filters.scope,

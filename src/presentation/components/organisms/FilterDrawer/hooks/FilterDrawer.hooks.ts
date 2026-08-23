@@ -5,6 +5,7 @@ import {
 } from "react"
 
 import type { TransactionStatus } from "../../../../../domain/analytics/types"
+import { toggleCategoryPath } from "../../../../../domain/analytics/filters.ts"
 import { useAppStore } from "../../../../providers/AppStoreProvider/index.ts"
 import {
   collectFilterDrawerRootCategories,
@@ -36,7 +37,9 @@ export function useFilterDrawer(): FilterDrawerViewProps {
   const open = useAppStore((state) => state.filterDrawerOpen)
   const patchFilters = useAppStore((state) => state.actions.patchFilters)
   const setAccountIds = useAppStore((state) => state.actions.setAccountIds)
-  const setCategoryPrefix = useAppStore((state) => state.actions.setCategoryPrefix)
+  const setCategoryPrefixes = useAppStore(
+    (state) => state.actions.setCategoryPrefixes,
+  )
   const onGranularityChange = useAppStore((state) => state.actions.setGranularity)
   const setStatuses = useAppStore((state) => state.actions.setStatuses)
   const setTags = useAppStore((state) => state.actions.setTags)
@@ -106,8 +109,8 @@ export function useFilterDrawer(): FilterDrawerViewProps {
       setAccountIds(
         toggleFilterDrawerUniversalValue(filters.accountIds, accountId, accountIds),
       ),
-    onCategoryChange: (category) =>
-      setCategoryPrefix(category === "" ? [] : [category]),
+    onCategoryToggle: (path) =>
+      setCategoryPrefixes(toggleCategoryPath(filters.categoryPrefixes, path)),
     onClose,
     onDateChange,
     onGranularityChange,

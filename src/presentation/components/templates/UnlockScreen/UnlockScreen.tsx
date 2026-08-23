@@ -5,6 +5,7 @@ import styles from "./UnlockScreen.module.css";
 import type { UnlockScreenProps } from "./UnlockScreen.types.ts";
 
 export function UnlockScreen({
+  allowEmptyPassphrase = false,
   blockedReason,
   error,
   onUnlock,
@@ -14,7 +15,7 @@ export function UnlockScreen({
   const hintId = useId();
   const inputId = useId();
   const { inputRef, showPassphrase, submit, togglePassphrase } =
-    useUnlockScreen(onUnlock, phase);
+    useUnlockScreen(onUnlock, phase, allowEmptyPassphrase);
   const pending = phase === "unlocking";
   const blocked = blockedReason !== null;
 
@@ -62,7 +63,9 @@ export function UnlockScreen({
                   Frase de desbloqueo
                 </label>
                 <span className={styles.fieldHint} id={hintId}>
-                  No se guarda; el campo se vacía al iniciar cada intento.
+                  {allowEmptyPassphrase
+                    ? "Desarrollo local: puedes dejarla vacía."
+                    : "No se guarda; el campo se vacía al iniciar cada intento."}
                 </span>
                 <span className={styles.inputFrame}>
                   <input
@@ -74,7 +77,7 @@ export function UnlockScreen({
                     id={inputId}
                     name="passphrase"
                     ref={inputRef}
-                    required
+                    required={!allowEmptyPassphrase}
                     spellCheck={false}
                     type={showPassphrase ? "text" : "password"}
                   />
