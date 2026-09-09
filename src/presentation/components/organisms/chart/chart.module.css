@@ -38,7 +38,7 @@
 .svg {
   display: block;
   width: 100%;
-  min-width: 34rem;
+  min-width: 0;
   height: auto;
   overflow: visible;
 }
@@ -58,6 +58,7 @@
 .legendItem {
   display: inline-flex;
   min-width: 0;
+  max-width: 100%;
   gap: 0.38rem;
   align-items: center;
 }
@@ -72,15 +73,71 @@
 }
 
 .legendLabel {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .legendValue {
   color: var(--ink-soft, #3c4a44);
   font-family: var(--mono, monospace);
   font-variant-numeric: tabular-nums;
+}
+
+.legendButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  min-height: 2.75rem;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.3rem 0.45rem;
+  color: inherit;
+  font: inherit;
+  background: transparent;
+  border: 1px solid var(--line, #cec9bb);
+  border-radius: var(--radius-xs, 0.35rem);
+  cursor: pointer;
+}
+
+.legendButton[aria-pressed="false"] {
+  text-decoration: line-through;
+  background: var(--paper, #efede5);
+}
+
+.legendButton:focus-visible {
+  outline: 2px solid var(--accent-ink, #22330e);
+  outline-offset: 2px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: center;
+  margin-bottom: 0.8rem;
+  font-size: 0.75rem;
+}
+
+.control {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.control select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.65rem;
+  color: var(--ink, #16231e);
+  font: inherit;
+  background: var(--surface-bright, #fffdf8);
+  border: 1px solid var(--line, #cec9bb);
+  border-radius: var(--radius-xs, 0.35rem);
 }
 
 .legendVariant1 .legendSwatch {
@@ -161,6 +218,15 @@
   stroke-dasharray: 12 4 2 4;
 }
 
+.seriesVariant4 .line { stroke-dasharray: 16 3; }
+.seriesVariant5 .line { stroke-dasharray: 2 3 8 3; }
+.seriesVariant6 .line { stroke-dasharray: 12 6 2 6 2 6; }
+.seriesVariant7 .line { stroke-dasharray: 18 4 8 4; }
+.legendVariant4 .legendSwatch { border-radius: 0.08rem; border: 2px solid var(--chart-series-color); background: transparent; }
+.legendVariant5 .legendSwatch { border-radius: 0; transform: rotate(45deg) scale(0.78); border: 2px solid var(--chart-series-color); background: transparent; }
+.legendVariant6 .legendSwatch { height: 0.25rem; border-radius: 0; }
+.legendVariant7 .legendSwatch { border-radius: 50%; background: transparent; border: 2px dotted var(--chart-series-color); }
+
 .seriesVariant0,
 .legendVariant0 {
   isolation: isolate;
@@ -217,12 +283,6 @@
 .horizontalBars,
 .divergingBars {
   isolation: isolate;
-}
-
-@media (max-width: 42rem) {
-  .svg {
-    min-width: 42rem;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -17,6 +17,7 @@ export interface ChartDataTableProps {
   readonly formatLabel?: (label: string) => string;
   readonly formatValue?: Intl.NumberFormat | ValueFormatter;
   readonly labelHeader: string;
+  readonly onSelectRow?: (id: string) => void;
   readonly rows:
     | readonly ChartDataTableRow[]
     | (() => readonly ChartDataTableRow[]);

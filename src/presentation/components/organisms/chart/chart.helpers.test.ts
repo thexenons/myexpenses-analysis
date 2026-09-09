@@ -1,8 +1,37 @@
 import { describe, expect, it } from "vitest"
 
-import { buildSeriesChartModel, getSeriesPaths } from "./chart.helpers"
+import { buildDivergingBarChartModel, buildHorizontalBarChartModel, buildSeriesChartModel, compactChartLabel, getSeriesPaths } from "./chart.helpers"
 
 describe("buildSeriesChartModel", () => {
+  it("keeps all mobile bars, axes and series inside the available width", () => {
+    const horizontal = buildHorizontalBarChartModel([
+      { id: "out", label: "Salidas", value: -250 },
+      { id: "in", label: "Entradas", value: 100 },
+    ], 280);
+    expect(horizontal.plotLeft).toBe(18);
+    expect(horizontal.plotRight).toBe(262);
+    for (const bar of horizontal.bars) {
+      expect(bar.barX).toBeGreaterThanOrEqual(horizontal.plotLeft);
+      expect(bar.barX + bar.barWidth).toBeLessThanOrEqual(horizontal.plotRight);
+    }
+    const diverging = buildDivergingBarChartModel([{ id: "jan", label: "Enero", leftValue: 100, rightValue: 250 }], undefined, "Salidas", undefined, "Entradas", 280);
+    expect(diverging.centerX).toBe(140);
+    expect(diverging.centerX - diverging.bars[0]!.leftWidth).toBeGreaterThanOrEqual(diverging.plotLeft);
+    expect(diverging.centerX + diverging.bars[0]!.rightWidth).toBeLessThanOrEqual(diverging.plotRight);
+    const line = buildSeriesChartModel([{ id: "cash", label: "Flujo", data: Array.from({ length: 12 }, (_, index) => ({ label: `2026-${String(index + 1).padStart(2, "0")}`, value: index })) }], 280);
+    expect(line.visibleLabels.size).toBe(3);
+    expect(line.plottedSeries[0]?.coordinates.at(-1)?.x).toBeLessThan(280);
+  });
+
+  it("keeps zero bars empty and long labels recognizable without clipping the SVG", () => {
+    const model = buildHorizontalBarChartModel([{ id: "zero", label: "Sin movimiento", value: 0 }]);
+    expect(model.bars[0]?.barWidth).toBe(0);
+    const fullLabel = "Gastos del hogar › Limpieza › Productos de limpieza";
+    expect(compactChartLabel(fullLabel)).toHaveLength(32);
+    expect(compactChartLabel(fullLabel)).toContain("…");
+    expect(compactChartLabel(fullLabel).endsWith("ductos de limpieza")).toBe(true);
+  });
+
   it("orders misaligned temporal series before indexing the axis and paths", () => {
     const model = buildSeriesChartModel([
       {

@@ -148,6 +148,39 @@ test("imports a synthetic v189 backup deterministically with complete provenance
     }
 });
 
+test("imports schema 190 with precious-metal commodities and unchanged financial postings", async () => {
+    const directoryPath = await mkdtemp(join(tmpdir(), "myexpenses-import-v190-test-"));
+    const inputPath = join(directoryPath, "backup.zip");
+    const outputPath = join(directoryPath, "dataset.json");
+    try {
+        const database = await createImportDatabaseFixture({
+            schemaVersion: 190,
+            extraSql: [
+                "INSERT INTO currency (_id, code, label, fraction_digits, symbol, commodity_type) VALUES (3, 'XAU', 'Gold', 6, 'XAU', 'COMMODITY')",
+                "UPDATE transactions SET original_amount = 123456, original_currency = 'XAU' WHERE _id = 1",
+            ],
+        });
+        const archive = await createBackupZipFixture({ database });
+        await writeFile(inputPath, archive);
+        const result = await importBackup({ inputPath, outputPath, timeZone: "Europe/Madrid" });
+        const parsed = parseBackupDataset(JSON.parse(await readFile(outputPath, "utf8")) as unknown);
+        assert.equal(parsed.source.schemaVersion, 190);
+        assert.equal(parsed.source.databaseSha256, sha256(database));
+        assert.equal(parsed.currencies.find((currency) => currency.code === "XAU")?.commodityType, "COMMODITY");
+        assert.equal(parsed.postings.find((posting) => posting.sourceId === 1)?.originalCurrency, "XAU");
+        assert.equal(result.postingCount, 11);
+        assert.equal(parsed.accounts.find((account) => account.sourceId === 2)?.balances?.currentNativeMinor, 250);
+        assert.equal(sha256(await readFile(inputPath)), sha256(archive));
+        assert.equal((await lstat(outputPath)).mode & 0o777, 0o600);
+        assert.throws(() => parseBackupDataset({
+            ...parsed,
+            source: { ...parsed.source, schemaVersion: 191 },
+        }), /expected schema 189 or 190/u);
+    } finally {
+        await rm(directoryPath, { force: true, recursive: true });
+    }
+});
+
 test("leaves an existing output untouched when required preferences are missing", async () => {
     const directoryPath = await mkdtemp(
         join(tmpdir(), "myexpenses-import-backup-atomic-test-"),

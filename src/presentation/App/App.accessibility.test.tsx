@@ -78,8 +78,15 @@ describe("App accessibility", () => {
     ] as const
 
     for (const [navigationName, headingName] of routes) {
+      const link = screen.getByRole("link", { name: navigationName })
+      const pathname = link.getAttribute("href")
       // oxlint-disable-next-line no-await-in-loop -- Each audit requires the preceding route transition to finish.
-      await user.click(screen.getByRole("link", { name: navigationName }))
+      await user.click(link)
+      // oxlint-disable-next-line no-await-in-loop -- Match success can precede React's route commit; axe must audit the committed destination.
+      await waitFor(() => {
+        expect(router.state.status).toBe("idle")
+        expect(router.state.resolvedLocation?.pathname).toBe(pathname)
+      })
       // oxlint-disable-next-line no-await-in-loop -- Lazy route content must mount before axe inspects it.
       const heading = await screen.findByRole("heading", {
         level: 1,

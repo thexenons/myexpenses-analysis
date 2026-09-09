@@ -2,7 +2,6 @@ import type initSqlJs from "sql.js";
 
 import {
     CATEGORY_TYPE,
-    V189_SCHEMA_VERSION,
     type MinorUnits,
     type V189Account,
     type V189AdapterOptions,
@@ -1182,13 +1181,14 @@ function assertPartition(scopes: Readonly<Record<V189ScopeName, V189Scope>>): vo
 
 /**
  * Adapts an already-open sql.js database. ZIP and filesystem I/O intentionally
- * live outside this versioned schema adapter.
+ * live outside this versioned schema adapter. Schema 190 shares its tables
+ * and financial queries; its changed commodity metadata is preserved.
  */
 export function adaptV189(
     database: initSqlJs.Database,
     rawOptions: V189AdapterOptions,
 ): V189CanonicalDataset {
-    validateV189Database(database);
+    const { schemaVersion } = validateV189Database(database);
     const options = normalizeOptions(rawOptions);
     const currencies = loadCurrencies(
         database,
@@ -1261,7 +1261,7 @@ export function adaptV189(
     return {
         metadata: {
             source: "MyExpenses",
-            schemaVersion: V189_SCHEMA_VERSION,
+            schemaVersion,
             timeZone: options.timeZone,
             preferences: options.preferences,
             policies: {

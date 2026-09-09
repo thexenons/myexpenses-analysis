@@ -1,0 +1,17 @@
+.root { margin-top: 0.65rem; border-top: 1px solid var(--line, #cec9bb); font-size: 0.75rem; }
+.summary { width: fit-content; min-width: 0; max-width: 100%; min-height: 2.75rem; align-content: center; cursor: pointer; font-weight: 700; overflow-wrap: anywhere; }
+.label { display: grid; gap: 0.35rem; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.label select { width: 100%; min-width: 0; max-width: 100%; min-height: 2.75rem; padding: 0.45rem; color: var(--ink, #16231e); font: inherit; border: 1px solid var(--line, #cec9bb); border-radius: 0.35rem; background: var(--surface-bright, #fffdf8); }
+.readout { display: block; padding: 0.65rem 0; }
+.values { display: grid; gap: 0.5rem; margin: 0.6rem 0 0; }
+.value { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr)); gap: 0.3rem 1rem; }
+.value dt { overflow-wrap: anywhere; }
+.value dd { min-width: 0; margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.detail { grid-column: 1 / -1; font-size: 0.7rem; }
+.swatch { display: inline-block; width: 0.65rem; height: 0.65rem; margin-right: 0.45rem; border-radius: 50%; }
+.tooltip { position: fixed; z-index: 50; width: min(19rem, calc(100vw - 1rem)); max-height: 15rem; padding: 0.8rem; overflow: auto; color: var(--ink, #16231e); font-size: 0.75rem; background: var(--surface-bright, #fffdf8); border: 1px solid var(--line-dark, #9ca59f); border-radius: 0.65rem; box-shadow: var(--shadow-small, 0 4px 16px #0002); pointer-events: none; }
+.summary:focus-visible, .label select:focus-visible { outline: 2px solid var(--accent-ink, #22330e); outline-offset: 2px; }
+
+@media (max-width: 42rem) {
+  .tooltip { inset-inline: 0.5rem; left: 0.5rem !important; width: auto; }
+}

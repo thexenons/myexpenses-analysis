@@ -7,7 +7,6 @@ import type {
 } from "../../../domain/analytics/types.ts";
 
 export interface OverviewCategoryRank {
-  readonly activityPercent: number;
   readonly category: CategoryBreakdownNode;
 }
 

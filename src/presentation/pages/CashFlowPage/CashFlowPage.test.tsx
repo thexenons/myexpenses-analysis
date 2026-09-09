@@ -109,4 +109,21 @@ describe("CashFlowPageView", () => {
       "Reajuste*",
     ]);
   });
+
+  it("plots real receipts and payments including transfers, never an absolute-value expense refund", () => {
+    const filtered = applyFilters(normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cuenta", type: "DEFAULT" } } },
+      categories: { Gastos: { categoryType: "EXPENSE" }, Transferencia: { categoryType: "TRANSFER" } },
+      parsedData: [{ uuid: "cash", label: "Cuenta", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "refund", date: "2026-01-01", amount: 3, category: ["Gastos"], sourceTransactionUuid: "refund", sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+        { uuid: "payment", date: "2026-01-02", amount: -5, category: ["Transferencia"], sourceTransactionUuid: "payment", sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+      ] }],
+    }), createDefaultFilterState());
+    const model = createCashFlowPageModel(filtered, "month");
+    expect(model.periodBars).toMatchObject([{ leftValue: 5, rightValue: 3 }]);
+    expect(model.kpis.realCashFlowEurMinor).toBe(-200);
+    render(<CashFlowPageView {...model} />);
+    expect(screen.getByRole("button", { name: /Salidas reales/ })).toBeVisible();
+    expect(screen.getByText("Un importe negativo es un abono, no un gasto adicional.", { exact: false, selector: "p" })).toBeVisible();
+  });
 });

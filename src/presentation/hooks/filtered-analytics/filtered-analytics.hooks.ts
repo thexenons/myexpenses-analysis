@@ -1,6 +1,7 @@
 import { useDeferredValue, useMemo } from "react";
 
 import { resolveTimeGranularity } from "../../../domain/analytics/date-periods.ts";
+import { datasetDateBounds } from "../../../domain/analytics/date-bounds.ts";
 import { applyFilters } from "../../../domain/analytics/filters.ts";
 import { useAppStore } from "../../providers/AppStoreProvider/index.ts";
 
@@ -12,6 +13,11 @@ export function useFilteredAnalytics() {
   const deferredFilters = useMemo(
     () => ({
       accountIds: filters.accountIds,
+      originAccountIds: filters.originAccountIds,
+      destinationAccountIds: filters.destinationAccountIds,
+      dateBasis: filters.dateBasis,
+      categoryMatch: filters.categoryMatch,
+      categoryDepth: filters.categoryDepth,
       categoryPrefixes: filters.categoryPrefixes,
       dateRange: filters.dateRange,
       linked: filters.linked,
@@ -24,6 +30,11 @@ export function useFilteredAnalytics() {
     [
       deferredSearch,
       filters.accountIds,
+      filters.originAccountIds,
+      filters.destinationAccountIds,
+      filters.dateBasis,
+      filters.categoryMatch,
+      filters.categoryDepth,
       filters.categoryPrefixes,
       filters.dateRange,
       filters.linked,
@@ -37,12 +48,13 @@ export function useFilteredAnalytics() {
     () => (analytics === null ? null : applyFilters(analytics, deferredFilters)),
     [analytics, deferredFilters],
   );
+  const bounds = analytics === null ? null : datasetDateBounds(analytics, filters.dateBasis);
   const granularity = resolveTimeGranularity(
     granularitySetting,
     filters.periodMode,
     filters.dateRange,
-    analytics?.minDate ?? null,
-    analytics?.maxDate ?? null,
+    bounds?.minDate ?? null,
+    bounds?.maxDate ?? null,
   );
 
   return {

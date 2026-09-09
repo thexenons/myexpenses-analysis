@@ -14,6 +14,7 @@ import type {
   NormalizedPosting,
 } from "./types.ts";
 import { monthPeriodForLabel } from "./periods.ts";
+import { postingDate } from "./filters.ts";
 
 export type BudgetHealth = "on-track" | "watch" | "exceeded" | "unallocated";
 export type BudgetAllocationSource = "EXACT" | "FALLBACK" | "NONE";
@@ -71,6 +72,10 @@ export interface BudgetAllocationNode extends BudgetTotals {
 }
 
 export interface BudgetAnalysis {
+  readonly dateBasis?: "operation" | "value";
+  /** Intersection of the global query and the budget period; null means no overlap. */
+  readonly consumptionDateRange?: { readonly from: IsoDate; readonly to: IsoDate } | null;
+  readonly isFilteredComparison?: boolean;
   readonly budget: BackupBudgetV1;
   readonly period: BudgetPeriod;
   readonly periods: readonly BudgetPeriod[];
@@ -554,8 +559,8 @@ function scopedExpensePostings(
       !posting.isVoid &&
       (posting.bucket === "expense" ||
         (budget.aggregateNeutral && posting.categoryType === "NEUTRAL")) &&
-      posting.date >= period.startDate &&
-      posting.date <= period.endDate &&
+      postingDate(posting, filtered.filters) >= period.startDate &&
+      postingDate(posting, filtered.filters) <= period.endDate &&
       postingInBudgetScope(posting, scope) &&
       matchesBudgetFilter(budget.filter, posting, categoryByUuid),
   );
@@ -851,10 +856,23 @@ export function analyzeBudgetPeriod(
     allocationNodes.map((node) => node.consumedMinor),
     "Categorized consumption",
   );
+  const { filters } = filtered;
+  const from = filters.dateRange.from !== null && filters.dateRange.from > period.startDate
+    ? filters.dateRange.from : period.startDate;
+  const to = filters.dateRange.to !== null && filters.dateRange.to < period.endDate
+    ? filters.dateRange.to : period.endDate;
+  const isFilteredComparison = from !== period.startDate || to !== period.endDate ||
+    filters.scope !== "all" || filters.accountIds.length > 0 ||
+    (filters.originAccountIds?.length ?? 0) > 0 || (filters.destinationAccountIds?.length ?? 0) > 0 ||
+    filters.categoryPrefixes.length > 0 || filters.statuses.length > 0 || filters.tags.length > 0 ||
+    filters.search !== "" || filters.linked !== "all";
 
   return {
     status: "ready",
     analysis: {
+      dateBasis: filters.dateBasis ?? "operation",
+      consumptionDateRange: from <= to ? { from, to } : null,
+      isFilteredComparison,
       budget,
       period,
       periods: periodResult.periods,

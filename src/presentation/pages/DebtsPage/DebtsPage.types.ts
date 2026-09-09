@@ -6,6 +6,8 @@ export interface DebtTotals {
   readonly advancesEurMinor: number;
   readonly balanceEurMinor: number;
   readonly expensesEurMinor: number;
+  readonly expenseRefundsEurMinor: number;
+  readonly flowEurMinor: number;
   readonly recoveriesEurMinor: number;
 }
 
@@ -16,6 +18,7 @@ export interface DebtsPageViewProps {
   readonly debts: readonly DebtBreakdownItem[];
   readonly onClearAccounts: () => void;
   readonly onToggleAccount: (accountId: string) => void;
+  readonly onViewTransactions: (accountId?: string) => void;
   readonly selectedAccountIds: ReadonlySet<string>;
   readonly showClearAccounts: boolean;
   readonly totals: DebtTotals;

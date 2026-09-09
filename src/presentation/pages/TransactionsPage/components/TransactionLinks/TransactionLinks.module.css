@@ -1,0 +1,9 @@
+@layer components {
+  .root { max-width: 34rem; margin-top: 0.2rem; white-space: normal; font-size: 0.72rem; }
+  .root summary { width: fit-content; min-height: 2.25rem; align-content: center; color: var(--transfer); cursor: pointer; }
+  .content { padding: 0.7rem; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-bright); }
+  .content p { margin: 0; color: var(--muted); line-height: 1.5; }
+  .content ul { display: grid; gap: 0.65rem; padding-inline-start: 1rem; }
+  .content li { overflow-wrap: anywhere; }
+  .content li span { display: block; margin-top: 0.2rem; color: var(--muted); }
+}

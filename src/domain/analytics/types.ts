@@ -246,6 +246,12 @@ export interface FilterState {
   readonly dateRange: DateRangeFilter;
   /** Empty means every account allowed by scope. */
   readonly accountIds: readonly string[];
+  /** Directional endpoints of a payment; independent from the displayed account scope. */
+  readonly originAccountIds?: readonly string[];
+  readonly destinationAccountIds?: readonly string[];
+  readonly dateBasis?: "operation" | "value";
+  readonly categoryMatch?: "posting" | "either";
+  readonly categoryDepth?: "subtree" | "exact";
   /** Empty means all; otherwise a transaction starts with any selected path. */
   readonly categoryPrefixes: readonly (readonly string[])[];
   /** Empty means every status. VOID can remain visible in tables. */
@@ -264,9 +270,11 @@ export interface FilteredAnalyticsDataset {
   readonly postings: readonly NormalizedPosting[];
   /** Matching non-VOID rows, retained once for every metric consumer. */
   readonly activePostings: readonly NormalizedPosting[];
-  /** Per-account opening at the start of the selected period and filters. */
+  /** Complete account balances: content filters affect movements, never these balances. */
   readonly periodOpeningEurMinorByAccountId: Readonly<Record<string, number>>;
   readonly periodOpeningBalanceEurMinor: number;
+  readonly periodClosingEurMinorByAccountId?: Readonly<Record<string, number>>;
+  readonly periodClosingBalanceEurMinor?: number;
 }
 
 export interface AmountSummary {
@@ -282,6 +290,9 @@ export interface AmountSummary {
 }
 
 export interface FlowComposition {
+  /** Signed debt sides of verified transfers, excluded from actual expenses/refunds. */
+  readonly debtExpenseAdjustmentsEurMinor?: number;
+  readonly debtIncomeAdjustmentsEurMinor?: number;
   readonly grossExpensesEurMinor: number;
   readonly expenseRefundsEurMinor: number;
   readonly netExpensesEurMinor: number;

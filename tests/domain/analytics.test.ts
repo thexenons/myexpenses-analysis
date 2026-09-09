@@ -750,8 +750,8 @@ test("category, account and debt breakdowns reconcile to the filtered totals", (
     },
     {
       closing: 3_000,
-      advances: 3_000,
-      recoveries: 1_000,
+      advances: 0,
+      recoveries: 0,
       expenses: 3_000,
       refunds: 1_000,
     },

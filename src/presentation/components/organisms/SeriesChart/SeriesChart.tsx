@@ -1,12 +1,13 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- The generated SVG itself is the image and supplies title, description and an exact-data table. */
-import { useCallback } from "react";
+import { useCallback, useImperativeHandle, useRef } from "react";
 
 import { cx, formatNumber } from "../../../utils/component.helpers.ts";
 import { ChartDataTable } from "../ChartDataTable/index.ts";
 import { ChartFrame } from "../ChartFrame/index.ts";
 import { ChartLegend } from "../ChartLegend/index.ts";
+import { ChartInspector } from "../chart/components/ChartInspector/index.ts";
+import type { ChartInspectorHandle } from "../chart/components/ChartInspector/index.ts";
 import {
-  CHART_WIDTH,
   SERIES_CHART_HEIGHT,
   chartColorStyle,
   chartDescription,
@@ -18,6 +19,8 @@ import {
 import styles from "../chart/chart.module.css";
 import {
   useChartIds,
+  useChartSeriesVisibility,
+  useChartWidth,
   useSeriesChartModel,
 } from "../chart/hooks/chart.hooks.ts";
 import type { SeriesChartProps } from "./SeriesChart.types.ts";
@@ -44,6 +47,7 @@ export function SeriesChart({
   emptyMessage = "No hay datos para representar.",
   formatLabel = identityLabel,
   formatValue,
+  onSelectPeriod,
   ref,
   series,
   title,
@@ -51,10 +55,13 @@ export function SeriesChart({
   variant,
 }: SeriesChartProps) {
   const { descriptionId, titleId } = useChartIds("series-chart");
+  const { element: chartElement, setElement: setChartElement, width: chartWidth } = useChartWidth();
+  useImperativeHandle(ref, () => chartElement!, [chartElement]);
+  const inspectorRef = useRef<ChartInspectorHandle>(null);
+  const { coloredSeries, hiddenSeriesIds, onToggleSeries, visibleSeries } = useChartSeriesVisibility(series);
   const {
     empty,
     labels,
-    legendItems,
     plotBottom,
     plotLeft,
     plotRight,
@@ -63,9 +70,9 @@ export function SeriesChart({
     scale,
     visibleLabels,
     zeroY,
-  } = useSeriesChartModel(series);
+  } = useSeriesChartModel(visibleSeries, chartWidth);
   const createDataTableRows = useCallback(() => {
-    const valuesBySeriesAndLabel = series.map((item) => {
+    const valuesBySeriesAndLabel = visibleSeries.map((item) => {
       const valuesByLabel = new Map<string, number | null>();
       for (const point of item.data) {
         if (!valuesByLabel.has(point.label)) {
@@ -85,7 +92,15 @@ export function SeriesChart({
         (valuesByLabel) => valuesByLabel.get(label) ?? null,
       ),
     }));
-  }, [labels, series]);
+  }, [labels, visibleSeries]);
+  const getInspectorValues = useCallback((label: string) => visibleSeries.map((item) => {
+    const point = item.data.find((candidate) => candidate.label === label);
+    return {
+      id: item.id, label: item.label, color: item.color,
+      value: point !== undefined && Number.isFinite(point.value) ? point.value : null,
+      detail: point?.tooltip ?? (point === undefined ? undefined : tooltipFormatter?.(point, item)),
+    };
+  }), [visibleSeries, tooltipFormatter]);
 
   return (
     <ChartFrame
@@ -94,20 +109,31 @@ export function SeriesChart({
         className,
       )}
       dataTable={
+        <>
+        <ChartInspector
+          formatLabel={formatLabel}
+          formatValue={formatValue}
+          getValues={getInspectorValues}
+          items={labels.map((label) => ({ id: label, label }))}
+          ref={inspectorRef}
+          title={title}
+        />
         <ChartDataTable
           caption={`Datos exactos de ${title}`}
-          columns={series.map((item) => ({ id: item.id, label: item.label }))}
+          columns={visibleSeries.map((item) => ({ id: item.id, label: item.label }))}
           formatLabel={formatLabel}
           formatValue={formatValue}
           labelHeader="Periodo"
+          onSelectRow={onSelectPeriod}
           rows={createDataTableRows}
         />
+        </>
       }
       description={description}
       empty={empty}
-      emptyMessage={emptyMessage}
-      legend={<ChartLegend items={legendItems} />}
-      ref={ref}
+      emptyMessage={visibleSeries.length === 0 && series.length > 0 ? "Todas las series están ocultas. Activa una en la leyenda." : emptyMessage}
+      legend={<ChartLegend hiddenItemIds={hiddenSeriesIds} items={coloredSeries} onToggleItem={onToggleSeries} />}
+      ref={setChartElement}
       title={title}
     >
       <svg
@@ -115,8 +141,9 @@ export function SeriesChart({
         aria-labelledby={titleId}
         className={styles.svg}
         preserveAspectRatio="xMidYMid meet"
+        onPointerLeave={() => inspectorRef.current?.dismiss()}
         role="img"
-        viewBox={`0 0 ${CHART_WIDTH} ${SERIES_CHART_HEIGHT}`}
+        viewBox={`0 0 ${chartWidth} ${SERIES_CHART_HEIGHT}`}
       >
         <title id={titleId}>{title}</title>
         <desc id={descriptionId}>{chartDescription(description, title)}</desc>
@@ -156,7 +183,7 @@ export function SeriesChart({
               <text
                 className={cx(styles.axisLabel, styles.xAxisLabel)}
                 key={label}
-                textAnchor="middle"
+                textAnchor={index === 0 ? "start" : index === labels.length - 1 ? "end" : "middle"}
                 x={
                   labels.length === 1
                     ? (plotLeft + plotRight) / 2
@@ -177,7 +204,8 @@ export function SeriesChart({
           />
         </g>
 
-        {plottedSeries.map(({ coordinates, series: item }, seriesIndex) => {
+        {plottedSeries.map(({ coordinates, series: item }) => {
+          const seriesIndex = coloredSeries.findIndex((candidate) => candidate.id === item.id);
           const { areaPath, linePath } = getSeriesPaths(coordinates, zeroY);
 
           return (
@@ -185,7 +213,7 @@ export function SeriesChart({
               aria-hidden="true"
               className={cx(
                 styles.series,
-                styles[`seriesVariant${seriesIndex % 4}`],
+                styles[`seriesVariant${seriesIndex % 8}`],
               )}
               key={item.id}
               style={chartColorStyle(
@@ -222,6 +250,7 @@ export function SeriesChart({
                     cy={y}
                     fill="var(--chart-series-color, currentColor)"
                     key={point.id ?? point.label}
+                    onPointerEnter={(event) => inspectorRef.current?.inspect(point.label, event.clientX, event.clientY)}
                     r="4"
                   >
                     <title>{tooltip}</title>

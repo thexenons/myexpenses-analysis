@@ -10,6 +10,8 @@ import type {
 
 export interface FilterDrawerViewProps {
   accounts: readonly NormalizedAccount[]
+  endpointAccounts: readonly NormalizedAccount[]
+  categoryPaths: readonly (readonly string[])[]
   allAccountsSelected: boolean
   allStatusesSelected: boolean
   availableTags: readonly string[]
@@ -18,6 +20,11 @@ export interface FilterDrawerViewProps {
   filters: FilterState
   hasActiveFilters: boolean
   onAccountToggle(accountId: string): void
+  onOriginToggle(accountId: string): void
+  onDestinationToggle(accountId: string): void
+  onDateBasisChange(dateBasis: "operation" | "value"): void
+  onCategoryMatchChange(categoryMatch: "posting" | "either"): void
+  onCategoryDepthChange(categoryDepth: "subtree" | "exact"): void
   onCategoryToggle(path: readonly string[]): void
   onClose(): void
   onLinkedChange(linked: LinkedFilter): void

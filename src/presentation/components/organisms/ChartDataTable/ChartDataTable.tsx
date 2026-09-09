@@ -2,6 +2,8 @@
 import { useMemo } from "react";
 
 import { formatNumber } from "../../../utils/component.helpers.ts";
+import { Button } from "../../atoms/Button/index.ts";
+import { downloadChartCsv } from "./ChartDataTable.helpers.ts";
 import styles from "./ChartDataTable.module.css";
 import type { ChartDataTableProps } from "./ChartDataTable.types.ts";
 import { useChartDataTable } from "./hooks/ChartDataTable.hooks.ts";
@@ -16,6 +18,7 @@ export function ChartDataTable({
   formatLabel = identityLabel,
   formatValue,
   labelHeader,
+  onSelectRow,
   rows,
   summary = "Ver datos exactos",
 }: ChartDataTableProps) {
@@ -33,6 +36,15 @@ export function ChartDataTable({
     >
       <summary className={styles.summary}>{summary}</summary>
       {open ? (
+        <>
+        <Button
+          aria-label={`Descargar CSV: ${caption}`}
+          onClick={() => downloadChartCsv(labelHeader, columns, resolvedRows)}
+          size="compact"
+          variant="secondary"
+        >
+          Descargar CSV
+        </Button>
         <section
           aria-label={`Tabla: ${caption}`}
           className={styles.scroller}
@@ -56,7 +68,16 @@ export function ChartDataTable({
               {resolvedRows.map((row) => (
                 <tr className={styles.row} key={row.id}>
                   <th className={styles.rowHeader} scope="row">
-                    {formatLabel(row.label)}
+                    {onSelectRow ? (
+                      <Button
+                        aria-label={`Ver movimientos: ${formatLabel(row.label)}`}
+                        onClick={() => onSelectRow(row.id)}
+                        size="compact"
+                        variant="ghost"
+                      >
+                        {formatLabel(row.label)}
+                      </Button>
+                    ) : formatLabel(row.label)}
                   </th>
                   {row.values.map((value, index) => (
                     <td className={styles.value} key={columns[index]?.id ?? index}>
@@ -68,6 +89,7 @@ export function ChartDataTable({
             </tbody>
           </table>
         </section>
+        </>
       ) : null}
     </details>
   );

@@ -73,4 +73,15 @@ describe("GlobalFilters", () => {
     })
     expect(appStore.getState().granularity).toBe("auto")
   })
+
+  it("announces and independently clears the new filter dimensions", async () => {
+    const user = userEvent.setup()
+    appStore.getState().actions.patchFilters({ originAccountIds: ["cash"], destinationAccountIds: ["partner"], dateBasis: "value", categoryDepth: "exact", categoryMatch: "either" })
+    render(<AppStoreProvider store={appStore}><GlobalFilters /></AppStoreProvider>)
+    expect(screen.getByRole("button", { name: "Abrir todos los filtros, 5 activos" })).toBeVisible()
+    await user.click(screen.getByRole("button", { name: "Quitar filtro Fecha valor" }))
+    expect(appStore.getState().filters.dateBasis).toBe("operation")
+    expect(appStore.getState().filters.destinationAccountIds).toEqual(["partner"])
+    expect(screen.getByRole("button", { name: "Abrir todos los filtros, 4 activos" })).toBeVisible()
+  })
 })

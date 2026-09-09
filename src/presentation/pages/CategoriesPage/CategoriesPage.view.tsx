@@ -14,8 +14,10 @@ import {
   formatPeriodLabel,
 } from "../../utils/format.ts";
 import { CategoryTreeNode } from "./components/CategoryTreeNode/index.ts";
+import { CATEGORY_METRIC_LABELS, DEFAULT_CATEGORY_CHART_OPTIONS } from "./CategoriesPage.helpers.ts";
+import chartStyles from "../../components/organisms/chart/chart.module.css";
 import styles from "./CategoriesPage.module.css";
-import type { CategoriesPageViewProps } from "./CategoriesPage.types.ts";
+import type { CategoriesPageViewProps, CategoryLevel, CategoryMetric } from "./CategoriesPage.types.ts";
 
 export function CategoriesPageView({
   activityEurMinor,
@@ -25,6 +27,11 @@ export function CategoriesPageView({
   categoryTree,
   directPostingCount,
   expenseEurMinor,
+  chartOptions = DEFAULT_CATEGORY_CHART_OPTIONS,
+  onChartOptionsChange,
+  onViewCategory,
+  onViewTransactions,
+  onViewPeriod,
   onClearCategory,
   onToggleCategory,
   selectedCategoryIds,
@@ -33,7 +40,7 @@ export function CategoriesPageView({
 }: CategoriesPageViewProps) {
   return (
     <AnalyticsPage
-      description="Navega por el árbol contable y convierte cualquier ruta en filtro global. Los padres incluyen toda la actividad de sus descendientes."
+      description="Compara categorías y convierte cualquier ruta en filtro global."
       introAction={
         showClearCategory ? (
           <Button onClick={onClearCategory} variant="secondary">
@@ -50,16 +57,16 @@ export function CategoriesPageView({
           }
           formatValue={euroFormatter}
           icon={<Icon name="category" />}
-          label="Actividad seleccionada"
+          label="Neto seleccionado"
           tone="info"
           value={euroFromMinor(activityEurMinor)}
         />
         <KpiCard
-          detail="Incluye descendientes"
+          detail="Negativo: abonos; no implica efectivo recuperado."
           formatValue={euroFormatter}
           icon={<Icon name="receipt" />}
-          label="Gasto de la selección"
-          tone="negative"
+          label="Gasto neto de la selección"
+          tone={expenseEurMinor >= 0 ? "negative" : "info"}
           value={euroFromMinor(expenseEurMinor)}
         />
         <KpiCard
@@ -80,21 +87,51 @@ export function CategoriesPageView({
         />
       </AnalyticsPageGrid>
 
+      <Panel title="Consultar categorías" description="Elige la métrica y compara raíces o apuntes directos, sin duplicar importes.">
+        <div className={chartStyles.controls}>
+          <label className={chartStyles.control}>
+            Métrica de categorías
+            <select value={chartOptions.metric} onChange={(event) => onChartOptionsChange?.({ ...chartOptions, metric: event.target.value as CategoryMetric })}>
+              {Object.entries(CATEGORY_METRIC_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
+          <label className={chartStyles.control}>
+            Nivel de categorías
+            <select value={chartOptions.level} onChange={(event) => onChartOptionsChange?.({ ...chartOptions, level: event.target.value as CategoryLevel })}>
+              <option value="roots">Raíces o selección, con descendientes</option>
+              <option value="direct">Rutas exactas, sólo apuntes directos</option>
+            </select>
+          </label>
+          <label className={chartStyles.control}>
+            Series comparadas{showClearCategory ? " (selección completa)" : ""}
+            <select disabled={showClearCategory} value={chartOptions.seriesLimit} onChange={(event) => onChartOptionsChange?.({ ...chartOptions, seriesLimit: Number(event.target.value) })}>
+              <option value={4}>Primeras 4</option>
+              <option value={12}>Primeras 12</option>
+              <option value={0}>Todas</option>
+            </select>
+          </label>
+          {onViewTransactions ? <Button onClick={onViewTransactions} variant="secondary">Ver movimientos de la selección</Button> : null}
+        </div>
+        <p className={styles.help}>Activa u oculta series desde la leyenda.</p>
+      </Panel>
+
       <AnalyticsPageGrid variant="two">
         <Panel className={styles.chartPanel}>
           <HorizontalBarChart
             data={categoryBars}
-            description="Importe neto absoluto para comparar peso relativo."
+            description={`${CATEGORY_METRIC_LABELS[chartOptions.metric]}. Orden por importe absoluto; se conserva el signo.`}
             formatValue={euroFormatter}
             labelHeader="Categoría"
+            onSelectDatum={onViewCategory}
             title="Peso de las categorías"
           />
         </Panel>
         <Panel className={styles.chartPanel}>
           <LineChart
-            description="Evolución de las cuatro raíces con más actividad."
+            description={`${CATEGORY_METRIC_LABELS[chartOptions.metric]}. ${categorySeries.length} series; todas las seleccionadas están incluidas.`}
             formatLabel={formatPeriodLabel}
             formatValue={euroFormatter}
+            onSelectPeriod={onViewPeriod}
             series={categorySeries}
             title="Evolución comparada"
           />
@@ -102,7 +139,7 @@ export function CategoriesPageView({
       </AnalyticsPageGrid>
 
       <Panel
-        description="Despliega ramas y combina varias rutas en el filtro global"
+        description="Despliega ramas y combina varias rutas en el filtro global. El árbol muestra importes netos; padres y descendientes no deben sumarse entre sí."
         title="Explorador jerárquico"
       >
         {categoryTree.length === 0 ? (

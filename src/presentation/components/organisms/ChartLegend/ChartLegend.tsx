@@ -8,7 +8,9 @@ import type { ChartLegendProps } from "./ChartLegend.types.ts";
 
 export function ChartLegend({
   className,
+  hiddenItemIds,
   items,
+  onToggleItem,
   ref,
   valueFormatter,
   ...props
@@ -19,7 +21,7 @@ export function ChartLegend({
         <li
           className={cx(
             styles.legendItem,
-            styles[`legendVariant${index % 4}`],
+            styles[`legendVariant${index % 8}`],
           )}
           key={item.id}
           style={chartColorStyle(
@@ -27,8 +29,23 @@ export function ChartLegend({
             seriesColor(item.color, index),
           )}
         >
-          <span aria-hidden="true" className={styles.legendSwatch} />
-          <span className={styles.legendLabel}>{item.label}</span>
+          {onToggleItem ? (
+            <button
+              aria-label={`${hiddenItemIds?.has(item.id) ? "Mostrar" : "Ocultar"} serie: ${item.label}`}
+              aria-pressed={!hiddenItemIds?.has(item.id)}
+              className={styles.legendButton}
+              onClick={() => onToggleItem(item.id)}
+              type="button"
+            >
+              <span aria-hidden="true" className={styles.legendSwatch} />
+              <span className={styles.legendLabel}>{item.label}</span>
+            </button>
+          ) : (
+            <>
+              <span aria-hidden="true" className={styles.legendSwatch} />
+              <span className={styles.legendLabel}>{item.label}</span>
+            </>
+          )}
           {item.value === undefined ? null : (
             <data className={styles.legendValue} value={item.value}>
               {formatNumber(item.value, valueFormatter)}

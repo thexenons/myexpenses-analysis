@@ -19,6 +19,24 @@ function resetAppStore() {
 describe("Sidebar", () => {
   beforeEach(resetAppStore)
 
+  it("keeps the transactions section active regardless of pagination and sorting", async () => {
+    const history = createMemoryHistory({
+      initialEntries: ["/transacciones?page=2&sort=amount&direction=asc"],
+    })
+    const router = createAppRouter({ history })
+    render(
+      <AppStoreProvider store={appStore}>
+        <RouterProvider router={router} />
+      </AppStoreProvider>,
+    )
+
+    expect(await screen.findByRole("link", { name: "Transacciones" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    )
+    expect(screen.getByText("Sección actual: Transacciones")).toBeInTheDocument()
+  })
+
   it("navigates with links and announces click and history changes", async () => {
     const user = userEvent.setup()
     const scrollIntoView = vi.fn<() => void>()

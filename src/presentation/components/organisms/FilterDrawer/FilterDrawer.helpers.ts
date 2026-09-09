@@ -42,12 +42,25 @@ export function collectFilterDrawerTags(
   return [...tags].toSorted((left, right) => SPANISH_COLLATOR.compare(left, right))
 }
 
+export function collectFilterDrawerCategoryPaths(dataset: AnalyticsDataset | null): readonly (readonly string[])[] {
+  if (dataset === null) return []
+  const paths = new Map<string, readonly string[]>()
+  for (const posting of dataset.postings) {
+    for (let length = 1; length <= posting.categoryPath.length; length += 1) {
+      const path = posting.categoryPath.slice(0, length)
+      paths.set(JSON.stringify(path), path)
+    }
+  }
+  return [...paths.values()].toSorted((left, right) => SPANISH_COLLATOR.compare(left.join(" › "), right.join(" › ")))
+}
+
 export function toggleFilterDrawerUniversalValue<Value extends string>(
   selectedValues: readonly Value[],
   value: Value,
   allValues: readonly Value[],
 ): readonly Value[] {
   const selected = new Set(selectedValues.length === 0 ? allValues : selectedValues)
+  if (selected.size === 1 && selected.has(value)) return selectedValues
   if (selected.has(value)) selected.delete(value)
   else selected.add(value)
   return selected.size === allValues.length
@@ -74,6 +87,11 @@ export function hasActiveDrawerFilters(
     filters.dateRange.from !== null ||
     filters.dateRange.to !== null ||
     filters.accountIds.length > 0 ||
+    (filters.originAccountIds?.length ?? 0) > 0 ||
+    (filters.destinationAccountIds?.length ?? 0) > 0 ||
+    filters.dateBasis === "value" ||
+    filters.categoryMatch === "either" ||
+    filters.categoryDepth === "exact" ||
     filters.categoryPrefixes.length > 0 ||
     filters.statuses.length > 0 ||
     filters.tags.length > 0 ||

@@ -67,7 +67,7 @@ export interface V189LocalTimestamp {
 
 export interface V189Metadata {
     source: "MyExpenses";
-    schemaVersion: typeof V189_SCHEMA_VERSION;
+    schemaVersion: typeof V189_SCHEMA_VERSION | 190;
     timeZone: string;
     preferences: V189Preferences;
     policies: {

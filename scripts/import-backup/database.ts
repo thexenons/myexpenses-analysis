@@ -2,7 +2,6 @@ import initSqlJs from "sql.js";
 import type { Database, SqlJsStatic } from "sql.js";
 
 const SQLITE_HEADER = Buffer.from("SQLite format 3\0", "ascii");
-const EXPECTED_SCHEMA_VERSION = 189 as const;
 const MAX_DATABASE_BYTES = 128 * 1024 * 1024;
 
 export const SCHEMA_189_REQUIRED_COLUMNS = Object.freeze({
@@ -122,7 +121,7 @@ export class BackupDatabaseError extends Error {
 }
 
 export interface BackupDatabaseMetadata {
-    schemaVersion: typeof EXPECTED_SCHEMA_VERSION;
+    schemaVersion: 189 | 190;
 }
 
 let sqlJsPromise: Promise<SqlJsStatic> | undefined;
@@ -170,7 +169,7 @@ function validateRequiredSchema(database: Database): void {
         if (existingTables.get(tableName) !== "table") {
             throw databaseError(
                 "SCHEMA_MISMATCH",
-                "The schema 189 backup is missing a required base table",
+                "The schema 189/190 backup is missing a required base table",
             );
         }
         const columns = new Set<string>();
@@ -187,7 +186,7 @@ function validateRequiredSchema(database: Database): void {
             if (!columns.has(columnName)) {
                 throw databaseError(
                     "SCHEMA_MISMATCH",
-                    "The schema 189 backup is missing a required column",
+                    "The schema 189/190 backup is missing a required column",
                 );
             }
         }
@@ -208,10 +207,10 @@ function validateDatabase(database: Database): BackupDatabaseMetadata {
     }
 
     const schemaVersion = firstScalar(database, "PRAGMA user_version");
-    if (schemaVersion !== EXPECTED_SCHEMA_VERSION) {
+    if (schemaVersion !== 189 && schemaVersion !== 190) {
         throw databaseError(
             "SCHEMA_MISMATCH",
-            `Expected MyExpenses schema ${EXPECTED_SCHEMA_VERSION}`,
+            "Expected MyExpenses schema 189 or 190",
         );
     }
     validateRequiredSchema(database);
@@ -236,7 +235,7 @@ function validateDatabase(database: Database): BackupDatabaseMetadata {
         );
     }
 
-    return { schemaVersion: EXPECTED_SCHEMA_VERSION };
+    return { schemaVersion };
 }
 
 function assertDatabaseBytes(bytes: Uint8Array): void {

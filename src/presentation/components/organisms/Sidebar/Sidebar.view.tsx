@@ -89,7 +89,7 @@ export function SidebarView({
             return (
               <li key={item.to}>
                 <Link
-                  activeOptions={{ exact: true }}
+                  activeOptions={{ exact: true, includeSearch: false }}
                   aria-label={item.label}
                   className={styles.navigationButton}
                   to={item.to}
@@ -137,12 +137,14 @@ export function SidebarView({
       </div>
       <button
         aria-describedby="automatic-lock-note"
+        aria-label="Bloquear bóveda"
         className={styles.lockButton}
         onClick={onLock}
         type="button"
       >
         <span aria-hidden="true" className={styles.lockMark} />
         <span className={styles.lockLabel}>Bloquear bóveda</span>
+        <span aria-hidden="true" className={styles.mobileLockLabel}>Bloquear</span>
       </button>
       <p className={styles.visuallyHidden} id="automatic-lock-note">
         La bóveda también se bloquea tras 15 minutos sin actividad.

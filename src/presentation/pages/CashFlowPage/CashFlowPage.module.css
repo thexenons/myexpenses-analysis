@@ -1,8 +1,7 @@
 .chartPanel {
-  min-height: 26rem;
+  min-width: 0;
 }
 
-.rankList,
 .compositionList {
   display: grid;
   gap: 0.75rem;
@@ -24,11 +23,11 @@
 
 .compositionLabel {
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
 }
 
 .compositionValue {
   font-family: var(--mono);
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   font-weight: 700;
 }

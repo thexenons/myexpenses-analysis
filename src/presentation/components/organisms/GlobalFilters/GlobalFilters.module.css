@@ -1,24 +1,43 @@
 @layer components {
+  .activeSelections {
+    flex-basis: 100%;
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 0.4rem;
+    list-style: none;
+    margin: 0;
+    padding: 0.15rem 0;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  .activeSelections button {
+    white-space: nowrap;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.75rem;
+    padding: 0.35rem 0.65rem;
+    cursor: pointer;
+  }
   .filters {
     position: sticky;
     top: 0;
     z-index: 20;
-    display: grid;
-    grid-template-columns:
-      auto minmax(12rem, 1.35fr) minmax(14rem, 1fr)
-      minmax(18rem, 1.2fr) minmax(14rem, 1fr) auto;
-    gap: 0.68rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     align-items: center;
-    min-height: 4.85rem;
-    padding: 0.72rem clamp(1rem, 2.1vw, 2.2rem);
-    background: rgb(239 237 229 / 91%);
-    border-bottom: 1px solid rgb(156 165 159 / 38%);
-    box-shadow: 0 0.55rem 1.8rem rgb(23 37 31 / 5%);
-    backdrop-filter: blur(18px) saturate(118%);
+    min-height: 3.75rem;
+    padding: 0.5rem clamp(1rem, 2vw, 2rem);
+    background: var(--surface-bright);
+    border-bottom: 1px solid var(--line);
   }
 
   .filterIdentity {
-    display: grid;
+    display: none;
     min-width: 5.4rem;
     padding-right: 0.35rem;
   }
@@ -44,9 +63,24 @@
   .period,
   .granularity {
     min-width: 0;
+    max-width: 100%;
+  }
+
+  .search {
+    flex: 1 1 9rem;
+  }
+
+  .scope,
+  .granularity {
+    flex: 1 1 auto;
+  }
+
+  .period {
+    flex: 1.15 1 14rem;
   }
 
   .drawerButton {
+    flex: none;
     white-space: nowrap;
   }
 
@@ -64,36 +98,27 @@
   }
 }
 
-@media (width <= 93rem) {
-  .filters {
-    grid-template-columns: minmax(13rem, 1fr) minmax(14rem, auto) minmax(14rem, auto) auto;
-  }
-
-  .filterIdentity,
+@media (width <= 52rem) {
+  .granularity,
   .period {
-    display: none;
-  }
-}
-
-@media (width <= 69rem) {
-  .filters {
-    grid-template-columns: minmax(12rem, 1fr) minmax(14rem, auto) auto;
-  }
-
-  .granularity {
     display: none;
   }
 }
 
 @media (width <= 42rem) {
   .filters {
+    display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     min-height: 4.2rem;
     padding: 0.55rem 0.75rem;
   }
 
   .scope {
-    display: none;
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .drawerButton {
+    grid-column: 2;
   }
 
   .drawerButton {

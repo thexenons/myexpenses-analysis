@@ -35,8 +35,8 @@ y exige regenerarla con `pnpm data:encrypt` o mediante el pipeline automatizado.
 La interfaz ofrece ocho rutas coordinadas por filtros globales:
 
 - `/resumen`: resumen general y valoración de cuentas;
-- `/flujo-de-caja`: evolución del flujo de caja;
-- `/deudas`: gastos, anticipos y saldos de deudas;
+- `/flujo-de-caja`: entradas, salidas reales y resultado consolidado;
+- `/deudas`: dinero enviado/recibido, gasto atribuido y saldos de deudas;
 - `/presupuestos`: asignación, consumo, disponible y rollovers por periodo y
   categoría;
 - `/categorias`: jerarquía y evolución de categorías;
@@ -45,8 +45,11 @@ La interfaz ofrece ocho rutas coordinadas por filtros globales:
   calidad/procedencia de los datos;
 - `/transacciones`: buscador, ordenación, paginación, trazabilidad y CSV.
 
-Los filtros de ámbito, periodo, granularidad, cuentas, categorías, estado,
-etiquetas, búsqueda y transferencias enlazadas afectan a todas las vistas. El
+Los filtros globales permiten combinar ámbito, cuentas consultadas, cuenta de
+origen, cuenta de destino, categorías, estado, etiquetas, búsqueda y
+transferencias enlazadas. Se puede usar la fecha de operación o de valor (con
+operación como alternativa si falta), incluir descendientes o una categoría
+exacta y buscar la categoría en el apunte o también en su contrapartida. El
 periodo puede abarcar todo el historial o elegirse como un día, semana de lunes
 a domingo, mes, año o rango personalizado; el periodo actual se limita a hoy.
 La granularidad de gráficas y
@@ -59,6 +62,22 @@ permanecen en memoria. TanStack Router gestiona URLs tipadas, historial,
 restauración de scroll y precarga por intención; cada pantalla se carga en su
 propio chunk mediante `lazy` y `Suspense`. La página de transacciones conserva
 paginación y ordenación en la URL.
+
+Los movimientos y gastos respetan los filtros de contenido; la apertura y el
+cierre son saldos completos de las cuentas elegidas en las fechas indicadas.
+Filtrar «Banco → Pareja → Supermercado» permite consultar la salida desde el
+banco con el ámbito de flujo real, o la parte atribuida a la pareja con el de
+deudas. El reparto procede de los splits registrados. Un apunte positivo en la
+cuenta de deuda no se considera dinero recuperado por su signo.
+
+Las gráficas de barras permiten ampliar el ranking y exportar todos sus datos;
+las series se pueden mostrar u ocultar desde la leyenda. Cuentas y categorías
+ofrecen selección de métricas, evolución y acceso a movimientos. La comparación
+de periodos conserva los filtros y admite periodo anterior, año anterior o
+referencia personalizada. Los controles visuales no modifican los totales
+contables. Consulta los detalles y límites en [estadísticas](docs/statistics.md).
+La [revisión visual y funcional](docs/visual-review.md) recoge la cobertura
+comprobada, los ajustes de diseño y el requisito pendiente antes de publicar.
 
 ### Arquitectura
 
@@ -101,9 +120,11 @@ pnpm data:import-backup
 
 La salida por defecto es `data/app-dataset.json`; puede cambiarse con
 `--output`. Sin `--input`, el comando selecciona el nombre válido más reciente
-de `data/`, y la zona predeterminada es `Europe/Madrid`. Sólo se admite
-actualmente el esquema SQLite 189 de MyExpenses 4.1.0.2, y una versión distinta
-falla antes de consultar datos.
+de `data/`, y la zona predeterminada es `Europe/Madrid`. Se admiten los esquemas
+SQLite 189 y 190, verificados con MyExpenses 4.1.0.2 y 4.1.2. La versión original
+se conserva; las demás se rechazan antes de consultar datos financieros. El
+[contrato de importación](docs/backup-import.md) documenta la compatibilidad y
+la migración de metales al tipo `COMMODITY`.
 
 El dataset contiene, con importes enteros en unidades menores:
 

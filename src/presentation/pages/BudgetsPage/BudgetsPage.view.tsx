@@ -14,6 +14,7 @@ import { BudgetAllocationTable } from "./components/BudgetAllocationTable/Budget
 import { BudgetControls } from "./components/BudgetControls/BudgetControls.tsx";
 import { BudgetUtilization } from "./components/BudgetUtilization/BudgetUtilization.tsx";
 import styles from "./BudgetsPage.module.css";
+import { formatDate } from "../../utils/format.ts";
 
 const percentageFormatter = new Intl.NumberFormat("es-ES", {
   maximumFractionDigits: 1,
@@ -97,6 +98,14 @@ export function BudgetsPageView({
         title="Marco de análisis"
       >
         {controls}
+        <p className={styles.technicalNote}>
+          Fecha de {analysis.dateBasis === "value" ? "valor; se usa operación cuando no está registrada" : "operación"}.
+          {" "}{analysis.consumptionDateRange === null
+            ? "No hay solapamiento entre las fechas globales y el periodo del presupuesto."
+            : `Consumo consultado: ${formatDate(analysis.consumptionDateRange?.from ?? analysis.period.startDate)} – ${formatDate(analysis.consumptionDateRange?.to ?? analysis.period.endDate)}.`}
+          {" "}Las asignaciones y los arrastres corresponden al periodo completo, sin prorratear.
+          {analysis.isFilteredComparison ? " Con filtros, asignado menos corte y utilización comparan ese límite completo con el gasto seleccionado; no indican la disponibilidad real del presupuesto completo." : ""}
+        </p>
       </Panel>
 
       <AnalyticsPageGrid variant="kpis">
@@ -109,7 +118,7 @@ export function BudgetsPageView({
           value={toMajor(global.assignedMinor)}
         />
         <KpiCard
-          detail="Reembolsos descontados · VOID excluido"
+          detail="Neto de los apuntes seleccionados · anulados excluidos"
           formatValue={amountFormatter}
           icon={<Icon name="receipt" />}
           label="Gasto neto"
@@ -120,8 +129,8 @@ export function BudgetsPageView({
           detail={`${analysis.filteredPostingCount} apuntes efectivos`}
           formatValue={amountFormatter}
           icon={<Icon name="trend" />}
-          label="Disponible"
-          tone={global.availableMinor < 0 ? "negative" : "positive"}
+          label={analysis.isFilteredComparison ? "Asignado menos corte" : "Disponible"}
+          tone={analysis.isFilteredComparison ? "info" : global.availableMinor < 0 ? "negative" : "positive"}
           value={toMajor(global.availableMinor)}
         />
         <KpiCard

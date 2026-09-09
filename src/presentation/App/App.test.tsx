@@ -38,6 +38,10 @@ async function waitForRouterReady(
     () => {
       expect(router.state.location.pathname).toBe(expectedPathname);
       expect(router.state.matches.at(-1)?.status).toBe("success");
+      // Match data becomes successful before React commits the new route.
+      // Router idle/resolvedLocation are published after that acknowledgement.
+      expect(router.state.status).toBe("idle");
+      expect(router.state.resolvedLocation?.pathname).toBe(expectedPathname);
     },
     { timeout: 3_000 },
   );

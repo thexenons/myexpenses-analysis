@@ -2,13 +2,17 @@ import {
   aggregateDebtBreakdown,
   aggregateTimeSeries,
 } from "../../../domain/analytics/aggregations.ts";
-import { applyFilters } from "../../../domain/analytics/filters.ts";
+import {
+  applyFilters,
+  createDefaultFilterState,
+} from "../../../domain/analytics/filters.ts";
 import type {
   AnalyticsDataset,
   FilteredAnalyticsDataset,
   TimeGranularity,
 } from "../../../domain/analytics/types.ts";
 import { euroFromMinor } from "../../utils/format.ts";
+import { datasetDateBounds } from "../../../domain/analytics/date-bounds.ts";
 import type {
   DebtsPageViewProps,
   DebtTotals,
@@ -19,14 +23,16 @@ export function toggleDebtAccountIds(
   debtAccountIds: ReadonlySet<string>,
   accountId: string,
 ): readonly string[] {
-  if (accountIds.length === 0) return [accountId];
-  const selectedDebtIds = accountIds.filter((candidate) =>
-    debtAccountIds.has(candidate),
-  );
+  if (!debtAccountIds.has(accountId)) return accountIds;
+  const selectedDebtIds = accountIds.length === 0
+    ? [...debtAccountIds]
+    : accountIds.filter((candidate) => debtAccountIds.has(candidate));
   const next = selectedDebtIds.includes(accountId)
     ? selectedDebtIds.filter((candidate) => candidate !== accountId)
     : [...selectedDebtIds, accountId];
-  return next.length === 0 ? [] : next;
+  // The global empty selection means "all", so never turn removing the last
+  // selected account into silently selecting every account again.
+  return next.length === 0 ? selectedDebtIds : next;
 }
 
 export function createDebtsPageModel(
@@ -36,6 +42,7 @@ export function createDebtsPageModel(
   selectedAccountIds: ReadonlySet<string>,
   onClearAccounts: () => void,
   onToggleAccount: (accountId: string) => void,
+  onViewTransactions: (accountId?: string) => void,
 ): DebtsPageViewProps {
   const debts = aggregateDebtBreakdown(filtered);
   const availableDebts = aggregateDebtBreakdown(
@@ -53,12 +60,17 @@ export function createDebtsPageModel(
         result.balanceEurMinor + debt.periodClosingBalanceEurMinor,
       expensesEurMinor:
         result.expensesEurMinor + debt.grossDebtExpensesEurMinor,
+      expenseRefundsEurMinor:
+        result.expenseRefundsEurMinor + debt.debtExpenseRefundsEurMinor,
+      flowEurMinor: result.flowEurMinor + debt.netEurMinor,
       recoveriesEurMinor: result.recoveriesEurMinor + debt.recoveriesEurMinor,
     }),
     {
       advancesEurMinor: 0,
       balanceEurMinor: 0,
       expensesEurMinor: 0,
+      expenseRefundsEurMinor: 0,
+      flowEurMinor: 0,
       recoveriesEurMinor: 0,
     },
   );
@@ -66,7 +78,24 @@ export function createDebtsPageModel(
     (sum, debt) => sum + debt.periodOpeningBalanceEurMinor,
     0,
   );
-  const cumulativeBalance = series.map((point) => {
+  const bounds = datasetDateBounds(analytics, filtered.filters.dateBasis);
+  const starts = [bounds.minDate, filtered.filters.dateRange.to].filter((date) => date !== null).toSorted();
+  const ends = [bounds.maxDate, filtered.filters.dateRange.from].filter((date) => date !== null).toSorted();
+  const balanceSeries = debts.length === 0 ? [] : aggregateTimeSeries(
+    applyFilters(analytics, {
+      ...createDefaultFilterState(),
+      accountIds: debts.map((debt) => debt.account.id),
+      dateRange: {
+        from: filtered.filters.dateRange.from ?? starts[0] ?? null,
+        to: filtered.filters.dateRange.to ?? ends.at(-1) ?? null,
+      },
+      dateBasis: filtered.filters.dateBasis ?? "operation",
+      periodMode: filtered.filters.periodMode,
+      scope: "debtsOnly",
+    }),
+    granularity,
+  );
+  const cumulativeBalance = balanceSeries.map((point) => {
     cumulativeBalanceEurMinor += point.debtFlowEurMinor;
     return {
       label: point.key,
@@ -75,7 +104,7 @@ export function createDebtsPageModel(
   });
 
   return {
-    accountBars: debts.slice(0, 12).map((debt) => ({
+    accountBars: debts.map((debt) => ({
       id: debt.account.id,
       label: debt.account.label,
       value: euroFromMinor(debt.periodClosingBalanceEurMinor),
@@ -85,7 +114,7 @@ export function createDebtsPageModel(
     debtSeries: [
       {
         id: "debt-flow",
-        label: "Movimiento en deudas",
+        label: "Movimiento filtrado",
         color: "#bd7d2f",
         data: series.map((point) => ({
           label: point.key,
@@ -94,7 +123,7 @@ export function createDebtsPageModel(
       },
       {
         id: "debt-balance",
-        label: "Saldo acumulado",
+        label: "Saldo real de las cuentas",
         color: "#35698b",
         data: cumulativeBalance,
       },
@@ -103,8 +132,10 @@ export function createDebtsPageModel(
     debts,
     onClearAccounts,
     onToggleAccount,
+    onViewTransactions,
     selectedAccountIds,
-    showClearAccounts: filtered.filters.accountIds.length > 0,
+    showClearAccounts: filtered.filters.accountIds.length > 0 ||
+      filtered.filters.scope === "realCashFlow",
     totals,
   };
 }

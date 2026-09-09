@@ -9,6 +9,25 @@
   gap: 0.7rem;
 }
 
+.limitControl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.limitControl select {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.55rem;
+  color: var(--ink);
+  background: var(--surface-bright);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius-xs);
+  font: inherit;
+}
+
 .rankGroup {
   --rank-accent: var(--transfer);
 

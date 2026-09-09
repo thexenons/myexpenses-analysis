@@ -60,6 +60,9 @@ describe("NotFoundPage", () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/resumen");
       expect(router.state.matches.at(-1)?.status).toBe("success");
+      // A successful match precedes the React transition's committed screen.
+      expect(router.state.status).toBe("idle");
+      expect(router.state.resolvedLocation?.pathname).toBe("/resumen");
     });
     expect(
       await screen.findByRole("heading", { name: "Resumen general" }),

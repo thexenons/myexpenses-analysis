@@ -71,6 +71,21 @@ describe("CategoriesPageView", () => {
 });
 
 describe("createCategoriesPageModel", () => {
+  it("does not display a net expense credit as positive spending", () => {
+    const analytics = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cuenta", type: "DEFAULT" } } },
+      categories: { Gastos: { categoryType: "EXPENSE" } },
+      parsedData: [{ uuid: "cash", label: "Cuenta", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "refund", date: "2026-01-01", amount: 20, category: ["Gastos"], sourceTransactionUuid: "refund", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+      ] }],
+    });
+    const model = createCategoriesPageModel(analytics, applyFilters(analytics, createDefaultFilterState()), [], "month", vi.fn(), vi.fn());
+    expect(model.expenseEurMinor).toBe(-2_000);
+    expect(model.categoryBars[0]?.value).toBe(20);
+    expect(model.categoryBars[0]?.color).toBe("#a33f36");
+    expect(model.categorySeries[0]?.color).toBe(model.categoryBars[0]?.color);
+  });
+
   it("keeps the comparison series inside the selected subcategory", () => {
     const source: AppDataset = {
       accounts: {
@@ -146,14 +161,14 @@ describe("createCategoriesPageModel", () => {
     );
 
     expect(model.categorySeries).toHaveLength(1);
-    expect(model.categorySeries[0]?.label).toBe("Comida");
+    expect(model.categorySeries[0]?.label).toBe("Gastos › Comida");
     expect(model.categorySeries[0]?.data).toEqual([
       expect.objectContaining({ label: "2026", value: -10 }),
     ]);
     expect(model.categoryBars).toEqual([
       expect.objectContaining({
         label: "Gastos › Comida",
-        value: 10,
+        value: -10,
       }),
     ]);
     expect(model.categoryTree[0]?.children.map(({ name }) => name)).toEqual([
@@ -171,5 +186,39 @@ describe("createCategoriesPageModel", () => {
       vi.fn<(path: readonly string[]) => void>(),
     );
     expect(completeTreeModel.directPostingCount).toBe(3);
+    expect(completeTreeModel.categoryBars).toEqual([
+      expect.objectContaining({ label: "Gastos", value: -35 }),
+    ]);
+
+    const directModel = createCategoriesPageModel(
+      analytics, applyFilters(analytics, createDefaultFilterState()), [], "year", vi.fn(), vi.fn(),
+      { metric: "realCashFlowEurMinor", level: "direct", seriesLimit: 0 },
+    );
+    expect(directModel.categoryBars.map(({ value }) => value)).toEqual([-20, -10, -5]);
+    expect(directModel.categorySeries.map(({ data }) => data[0]?.value)).toEqual([-20, -10, -5]);
+    expect(directModel.categoryBars.reduce((sum, bar) => sum + bar.value, 0)).toBe(-35);
+
+    const exactRoot = applyFilters(analytics, {
+      ...createDefaultFilterState(), categoryPrefixes: [["Gastos"]], categoryDepth: "exact",
+    });
+    const exactRootModel = createCategoriesPageModel(analytics, exactRoot, [["Gastos"]], "year", vi.fn(), vi.fn());
+    expect(exactRootModel.categoryBars[0]?.value).toBe(-5);
+    expect(exactRootModel.categorySeries[0]?.data[0]?.value).toBe(-5);
+  });
+
+  it("never silently drops a selected category beyond the fourth series", () => {
+    const paths = Array.from({ length: 6 }, (_, index) => ["Gastos", `Grupo ${index}`]);
+    const analytics = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cuenta", type: "DEFAULT" } } },
+      categories: { Gastos: { categoryType: "EXPENSE", children: Object.fromEntries(paths.map((path) => [path[1], { categoryType: "EXPENSE" }])) } },
+      parsedData: [{ uuid: "cash", label: "Cuenta", currency: "EUR", openingBalance: 0, transactions: paths.map((categoryPath, index) => ({
+        uuid: `p${index}`, date: "2026-01-01", amount: -(index + 1), category: categoryPath,
+        sourceTransactionUuid: `p${index}`, sourceStatus: "RECONCILED", splitIndex: null, splitCount: null,
+      })) }],
+    });
+    const filtered = applyFilters(analytics, { ...createDefaultFilterState(), categoryPrefixes: paths });
+    const model = createCategoriesPageModel(analytics, filtered, paths, "month", vi.fn(), vi.fn());
+    expect(model.categoryBars).toHaveLength(6);
+    expect(model.categorySeries).toHaveLength(6);
   });
 });

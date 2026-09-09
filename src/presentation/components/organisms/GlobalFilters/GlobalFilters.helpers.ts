@@ -11,6 +11,11 @@ export function countGlobalFilters(
   if (filters.scope !== "all") count += 1
   if (filters.dateRange.from !== null || filters.dateRange.to !== null) count += 1
   if (filters.accountIds.length > 0) count += 1
+  if ((filters.originAccountIds?.length ?? 0) > 0) count += 1
+  if ((filters.destinationAccountIds?.length ?? 0) > 0) count += 1
+  if (filters.dateBasis === "value") count += 1
+  if (filters.categoryMatch === "either") count += 1
+  if (filters.categoryDepth === "exact") count += 1
   if (filters.categoryPrefixes.length > 0) count += 1
   if (filters.statuses.length > 0) count += 1
   if (filters.tags.length > 0) count += 1

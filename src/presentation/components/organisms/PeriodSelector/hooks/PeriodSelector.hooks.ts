@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { datasetDateBounds } from "../../../../../domain/analytics/date-bounds.ts";
 
 import {
   dateRangeForPeriod,
@@ -48,22 +49,25 @@ export function usePeriodSelector({
   const analytics = useAppStore((state) => state.analytics);
   const dateRange = useAppStore((state) => state.filters.dateRange);
   const periodMode = useAppStore((state) => state.filters.periodMode);
+  const dateBasis = useAppStore((state) => state.filters.dateBasis);
   const setDatePeriod = useAppStore((state) => state.actions.setDatePeriod);
   const timeZone = analytics?.backup?.preferences.timeZone ?? "Europe/Madrid";
   const today = isoDateInTimeZone(new Date(), timeZone);
-  const maximum = laterDate(today, analytics?.maxDate ?? null);
+  const bounds = analytics === null ? null : datasetDateBounds(analytics, dateBasis);
+  const minimum = bounds?.minDate ?? null;
+  const maximum = laterDate(today, bounds?.maxDate ?? null);
   const fallback = dateRange.to ?? dateRange.from ?? today;
   const presetMode =
     periodMode === "all" || periodMode === "custom" ? null : periodMode;
   const inputValue =
     presetMode === null ? "" : periodInputValue(presetMode, dateRange, fallback);
   const inputMin =
-    presetMode === null || analytics?.minDate === null || analytics === null
+    presetMode === null || minimum === null
       ? undefined
       : periodInputValue(
           presetMode,
-          { from: analytics.minDate, to: analytics.minDate },
-          analytics.minDate,
+          { from: minimum, to: minimum },
+          minimum,
         );
   const inputMax =
     presetMode === null
@@ -105,14 +109,14 @@ export function usePeriodSelector({
     [dateRange, setDatePeriod],
   );
   const yearOptions = useMemo(
-    () => buildYearOptions(analytics?.minDate ?? null, maximum),
-    [analytics?.minDate, maximum],
+    () => buildYearOptions(minimum, maximum),
+    [minimum, maximum],
   );
 
   return {
     className,
     customMax: maximum,
-    customMin: analytics?.minDate ?? undefined,
+    customMin: minimum ?? undefined,
     customDateRange: dateRange,
     inputMax,
     inputMin,

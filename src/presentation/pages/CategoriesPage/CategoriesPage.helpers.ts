@@ -10,17 +10,28 @@ import type {
   AnalyticsDataset,
   CategoryBreakdownNode,
   FilteredAnalyticsDataset,
+  NormalizedPosting,
   TimeGranularity,
 } from "../../../domain/analytics/types.ts";
 import { euroFromMinor } from "../../utils/format.ts";
-import type { CategoriesPageViewProps } from "./CategoriesPage.types.ts";
+import type { CategoriesPageViewProps, CategoryChartOptions } from "./CategoriesPage.types.ts";
 
-const CATEGORY_SERIES_COLORS = [
-  "#a33f36",
-  "#286a4c",
-  "#35698b",
-  "#bd7d2f",
-] as const;
+export const DEFAULT_CATEGORY_CHART_OPTIONS: CategoryChartOptions = {
+  metric: "netEurMinor", level: "roots", seriesLimit: 4,
+};
+
+export const CATEGORY_METRIC_LABELS = {
+  netEurMinor: "Importe neto",
+  expensesEurMinor: "Gasto neto (con signo)",
+  incomesEurMinor: "Ingresos netos",
+  realCashFlowEurMinor: "Flujo de caja real",
+  debtFlowEurMinor: "Movimiento en deudas",
+} as const;
+
+function categoryColor(category: CategoryBreakdownNode): string {
+  return category.categoryType === "EXPENSE" ? "#a33f36"
+    : category.categoryType === "INCOME" ? "#286a4c" : "#35698b";
+}
 
 function appendCategoryTree(
   nodes: readonly CategoryBreakdownNode[],
@@ -47,6 +58,11 @@ export function createCategoriesPageModel(
   granularity: TimeGranularity,
   onClearCategory: () => void,
   onToggleCategory: (path: readonly string[]) => void,
+  chartOptions: CategoryChartOptions = DEFAULT_CATEGORY_CHART_OPTIONS,
+  onChartOptionsChange?: (options: CategoryChartOptions) => void,
+  onViewCategory?: (id: string) => void,
+  onViewTransactions?: () => void,
+  onViewPeriod?: (label: string) => void,
 ): CategoriesPageViewProps {
   const categories = aggregateCategoryBreakdown(filtered);
   const visibleCategories = aggregateCategoryBreakdown(
@@ -63,46 +79,54 @@ export function createCategoriesPageModel(
     (sum, item) => sum + item.summary.netEurMinor,
     0,
   );
-  const expenseEurMinor = Math.abs(
-    categories.reduce((sum, item) => sum + item.summary.expensesEurMinor, 0),
+  const expenseEurMinor = -categories.reduce((sum, item) => sum + item.summary.expensesEurMinor, 0) || 0;
+  // Every chart compares a partition: inclusive roots or disjoint exact paths.
+  // Showing an inclusive parent beside its descendants would count money twice.
+  const selectedFilteredCategories = filtered.filters.categoryMatch === "either"
+    ? []
+    : flattenCategories(categories).filter((category) => categoryPrefixes.some((path) => categoryPathsEqual(category.path, path)));
+  const nonOverlappingSelection = selectedFilteredCategories.filter((category) =>
+    !selectedFilteredCategories.some((parent) => parent.path.length < category.path.length &&
+      parent.path.every((segment, index) => category.path[index] === segment)),
   );
-  const comparisonCategories =
-    selectedCategories.length === 0
-      ? visibleCategories.slice(0, 4)
-      : selectedCategories.slice(0, 4);
-  const barCategories =
-    selectedCategories.length === 0
-      ? flattenedCategories.slice(0, 12)
-      : selectedCategories.length === 1 && selectedCategories[0]!.children.length > 0
-        ? selectedCategories[0]!.children.slice(0, 12)
-        : selectedCategories.slice(0, 12);
+  const barCategories = (chartOptions.level === "direct"
+    ? flattenCategories(categories).filter((category) => category.directSummary.postingCount > 0)
+    : nonOverlappingSelection.length > 0 ? nonOverlappingSelection : categories)
+    .toSorted((left, right) => {
+      const summaryKey = chartOptions.level === "direct" ? "directSummary" : "summary";
+      return Math.abs(right[summaryKey][chartOptions.metric]) - Math.abs(left[summaryKey][chartOptions.metric]) || left.id.localeCompare(right.id);
+    });
+  const comparisonCategories = categoryPrefixes.length > 0 || chartOptions.seriesLimit === 0
+    ? barCategories
+    : barCategories.slice(0, chartOptions.seriesLimit);
 
   return {
     activityEurMinor,
     categoryBars: barCategories.map((category) => ({
       id: category.id,
       label: category.path.join(" › "),
-      value: euroFromMinor(Math.abs(category.summary.netEurMinor)),
-      color:
-        category.categoryType === "EXPENSE"
-          ? "#a33f36"
-          : category.categoryType === "INCOME"
-            ? "#286a4c"
-            : "#35698b",
+      value: euroFromMinor(category[chartOptions.level === "direct" ? "directSummary" : "summary"][chartOptions.metric]),
+      color: categoryColor(category),
     })),
     categoryCount: flattenedCategories.length,
-    categorySeries: comparisonCategories.map((category, index) => {
-      const scoped = applyFilters(analytics, {
-        ...filtered.filters,
-        categoryPrefixes: [category.path],
-      });
+    categorySeries: comparisonCategories.map((category) => {
+      // Partition the already filtered postings. Reapplying only this category
+      // would broaden an exact-path or counterpart-category selection.
+      const matchesCategory = (posting: NormalizedPosting) => chartOptions.level === "direct"
+        ? categoryPathsEqual(posting.categoryPath, category.path)
+        : category.path.every((segment, pathIndex) => posting.categoryPath[pathIndex] === segment);
+      const scoped = {
+        ...filtered,
+        postings: filtered.postings.filter(matchesCategory),
+        activePostings: filtered.activePostings.filter(matchesCategory),
+      };
       return {
         id: category.id,
-        label: category.name,
-        color: CATEGORY_SERIES_COLORS[index] ?? "#35698b",
+        label: category.path.join(" › "),
+        color: categoryColor(category),
         data: aggregateTimeSeries(scoped, granularity).map((point) => ({
           label: point.key,
-          value: euroFromMinor(point.netEurMinor),
+          value: euroFromMinor(point[chartOptions.metric]),
         })),
       };
     }),
@@ -112,6 +136,11 @@ export function createCategoriesPageModel(
       0,
     ),
     expenseEurMinor,
+    chartOptions,
+    onChartOptionsChange,
+    onViewCategory: filtered.filters.categoryMatch === "either" && categoryPrefixes.length > 0 ? undefined : onViewCategory,
+    onViewTransactions,
+    onViewPeriod,
     onClearCategory,
     onToggleCategory,
     selectedCategoryIds: new Set(selectedCategories.map((category) => category.id)),

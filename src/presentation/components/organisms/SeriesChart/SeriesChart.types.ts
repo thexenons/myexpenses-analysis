@@ -9,6 +9,7 @@ export interface SeriesChartBaseProps {
   readonly emptyMessage?: ReactNode;
   readonly formatLabel?: (label: string) => string;
   readonly formatValue?: Intl.NumberFormat | ValueFormatter;
+  readonly onSelectPeriod?: (label: string) => void;
   readonly ref?: Ref<HTMLElement>;
   readonly series: readonly ChartSeries[];
   readonly title: string;

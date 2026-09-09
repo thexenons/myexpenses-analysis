@@ -329,6 +329,34 @@ describe("budget periods", () => {
 });
 
 describe("budget analysis", () => {
+  it("uses the selected value date for both the global filter and the budget period", () => {
+    const initial = analyticsFixture();
+    const analytics = { ...initial, postings: initial.postings.map((row) => row.id === "outside" ? Object.assign({}, row, { valueDate: "2026-08-02" as const }) : row) };
+    const filtered = applyFilters(analytics, {
+      ...createDefaultFilterState(),
+      dateBasis: "value",
+      dateRange: { from: "2026-08-01", to: "2026-08-02" },
+    });
+    const result = analyzeBudgetPeriod(analytics, filtered, analytics.backup!.budgets[0]!, "MONTH:2026:7");
+    if (result.status !== "ready") throw new Error(result.reason);
+    expect(result.analysis.global.consumedMinor).toBe(1_000);
+    expect(result.analysis.global.assignedMinor).toBe(11_000);
+    expect(result.analysis.consumptionDateRange).toEqual({ from: "2026-08-01", to: "2026-08-02" });
+    expect(result.analysis.dateBasis).toBe("value");
+    expect(result.analysis.isFilteredComparison).toBe(true);
+  });
+
+  it("reports non-overlapping query dates without pretending the budget was prorated", () => {
+    const analytics = analyticsFixture();
+    const filtered = applyFilters(analytics, { ...createDefaultFilterState(), dateRange: { from: "2026-09-01", to: "2026-09-30" } });
+    const result = analyzeBudgetPeriod(analytics, filtered, analytics.backup!.budgets[0]!, "MONTH:2026:7");
+    if (result.status !== "ready") throw new Error(result.reason);
+    expect(result.analysis.global.consumedMinor).toBe(0);
+    expect(result.analysis.global.assignedMinor).toBe(11_000);
+    expect(result.analysis.consumptionDateRange).toBeNull();
+    expect(result.analysis.isFilteredComparison).toBe(true);
+  });
+
   it("applies fallback, rollovers, refunds and avoids parent-child double counting", () => {
     const analytics = analyticsFixture();
     const filtered = applyFilters(analytics, createDefaultFilterState());

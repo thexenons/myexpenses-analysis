@@ -1,5 +1,4 @@
 const BACKUP_DATASET_VERSION = 1 as const;
-const BACKUP_SCHEMA_VERSION = 189 as const;
 
 export type BackupCurrencyCode = Uppercase<string>;
 export type BackupNativeAccountType =
@@ -11,7 +10,7 @@ export type BackupNativeAccountType =
   | "INVST";
 export type BackupAccountScope = "DEFAULT" | "DEBT";
 export type BackupExchangeRateMode = "IDENTITY" | "STATIC" | "DYNAMIC";
-export type BackupCommodityType = "FIAT" | "SECURITY" | "CRYPTO";
+export type BackupCommodityType = "FIAT" | "SECURITY" | "CRYPTO" | "COMMODITY";
 export type BackupCategoryType = "TRANSFER" | "EXPENSE" | "INCOME" | "NEUTRAL";
 export type BackupPostingBucket = "expense" | "income" | "transfer";
 export type BackupTransactionStatus =
@@ -28,7 +27,7 @@ export type BackupFxSource =
 
 export interface BackupDatasetSourceV1 {
   readonly format: "myexpenses-backup";
-  readonly schemaVersion: typeof BACKUP_SCHEMA_VERSION;
+  readonly schemaVersion: 189 | 190;
   readonly backupSha256: string;
   readonly databaseSha256: string;
 }

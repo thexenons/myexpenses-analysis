@@ -1,11 +1,9 @@
-import type { CSSProperties } from "react";
-
 import { Badge } from "../../components/atoms/Badge/index.ts";
 import { Icon } from "../../components/atoms/Icon/index.ts";
 import { KpiCard } from "../../components/molecules/KpiCard/index.ts";
-import { EmptyState } from "../../components/molecules/EmptyState/index.ts";
 import { Panel } from "../../components/molecules/Panel/index.ts";
 import { AreaChart } from "../../components/organisms/AreaChart/index.ts";
+import { HorizontalBarChart } from "../../components/organisms/HorizontalBarChart/index.ts";
 import { AnalyticsPage } from "../../components/templates/AnalyticsPage/index.ts";
 import { AnalyticsPageGrid } from "../../components/templates/AnalyticsPageGrid/index.ts";
 import {
@@ -32,7 +30,7 @@ export function OverviewPageView({
 }: OverviewPageViewProps) {
   return (
     <AnalyticsPage
-      description="Una lectura consolidada de patrimonio, movimientos, gasto real y deuda. Las magnitudes del periodo responden a los filtros; la valoración actual conserva el corte final de las cuentas seleccionadas."
+      description="Movimientos y gastos según los filtros. Apertura, cierre y saldo de deuda incluyen el historial completo de las cuentas seleccionadas hasta su fecha de corte; no se limitan por categorías, texto, estado, origen o destino."
       notice={searchPending ? "Actualizando resultados…" : undefined}
       title="Resumen general"
     >
@@ -58,8 +56,8 @@ export function OverviewPageView({
           formatValue={euroFormatter}
           icon={<Icon name="receipt" />}
           label="Gastos netos"
-          tone="negative"
-          value={euroFromMinor(Math.abs(kpis.expensesEurMinor))}
+          tone={kpis.expensesEurMinor > 0 ? "positive" : "negative"}
+          value={euroFromMinor(-kpis.expensesEurMinor)}
         />
         <KpiCard
           detail={`${debtAccountCount} cuentas`}
@@ -79,7 +77,7 @@ export function OverviewPageView({
           </strong>
         </div>
         <div className={styles.stat}>
-          <span className={styles.statLabel}>Cierre estimado</span>
+          <span className={styles.statLabel}>Saldo al cierre del periodo</span>
           <strong className={styles.statValue}>
             {formatEuroMinor(kpis.periodClosingBalanceEurMinor)}
           </strong>
@@ -122,52 +120,26 @@ export function OverviewPageView({
           />
         </Panel>
 
-        <Panel
-          actions={<Icon name="category" size={18} />}
-          description="Actividad neta por raíz"
-          title="Categorías dominantes"
-        >
-          {topCategories.length === 0 ? (
-            <EmptyState
-              description="No hay actividad categorizada dentro del periodo y los filtros actuales."
-              icon={<Icon name="category" />}
-              title="Sin categorías dominantes"
-            />
-          ) : (
-            <div className={styles.rankList}>
-            {topCategories.map(({ activityPercent, category }) => (
-              <div className={styles.rankRow} key={category.id}>
-                <span className={styles.rankLabel}>{category.name}</span>
-                <span className={styles.rankTrack}>
-                  <span
-                    className={styles.rankFill}
-                    style={
-                      {
-                        "--bar-width": `${activityPercent}%`,
-                        "--bar-color":
-                          category.categoryType === "EXPENSE"
-                            ? "var(--expense)"
-                            : category.categoryType === "INCOME"
-                              ? "var(--income)"
-                              : "var(--transfer)",
-                      } as CSSProperties
-                    }
-                  />
-                </span>
-                <span className={styles.rankValue}>
-                  {formatEuroMinor(category.summary.netEurMinor)}
-                </span>
-              </div>
-            ))}
-            </div>
-          )}
+        <Panel>
+          <HorizontalBarChart
+            title="Categorías dominantes"
+            description="Actividad neta por raíz, sin sumar padres e hijos. Elige cuántas mostrar; la tabla y el CSV incluyen todas."
+            formatValue={euroFormatter}
+            labelHeader="Categoría"
+            data={topCategories.map(({ category }) => ({
+              id: category.id,
+              label: category.name,
+              value: euroFromMinor(category.summary.netEurMinor),
+              color: category.categoryType === "EXPENSE" ? "#a33f36" : category.categoryType === "INCOME" ? "#286a4c" : "#35698b",
+            }))}
+          />
         </Panel>
       </AnalyticsPageGrid>
 
       <AnalyticsPageGrid variant="two">
         <Panel
           actions={<Icon name="receipt" size={18} />}
-          description="Bruto, devoluciones y neto"
+          description="Gasto neto = bruto − devoluciones − asignación en deudas. Un neto negativo indica abono. Las asignaciones no son dinero devuelto."
           title="Composición del gasto"
         >
           <div className={styles.compositionList}>

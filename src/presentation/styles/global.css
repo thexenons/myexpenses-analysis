@@ -49,16 +49,16 @@
 
 @layer tokens {
   :root {
-    --paper: #efede5;
-    --paper-deep: #e3dfd3;
-    --surface: #faf8f2;
-    --surface-bright: #fffdf8;
+    --paper: #f3f5f2;
+    --paper-deep: #e9ede7;
+    --surface: #ffffff;
+    --surface-bright: #ffffff;
     --surface-ink: #10251e;
     --surface-ink-raised: #173128;
     --ink: #16231e;
     --ink-soft: #3c4a44;
     --muted: #59635e;
-    --line: #cec9bb;
+    --line: #d7ded7;
     --line-dark: #748079;
     --income: #286a4c;
     --income-soft: #dcebdd;
@@ -71,17 +71,16 @@
     --debt-soft: #f0e2c9;
     --accent: #c5da72;
     --accent-ink: #22330e;
-    --shadow: 0 18px 60px rgb(23 37 31 / 8%);
-    --shadow-small: 0 8px 24px rgb(23 37 31 / 7%);
+    --shadow: 0 12px 36px rgb(23 37 31 / 10%);
+    --shadow-small: none;
     --radius-xs: 0.35rem;
-    --radius-sm: 0.65rem;
-    --radius-md: 1rem;
-    --radius-lg: 1.45rem;
-    --display: "Iowan Old Style", "Baskerville", "Palatino Linotype", Georgia,
-      serif;
+    --radius-sm: 0.4rem;
+    --radius-md: 0.65rem;
+    --radius-lg: 0.8rem;
+    --display: var(--body);
     --body: "Avenir Next", "Century Gothic", "Trebuchet MS", sans-serif;
     --mono: "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
-    --sidebar-width: 15.5rem;
+    --sidebar-width: 14rem;
   }
 }
 
@@ -90,27 +89,9 @@
     min-width: 320px;
     min-height: 100vh;
     color: var(--ink);
-    background:
-      radial-gradient(circle at 90% -10%, rgb(197 218 114 / 26%), transparent 28rem),
-      radial-gradient(circle at 0% 70%, rgb(53 105 139 / 7%), transparent 32rem),
-      var(--paper);
+    background: var(--paper);
     font-family: var(--body);
     line-height: 1.5;
-  }
-
-  body::before {
-    position: fixed;
-    z-index: -1;
-    inset: 0;
-    pointer-events: none;
-    content: "";
-    opacity: 0.32;
-    background-image: repeating-linear-gradient(
-      90deg,
-      transparent 0,
-      transparent 27px,
-      rgb(22 35 30 / 2.2%) 28px
-    );
   }
 
   button,

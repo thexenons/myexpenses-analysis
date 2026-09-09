@@ -8,6 +8,31 @@ import { TransactionsPageView } from "./TransactionsPage.view.tsx";
 const posting = TRANSACTION_POSTING_FIXTURE;
 
 describe("TransactionsPageView", () => {
+  it("offers page sizes independently from export and labels the selected date basis", async () => {
+    const user = userEvent.setup();
+    const onPageSizeChange = vi.fn<(size: number) => void>();
+    render(
+      <TransactionsPageView
+        descending
+        dateBasis="value"
+        onDownload={vi.fn<() => void>()}
+        onPageChange={vi.fn<(page: number) => void>()}
+        onPageSizeChange={onPageSizeChange}
+        onSort={vi.fn<(key: "amount" | "date") => void>()}
+        page={1}
+        pageCount={1}
+        pageSize={50}
+        postings={[posting]}
+        resultCount={1}
+        searchPending={false}
+        sortKey="date"
+      />,
+    );
+    await user.selectOptions(screen.getByLabelText("Filas por página"), "100");
+    expect(onPageSizeChange).toHaveBeenCalledWith(100);
+    expect(screen.getByRole("button", { name: "Fecha valor" })).toBeVisible();
+  });
+
   it("renders rows and forwards sorting and export actions", async () => {
     const user = userEvent.setup();
     const onDownload = vi.fn<() => void>();

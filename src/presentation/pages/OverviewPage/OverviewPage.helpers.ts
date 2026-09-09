@@ -38,13 +38,6 @@ export function createOverviewPageModel(
     (sum, account) => sum + account.valuationBalanceEurMinor,
     0,
   );
-  const topCategoryNodes = categories.slice(0, 7);
-  const maxCategoryActivity = Math.max(
-    ...topCategoryNodes.map((category) =>
-      Math.abs(category.summary.netEurMinor),
-    ),
-    1,
-  );
   const expenseComposition: readonly OverviewAmountRow[] = [
     {
       amountEurMinor: composition.grossExpensesEurMinor,
@@ -55,12 +48,20 @@ export function createOverviewPageModel(
       label: "Devoluciones",
     },
     {
-      amountEurMinor: Math.abs(composition.netExpensesEurMinor),
+      amountEurMinor: composition.debtExpenseAdjustmentsEurMinor ?? 0,
+      label: "Asignación de gasto en deudas (con signo)",
+    },
+    {
+      amountEurMinor: -composition.netExpensesEurMinor,
       label: "Gasto neto",
     },
     {
       amountEurMinor: composition.incomeReversalsEurMinor,
       label: "Reversiones de ingreso",
+    },
+    {
+      amountEurMinor: composition.debtIncomeAdjustmentsEurMinor ?? 0,
+      label: "Asignación de ingreso en deudas (con signo)",
     },
   ];
 
@@ -101,11 +102,7 @@ export function createOverviewPageModel(
     kpis,
     searchPending,
     status,
-    topCategories: topCategoryNodes.map((category) => ({
-      activityPercent:
-        (Math.abs(category.summary.netEurMinor) / maxCategoryActivity) * 100,
-      category,
-    })),
+    topCategories: categories.map((category) => ({ category })),
     valuationBalanceEurMinor,
   };
 }

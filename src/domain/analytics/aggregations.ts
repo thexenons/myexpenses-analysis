@@ -1,4 +1,5 @@
-import { metricPostings } from "./filters.ts";
+import { metricPostings, postingDate } from "./filters.ts";
+import { resolvePostingAccounts } from "./transfer-relations.ts";
 import {
   addIsoDays,
   monthPeriodForDate,
@@ -38,6 +39,8 @@ interface MutableFlowComposition {
   grossExpensesEurMinor: number;
   expenseRefundsEurMinor: number;
   netExpensesEurMinor: number;
+  debtExpenseAdjustmentsEurMinor: number;
+  debtIncomeAdjustmentsEurMinor: number;
   grossIncomeEurMinor: number;
   incomeReversalsEurMinor: number;
   netIncomeEurMinor: number;
@@ -168,6 +171,8 @@ function createMutableComposition(): MutableFlowComposition {
     grossExpensesEurMinor: 0,
     expenseRefundsEurMinor: 0,
     netExpensesEurMinor: 0,
+    debtExpenseAdjustmentsEurMinor: 0,
+    debtIncomeAdjustmentsEurMinor: 0,
     grossIncomeEurMinor: 0,
     incomeReversalsEurMinor: 0,
     netIncomeEurMinor: 0,
@@ -180,6 +185,7 @@ function createMutableComposition(): MutableFlowComposition {
 function addPostingToComposition(
   composition: MutableFlowComposition,
   posting: NormalizedPosting,
+  isDebtTransfer: boolean,
 ): void {
   if (posting.isVoid) {
     return;
@@ -191,7 +197,13 @@ function addPostingToComposition(
       amount,
       "Net expenses",
     );
-    if (amount < 0) {
+    if (isDebtTransfer) {
+      composition.debtExpenseAdjustmentsEurMinor = addMinor(
+        composition.debtExpenseAdjustmentsEurMinor,
+        amount,
+        "Debt expense attribution",
+      );
+    } else if (amount < 0) {
       composition.grossExpensesEurMinor = addMinor(
         composition.grossExpensesEurMinor,
         -amount,
@@ -210,7 +222,13 @@ function addPostingToComposition(
       amount,
       "Net income",
     );
-    if (amount < 0) {
+    if (isDebtTransfer) {
+      composition.debtIncomeAdjustmentsEurMinor = addMinor(
+        composition.debtIncomeAdjustmentsEurMinor,
+        amount,
+        "Debt income attribution",
+      );
+    } else if (amount < 0) {
       composition.incomeReversalsEurMinor = addMinor(
         composition.incomeReversalsEurMinor,
         -amount,
@@ -250,7 +268,11 @@ export function aggregateFlowComposition(
 ): FlowComposition {
   const composition = createMutableComposition();
   for (const posting of metricPostings(filtered)) {
-    addPostingToComposition(composition, posting);
+    addPostingToComposition(
+      composition,
+      posting,
+      debtTransferPeer(posting, filtered) !== undefined,
+    );
   }
   return { ...composition };
 }
@@ -265,7 +287,7 @@ export function aggregateKpis(
     ...composition,
     accountCount: filtered.accounts.length,
     periodOpeningBalanceEurMinor: filtered.periodOpeningBalanceEurMinor,
-    periodClosingBalanceEurMinor: addMinor(
+    periodClosingBalanceEurMinor: filtered.periodClosingBalanceEurMinor ?? addMinor(
       filtered.periodOpeningBalanceEurMinor,
       summary.netEurMinor,
       "Filtered period closing balance",
@@ -353,10 +375,11 @@ export function aggregateTimeSeries(
   const preferences =
     filtered.source.backup?.preferences ?? DEFAULT_PERIOD_PREFERENCES;
   for (const posting of metricPostings(filtered)) {
-    let period = periodByDate.get(posting.date);
+    const date = postingDate(posting, filtered.filters);
+    let period = periodByDate.get(date);
     if (period === undefined) {
-      period = periodFor(posting.date, granularity, preferences);
-      periodByDate.set(posting.date, period);
+      period = periodFor(date, granularity, preferences);
+      periodByDate.set(date, period);
     }
     let group = groups.get(period.key);
     if (group === undefined) {
@@ -495,7 +518,7 @@ function accountItem(
     account,
     ...finalizedSummary,
     periodOpeningBalanceEurMinor,
-    periodClosingBalanceEurMinor: addMinor(
+    periodClosingBalanceEurMinor: filtered.periodClosingEurMinorByAccountId?.[account.id] ?? addMinor(
       periodOpeningBalanceEurMinor,
       finalizedSummary.netEurMinor,
       `Account ${account.id}, filtered period closing balance`,
@@ -543,29 +566,37 @@ export function aggregateDebtBreakdown(
       let grossDebtExpensesEurMinor = 0;
       let debtExpenseRefundsEurMinor = 0;
       for (const posting of postingsByAccount.get(account.id) ?? []) {
-        if (posting.amountEurMinor < 0) {
+        const transferPeer = debtTransferPeer(posting, filtered);
+        const peer = transferPeer?.accountType === "DEFAULT" ? transferPeer : undefined;
+        // Cash movement is established by the operational counterpart. A debt
+        // account's sign alone does not tell us whether money was recovered.
+        if (peer !== undefined && peer.amountEurMinor < 0) {
           advancesEurMinor = addMinor(
             advancesEurMinor,
-            -posting.amountEurMinor,
+            -peer.amountEurMinor,
             `Debt account ${account.id}, advances`,
           );
-          if (posting.bucket === "expense") {
-            grossDebtExpensesEurMinor = addMinor(
-              grossDebtExpensesEurMinor,
-              -posting.amountEurMinor,
-              `Debt account ${account.id}, expenses`,
-            );
-          }
-        } else {
+        } else if (peer !== undefined && peer.amountEurMinor > 0) {
           recoveriesEurMinor = addMinor(
             recoveriesEurMinor,
-            posting.amountEurMinor,
+            peer.amountEurMinor,
             `Debt account ${account.id}, recoveries`,
           );
-          if (posting.bucket === "expense") {
+        }
+        if ((peer ?? posting).bucket === "expense" && transferPeer?.accountType !== "DEBT") {
+          // A transfer attributes the operational expense to this debt account;
+          // an unpaired charge (e.g. credit-card spending) keeps its own sign.
+          const expenseAmount = peer?.amountEurMinor ?? posting.amountEurMinor;
+          if (expenseAmount < 0) {
+            grossDebtExpensesEurMinor = addMinor(
+              grossDebtExpensesEurMinor,
+              -expenseAmount,
+              `Debt account ${account.id}, expenses`,
+            );
+          } else {
             debtExpenseRefundsEurMinor = addMinor(
               debtExpenseRefundsEurMinor,
-              posting.amountEurMinor,
+              expenseAmount,
               `Debt account ${account.id}, expense refunds`,
             );
           }
@@ -584,4 +615,18 @@ export function aggregateDebtBreakdown(
           Math.abs(left.periodClosingBalanceEurMinor) ||
         left.account.label.localeCompare(right.account.label, "es"),
     );
+}
+
+function debtTransferPeer(
+  posting: NormalizedPosting,
+  filtered: FilteredAnalyticsDataset,
+): NormalizedPosting | undefined {
+  if (posting.accountType !== "DEBT") return undefined;
+  const { peer, originAccount, destinationAccount } = resolvePostingAccounts(posting, filtered.source);
+  // Native signs establish direction even if one EUR conversion rounds to zero.
+  return peer !== undefined &&
+    !peer.isVoid &&
+    originAccount !== undefined && destinationAccount !== undefined
+    ? peer
+    : undefined;
 }

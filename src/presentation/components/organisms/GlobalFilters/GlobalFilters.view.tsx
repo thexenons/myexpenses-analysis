@@ -19,6 +19,7 @@ const SCOPE_OPTIONS: readonly SegmentedControlOption<AnalyticsScope>[] = [
 
 export function GlobalFiltersView({
   activeFilterCount,
+  activeSelections,
   filters,
   onOpenDrawer,
   onScopeChange,
@@ -72,6 +73,13 @@ export function GlobalFiltersView({
           </span>
         ) : null}
       </Button>
+      {activeSelections.length > 0 ? <ul aria-label="Filtros aplicados" className={styles.activeSelections}>
+        {activeSelections.map((selection) => <li key={selection.id}>
+          <button type="button" onClick={selection.onRemove} aria-label={`Quitar filtro ${selection.label}`}>
+            {selection.label} <span aria-hidden="true">×</span>
+          </button>
+        </li>)}
+      </ul> : null}
     </section>
   )
 }

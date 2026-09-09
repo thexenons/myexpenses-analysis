@@ -18,6 +18,8 @@ const EMPTY_TRANSACTIONS: ReactNode = (
 );
 
 export function TransactionTable({
+  dataset,
+  dateBasis,
   descending,
   onSort,
   postings,
@@ -26,7 +28,7 @@ export function TransactionTable({
   return (
     <DataTable
       caption="Transacciones que coinciden con los filtros globales"
-      columns={createTransactionTableColumns(descending, sortKey, onSort)}
+      columns={createTransactionTableColumns(descending, sortKey, onSort, dataset, dateBasis)}
       empty={EMPTY_TRANSACTIONS}
       rowKey={transactionTableRowKey}
       rows={postings}

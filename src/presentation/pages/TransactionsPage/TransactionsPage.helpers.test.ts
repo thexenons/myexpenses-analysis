@@ -91,6 +91,11 @@ describe("createPostingsCsv", () => {
       "payee_id",
       "metodo_id",
       "tag_ids",
+      "cuenta_origen_uuid",
+      "cuenta_origen",
+      "cuenta_destino_uuid",
+      "cuenta_destino",
+      "contrapartida_id",
     ]);
     expect(row).toEqual([
       "2026-08-20",
@@ -135,6 +140,11 @@ describe("createPostingsCsv", () => {
       "3",
       "4",
       "7",
+      "",
+      "",
+      "",
+      "",
+      "",
     ]);
     expect(row?.[8]?.startsWith("'")).toBe(false);
     expect(row?.[11]?.startsWith("'")).toBe(false);
@@ -157,6 +167,12 @@ describe("createPostingsCsv", () => {
 });
 
 describe("sortPostings", () => {
+  it("orders by value date when that is the selected date basis", () => {
+    const operationFirst = { ...TRANSACTION_POSTING_FIXTURE, id: "operation-first", date: "2026-08-01" as const, valueDate: "2026-08-05" as const };
+    const valueFirst = { ...TRANSACTION_POSTING_FIXTURE, id: "value-first", date: "2026-08-02" as const, valueDate: "2026-08-03" as const };
+    expect(sortPostings([operationFirst, valueFirst], "date", false, "value").map(({ id }) => id)).toEqual(["value-first", "operation-first"]);
+  });
+
   it("orders same-day transactions by their exact operation time", () => {
     const early = {
       ...TRANSACTION_POSTING_FIXTURE,

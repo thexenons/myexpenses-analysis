@@ -7,54 +7,33 @@
     flex-direction: column;
     width: var(--sidebar-width);
     height: 100dvh;
-    padding: 1.25rem 1rem 1rem;
+    padding: 1rem 0.75rem 0.85rem;
     overflow: hidden auto;
     color: #f5f3e9;
-    background:
-      radial-gradient(circle at 12% 2%, rgb(197 218 114 / 17%), transparent 13rem),
-      linear-gradient(155deg, #163128, #0b1d17 72%);
+    background: var(--surface-ink);
     border-right: 1px solid rgb(255 255 255 / 8%);
-  }
-
-  .sidebar::after {
-    position: absolute;
-    right: -3rem;
-    bottom: 8rem;
-    width: 8rem;
-    height: 8rem;
-    pointer-events: none;
-    content: "";
-    opacity: 0.11;
-    border: 1px solid var(--accent);
-    border-radius: 50%;
-    box-shadow:
-      0 0 0 1.2rem transparent,
-      0 0 0 1.25rem var(--accent),
-      0 0 0 2.6rem transparent,
-      0 0 0 2.65rem var(--accent);
   }
 
   .brand {
     display: grid;
-    grid-template-columns: 2.55rem minmax(0, 1fr);
+    grid-template-columns: 2rem minmax(0, 1fr);
     gap: 0.72rem;
     align-items: center;
-    padding: 0.15rem 0.25rem 1.15rem;
+    padding: 0.15rem 0.35rem 1rem;
     border-bottom: 1px solid rgb(255 255 255 / 12%);
   }
 
   .brandMark {
     display: grid;
-    width: 2.55rem;
-    height: 2.55rem;
+    width: 2rem;
+    height: 2rem;
     color: var(--accent-ink);
     background: var(--accent);
-    border-radius: 50% 50% 50% 0.52rem;
+    border-radius: var(--radius-sm);
     font-family: var(--display);
-    font-size: 1.3rem;
+    font-size: 1.1rem;
     font-weight: 800;
     place-items: center;
-    transform: rotate(-3deg);
   }
 
   .brandCopy {
@@ -75,15 +54,14 @@
 
   .brandCopy small,
   .sectionLabel {
-    color: rgb(245 243 233 / 62%);
+    color: rgb(245 243 233 / 75%);
     font-size: 0.68rem;
     font-weight: 760;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
+    letter-spacing: 0.015em;
   }
 
   .sectionLabel {
-    margin: 1.3rem 0 0.55rem 0.65rem;
+    margin: 1rem 0 0.45rem 0.65rem;
   }
 
   .navigation {
@@ -99,38 +77,36 @@
   .navigationButton {
     position: relative;
     display: grid;
-    grid-template-columns: 1.3rem 1.35rem minmax(0, 1fr);
-    gap: 0.48rem;
+    grid-template-columns: 1.2rem minmax(0, 1fr);
+    gap: 0.6rem;
     align-items: center;
     width: 100%;
     min-height: 2.75rem;
     padding: 0.56rem 0.68rem;
-    color: rgb(245 243 233 / 64%);
+    color: rgb(245 243 233 / 80%);
     background: transparent;
     border: 1px solid transparent;
     border-radius: var(--radius-sm);
-    font-size: 0.76rem;
-    font-weight: 660;
+    font-size: 0.85rem;
+    font-weight: 600;
     text-align: left;
     text-decoration: none;
     transition:
       color 150ms ease,
       background-color 150ms ease,
-      border-color 150ms ease,
-      transform 150ms ease;
+      border-color 150ms ease;
   }
 
   .navigationButton:hover {
     color: #fffef9;
     background: rgb(255 255 255 / 6%);
-    transform: translateX(2px);
   }
 
   .navigationButton[aria-current="page"] {
     color: #fffef9;
-    background: rgb(197 218 114 / 12%);
-    border-color: rgb(197 218 114 / 25%);
-    box-shadow: inset 0.2rem 0 0 var(--accent);
+    background: rgb(255 255 255 / 9%);
+    border-color: rgb(255 255 255 / 10%);
+    box-shadow: inset 0.16rem 0 0 var(--accent);
   }
 
   .navigationButton[aria-current="page"] .navigationIcon {
@@ -138,16 +114,15 @@
   }
 
   .index {
-    color: rgb(245 243 233 / 28%);
-    font-family: var(--mono);
-    font-size: 0.57rem;
+    display: none;
   }
 
   .navigationIcon {
     transition: color 150ms ease;
   }
 
-  .mobileLabel {
+  .mobileLabel,
+  .mobileLockLabel {
     display: none;
   }
 
@@ -170,17 +145,15 @@
     gap: 0.65rem;
     margin-top: auto;
     padding: 0.82rem;
-    background: rgb(255 255 255 / 5%);
-    border: 1px solid rgb(255 255 255 / 9%);
+    border-top: 1px solid rgb(255 255 255 / 12%);
     border-radius: var(--radius-md);
   }
 
   .snapshotHeading {
-    color: rgb(245 243 233 / 62%);
+    color: rgb(245 243 233 / 75%);
     font-size: 0.68rem;
     font-weight: 760;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    letter-spacing: 0.015em;
   }
 
   .snapshotGrid {
@@ -195,7 +168,7 @@
   }
 
   .snapshotGrid dt {
-    color: rgb(245 243 233 / 62%);
+    color: rgb(245 243 233 / 75%);
     font-size: 0.68rem;
   }
 
@@ -211,7 +184,7 @@
     display: flex;
     gap: 0.3rem;
     justify-content: space-between;
-    color: rgb(245 243 233 / 62%);
+    color: rgb(245 243 233 / 75%);
     font-family: var(--mono);
     font-size: 0.65rem;
   }
@@ -226,7 +199,7 @@
     min-height: 2.75rem;
     padding: 0.48rem 0.65rem;
     margin-top: 0.6rem;
-    color: rgb(245 243 233 / 72%);
+    color: rgb(245 243 233 / 85%);
     background: transparent;
     border: 1px solid rgb(255 255 255 / 12%);
     border-radius: var(--radius-sm);
@@ -275,15 +248,14 @@
     inset: auto 0 0;
     width: 100%;
     height: auto;
-    padding: 0.4rem max(0.35rem, env(safe-area-inset-right))
-      max(0.4rem, env(safe-area-inset-bottom))
+    min-height: 4.15rem;
+    padding: 0.25rem max(0.35rem, env(safe-area-inset-right))
+      max(0.25rem, env(safe-area-inset-bottom))
       max(0.35rem, env(safe-area-inset-left));
     overflow: visible;
-    background: rgb(11 29 23 / 97%);
+    background: var(--surface-ink);
     border-top: 1px solid rgb(255 255 255 / 10%);
     border-right: 0;
-    box-shadow: 0 -0.8rem 2.4rem rgb(10 28 22 / 16%);
-    backdrop-filter: blur(16px);
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.3rem;
@@ -298,12 +270,20 @@
   }
 
   .navigation {
-    overflow: visible;
+    min-width: 0;
+    overflow-x: auto;
+    scroll-padding-inline: 0.25rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgb(245 243 233 / 40%) transparent;
   }
 
   .navigationList {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    display: flex;
     gap: 0.16rem;
+  }
+
+  .navigationList > li {
+    flex: 1 0 4.4rem;
   }
 
   .navigationButton {
@@ -311,9 +291,9 @@
     flex-direction: column;
     gap: 0.1rem;
     justify-content: center;
-    min-height: 3.7rem;
+    min-height: 3.35rem;
     padding: 0.32rem 0.16rem;
-    font-size: 0.66rem;
+    font-size: 0.72rem;
     text-align: center;
   }
 
@@ -332,9 +312,7 @@
 
   .mobileLabel {
     display: block;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .navigationIcon {
@@ -344,7 +322,7 @@
 
   .lockButton {
     min-width: 3.8rem;
-    min-height: 3.7rem;
+    min-height: 3.35rem;
     padding: 0.3rem 0.4rem;
     margin: 0;
     flex-direction: column;
@@ -352,38 +330,12 @@
   }
 
   .lockLabel {
-    max-width: 4rem;
-    overflow: hidden;
-    font-size: 0.65rem;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-@media (width <= 42rem) {
-  .sidebar {
-    grid-template-columns: minmax(0, 1fr) 4rem;
+    display: none;
   }
 
-  .navigationList {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .navigationButton {
-    min-height: 3.2rem;
-  }
-
-  .lockButton {
-    align-self: stretch;
-    min-width: 4rem;
-    min-height: 6.56rem;
-  }
-}
-
-@media (width <= 28rem) {
-  .mobileLabel {
-    font-size: 0.65rem;
-    letter-spacing: -0.02em;
+  .mobileLockLabel {
+    display: block;
+    font-size: 0.7rem;
   }
 }
 

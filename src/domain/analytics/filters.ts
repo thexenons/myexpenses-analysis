@@ -1,4 +1,5 @@
 import { assertIsoDate, normalizeSearchText } from "./validation.ts";
+import { resolvePostingAccounts } from "./transfer-relations.ts";
 import type {
   AnalyticsScope,
   AnalyticsDataset,
@@ -46,6 +47,11 @@ export function createDefaultFilterState(): FilterState {
     periodMode: "all",
     dateRange: { from: null, to: null },
     accountIds: [],
+    originAccountIds: [],
+    destinationAccountIds: [],
+    dateBasis: "operation",
+    categoryMatch: "posting",
+    categoryDepth: "subtree",
     categoryPrefixes: [],
     statuses: [],
     tags: [],
@@ -151,6 +157,11 @@ export function restoreFilterState(value: unknown): FilterState {
       : "all",
     dateRange: { from, to },
     accountIds: restoreStringList(value.accountIds),
+    originAccountIds: restoreStringList(value.originAccountIds),
+    destinationAccountIds: restoreStringList(value.destinationAccountIds),
+    dateBasis: value.dateBasis === "value" ? "value" : "operation",
+    categoryMatch: value.categoryMatch === "either" ? "either" : "posting",
+    categoryDepth: value.categoryDepth === "exact" ? "exact" : "subtree",
     categoryPrefixes:
       categoryPrefixes.length > 0
         ? categoryPrefixes
@@ -226,7 +237,18 @@ function snapshotFilters(filters: FilterState): FilterState {
   }
 
   validateStringList(filters.accountIds, "accountIds");
+  validateStringList(filters.originAccountIds ?? [], "originAccountIds");
+  validateStringList(filters.destinationAccountIds ?? [], "destinationAccountIds");
+  if (filters.dateBasis !== undefined && filters.dateBasis !== "operation" && filters.dateBasis !== "value") {
+    throw new Error("Unknown date basis");
+  }
+  if (filters.categoryMatch !== undefined && filters.categoryMatch !== "posting" && filters.categoryMatch !== "either") {
+    throw new Error("Unknown category matching mode");
+  }
   const categoryPrefixes = snapshotCategoryPrefixes(filters.categoryPrefixes);
+  if (filters.categoryDepth !== undefined && filters.categoryDepth !== "subtree" && filters.categoryDepth !== "exact") {
+    throw new Error("Unknown category depth");
+  }
   validateStringList(filters.tags, "tags");
   for (const status of filters.statuses) {
     if (!VALID_STATUSES.has(status)) {
@@ -239,6 +261,11 @@ function snapshotFilters(filters: FilterState): FilterState {
     periodMode: filters.periodMode,
     dateRange: { from, to },
     accountIds: [...new Set(filters.accountIds)],
+    originAccountIds: [...new Set(filters.originAccountIds ?? [])],
+    destinationAccountIds: [...new Set(filters.destinationAccountIds ?? [])],
+    dateBasis: filters.dateBasis ?? "operation",
+    categoryMatch: filters.categoryMatch ?? "posting",
+    categoryDepth: filters.categoryDepth ?? "subtree",
     categoryPrefixes,
     statuses: [...new Set(filters.statuses)],
     tags: [...new Set(filters.tags)],
@@ -251,6 +278,10 @@ export function accountMatchesScope(
   account: NormalizedAccount,
   scope: AnalyticsScope,
 ): boolean {
+  // The importer retains account metadata for references, but intentionally
+  // omits movements of accounts outside MyExpenses' supported total scope.
+  // Including only their opening balance would present a fictitious balance.
+  if (account.includedInAll === false) return false;
   if (scope === "realCashFlow") {
     return account.type === "DEFAULT";
   }
@@ -295,15 +326,20 @@ export function toggleCategoryPath(
 function categoryMatchesPrefixes(
   categoryPath: readonly string[],
   prefixes: readonly (readonly string[])[],
+  depth: FilterState["categoryDepth"],
 ): boolean {
   return (
     prefixes.length === 0 ||
-    prefixes.some((prefix) => categoryStartsWith(categoryPath, prefix))
+    prefixes.some((prefix) => depth === "exact"
+      ? categoryPathsEqual(categoryPath, prefix)
+      : categoryStartsWith(categoryPath, prefix))
   );
 }
 
 interface MatcherState {
   readonly accountIds: ReadonlySet<string>;
+  readonly originIds: ReadonlySet<string>;
+  readonly destinationIds: ReadonlySet<string>;
   readonly searchTokens: readonly string[];
   readonly statuses: ReadonlySet<TransactionStatus>;
   readonly tags: ReadonlySet<string>;
@@ -316,6 +352,8 @@ function createMatcherState(
   const search = normalizeSearchText(filters.search);
   return {
     accountIds: new Set(accounts.map((account) => account.id)),
+    originIds: new Set(filters.originAccountIds ?? []),
+    destinationIds: new Set(filters.destinationAccountIds ?? []),
     searchTokens: search === "" ? [] : search.split(" "),
     statuses: new Set(filters.statuses),
     tags: new Set(filters.tags),
@@ -326,6 +364,7 @@ function matchesPostingWithoutDate(
   posting: NormalizedPosting,
   filters: FilterState,
   matcher: MatcherState,
+  dataset: AnalyticsDataset,
 ): boolean {
   if (!matcher.accountIds.has(posting.accountId)) {
     return false;
@@ -333,7 +372,18 @@ function matchesPostingWithoutDate(
   if (matcher.statuses.size > 0 && !matcher.statuses.has(posting.status)) {
     return false;
   }
-  if (!categoryMatchesPrefixes(posting.categoryPath, filters.categoryPrefixes)) {
+  const relation = matcher.originIds.size > 0 || matcher.destinationIds.size > 0 || filters.categoryMatch === "either"
+    ? resolvePostingAccounts(posting, dataset)
+    : undefined;
+  if (matcher.originIds.size > 0 && (relation?.originAccount === undefined || !matcher.originIds.has(relation.originAccount.id))) {
+    return false;
+  }
+  if (matcher.destinationIds.size > 0 && (relation?.destinationAccount === undefined || !matcher.destinationIds.has(relation.destinationAccount.id))) {
+    return false;
+  }
+  if (!categoryMatchesPrefixes(posting.categoryPath, filters.categoryPrefixes, filters.categoryDepth) &&
+    !(filters.categoryMatch === "either" && relation?.peer !== undefined &&
+      categoryMatchesPrefixes(relation.peer.categoryPath, filters.categoryPrefixes, filters.categoryDepth))) {
     return false;
   }
   if (
@@ -387,11 +437,16 @@ function postingSearchIndex(posting: NormalizedPosting): string {
   return result;
 }
 
+export function postingDate(posting: NormalizedPosting, filters: FilterState): IsoDate {
+  return filters.dateBasis === "value" ? posting.valueDate ?? posting.date : posting.date;
+}
+
 function matchesDate(posting: NormalizedPosting, filters: FilterState): boolean {
   const { from, to } = filters.dateRange;
+  const date = postingDate(posting, filters);
   return !(
-    (from !== null && posting.date < from) ||
-    (to !== null && posting.date > to)
+    (from !== null && date < from) ||
+    (to !== null && date > to)
   );
 }
 
@@ -422,15 +477,17 @@ export function applyFilters(
   const postings: NormalizedPosting[] = [];
   const activePostings: NormalizedPosting[] = [];
   const periodOpeningByAccount: Record<string, number> = Object.create(null);
+  const periodClosingByAccount: Record<string, number> = Object.create(null);
   for (const account of accounts) {
     periodOpeningByAccount[account.id] = account.openingBalanceEurMinor;
+    periodClosingByAccount[account.id] = account.openingBalanceEurMinor;
   }
 
   for (const posting of dataset.postings) {
     if (
       !posting.isVoid &&
       filters.dateRange.from !== null &&
-      posting.date < filters.dateRange.from
+      postingDate(posting, filters) < filters.dateRange.from
     ) {
       const current = periodOpeningByAccount[posting.accountId];
       if (current !== undefined) {
@@ -441,7 +498,13 @@ export function applyFilters(
         );
       }
     }
-    if (!matchesPostingWithoutDate(posting, filters, matcher)) {
+    if (!posting.isVoid && (filters.dateRange.to === null || postingDate(posting, filters) <= filters.dateRange.to)) {
+      const current = periodClosingByAccount[posting.accountId];
+      if (current !== undefined) {
+        periodClosingByAccount[posting.accountId] = addMinor(current, posting.amountEurMinor, "Account closing balance");
+      }
+    }
+    if (!matchesPostingWithoutDate(posting, filters, matcher, dataset)) {
       continue;
     }
     if (matchesDate(posting, filters)) {
@@ -459,6 +522,11 @@ export function applyFilters(
     );
   }
 
+  let periodClosingBalanceEurMinor = 0;
+  for (const amount of Object.values(periodClosingByAccount)) {
+    periodClosingBalanceEurMinor = addMinor(periodClosingBalanceEurMinor, amount, "Closing balance");
+  }
+
   return {
     source: dataset,
     filters,
@@ -467,6 +535,8 @@ export function applyFilters(
     activePostings,
     periodOpeningEurMinorByAccountId: periodOpeningByAccount,
     periodOpeningBalanceEurMinor,
+    periodClosingEurMinorByAccountId: periodClosingByAccount,
+    periodClosingBalanceEurMinor,
   };
 }
 

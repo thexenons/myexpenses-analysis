@@ -13,6 +13,9 @@ export interface HorizontalBarChartProps {
   readonly formatLabel?: (label: string) => string;
   readonly formatValue?: Intl.NumberFormat | ValueFormatter;
   readonly labelHeader?: string;
+  readonly initialLimit?: number;
+  readonly onSelectDatum?: (id: string) => void;
+  readonly valueHeader?: string;
   readonly ref?: Ref<HTMLElement>;
   readonly title: string;
   readonly tooltipFormatter?: (datum: ChartBarDatum) => string;

@@ -262,6 +262,31 @@ test("groups local hours, ISO weekdays and effective value-date lag", () => {
   assert.equal(insights.valueDates.distinctValueDateTo, "2024-01-02");
 });
 
+test("value-date patterns use the value weekday and never borrow an operation hour for a known value date", () => {
+  const source = fixtureDataset();
+  const dataset = { ...source, postings: source.postings.map((row) => row.id === "income" ? Object.assign({}, row, { valueTime: "12:15:00" }) : row) };
+  const filtered = applyFilters(dataset, { ...createDefaultFilterState(), dateBasis: "value" });
+  const insights = aggregateBackupInsights(filtered);
+  assert.ok(insights);
+  assert.equal(insights.timing.dateBasis, "value");
+  assert.equal(insights.timing.weekdays[0]?.postingCount, 1, "the VOID value date is Monday");
+  assert.equal(insights.timing.weekdays[1]?.postingCount, 2, "expense and income value dates are Tuesday");
+  assert.equal(insights.timing.hours[9]?.postingCount, 0, "known value date with no value time does not inherit operation hour");
+  assert.equal(insights.timing.hours[12]?.postingCount, 1);
+  assert.equal(insights.timing.hours[23]?.postingCount, 1, "when the value date is entirely missing, operation date and hour remain the fallback");
+  assert.equal(insights.valueDates.distinctValueDateCount, 2, "lag still compares original operation and value dates");
+});
+
+test("retains every ranked payee when presentation requests all and still validates explicit limits", () => {
+  const source = fixtureDataset();
+  const dataset = { ...source, postings: Array.from({ length: 30 }, (_, index) => posting(`payee-${index}`, "2024-01-01", -100, { payee: `Payee ${index}` })) };
+  const filtered = applyFilters(dataset, createDefaultFilterState());
+  assert.equal(aggregateBackupInsights(filtered)?.payees.topExpenses.length, 5);
+  assert.equal(aggregateBackupInsights(filtered, { topPayeeLimit: 26 })?.payees.topExpenses.length, 26);
+  assert.equal(aggregateBackupInsights(filtered, { topPayeeLimit: null })?.payees.topExpenses.length, 30);
+  assert.throws(() => aggregateBackupInsights(filtered, { topPayeeLimit: 0 }));
+});
+
 test("uses exactly the postings and accounts selected by global filters", () => {
   const defaults = createDefaultFilterState();
   const filtered = applyFilters(fixtureDataset(), {

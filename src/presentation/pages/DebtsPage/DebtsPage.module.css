@@ -1,5 +1,5 @@
 .chartPanel {
-  min-height: 26rem;
+  min-width: 0;
 }
 
 .debtSummary {
@@ -7,28 +7,46 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 1rem;
   align-items: end;
-  padding: 1.2rem;
-  color: #f7f3e7;
-  background:
-    radial-gradient(circle at 90% 0%, rgb(197 218 114 / 17%), transparent 18rem),
-    var(--surface-ink);
-  border-radius: var(--radius-lg);
+  padding: 1rem;
+  color: var(--ink);
+  background: var(--surface-bright);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
 }
 
 .debtSummaryLabel {
-  color: rgb(247 243 231 / 58%);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  font-weight: 650;
 }
 
 .debtSummaryValue {
   margin-top: 0.25rem;
   font-family: var(--display);
-  font-size: clamp(2rem, 5vw, 4rem);
-  line-height: 1;
-  letter-spacing: -0.05em;
+  font-size: clamp(1.6rem, 3vw, 2.3rem);
+  font-weight: 650;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.debtSummaryNote {
+  max-width: 60rem;
+  margin-top: 0.55rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.accountMetrics {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.accountMetrics dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .accountGrid {
@@ -45,7 +63,6 @@
   background: var(--surface-bright);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-small);
   text-align: left;
   content-visibility: auto;
   contain-intrinsic-size: 0 170px;
@@ -54,7 +71,7 @@
 .accountCard[data-selected="true"] {
   background: color-mix(in srgb, var(--debt-soft) 46%, var(--surface-bright));
   border-color: var(--debt-ink);
-  box-shadow: inset 0.2rem 0 0 var(--debt-ink), var(--shadow-small);
+  box-shadow: inset 0.15rem 0 0 var(--debt-ink);
 }
 
 .accountHeader {

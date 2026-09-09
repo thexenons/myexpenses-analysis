@@ -37,6 +37,14 @@ export function identityLabel(label: string): string {
   return label
 }
 
+/** Only the SVG label is shortened; tooltips, inspection and tables keep it whole. */
+export function compactChartLabel(label: string, maximumLength = 32): string {
+  const characters = Array.from(label);
+  const prefixLength = Math.ceil((maximumLength - 1) * 0.4);
+  const suffixLength = maximumLength - prefixLength - 1;
+  return characters.length <= maximumLength ? label : `${characters.slice(0, prefixLength).join("")}…${characters.slice(-suffixLength).join("")}`;
+}
+
 export function seriesColor(color: string | undefined, index: number): string {
   return color ?? DEFAULT_SERIES_COLORS[index % DEFAULT_SERIES_COLORS.length]!
 }
@@ -132,6 +140,7 @@ export function chartDescription(
 
 export function buildSeriesChartModel(
   series: ReadonlyArray<ChartSeries>,
+  width = CHART_WIDTH,
 ): SeriesChartModel {
   const labels: string[] = []
   const labelSet = new Set<string>()
@@ -156,8 +165,8 @@ export function buildSeriesChartModel(
   )
 
   const scale = createScale(values)
-  const plotLeft = SERIES_MARGIN.left
-  const plotRight = CHART_WIDTH - SERIES_MARGIN.right
+  const plotLeft = width < 600 ? 80 : SERIES_MARGIN.left
+  const plotRight = width - (width < 600 ? 14 : SERIES_MARGIN.right)
   const plotTop = SERIES_MARGIN.top
   const plotBottom = SERIES_CHART_HEIGHT - SERIES_MARGIN.bottom
   const zeroY = scaleLinear(0, scale.min, scale.max, plotBottom, plotTop)
@@ -191,7 +200,7 @@ export function buildSeriesChartModel(
     plotTop,
     plottedSeries,
     scale,
-    visibleLabels: selectedLabelIndexes(labels.length),
+    visibleLabels: selectedLabelIndexes(labels.length, width < 400 ? 3 : width < 600 ? 5 : 7),
     zeroY,
   }
 }
@@ -215,21 +224,24 @@ export function getSeriesPaths(
 
 export function buildHorizontalBarChartModel(
   data: ReadonlyArray<ChartBarDatum>,
+  width = CHART_WIDTH,
 ): HorizontalBarChartModel {
+  const compact = width < 600;
+  const rowHeight = compact ? 56 : BAR_ROW_HEIGHT;
   const validData = data.filter((datum) => Number.isFinite(datum.value))
   const scale = createScale(validData.map((datum) => datum.value))
   const chartHeight = Math.max(
-    250,
-    BAR_MARGIN.top + BAR_MARGIN.bottom + validData.length * BAR_ROW_HEIGHT,
+    compact ? 140 : 250,
+    BAR_MARGIN.top + BAR_MARGIN.bottom + validData.length * rowHeight,
   )
-  const plotLeft = BAR_MARGIN.left
-  const plotRight = CHART_WIDTH - BAR_MARGIN.right
+  const plotLeft = compact ? 18 : BAR_MARGIN.left
+  const plotRight = width - (compact ? 18 : BAR_MARGIN.right)
   const plotBottom = chartHeight - BAR_MARGIN.bottom
   const zeroX = scaleLinear(0, scale.min, scale.max, plotLeft, plotRight)
 
   return {
     bars: validData.map((datum, index) => {
-      const centerY = BAR_MARGIN.top + index * BAR_ROW_HEIGHT + BAR_ROW_HEIGHT / 2
+      const centerY = BAR_MARGIN.top + index * rowHeight + rowHeight / 2
       const valueX = scaleLinear(
         datum.value,
         scale.min,
@@ -239,7 +251,7 @@ export function buildHorizontalBarChartModel(
       )
 
       return {
-        barWidth: Math.max(1, Math.abs(valueX - zeroX)),
+        barWidth: Math.abs(valueX - zeroX),
         barX: Math.min(zeroX, valueX),
         centerY,
         color: seriesColor(datum.color, index),
@@ -261,7 +273,12 @@ export function buildDivergingBarChartModel(
   leftLabel: string,
   rightColor: string | undefined,
   rightLabel: string,
+  width = CHART_WIDTH,
 ): DivergingBarChartModel {
+  const compact = width < 600;
+  const rowHeight = compact ? 56 : BAR_ROW_HEIGHT;
+  const plotLeft = compact ? 18 : BAR_MARGIN.left;
+  const plotRight = width - (compact ? 18 : BAR_MARGIN.right);
   const validData = data.filter(
     (datum) =>
       Number.isFinite(datum.leftValue) && Number.isFinite(datum.rightValue),
@@ -278,11 +295,11 @@ export function buildDivergingBarChartModel(
 
   const extent = maximum || 1
   const chartHeight = Math.max(
-    250,
-    BAR_MARGIN.top + BAR_MARGIN.bottom + validData.length * BAR_ROW_HEIGHT,
+    compact ? 140 : 250,
+    BAR_MARGIN.top + BAR_MARGIN.bottom + validData.length * rowHeight,
   )
-  const centerX = (BAR_MARGIN.left + CHART_WIDTH - BAR_MARGIN.right) / 2
-  const halfWidth = (CHART_WIDTH - BAR_MARGIN.right - BAR_MARGIN.left) / 2
+  const centerX = (plotLeft + plotRight) / 2
+  const halfWidth = (plotRight - plotLeft) / 2
   const tickScale = createScale([-extent, extent])
   const scaleExtent = Math.max(
     Math.abs(tickScale.min),
@@ -293,7 +310,7 @@ export function buildDivergingBarChartModel(
 
   return {
     bars: validData.map((datum, index) => ({
-      centerY: BAR_MARGIN.top + index * BAR_ROW_HEIGHT + BAR_ROW_HEIGHT / 2,
+      centerY: BAR_MARGIN.top + index * rowHeight + rowHeight / 2,
       datum,
       leftWidth: (Math.abs(datum.leftValue) / scaleExtent) * halfWidth,
       rightWidth: (Math.abs(datum.rightValue) / scaleExtent) * halfWidth,
@@ -305,6 +322,8 @@ export function buildDivergingBarChartModel(
       { color: resolvedRightColor, id: "right", label: rightLabel },
     ],
     plotBottom: chartHeight - BAR_MARGIN.bottom,
+    plotLeft,
+    plotRight,
     resolvedLeftColor,
     resolvedRightColor,
     tickScale,

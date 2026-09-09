@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseBackupDataset } from "../../src/domain/analytics/normalize-backup-dataset.ts";
+import { normalizeBackupDataset, parseBackupDataset } from "../../src/domain/analytics/normalize-backup-dataset.ts";
+import { applyFilters, createDefaultFilterState } from "../../src/domain/analytics/filters.ts";
+import { aggregateKpis } from "../../src/domain/analytics/aggregations.ts";
 import { createAppDataset } from "./app-dataset.ts";
 import { withBackupDatabase } from "./database.ts";
 import { createImportDatabaseFixture } from "./test-fixtures.ts";
@@ -49,6 +51,30 @@ function mapFixture(
         timeZone: "Europe/Madrid",
     });
 }
+
+test("excluded account metadata does not add an unsupported opening balance to frontend scopes", async () => {
+    const bytes = await createImportDatabaseFixture({
+        extraSql: ["UPDATE accounts SET exclude_from_totals = 1, opening_balance = 500 WHERE _id = 4"],
+    });
+    const canonical = await withBackupDatabase(bytes, (database) => adaptV189(database, {
+        timeZone: "Europe/Madrid", preferences: PREFERENCES,
+    }));
+    const dataset = mapFixture(canonical);
+    const omittedAccount = dataset.accounts.find((account) => account.sourceId === 4);
+    assert.ok(omittedAccount);
+    assert.equal(omittedAccount.flags.includedInAll, false);
+    const normalized = normalizeBackupDataset(dataset);
+    for (const [scope, canonicalScope] of [["all", "ALL"], ["realCashFlow", "REAL_CASH"], ["debtsOnly", "DEBT"]] as const) {
+        const filtered = applyFilters(normalized, { ...createDefaultFilterState(), scope });
+        const totals = aggregateKpis(filtered);
+        assert.equal(filtered.accounts.some((account) => account.id === omittedAccount.uuid), false);
+        assert.equal(totals.periodOpeningBalanceEurMinor, canonical.scopes[canonicalScope].openingBalanceHomeMinor);
+        assert.equal(totals.periodClosingBalanceEurMinor, canonical.scopes[canonicalScope].closingFlowBalanceHomeMinor);
+    }
+    assert.equal(applyFilters(normalized, {
+        ...createDefaultFilterState(), accountIds: [omittedAccount.uuid],
+    }).accounts.length, 0);
+});
 
 test("maps allowlisted budget filters to stable entity UUIDs", async () => {
     const canonical = await canonicalFixture();

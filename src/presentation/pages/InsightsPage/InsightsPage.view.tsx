@@ -44,7 +44,7 @@ export function InsightsPageView({
           detail={`${countFormatter.format(insights.timing.midnightOrMissingTimeCount)} a medianoche o sin precisión`}
           formatValue={countFormatter}
           icon={<Icon name="calendar" />}
-          label="Hora local precisa"
+          label={insights.timing.dateBasis === "value" ? "Hora de valor precisa" : "Hora local precisa"}
           tone="info"
           value={insights.timing.timedPostingCount}
         />

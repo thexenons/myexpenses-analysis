@@ -1,0 +1,8 @@
+@layer components {
+  .totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1rem; margin: 0; }
+  .totals dt { color: var(--muted); font-size: 0.72rem; }
+  .totals dd { margin: 0.35rem 0 0; font-family: var(--mono); font-size: 1rem; color: var(--ink); }
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem; }
+  .pageSize { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.72rem; }
+  .pageSize select { min-height: 2.25rem; padding: 0.35rem 0.55rem; border: 1px solid var(--line-dark); border-radius: var(--radius-xs); color: var(--ink); background: var(--surface-bright); font: inherit; }
+}

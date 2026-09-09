@@ -81,9 +81,12 @@ export async function createSchema189DatabaseFixture(
     }
 }
 
-/** Anonymous but relationally complete v189 fixture for import-pipeline tests. */
-export async function createImportDatabaseFixture(): Promise<Uint8Array> {
+/** Anonymous relational fixture; schema 190 preserves these tables. */
+export async function createImportDatabaseFixture(
+    options: { schemaVersion?: 189 | 190; extraSql?: readonly string[] } = {},
+): Promise<Uint8Array> {
     return createSchema189DatabaseFixture({
+        schemaVersion: options.schemaVersion ?? 189,
         extraSql: [
             `INSERT INTO currency
                 (_id, code, label, fraction_digits, symbol, commodity_type)
@@ -167,6 +170,7 @@ export async function createImportDatabaseFixture(): Promise<Uint8Array> {
              VALUES
                 (1, 0, NULL, NULL, 500, 0, 0, 0),
                 (1, 10, 2026, 8, 100, 5, 7, 1)`,
+            ...(options.extraSql ?? []),
         ],
     });
 }

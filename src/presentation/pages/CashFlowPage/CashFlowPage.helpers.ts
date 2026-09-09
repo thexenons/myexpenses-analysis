@@ -19,12 +19,16 @@ export function createCashFlowPageModel(
   const composition = aggregateFlowComposition(filtered);
   const series = aggregateTimeSeries(filtered, granularity);
   const categories = aggregateCategoryBreakdown(filtered);
+  const realPostings = filtered.activePostings.filter((posting) => posting.accountType === "DEFAULT");
+  const inflows = new Map(aggregateTimeSeries({ ...filtered, activePostings: realPostings.filter((posting) => posting.amountEurMinor > 0) }, granularity)
+    .map((point) => [point.key, point.netEurMinor]));
+  const outflows = new Map(aggregateTimeSeries({ ...filtered, activePostings: realPostings.filter((posting) => posting.amountEurMinor < 0) }, granularity)
+    .map((point) => [point.key, -point.netEurMinor]));
 
   return {
     composition,
     expenseCategories: categories
-      .filter((category) => category.summary.expensesEurMinor !== 0)
-      .slice(0, 8),
+      .filter((category) => category.summary.expensesEurMinor !== 0),
     kpis,
     lineSeries: [
       {
@@ -49,8 +53,8 @@ export function createCashFlowPageModel(
     periodBars: series.map((point) => ({
       id: point.key,
       label: point.key,
-      leftValue: euroFromMinor(Math.abs(point.expensesEurMinor)),
-      rightValue: euroFromMinor(point.incomesEurMinor),
+      leftValue: euroFromMinor(outflows.get(point.key) ?? 0),
+      rightValue: euroFromMinor(inflows.get(point.key) ?? 0),
     })),
     savingsEurMinor: kpis.incomesEurMinor + kpis.expensesEurMinor,
   };

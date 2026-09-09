@@ -215,7 +215,7 @@ test("validates the exact schema version before inspecting data", () => {
             () => validateV189Database(database),
             (error: unknown) =>
                 error instanceof V189SchemaError &&
-                error.message.includes("expected 189, received 188"),
+                error.message.includes("expected 189 or 190, received 188"),
         );
     } finally {
         database.close();

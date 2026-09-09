@@ -17,10 +17,12 @@ export function InsightsTiming({
   timing,
   weekdayBars,
 }: InsightsTimingProps) {
+  const valueBasis = timing.dateBasis === "value";
+  const hourTitle = valueBasis ? "Ritmo por hora de valor" : "Ritmo por hora local";
   return (
     <AnalyticsPageGrid variant="two">
       <Panel
-        aria-label="Patrón por hora local"
+        aria-label={valueBasis ? "Patrón por hora de valor" : "Patrón por hora local"}
         actions={
           <Badge tone="info">
             {percentageFormatter.format(timing.hourCoverageRatio)} cobertura
@@ -29,10 +31,10 @@ export function InsightsTiming({
         className={`${styles.chartPanel} ${styles.deferredPanel}`}
       >
         <LineChart
-          description={`${countFormatter.format(timing.timedPostingCount)} apuntes conservan una hora distinta de 00:00. Los anulados permanecen en el conteo; su importe es cero en agregados.`}
+          description={`${countFormatter.format(timing.timedPostingCount)} apuntes conservan una hora ${valueBasis ? "de valor" : "de operación"} distinta de 00:00. ${valueBasis ? "Si falta la fecha valor se usa la operación; si existe sin hora, no se inventa una hora de valor. " : ""}Los anulados permanecen en el conteo; su importe es cero en agregados.`}
           formatValue={countFormatter}
           series={hourSeries}
-          title="Ritmo por hora local"
+          title={hourTitle}
         />
       </Panel>
       <Panel
@@ -41,9 +43,10 @@ export function InsightsTiming({
       >
         <HorizontalBarChart
           data={weekdayBars}
-          description="Número de apuntes por día local de la semana dentro del filtro actual."
+          description={`Número de apuntes por día de la semana según la fecha de ${valueBasis ? "valor (operación si falta)" : "operación"}, dentro del filtro actual.`}
           formatValue={countFormatter}
           labelHeader="Día"
+          valueHeader="Apuntes"
           title="Distribución semanal"
         />
       </Panel>

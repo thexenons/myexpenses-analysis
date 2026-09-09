@@ -1,5 +1,7 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
 
+import { accountMatchesScope } from "../../../../domain/analytics/filters.ts";
 import { useFilteredAnalytics } from "../../../hooks/filtered-analytics/filtered-analytics.hooks.ts";
 import { useAppStore } from "../../../providers/AppStoreProvider/index.ts";
 import {
@@ -9,14 +11,14 @@ import {
 import type { DebtsPageViewProps } from "../DebtsPage.types.ts";
 
 export function useDebtsPage(): DebtsPageViewProps | null {
+  const navigate = useNavigate();
   const { analytics, filtered, filters, granularity } = useFilteredAnalytics();
   const patchFilters = useAppStore((state) => state.actions.patchFilters);
-  const setAccountIds = useAppStore((state) => state.actions.setAccountIds);
   const debtAccountIds = useMemo(
     () =>
       new Set(
         analytics?.accounts
-          .filter((account) => account.type === "DEBT")
+          .filter((account) => accountMatchesScope(account, "debtsOnly"))
           .map((account) => account.id) ?? [],
       ),
     [analytics],
@@ -28,32 +30,44 @@ export function useDebtsPage(): DebtsPageViewProps | null {
   const effectiveSelectedAccountIds = useMemo(
     () =>
       new Set(
-        filters.accountIds.length === 0
+        filters.scope === "realCashFlow" ? [] : filters.accountIds.length === 0
           ? debtAccountIds
           : selectedDebtAccountIds,
       ),
-    [debtAccountIds, filters.accountIds.length, selectedDebtAccountIds],
+    [debtAccountIds, filters.accountIds.length, filters.scope, selectedDebtAccountIds],
   );
   const onClearAccounts = useCallback(
-    () => setAccountIds([]),
-    [setAccountIds],
+    () => patchFilters({ accountIds: [], scope: "debtsOnly" }),
+    [patchFilters],
   );
   const onToggleAccount = useCallback(
     (accountId: string) => {
-      if (filters.scope === "realCashFlow") {
-        patchFilters({ scope: "debtsOnly" });
-      }
-      setAccountIds(
-        toggleDebtAccountIds(filters.accountIds, debtAccountIds, accountId),
-      );
+      patchFilters({
+        accountIds: filters.scope === "realCashFlow"
+          ? [accountId]
+          : toggleDebtAccountIds(filters.accountIds, debtAccountIds, accountId),
+        scope: "debtsOnly",
+      });
     },
     [
       debtAccountIds,
       filters.accountIds,
       filters.scope,
       patchFilters,
-      setAccountIds,
     ],
+  );
+  const onViewTransactions = useCallback(
+    (accountId?: string) => {
+      patchFilters({
+        ...(accountId === undefined ? {} : { accountIds: [accountId] }),
+        scope: "debtsOnly",
+      });
+      void navigate({
+        to: "/transacciones",
+        search: { page: 1, sort: "date", direction: "desc" },
+      });
+    },
+    [navigate, patchFilters],
   );
 
   return useMemo(
@@ -67,6 +81,7 @@ export function useDebtsPage(): DebtsPageViewProps | null {
             effectiveSelectedAccountIds,
             onClearAccounts,
             onToggleAccount,
+            onViewTransactions,
           ),
     [
       analytics,
@@ -75,6 +90,7 @@ export function useDebtsPage(): DebtsPageViewProps | null {
       granularity,
       onClearAccounts,
       onToggleAccount,
+      onViewTransactions,
     ],
   );
 }

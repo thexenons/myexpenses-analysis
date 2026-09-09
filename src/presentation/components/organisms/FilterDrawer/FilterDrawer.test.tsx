@@ -204,4 +204,37 @@ describe("FilterDrawer", () => {
     expect(screen.queryByRole("checkbox", { name: /Caja, EUR, Efectivo/ })).toBeNull()
     expect(appStore.getState().filters.accountIds).toEqual([])
   })
+
+  it("keeps direction filters independent of scope and exposes date and category modes", async () => {
+    const user = userEvent.setup()
+    appStore.setState({
+      analytics: normalizeDataset({
+        accounts: { version: 2, accounts: { cash: { label: "Caja", type: "DEFAULT" }, debt: { label: "Persona", type: "DEBT" } } },
+        categories: {},
+        parsedData: [
+          { uuid: "cash", label: "Caja", currency: "EUR", openingBalance: 0, transactions: [] },
+          { uuid: "debt", label: "Persona", currency: "EUR", openingBalance: 0, transactions: [] },
+        ],
+      }),
+      filterDrawerOpen: true,
+    })
+    render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
+    await user.click(screen.getByRole("checkbox", { name: "Cuenta de origen: Caja, EUR" }))
+    await user.click(screen.getByRole("checkbox", { name: "Cuenta de destino: Persona, EUR" }))
+    await user.click(screen.getByRole("radio", { name: "Solo deudas" }))
+    await user.click(screen.getByRole("radio", { name: "Valor" }))
+    await user.click(screen.getByRole("radio", { name: "Solo ruta exacta" }))
+    await user.click(screen.getByRole("checkbox", { name: "También buscar la categoría en la contrapartida vinculada" }))
+    expect(appStore.getState().filters).toMatchObject({ scope: "debtsOnly", originAccountIds: ["cash"], destinationAccountIds: ["debt"], dateBasis: "value", categoryMatch: "either", categoryDepth: "exact" })
+    expect(screen.getByRole("checkbox", { name: "Persona, EUR, Deuda" })).toBeDisabled()
+    await user.click(screen.getByRole("button", { name: "Restablecer" }))
+    expect(appStore.getState().filters).toEqual(createDefaultFilterState())
+  })
+
+  it("does not turn the last selected status into all statuses", () => {
+    appStore.setState({ filterDrawerOpen: true, filters: { ...createDefaultFilterState(), statuses: ["CLEARED"] } })
+    render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
+    expect(screen.getByRole("checkbox", { name: "Compensadas" })).toBeDisabled()
+    expect(screen.getByRole("checkbox", { name: "Anuladas" })).not.toBeChecked()
+  })
 })

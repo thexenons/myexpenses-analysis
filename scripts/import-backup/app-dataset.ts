@@ -197,7 +197,7 @@ function mapCommodityType(
     if (value === null) {
         return null;
     }
-    if (value === "FIAT" || value === "SECURITY" || value === "CRYPTO") {
+    if (value === "FIAT" || value === "SECURITY" || value === "CRYPTO" || value === "COMMODITY") {
         return value;
     }
     return fail(context, "unsupported commodity type");
@@ -1035,8 +1035,8 @@ function assertCanonicalMetadata(
     canonical: V189CanonicalDataset,
     options: CreateAppDatasetOptions,
 ): void {
-    if (canonical.metadata.schemaVersion !== 189) {
-        fail("Canonical dataset", "expected schema 189");
+    if (canonical.metadata.schemaVersion !== 189 && canonical.metadata.schemaVersion !== 190) {
+        fail("Canonical dataset", "expected schema 189 or 190");
     }
     const preferences = canonical.metadata.preferences;
     if (
@@ -1098,7 +1098,7 @@ function validateTimeZone(value: string): string {
     return value;
 }
 
-/** Strictly maps the private v189 canonical model to the public app dataset. */
+/** Strictly maps the private schema-189/190 canonical model to the app dataset. */
 export function createAppDataset(
     options: CreateAppDatasetOptions,
 ): BackupDatasetV1 {
@@ -1291,7 +1291,7 @@ export function createAppDataset(
         version: 1,
         source: {
             format: "myexpenses-backup",
-            schemaVersion: 189,
+            schemaVersion: options.canonical.metadata.schemaVersion,
             backupSha256: options.backupSha256,
             databaseSha256: options.databaseSha256,
         },

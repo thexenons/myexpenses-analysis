@@ -116,6 +116,26 @@ const analysis: BudgetAnalysis = {
 };
 
 describe("BudgetsPageView", () => {
+  it("distinguishes a filtered comparison from the full budget availability", () => {
+    render(
+      <BudgetsPageView
+        analysis={{ ...analysis, dateBasis: "value", consumptionDateRange: { from: "2026-08-10", to: "2026-08-12" }, isFilteredComparison: true }}
+        budgetOptions={[{ value: "budget", label: "Presupuesto doméstico" }]}
+        emptyDescription={null}
+        emptyTitle={null}
+        onBudgetChange={vi.fn<(uuid: string) => void>()}
+        onPeriodChange={vi.fn<(key: string) => void>()}
+        periodOptions={[]}
+        searchPending={false}
+        selectedBudgetUuid="budget"
+        selectedPeriodKey="MONTH:2026:7"
+      />,
+    );
+    expect(screen.getByText("Asignado menos corte")).toBeVisible();
+    expect(screen.getByText(/sin prorratear/)).toHaveTextContent("Consumo consultado: 10 ago 2026 – 12 ago 2026");
+    expect(screen.getByText(/no indican la disponibilidad real del presupuesto completo/)).toBeVisible();
+  });
+
   it("renders budget KPIs, the technical global allocation and hierarchy", async () => {
     const user = userEvent.setup();
     const onBudgetChange = vi.fn<(uuid: string) => void>();

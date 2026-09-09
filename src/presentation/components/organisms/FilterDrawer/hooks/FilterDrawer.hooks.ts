@@ -9,6 +9,7 @@ import { toggleCategoryPath } from "../../../../../domain/analytics/filters.ts"
 import { useAppStore } from "../../../../providers/AppStoreProvider/index.ts"
 import {
   collectFilterDrawerRootCategories,
+  collectFilterDrawerCategoryPaths,
   collectFilterDrawerTags,
   hasActiveDrawerFilters,
   sortFilterDrawerAccounts,
@@ -51,6 +52,8 @@ export function useFilterDrawer(): FilterDrawerViewProps {
     () => accounts.map((account) => account.id),
     [accounts],
   )
+  const endpointAccounts = useMemo(() => sortFilterDrawerAccounts(analytics, "all"), [analytics])
+  const categoryPaths = useMemo(() => collectFilterDrawerCategoryPaths(analytics), [analytics])
   const rootCategories = useMemo(
     () => collectFilterDrawerRootCategories(analytics),
     [analytics],
@@ -82,6 +85,8 @@ export function useFilterDrawer(): FilterDrawerViewProps {
 
   return {
     accounts,
+    endpointAccounts,
+    categoryPaths,
     allAccountsSelected: filters.accountIds.length === 0,
     allStatusesSelected: filters.statuses.length === 0,
     availableTags,
@@ -95,6 +100,11 @@ export function useFilterDrawer(): FilterDrawerViewProps {
       ),
     onCategoryToggle: (path) =>
       setCategoryPrefixes(toggleCategoryPath(filters.categoryPrefixes, path)),
+    onOriginToggle: (accountId) => patchFilters({ originAccountIds: toggleFilterDrawerOptionalValue(filters.originAccountIds ?? [], accountId) }),
+    onDestinationToggle: (accountId) => patchFilters({ destinationAccountIds: toggleFilterDrawerOptionalValue(filters.destinationAccountIds ?? [], accountId) }),
+    onDateBasisChange: (dateBasis) => patchFilters({ dateBasis }),
+    onCategoryMatchChange: (categoryMatch) => patchFilters({ categoryMatch }),
+    onCategoryDepthChange: (categoryDepth) => patchFilters({ categoryDepth }),
     onClose,
     onLinkedChange: (linked) => patchFilters({ linked }),
     onReset: () => {

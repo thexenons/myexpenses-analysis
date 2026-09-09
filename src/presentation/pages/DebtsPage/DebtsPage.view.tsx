@@ -25,16 +25,16 @@ export function DebtsPageView({
   debts,
   onClearAccounts,
   onToggleAccount,
+  onViewTransactions,
   selectedAccountIds,
   showClearAccounts,
   totals,
 }: DebtsPageViewProps) {
-  const balanceVariation =
-    totals.recoveriesEurMinor - totals.advancesEurMinor;
+  const netFunding = totals.advancesEurMinor - totals.recoveriesEurMinor;
 
   return (
     <AnalyticsPage
-      description="Evolución de las cuentas marcadas como deuda, separada del dinero que realmente entra y sale de las cuentas operativas."
+      description="Dinero enviado y recibido, gastos atribuidos y saldos de las cuentas de deuda. Las transferencias se identifican por su contrapartida; el signo del saldo por sí solo no indica quién debe a quién."
       introAction={
         showClearAccounts ? (
           <Button onClick={onClearAccounts} variant="secondary">
@@ -52,6 +52,10 @@ export function DebtsPageView({
           <div className={styles.debtSummaryValue}>
             {formatEuroMinor(totals.balanceEurMinor)}
           </div>
+          <p className={styles.debtSummaryNote}>
+            Saldo real al cierre de las fechas elegidas. Los filtros de contenido
+            y origen/destino solo limitan los movimientos y gastos analizados.
+          </p>
         </div>
         <Badge tone="warning">
           {countFormatter.format(debts.length)} cuentas incluidas
@@ -60,43 +64,59 @@ export function DebtsPageView({
 
       <AnalyticsPageGrid variant="kpis">
         <KpiCard
-          detail="Salidas o nuevos importes pendientes"
+          detail="Transferencias desde cuentas propias hacia estas cuentas"
           formatValue={euroFormatter}
           icon={<Icon name="arrow-down-right" />}
-          label="Nuevos adelantos"
+          label="Enviado a deudas"
           tone="negative"
           value={euroFromMinor(totals.advancesEurMinor)}
         />
         <KpiCard
-          detail="Entradas y devoluciones"
+          detail="Transferencias efectivamente recibidas en cuentas propias"
           formatValue={euroFormatter}
           icon={<Icon name="arrow-up-right" />}
-          label="Recuperaciones"
+          label="Recibido de deudas"
           tone="positive"
           value={euroFromMinor(totals.recoveriesEurMinor)}
         />
         <KpiCard
-          detail="Apuntes clasificados como gasto"
+          detail="Gastos directos y partes financiadas desde cuentas propias"
           formatValue={euroFormatter}
           icon={<Icon name="debt" />}
-          label="Gasto bruto en deudas"
+          label="Gasto bruto atribuido"
           tone="warning"
           value={euroFromMinor(totals.expensesEurMinor)}
         />
         <KpiCard
-          detail="Recuperado menos adelantado"
+          detail={`${formatEuroMinor(totals.expenseRefundsEurMinor)} en devoluciones de gasto`}
+          formatValue={euroFormatter}
+          icon={<Icon name="receipt" />}
+          label="Gasto neto atribuido"
+          tone="warning"
+          value={euroFromMinor(totals.expensesEurMinor - totals.expenseRefundsEurMinor)}
+        />
+        <KpiCard
+          detail="Enviado menos recibido en cuentas propias"
+          formatValue={euroFormatter}
+          icon={<Icon name="transfer" />}
+          label="Aportación neta"
+          tone={netFunding > 0 ? "negative" : "positive"}
+          value={euroFromMinor(netFunding)}
+        />
+        <KpiCard
+          detail="Suma de los movimientos filtrados, incluidos ajustes"
           formatValue={euroFormatter}
           icon={<Icon name="debt" />}
-          label="Variación neta"
-          tone={balanceVariation >= 0 ? "positive" : "negative"}
-          value={euroFromMinor(balanceVariation)}
+          label="Movimiento neto"
+          tone="neutral"
+          value={euroFromMinor(totals.flowEurMinor)}
         />
       </AnalyticsPageGrid>
 
       <AnalyticsPageGrid variant="two">
         <Panel className={styles.chartPanel}>
           <LineChart
-            description="Movimiento y saldo acumulado de las cuentas incluidas por el filtro global."
+            description="Los movimientos respetan todos los filtros. El saldo real incorpora todos los movimientos de las cuentas seleccionadas, aunque no coincidan con los filtros de contenido."
             formatLabel={formatPeriodLabel}
             formatValue={euroFormatter}
             series={debtSeries}
@@ -106,16 +126,27 @@ export function DebtsPageView({
         <Panel className={styles.chartPanel}>
           <HorizontalBarChart
             data={accountBars}
-            description="Saldo firmado de las cuentas con mayor posición absoluta."
+            description="Saldo real ordenado por importe absoluto. Selecciona una cuenta para ver sus movimientos."
             formatValue={euroFormatter}
+            initialLimit={0}
             labelHeader="Cuenta"
+            onSelectDatum={onViewTransactions}
             title="Quién concentra el saldo"
           />
         </Panel>
       </AnalyticsPageGrid>
 
       <Panel
-        description="Selecciona una o varias cuentas mediante el filtro global existente"
+        actions={
+          <Button
+            disabled={debts.length === 0}
+            onClick={() => onViewTransactions()}
+            variant="secondary"
+          >
+            Ver movimientos de la selección
+          </Button>
+        }
+        description="Incluye o excluye cuentas manteniendo al menos una seleccionada. Abre sus movimientos para consultar el detalle con los filtros actuales."
         title="Seleccionar cuentas de deuda"
       >
         {availableDebts.length === 0 ? (
@@ -148,20 +179,37 @@ export function DebtsPageView({
                   </strong>
                   <div className={styles.accountFooter}>
                     <span className={styles.accountMeta}>
-                      Periodo {formatEuroMinor(debt.netEurMinor)}
+                      Movimiento filtrado {formatEuroMinor(debt.netEurMinor)}
                     </span>
                     <span className={styles.accountMeta}>
                       Apertura {formatEuroMinor(debt.periodOpeningBalanceEurMinor)}
                     </span>
                   </div>
+                  <dl className={styles.accountMetrics}>
+                    <dt>Enviado</dt>
+                    <dd>{formatEuroMinor(debt.advancesEurMinor)}</dd>
+                    <dt>Recibido</dt>
+                    <dd>{formatEuroMinor(debt.recoveriesEurMinor)}</dd>
+                    <dt>Gasto neto atribuido</dt>
+                    <dd>{formatEuroMinor(debt.grossDebtExpensesEurMinor - debt.debtExpenseRefundsEurMinor)}</dd>
+                  </dl>
                   <Button
-                    aria-label={`${selected ? "Quitar filtro de" : "Filtrar por"} ${debt.account.label}`}
+                    aria-label={`${selected ? "Excluir" : "Incluir"} ${debt.account.label}`}
                     aria-pressed={selected}
+                    disabled={selected && selectedAccountIds.size === 1}
                     onClick={() => onToggleAccount(debt.account.id)}
                     size="compact"
                     variant={selected ? "primary" : "secondary"}
                   >
-                    {selected ? "Incluida" : "Incluir"}
+                    {selected ? "Excluir" : "Incluir"}
+                  </Button>
+                  <Button
+                    aria-label={`Ver movimientos de ${debt.account.label}`}
+                    onClick={() => onViewTransactions(debt.account.id)}
+                    size="compact"
+                    variant="secondary"
+                  >
+                    Ver movimientos
                   </Button>
                 </article>
               );

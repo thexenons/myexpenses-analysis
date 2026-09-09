@@ -42,7 +42,7 @@ export function createInsightsPageModel(
   filtered: FilteredAnalyticsDataset,
   searchPending: boolean,
 ): InsightsPageViewProps | null {
-  const insights = aggregateBackupInsights(filtered);
+  const insights = aggregateBackupInsights(filtered, { topPayeeLimit: null });
   if (insights === null) {
     return null;
   }

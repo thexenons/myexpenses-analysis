@@ -5,6 +5,8 @@ import { KpiCard } from "../../components/molecules/KpiCard/index.ts";
 import { EmptyState } from "../../components/molecules/EmptyState/index.ts";
 import { Panel } from "../../components/molecules/Panel/index.ts";
 import { HorizontalBarChart } from "../../components/organisms/HorizontalBarChart/index.ts";
+import { LineChart } from "../../components/organisms/LineChart/index.ts";
+import chartStyles from "../../components/organisms/chart/chart.module.css";
 import { AnalyticsPage } from "../../components/templates/AnalyticsPage/index.ts";
 import { AnalyticsPageGrid } from "../../components/templates/AnalyticsPageGrid/index.ts";
 import { AccountDetails } from "./components/AccountDetails/index.ts";
@@ -13,9 +15,11 @@ import {
   euroFormatter,
   euroFromMinor,
   formatEuroMinor,
+  formatPeriodLabel,
 } from "../../utils/format.ts";
 import styles from "./AccountsPage.module.css";
-import type { AccountsPageViewProps } from "./AccountsPage.types.ts";
+import type { AccountMetric, AccountsPageViewProps } from "./AccountsPage.types.ts";
+import { ACCOUNT_METRIC_LABELS } from "./AccountsPage.helpers.ts";
 
 const EXCHANGE_MODE_LABELS = {
   DYNAMIC: "Conversión dinámica",
@@ -28,15 +32,22 @@ const ACCOUNT_SCOPE_LABELS = {
   DEFAULT: "Operativa",
 } as const;
 
+const EMPTY_ACCOUNT_SERIES = [] as const;
+
 export function AccountsPageView({
   accountBars,
+  accountSeries = EMPTY_ACCOUNT_SERIES,
   accounts,
+  metric = "periodClosingBalanceEurMinor",
+  onMetricChange,
   onSelectAccount,
+  onViewTransactions,
+  onViewPeriod,
   totals,
 }: AccountsPageViewProps) {
   return (
     <AnalyticsPage
-      description="Posición, actividad y naturaleza de cada cuenta. El saldo del periodo incorpora la apertura correspondiente al rango seleccionado."
+      description="Saldos reales al cierre y movimientos dentro de los filtros. Las categorías limitan los movimientos, sin alterar el saldo real."
       title="Cuentas"
     >
       <AnalyticsPageGrid variant="kpis">
@@ -44,7 +55,7 @@ export function AccountsPageView({
           detail={`${countFormatter.format(accounts.length)} cuentas`}
           formatValue={euroFormatter}
           icon={<Icon name="wallet" />}
-          label="Saldo conjunto"
+          label="Saldo real conjunto al cierre"
           tone={totals.closingEurMinor >= 0 ? "cash" : "negative"}
           value={euroFromMinor(totals.closingEurMinor)}
         />
@@ -75,12 +86,32 @@ export function AccountsPageView({
       </AnalyticsPageGrid>
 
       <Panel className={styles.chartPanel}>
+        <div className={chartStyles.controls}>
+          <label className={chartStyles.control}>
+            Métrica de cuentas
+            <select value={metric} onChange={(event) => onMetricChange?.(event.target.value as AccountMetric)}>
+              {Object.entries(ACCOUNT_METRIC_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
+        </div>
         <HorizontalBarChart
           data={accountBars}
-          description="Cuentas ordenadas por saldo absoluto del periodo."
+          description={`${ACCOUNT_METRIC_LABELS[metric]}. Orden por importe absoluto; se conserva el signo.`}
           formatValue={euroFormatter}
           labelHeader="Cuenta"
-          title="Mapa de saldos"
+          onSelectDatum={metric === "periodClosingBalanceEurMinor" ? undefined : onViewTransactions}
+          title={metric === "periodClosingBalanceEurMinor" ? "Mapa de saldos" : "Comparación de cuentas"}
+        />
+      </Panel>
+
+      <Panel className={styles.chartPanel}>
+        <LineChart
+          description={`${ACCOUNT_METRIC_LABELS[metric]}. Muestra u oculta cuentas en la leyenda; ajusta las fechas y la agrupación en los filtros globales.`}
+          formatLabel={formatPeriodLabel}
+          formatValue={euroFormatter}
+          onSelectPeriod={metric === "periodClosingBalanceEurMinor" ? undefined : onViewPeriod}
+          series={accountSeries}
+          title="Evolución comparada de cuentas"
         />
       </Panel>
 
@@ -134,6 +165,16 @@ export function AccountsPageView({
                 >
                   Filtrar
                 </Button>
+                {onViewTransactions ? (
+                  <Button
+                    aria-label={`Ver movimientos de ${item.account.label}`}
+                    onClick={() => onViewTransactions(item.account.id)}
+                    size="compact"
+                    variant="secondary"
+                  >
+                    Movimientos
+                  </Button>
+                ) : null}
                 <AccountDetails
                   exchangeRateToEur={item.exchangeRateToEur}
                   item={item}

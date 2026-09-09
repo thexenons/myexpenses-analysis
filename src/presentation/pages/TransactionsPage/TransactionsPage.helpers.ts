@@ -1,4 +1,5 @@
-import type { NormalizedPosting } from "../../../domain/analytics/types.ts";
+import { resolvePostingAccounts } from "../../../domain/analytics/transfer-relations.ts";
+import type { AnalyticsDataset, NormalizedPosting } from "../../../domain/analytics/types.ts";
 import type { TransactionSortKey } from "./TransactionsPage.types.ts";
 
 export const TRANSACTIONS_PAGE_SIZE = 50;
@@ -16,6 +17,7 @@ function csvCell(value: string | number): string {
 
 export function createPostingsCsv(
   postings: readonly NormalizedPosting[],
+  dataset?: AnalyticsDataset,
 ): string {
   const header = [
     "fecha",
@@ -60,9 +62,15 @@ export function createPostingsCsv(
     "payee_id",
     "metodo_id",
     "tag_ids",
+    "cuenta_origen_uuid",
+    "cuenta_origen",
+    "cuenta_destino_uuid",
+    "cuenta_destino",
+    "contrapartida_id",
   ];
-  const lines = postings.map((posting) =>
-    [
+  const lines = postings.map((posting) => {
+    const relation = dataset === undefined ? undefined : resolvePostingAccounts(posting, dataset);
+    return [
       posting.date,
       posting.accountLabel,
       posting.accountType,
@@ -108,19 +116,25 @@ export function createPostingsCsv(
       posting.payeeSourceId ?? "",
       posting.paymentMethodSourceId ?? "",
       posting.tagSourceIds?.join(" | ") ?? "",
+      relation?.originAccount?.id ?? "",
+      relation?.originAccount?.label ?? "",
+      relation?.destinationAccount?.id ?? "",
+      relation?.destinationAccount?.label ?? "",
+      relation?.peer?.id ?? "",
     ]
       .map(csvCell)
-      .join(","),
-  );
+      .join(",");
+  });
 
   return [header.join(","), ...lines].join("\n");
 }
 
 export function downloadPostingsCsv(
   postings: readonly NormalizedPosting[],
+  dataset?: AnalyticsDataset,
 ): void {
   const url = URL.createObjectURL(
-    new Blob(["\uFEFF", createPostingsCsv(postings)], {
+    new Blob(["\uFEFF", createPostingsCsv(postings, dataset)], {
       type: "text/csv;charset=utf-8",
     }),
   );
@@ -137,7 +151,14 @@ export function downloadPostingsCsv(
 function comparePostingsByDate(
   left: NormalizedPosting,
   right: NormalizedPosting,
+  dateBasis: "operation" | "value",
 ): number {
+  if (dateBasis === "value") {
+    const byValueDate = (left.valueDate ?? left.date).localeCompare(right.valueDate ?? right.date);
+    if (byValueDate !== 0) return byValueDate;
+    const byValueTime = (left.valueTime ?? left.localTime ?? "00:00:00").localeCompare(right.valueTime ?? right.localTime ?? "00:00:00");
+    return byValueTime || left.id.localeCompare(right.id);
+  }
   if (
     left.epochSeconds !== undefined &&
     right.epochSeconds !== undefined &&
@@ -157,13 +178,14 @@ export function sortPostings(
   postings: readonly NormalizedPosting[],
   sortKey: TransactionSortKey,
   descending: boolean,
+  dateBasis: "operation" | "value" = "operation",
 ): readonly NormalizedPosting[] {
   return postings.toSorted((left, right) => {
     const comparison =
       sortKey === "date"
-        ? comparePostingsByDate(left, right)
+        ? comparePostingsByDate(left, right, dateBasis)
         : left.amountEurMinor - right.amountEurMinor ||
-          comparePostingsByDate(left, right);
+          comparePostingsByDate(left, right, dateBasis);
     return descending ? -comparison : comparison;
   });
 }

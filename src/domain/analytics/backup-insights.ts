@@ -1,4 +1,5 @@
 import type { BackupNativeAccountType } from "./backup-dataset.types.ts";
+import { postingDate } from "./filters.ts";
 import type {
   FilteredAnalyticsDataset,
   IsoDate,
@@ -62,6 +63,7 @@ export interface WeekdayInsight extends InsightAmountBucket {
 }
 
 export interface TimingInsights {
+  readonly dateBasis?: "operation" | "value";
   readonly hourCoverageRatio: number;
   readonly hours: readonly HourInsight[];
   readonly midnightOrMissingTimeCount: number;
@@ -145,7 +147,8 @@ export interface BackupInsights {
 }
 
 export interface AggregateBackupInsightsOptions {
-  readonly topPayeeLimit?: number;
+  /** Null retains all ranked payees for user-controlled presentation limits. */
+  readonly topPayeeLimit?: number | null;
 }
 
 interface MutableAmountBucket {
@@ -215,15 +218,15 @@ function payeeAmount(
 function rankPayees(
   payees: readonly PayeeInsight[],
   amount: (payee: PayeeInsight) => number,
-  limit: number,
+  limit: number | null,
 ): readonly PayeeInsight[] {
-  return payees
+  const ranked = payees
     .filter((payee) => amount(payee) !== 0)
     .toSorted((left, right) => {
       const difference = Math.abs(amount(right)) - Math.abs(amount(left));
       return difference === 0 ? left.name.localeCompare(right.name, "es") : difference;
-    })
-    .slice(0, limit);
+    });
+  return limit === null ? ranked : ranked.slice(0, limit);
 }
 
 interface DateFacts {
@@ -326,10 +329,11 @@ function shortHash(hash: string): string {
   return `${hash.slice(0, 8)}…${hash.slice(-6)}`;
 }
 
-function assertTopPayeeLimit(value: number | undefined): number {
+function assertTopPayeeLimit(value: number | null | undefined): number | null {
+  if (value === null) return null;
   const limit = value ?? 5;
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 25) {
-    throw new Error("topPayeeLimit must be an integer from 1 through 25");
+  if (!Number.isSafeInteger(limit) || limit < 1) {
+    throw new Error("topPayeeLimit must be a positive safe integer or null");
   }
   return limit;
 }
@@ -378,14 +382,17 @@ export function aggregateBackupInsights(
     if (posting.linked) linkedPostingCount += 1;
     if (posting.splitIndex !== null) splitPartCount += 1;
     const weekdayBucket =
-      weekdayBuckets[dateFacts(posting.date, dateCache).isoWeekday - 1]!;
+      weekdayBuckets[dateFacts(postingDate(posting, filtered.filters), dateCache).isoWeekday - 1]!;
     addPostingAmount(weekdayBucket, posting, "Weekday activity");
 
+    const localTime = filtered.filters.dateBasis === "value" && posting.valueDate !== undefined
+      ? posting.valueTime
+      : posting.localTime;
     const timeMatch =
-      posting.localTime === undefined
+      localTime === undefined
         ? null
-        : PRECISE_TIME_PATTERN.exec(posting.localTime);
-    if (timeMatch !== null && posting.localTime !== "00:00:00") {
+        : PRECISE_TIME_PATTERN.exec(localTime);
+    if (timeMatch !== null && localTime !== "00:00:00") {
       const hour = Number(timeMatch[1]);
       const bucket = hourBuckets[hour];
       if (bucket === undefined) {
@@ -502,6 +509,7 @@ export function aggregateBackupInsights(
       voidPostingCount,
     },
     timing: {
+      dateBasis: filtered.filters.dateBasis ?? "operation",
       hourCoverageRatio: coverage(timedPostingCount, filtered.postings.length),
       hours: hourBuckets.map((bucket, hour) => ({
         hour,

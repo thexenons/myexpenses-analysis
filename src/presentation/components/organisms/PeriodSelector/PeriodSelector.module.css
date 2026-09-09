@@ -13,7 +13,8 @@
   }
 
   .root[data-variant="compact"] {
-    grid-template-columns: minmax(5.2rem, auto) minmax(8rem, 1fr);
+    display: flex;
+    flex-wrap: wrap;
     gap: 0.4rem;
     align-items: center;
     min-height: 2.75rem;
@@ -21,6 +22,17 @@
     background: var(--surface-bright);
     border: 1px solid var(--line-dark);
     border-radius: 999px;
+  }
+
+  .root[data-variant="compact"] > .compactMode {
+    flex: 1 1 5.2rem;
+  }
+
+  .root[data-variant="compact"] > .field,
+  .root[data-variant="compact"] > .customFields,
+  .root[data-variant="compact"] > .allPeriod {
+    flex: 1 1 8rem;
+    min-width: 0;
   }
 
   .compactMode,

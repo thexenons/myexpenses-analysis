@@ -101,6 +101,8 @@ export interface DivergingBarChartModel {
   chartHeight: number
   legendItems: ReadonlyArray<ChartLegendItem>
   plotBottom: number
+  plotLeft: number
+  plotRight: number
   resolvedLeftColor: string
   resolvedRightColor: string
   tickScale: Scale
