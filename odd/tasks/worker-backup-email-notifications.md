@@ -1,13 +1,14 @@
 # Worker backup email notifications
 
-**Status:** Original feature delivered to `origin/main`; WN-05 implemented and verified locally, with follow-up commit/`main` push pending parent action.
+**Status:** Original feature and WN-05 delivered to `origin/main`. Coolify redeployment and live message delivery remain manual checks.
 
-## STARTTLS follow-up — local implementation complete
+## STARTTLS follow-up — delivered
 
 - [x] **WN-05 — Use OVH port 587 with mandatory STARTTLS.** The user reported `ETIMEDOUT` on port 465 from Hetzner, then `SMTP_OK` from the deployed worker with `port: 587`, `secure: false`, and `requireTLS: true`. That verifies connectivity, TLS and authentication, not message delivery. Updated only the SMTP transport, its test expectations, and applicable documentation; certificate verification, credentials, timeouts, logging privacy, and notification state/retries are unchanged. No real email, remote server access, or Coolify change by the agent.
 - Route: delegated writer (transport, tests and documentation); parent owns authorized commits, `main` integration and push using the previously authorized Git SSH setup. Leave the unrelated category-average backlog note untouched and uncommitted. Authored diff: 31 changed lines; direct-main delivery, no PR.
 - Strict TDD observed: `pnpm exec tsx --test scripts/sync-pcloud/notification-mail.test.ts` was RED (1 passed, 1 failed: expected port 587, actual 465), then GREEN (2 passed). Final checks: focused sync-pcloud 75 passed; Node 222 passed, 2 reference-dataset skips; deployment 1 passed; `pnpm type-check`, `pnpm lint`, and `pnpm build` exited 0. UI tests were not rerun because no UI code changed.
 - Acceptance verified locally: port 587, explicit mandatory STARTTLS, normal certificate validation, all existing environment variables unchanged, no duplicate-state or publication changes. Coolify needs a redeploy after delivery, not new variables. Rollback boundary: this transport/test/docs change only; it does not modify persisted notification state.
+- Delivery: implementation commit `9d57a61` was fast-forward merged into `main` and pushed; remote `refs/heads/main` was verified at `9d57a6129ffa4dc73e231ccc6f64b93c92daa980`. Parent SMTP spot check passed 2/2. Native committed-slice assessment against `8ec5b45`: medium, 31 changed lines, `review_due: false` / `under_budget`; unrelated untracked backlog note explicitly excluded. No new review transaction was required.
 - Evidence: [Hetzner Cloud SMTP restrictions](https://docs.hetzner.com/cloud/servers/faq/#why-can-i-not-send-any-mails-from-my-server), [OVH MX Plan STARTTLS settings](https://docs.ovhcloud.com/it/guides/web-cloud/email-and-collaborative-solutions/mx-plan/how-to-configure-thunderbird-windows). Engram mirror remains pending due to the existing session-registration error.
 
 ## Latest delivery checkpoint
