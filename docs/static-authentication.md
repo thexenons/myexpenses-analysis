@@ -94,12 +94,13 @@ pCloud lo crea dentro de un workspace `0700` y lo elimina antes de construir.
 
 ## Qué protege y qué no
 
-Protege frente a:
-
-- descarga directa o indexación accidental del contenido estático;
-- exposición de un bucket/directorio de hosting;
-- lectura o modificación no autenticada del ciphertext;
-- manipulación del algoritmo, iteraciones, salt, IV o tamaño declarado.
+La bóveda cifrada **se sirve públicamente**: cualquiera puede descargarla y
+leer sus bytes. El cifrado protege la **confidencialidad del dataset en claro**
+frente a quien sólo obtiene esa bóveda; AES-GCM detecta cambios en el
+ciphertext y en el header autenticado (algoritmo, iteraciones, salt, IV y
+tamaño declarado) durante el desbloqueo. No impide descargar, sustituir ni
+borrar el fichero en el hosting; los permisos de escritura y la seguridad del
+servidor son controles separados.
 
 No protege frente a:
 
@@ -107,7 +108,11 @@ No protege frente a:
 - un navegador ya desbloqueado o un dispositivo comprometido;
 - un servidor/hosting comprometido que entregue JavaScript modificado para
   capturar la frase;
-- un administrador que pueda leer el fichero de frase del cron;
+- denegación de servicio o sustitución de la bóveda por quien controle el
+  hosting; la autenticación criptográfica rechazará una bóveda alterada, pero
+  no restaurará la disponibilidad;
+- un administrador que pueda leer el fichero de frase del cron o los secretos
+  de entorno de ejecución del worker de Coolify;
 - una vulnerabilidad XSS futura;
 - copias antiguas de `dist/` que contuviesen el JSON claro.
 

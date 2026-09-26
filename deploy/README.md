@@ -1,5 +1,10 @@
 # Despliegue periódico desde pCloud
 
+Esta guía corresponde al despliegue en un host Linux con CLI, archivos de
+secretos y cron. Para Coolify con Docker Compose y secretos de entorno, sigue
+[la guía de Coolify](../docs/coolify-deployment.md) **en lugar de** estos pasos;
+no actives cron y worker sobre el mismo volumen.
+
 Estos archivos son ejemplos; no contienen secretos ni activan el cron por sí
 solos. El servidor web debe usar como document root:
 
@@ -66,10 +71,40 @@ El orquestador publica el directorio, cambia `current` y escribe el estado
 privado sólo después del éxito completo. Una excepción conserva la release
 anterior. `--force` permite reconstruir el mismo backup tras actualizar código.
 
-El cron usa además `flock`; el orquestador mantiene su propio lock con PID y
-recupera de forma segura locks cuyo proceso ya no existe. `--force` vuelve a
-procesar el mismo backup sin sobrescribir la release anterior.
+El cron usa además `flock` sobre `.cron.lock`; el CLI y el worker comparten el
+bloqueo de kernel sobre `.sync.lock`. Este archivo permanece incluso sin una
+ejecución activa: no lo borres ni lo trunques para liberar un bloqueo. Un
+antiguo archivo con PID requiere migración con todos los escritores detenidos.
+`--force` vuelve a procesar el mismo backup sin sobrescribir la release anterior.
 
 Las releases anteriores se conservan deliberadamente para rollback y no se
 eliminan de forma automática. Revísalas periódicamente, sobre todo al rotar la
 frase de la bóveda.
+
+## Rotación del log
+
+El cron añade salida a `/var/log/myexpenses-sync.log` cada 15 minutos; sin
+rotación, ese fichero crece indefinidamente. Instala esta política como
+`/etc/logrotate.d/myexpenses-sync` y comprueba que el servicio periódico de
+`logrotate` esté activo:
+
+```text
+/var/log/myexpenses-sync.log {
+    weekly
+    rotate 12
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0600 myexpenses myexpenses
+}
+```
+
+Conserva 12 rotaciones semanales. La rotación por renombrado y `create` evita
+`copytruncate`, cuya ventana de copia/truncado puede perder líneas. Una
+ejecución de cron ya iniciada puede seguir escribiendo en el fichero
+renombrado hasta terminar; la siguiente abre el nuevo fichero. `delaycompress`
+deja la rotación más reciente sin comprimir para ese caso, pero no sustituye
+la monitorización si una ejecución dura más de un ciclo de rotación. Prueba la
+configuración sin cambiar logs con
+`sudo logrotate --debug /etc/logrotate.d/myexpenses-sync`.

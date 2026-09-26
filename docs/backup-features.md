@@ -31,8 +31,10 @@ fallbacks, asignaciones, rollovers y consumo real. Incluye:
 
 - selector de presupuesto y periodo;
 - asignado global, gasto neto, disponible y porcentaje utilizado;
-- estado propio `on-track`, `watch` o `exceeded`; estos umbrales son una ayuda
-  web y se etiquetan como derivación, no como dato oficial;
+- estado derivado de la web: `unallocated` si el asignado es menor o igual a
+  cero; `on-track` con utilización inferior al 75 %; `watch` entre el 75 % y
+  el 100 % inclusive; `exceeded` por encima del 100 %. No es un dato oficial
+  de MyExpenses;
 - desglose jerárquico sin sumar dos veces una asignación de padre e hijos;
 - asignaciones exactas frente a fallback, one-time y rollovers;
 - intersección con todos los filtros globales;

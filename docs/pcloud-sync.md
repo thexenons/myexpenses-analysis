@@ -2,7 +2,10 @@
 
 ## Alcance
 
-`pnpm deploy:sync-pcloud` está diseñado para un cron de Ubuntu. En cada
+Esta guía corresponde al CLI con archivos de configuración y cron en un host
+Ubuntu. Para Coolify con Docker Compose y secretos de entorno, usa la
+[guía específica](coolify-deployment.md); son alternativas, no pasos que deban
+combinarse. `pnpm deploy:sync-pcloud` en este host, en cada
 ejecución:
 
 1. obtiene el listado directo de una carpeta pCloud concreta;
@@ -72,12 +75,17 @@ a `/etc/myexpenses/sync-pcloud.json` y ajusta:
 - `folderId`: string decimal de la carpeta; como alternativa, `path` absoluto;
 - `tokenFile`: fichero `0600` con el Bearer;
 - `vaultPassphraseFile`: fichero `0600` con la frase de la web;
-- `deployRoot`: padre privado de `releases/`, `.work/`, estado y `current`;
+- `deployRoot`: padre de `releases/`, `.work/`, estado y `current`. El padre y
+  `releases/` deben ser transitables por el servidor web (el ejemplo usa
+  `0755`); no son directorios privados. `.work/` es `0700` y el estado
+  `.sync-state.json` es `0600`, fuera del document root `current`;
 - `repositoryRoot`: checkout con dependencias instaladas;
 - `timeZone`: zona IANA que MyExpenses no incluye en el backup.
 
-Los árboles `deployRoot` y `repositoryRoot` deben estar separados. Ningún
-secreto se admite dentro del JSON de configuración, argumentos, entorno o logs.
+Los árboles `deployRoot` y `repositoryRoot` deben estar separados. En **este
+CLI con configuración JSON**, ningún secreto se admite dentro del JSON,
+argumentos, entorno o logs: token y frase se leen desde archivos `0600`. El
+worker de Coolify usa, en cambio, secretos de entorno de ejecución.
 
 Prueba manual:
 
@@ -91,8 +99,12 @@ pnpm deploy:sync-pcloud -- \
 ## Cron y publicación atómica
 
 El ejemplo [sync-pcloud.cron.example](../deploy/sync-pcloud.cron.example) ejecuta
-cada 15 minutos y añade `flock`. El orquestador mantiene además un lock privado
-con PID y recupera uno huérfano cuando el proceso ya no existe.
+cada 15 minutos y añade `flock` sobre `.cron.lock`. El CLI y el worker comparten
+además un bloqueo de kernel sobre el archivo persistente `.sync.lock`; su
+existencia **no** indica una ejecución activa. No lo borres ni lo trunques,
+incluso cuando el proceso termine. Un archivo antiguo que contenga un PID no
+es un bloqueo recuperable automáticamente: detén los escritores y resuelve la
+migración antes de continuar.
 
 El servidor web debe apuntar a:
 
@@ -106,10 +118,121 @@ estado `.sync-state.json` queda fuera del document root efectivo y con modo
 `0600`.
 
 Las releases antiguas no se eliminan automáticamente: permiten rollback y
-evitan convertir una política de retención incorrecta en pérdida de datos. Para
-volver atrás, cambia `current` de forma atómica hacia una release revisada y usa
-`--force` en la siguiente actualización. Al rotar la frase, retira después las
-releases cifradas con la frase anterior.
+evitan convertir una política de retención incorrecta en pérdida de datos.
+Para volver atrás:
+
+1. Detén el cron, el worker de Coolify si existe, y cualquier sincronización
+   manual; espera a que terminen. No ejecutes simultáneamente cron y worker, ni
+   borres `.sync.lock`. Mantén los escritores detenidos hasta decidir cuándo
+   publicar datos nuevos.
+2. Selecciona y revisa un ID existente bajo `releases/`; confirma que esa
+   release contiene `index.html` y `data/app-dataset.vault.json`, y que conoces
+   la frase con la que se cifró. Ejecútalo como el usuario `myexpenses`,
+   sustituyendo el ID:
+
+   ```bash
+   sudo -u myexpenses /usr/bin/env node --input-type=module <<'JS'
+   import {
+     closeSync, constants, fstatSync, lstatSync, openSync, readlinkSync,
+     renameSync, symlinkSync, unlinkSync,
+   } from 'node:fs';
+   import { join } from 'node:path';
+   import { spawnSync } from 'node:child_process';
+
+   const root = '/srv/myexpenses';
+   const releaseId = 'replace-with-reviewed-release-id';
+   const held = [];
+   let temporary;
+   let temporaryCreated = false;
+   process.umask(0o077);
+
+   function directory(path) {
+     const entry = lstatSync(path);
+     if (!entry.isDirectory() || entry.uid !== process.getuid() ||
+         (entry.mode & 0o022) !== 0) throw new Error('Directorio inseguro');
+   }
+
+   function acquire(name, strictMode) {
+     const path = join(root, name);
+     const fd = openSync(path, constants.O_CREAT | constants.O_RDWR | constants.O_NOFOLLOW, 0o600);
+     try {
+       const verify = () => {
+         const open = fstatSync(fd);
+         const visible = lstatSync(path);
+         if (!open.isFile() || !visible.isFile() || open.dev !== visible.dev ||
+             open.ino !== visible.ino || open.nlink !== 1 || open.size !== 0 ||
+             open.uid !== process.getuid() ||
+             (strictMode ? (open.mode & 0o777) !== 0o600 : (open.mode & 0o022) !== 0)) {
+           throw new Error(`Bloqueo inseguro: ${name}`);
+         }
+       };
+       verify();
+       const result = spawnSync('/usr/bin/flock',
+         ['--exclusive', '--nonblock', '--conflict-exit-code', '75', '3'],
+         { stdio: ['ignore', 'ignore', 'ignore', fd] });
+       if (result.error || result.status !== 0) throw new Error(`Bloqueo ocupado o no disponible: ${name}`);
+       verify();
+       held.push(fd);
+     } catch (error) {
+       closeSync(fd);
+       throw error;
+     }
+   }
+
+   try {
+     if (!/^[a-z0-9][a-z0-9-]{0,159}$/.test(releaseId)) throw new Error('ID de release inválido');
+     directory(root);
+     directory(join(root, 'releases'));
+     acquire('.cron.lock', false);
+     acquire('.sync.lock', true);
+     const release = join(root, 'releases', releaseId);
+     directory(release);
+     directory(join(release, 'data'));
+     for (const file of ['index.html', 'data/app-dataset.vault.json']) {
+       if (!lstatSync(join(release, file)).isFile()) throw new Error('Release incompleta');
+     }
+     const current = join(root, 'current');
+     if (!lstatSync(current).isSymbolicLink()) throw new Error('Enlace current inválido');
+     const previous = readlinkSync(current);
+     if (!/^releases\/[a-z0-9][a-z0-9-]{0,159}$/.test(previous)) throw new Error('Destino current inválido');
+     directory(join(root, previous));
+     temporary = join(root, `.current.rollback.${process.pid}`);
+     symlinkSync(`releases/${releaseId}`, temporary);
+     temporaryCreated = true;
+     renameSync(temporary, current);
+     temporaryCreated = false;
+     if (readlinkSync(current) !== `releases/${releaseId}`) throw new Error('Publicación no verificada');
+     console.log(`Anterior: ${previous}; actual: ${readlinkSync(current)}`);
+   } catch (error) {
+     console.error(error instanceof Error ? error.message : 'Rollback fallido');
+     process.exitCode = 1;
+   } finally {
+     if (temporaryCreated) {
+       try { unlinkSync(temporary); } catch { /* No se creó el enlace temporal. */ }
+     }
+     for (const fd of held.reverse()) closeSync(fd);
+   }
+   JS
+   ```
+
+   El ejemplo usa Node y `/usr/bin/flock` ya necesarios en este host. Abre los
+   bloqueos sin seguir symlinks y conserva sus descriptores hasta terminar;
+   si alguno está ocupado o tiene metadatos inseguros, no cambia `current`.
+   Un `.sync.lock` ausente se crea con `0600`; uno antiguo con PID exige
+   intervención manual con todos los escritores detenidos. No renombres ni
+   elimines el bloqueo para «desatascar» una ejecución activa.
+
+3. Verifica por HTTPS que la aplicación carga y que la bóveda se desbloquea
+   con la frase correspondiente. El cambio de symlink es atómico, pero **no**
+   modifica `.sync-state.json`; conserva el estado para diagnóstico. Al
+   reanudar el cron, el orquestador verá que `current` no coincide con la
+   release del estado y puede volver a publicar el backup más reciente. No
+   ejecutes `--force` como parte del rollback inmediato: reconstruye y publica
+   el backup más reciente, no la release antigua. Úsalo sólo cuando quieras
+   desplegar de nuevo tras corregir la causa.
+
+Al rotar la frase, retira después las releases cifradas con la frase anterior.
+La configuración de rotación del log está en [la guía de despliegue](../deploy/README.md#rotación-del-log).
 
 ## Límites y operación
 
@@ -120,5 +243,4 @@ releases cifradas con la frase anterior.
 - Un servidor comprometido puede leer el token y la frase, o modificar el
   JavaScript publicado. Aplica parches, mínimo privilegio, HTTPS y las cabeceras
   de [protección estática](static-authentication.md).
-- Revisa crecimiento de `releases/` y logs; el pruning es deliberadamente
-  manual.
+- Revisa crecimiento de `releases/`; el pruning es deliberadamente manual.

@@ -165,8 +165,10 @@ Git y deben generarse localmente.
 El comando `pnpm deploy:sync-pcloud` consulta una carpeta concreta mediante
 OAuth Bearer, selecciona la copia más reciente, verifica sus checksums, importa,
 cifra y construye una release nueva. Sólo después cambia de forma atómica el
-symlink `current`; un fallo conserva la versión anterior. La configuración,
-cron y permisos están en [deploy/README.md](deploy/README.md).
+symlink `current`; un fallo conserva la versión anterior. Para un host Linux
+con cron, consulta [deploy/README.md](deploy/README.md). Para Coolify con
+Docker Compose, usa la [guía de Coolify](docs/coolify-deployment.md) en su
+lugar; no ejecutes ambos métodos sobre el mismo volumen.
 
 ## Verificación
 
