@@ -48,8 +48,9 @@ environment adapter with in-memory credentials rather than shell/JSON interpolat
   lifecycle boundary and its crash/shutdown tests; splitting by file type would
   leave that behavior incomplete. This is an estimate, not a per-task hard cap.
 - Commits: C01 `636368f` (471 authored changed lines), C02 `ff62398` (1153),
-  C03 `372ea40` (477). Running authored total: 2101 lines. No push/PR will be created without
-  separate authorization. The delivery choice is resolved; do not ask again.
+  C03 `372ea40` (477), C04 `9124c92` (602). Cumulative authored total:
+  2703 lines. No push/PR was created. The delivery choice is resolved; do not
+  ask again.
 
 ## Tasks
 
@@ -131,9 +132,11 @@ environment adapter with in-memory credentials rather than shell/JSON interpolat
   Contract test failed RED on the prior denylist, then focused tests passed
   11/11 with type-check, lint and diff checks. Actual Docker context transfer
   remains unverified without Docker.
-  Docker, Podman and nginx are unavailable, so image build, Compose runtime,
-  nginx syntax and health behavior remain pending live-container proof. This
-  task is locally complete and committed as `372ea40`. Native assessment:
+  At C03 verification, Docker, Podman and nginx were unavailable, so image
+  build, Compose runtime, nginx syntax and health behavior lacked local proof.
+  C04 later proved nginx syntax and HTTP policy with a pinned binary outside
+  containers; image and live-container behavior remain unverified. This task
+  is locally complete and committed as `372ea40`. Native assessment:
   medium (slice budget reached); user granted; reliability review found no
   defects. Exact acknowledgement consumed `review-fb4ab10d7cf7d8ea`.
   Independent final spot check passed 11/11 focused tests and type-check. A
@@ -173,8 +176,15 @@ environment adapter with in-memory credentials rather than shell/JSON interpolat
   `/tmp/myexpenses-nginx-proof-eOrWe0/report.json`. Docker image installation,
   Compose/named-volume copy-up, actual web UID 101 permissions, runtime
   health/replacement lifecycle, Coolify proxy/TLS, browser smoke checks and
-  real pCloud remain unverified. C04 is locally complete but uncommitted and
-  not yet assessed/reviewed; live operator acceptance remains pending.
+  real pCloud remain unverified. C04 is locally complete and committed as
+  `9124c923b70c786fb67b4174a996a9234c1f648b`; live operator acceptance
+  remains pending. The final committed slice from `372ea40` through `9124c92`
+  also includes registry cache `58af359` and documentation `811eaef`:
+  13 files, 862 authored changed lines. Native risk was high
+  (`process_boundary`); the user granted consent, all four parallel lenses
+  found no issues, and the approved acknowledgement burned authority for
+  lineage `review-06f7b592ce57df63` at consumed revision
+  `sha256:ba8fc1314c04dea844ada4f96df489b4a5747d35f7bebc2c1b4af911c6563130`.
   Independent final spot check passed `pnpm test:deployment` (1/1, 33.07s),
   `pnpm type-check` and `git diff --check`, with no actionable findings. The
   verifier confirmed four real TypeScript invocations, three Vite builds,
@@ -195,22 +205,24 @@ environment adapter with in-memory credentials rather than shell/JSON interpolat
 
 ## Progress and next step
 
-C01, C02 and C03 are committed, functionally verified and independently reviewed.
-The last reviewed boundary is `372ea40653a458fccb4c6ef528b8d2534f3dc1ff`.
-The C04 guide and durable synthetic integration test are implemented and locally
-checked; next: parent structural readback, commit/native assessment and review,
-then authorized live deployment acceptance by an operator.
+C01-C04 are committed, locally verified and independently reviewed. The last
+reviewed boundary is `9124c923b70c786fb67b4174a996a9234c1f648b`. No
+local implementation task remains. Live deployment acceptance still requires
+separate operator authorization and evidence; no push or deployment was done.
 The original pending documentation was preserved and reconciled separately.
 The functional verifier confirmed
 that Docker, Podman and nginx are absent from PATH. A separate pinned nginx
 binary passed local synthetic HTTP checks; no live container test ran.
 
-The separately pending registry cache is committed as `58af359`; its native
-assessment is medium, `under_budget` (2 lines), so it stays in the pending
-review slice based on `372ea40`. Legacy documentation was reconciled with
-the persistent kernel lease in `811eaef`, after 13 synthetic writer checks
-and an independent rollback spot check passed. That slice remains medium,
-`under_budget` at 264 authored lines; C04 will complete the pending slice.
+The registry cache `58af359` and legacy documentation `811eaef` had earlier
+medium, `under_budget` assessments (2 and 264 lines in their respective
+pending ranges). Those were historical intermediate states, not unresolved
+reviews: both commits were included in the final approved C04 slice. Legacy
+documentation reconciliation passed 13 synthetic writer checks and an
+independent rollback spot check. Docker image installation, Compose and volume
+copy-up, actual UID 101 permissions, health/replacement lifecycle, Coolify
+proxy/TLS, browser smoke tests, real pCloud, and production `myexpenses`
+logrotate validation remain pending live checks.
 
 Engram mirror: pending. Writes currently fail with `unknown_session` even when
 `session_id` is omitted; no identity has been invented or registered.
