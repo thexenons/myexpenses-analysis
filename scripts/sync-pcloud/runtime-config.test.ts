@@ -28,7 +28,54 @@ test("loads validated settings and exact literal secrets from memory", () => {
         token: validEnvironment.PCLOUD_TOKEN,
         vaultPassphrase: validEnvironment.MYEXPENSES_VAULT_PASSPHRASE,
     });
+    assert.equal(runtime.notifications, undefined);
     assert.doesNotMatch(JSON.stringify(runtime.config), /token|passphrase|File/iu);
+});
+
+test("notifications require complete runtime-only addresses and password", () => {
+    const notifications = {
+        MYEXPENSES_NOTIFICATION_TO: "recipient@example.com",
+        MYEXPENSES_NOTIFICATION_FROM: "sender@example.com",
+        MYEXPENSES_SMTP_PASSWORD: "private password",
+    };
+    const runtime = loadSyncPCloudRuntimeConfig({ ...validEnvironment, ...notifications });
+    assert.deepEqual(runtime.notifications, {
+        to: notifications.MYEXPENSES_NOTIFICATION_TO,
+        from: notifications.MYEXPENSES_NOTIFICATION_FROM,
+        password: notifications.MYEXPENSES_SMTP_PASSWORD,
+    });
+    for (const patch of [
+        { MYEXPENSES_NOTIFICATION_TO: "recipient@example.com" },
+        { ...notifications, MYEXPENSES_NOTIFICATION_TO: "a@example.com,b@example.com" },
+        { ...notifications, MYEXPENSES_NOTIFICATION_FROM: "sender@example.com\r\nBcc: evil@example.com" },
+        { ...notifications, MYEXPENSES_SMTP_PASSWORD: "" },
+    ]) {
+        assert.throws(() => loadSyncPCloudRuntimeConfig({ ...validEnvironment, ...patch }), /notification configuration is invalid/iu);
+    }
+});
+
+test("notification addresses reject trailing line terminators", () => {
+    const notifications = {
+        MYEXPENSES_NOTIFICATION_TO: "recipient@example.com",
+        MYEXPENSES_NOTIFICATION_FROM: "sender@example.com",
+        MYEXPENSES_SMTP_PASSWORD: "private-password",
+    };
+    for (const key of ["MYEXPENSES_NOTIFICATION_TO", "MYEXPENSES_NOTIFICATION_FROM"] as const) {
+        for (const terminator of ["\n", "\r", "\u2028", "\u2029"]) {
+            const invalid = notifications[key] + terminator;
+            assert.throws(
+                () => loadSyncPCloudRuntimeConfig({
+                    ...validEnvironment,
+                    ...notifications,
+                    [key]: invalid,
+                }),
+                (error: unknown) =>
+                    error instanceof Error &&
+                    /notification configuration is invalid/iu.test(error.message) &&
+                    !error.message.includes(invalid),
+            );
+        }
+    }
 });
 
 test("accepts a folder path and validates explicit roots and time zone", () => {

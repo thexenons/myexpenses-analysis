@@ -289,6 +289,73 @@ test("notification counters remain exact beyond Number.MAX_SAFE_INTEGER", async 
     }
 });
 
+test("notification acknowledgements reject noncanonical input without changing state", async () => {
+    const value = await fixture();
+    try {
+        await runPCloudSync(value.config, dependencies(
+            fakeClient(verified()), pipeline({ value: 0 }),
+        ), { notificationsEnabled: true });
+        const statePath = join(value.deployRoot, ".sync-state.json");
+        const before = await readFile(statePath);
+        const lease = await acquireSyncLease(value.deployRoot);
+        try {
+            for (const sequence of ["1\n", "1\r", "1\u2028", "1\u2029", "01", "1 "]) {
+                // oxlint-disable-next-line no-await-in-loop -- each rejected acknowledgement must leave the same durable state.
+                await assert.rejects(
+                    acknowledgePendingNotification(value.deployRoot, lease, sequence),
+                    /acknowledgement is invalid/iu,
+                );
+                // oxlint-disable-next-line no-await-in-loop -- verify no invalid input was persisted.
+                assert.deepEqual(await readFile(statePath), before);
+            }
+            assert.equal(await peekPendingNotification(value.deployRoot, lease), "1");
+        } finally {
+            await lease.close();
+        }
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("notification state rejects malformed counters and identity before delivery", async () => {
+    const value = await fixture();
+    try {
+        await runPCloudSync(value.config, dependencies(
+            fakeClient(verified()), pipeline({ value: 0 }),
+        ), { notificationsEnabled: true });
+        const statePath = join(value.deployRoot, ".sync-state.json");
+        const original = JSON.parse(await readFile(statePath, "utf8"));
+        const lease = await acquireSyncLease(value.deployRoot);
+        try {
+            const corruptions = [
+                { enqueued: "1\n" },
+                { enqueued: "1\u2028" },
+                { acknowledged: "0\r" },
+                { acknowledged: "0\u2029" },
+                { enqueued: "01" },
+                { lastEnqueuedIdentity: original.notifications.lastEnqueuedIdentity + "\n" },
+                { lastEnqueuedIdentity: original.notifications.lastEnqueuedIdentity + "\u2028" },
+            ];
+            for (const corruption of corruptions) {
+                // oxlint-disable-next-line no-await-in-loop -- each independent state fixture is checked in sequence.
+                await writeFile(statePath, JSON.stringify({
+                    ...original,
+                    notifications: { ...original.notifications, ...corruption },
+                }));
+                // oxlint-disable-next-line no-await-in-loop -- state parsing must fail closed before notification delivery.
+                await assert.rejects(
+                    peekPendingNotification(value.deployRoot, lease),
+                    /synchronization state is invalid/iu,
+                );
+            }
+        } finally {
+            await lease.close();
+        }
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
 test("pipeline failure leaves current release and state untouched", async () => {
     const value = await fixture();
     const count = { value: 0 };

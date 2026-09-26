@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, mkdir, mkdtemp, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -238,6 +238,123 @@ test("invalid worker timing fails before any layout work", async () => {
             MYEXPENSES_SYNC_INTERVAL_SECONDS: "0",
         }), /timing configuration is invalid/iu);
         assert.equal(await exists(value.deployRoot), false);
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("worker retries pending mail one per cycle without sending during failed bootstrap", { timeout: 5_000 }, async () => {
+    const value = await fixture();
+    const controller = new AbortController();
+    const notifications = {
+        MYEXPENSES_NOTIFICATION_TO: "recipient@example.com",
+        MYEXPENSES_NOTIFICATION_FROM: "sender@example.com",
+        MYEXPENSES_SMTP_PASSWORD: "private-password",
+    };
+    const messages: string[] = [];
+    const delivered: string[] = [];
+    let attempts = 0;
+    const deadline = setTimeout(() => controller.abort(), 1_000);
+    try {
+        await mkdir(value.deployRoot);
+        await writeFile(join(value.deployRoot, ".sync-state.json"), JSON.stringify({
+            version: 1, fileId: "100", checksumSha1: "a".repeat(40),
+            checksumSha256: "1".repeat(64), localSha256: "2".repeat(64),
+            size: 4, modifiedEpochSeconds: 1, releaseId: "release-a",
+            notifications: {
+                lastEnqueuedIdentity: "a".repeat(64),
+                enqueued: "2", acknowledged: "0",
+            },
+        }), { mode: 0o600 });
+        let cycles = 0;
+        const running = runSyncPCloudWorker({
+            ...value.environment, ...notifications,
+        }, {
+            intervalMs: 10, readinessPath: value.readyPath, signal: controller.signal,
+            sync: async (force) => {
+                cycles++;
+                if (!force) throw new Error("private sync detail");
+            },
+            sendNotification: async (settings, sequence) => {
+                assert.equal(settings.to, notifications.MYEXPENSES_NOTIFICATION_TO);
+                attempts++;
+                if (attempts === 1) throw new Error("private SMTP response");
+                delivered.push(sequence);
+                if (delivered.length === 2) controller.abort();
+            },
+            logger: { info: (message) => messages.push(message) },
+        });
+        await running;
+        const state = JSON.parse(await readFile(join(value.deployRoot, ".sync-state.json"), "utf8"));
+        assert.equal(state.notifications.acknowledged, "2");
+        assert.equal(attempts, 3);
+        assert.ok(cycles >= 3);
+        assert.deepEqual(delivered, ["1", "2"]);
+        assert.doesNotMatch(messages.join(" "), /private|recipient@example|sender@example/iu);
+    } finally {
+        clearTimeout(deadline);
+        controller.abort();
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("failed bootstrap does not attempt a pending notification", async () => {
+    const value = await fixture();
+    let sends = 0;
+    try {
+        await assert.rejects(runSyncPCloudWorker({
+            ...value.environment,
+            MYEXPENSES_NOTIFICATION_TO: "recipient@example.com",
+            MYEXPENSES_NOTIFICATION_FROM: "sender@example.com",
+            MYEXPENSES_SMTP_PASSWORD: "private-password",
+        }, {
+            readinessPath: value.readyPath,
+            sync: async () => { throw new Error("private bootstrap detail"); },
+            sendNotification: async () => { sends++; },
+        }), /bootstrap failed/iu);
+        assert.equal(sends, 0);
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("acknowledgement failure leaves mail pending for a later retry", { timeout: 5_000 }, async () => {
+    const value = await fixture();
+    const environment = {
+        ...value.environment,
+        MYEXPENSES_NOTIFICATION_TO: "recipient@example.com",
+        MYEXPENSES_NOTIFICATION_FROM: "sender@example.com",
+        MYEXPENSES_SMTP_PASSWORD: "private-password",
+    };
+    const statePath = join(value.deployRoot, ".sync-state.json");
+    let sends = 0;
+    try {
+        await mkdir(value.deployRoot);
+        await writeFile(statePath, JSON.stringify({
+            version: 1, fileId: "100", checksumSha1: "a".repeat(40),
+            checksumSha256: "1".repeat(64), localSha256: "2".repeat(64),
+            size: 4, modifiedEpochSeconds: 1, releaseId: "release-a",
+            notifications: {
+                lastEnqueuedIdentity: "a".repeat(64),
+                enqueued: "1", acknowledged: "0",
+            },
+        }), { mode: 0o600 });
+        const first = new AbortController();
+        await runSyncPCloudWorker(environment, {
+            readinessPath: value.readyPath, signal: first.signal,
+            sync: async () => {},
+            sendNotification: async () => { sends++; first.abort(); },
+            acknowledgeNotification: async () => { throw new Error("private disk detail"); },
+        });
+        assert.equal(JSON.parse(await readFile(statePath, "utf8")).notifications.acknowledged, "0");
+        const second = new AbortController();
+        await runSyncPCloudWorker(environment, {
+            readinessPath: value.readyPath, signal: second.signal,
+            sync: async () => {},
+            sendNotification: async () => { sends++; second.abort(); },
+        });
+        assert.equal(sends, 2);
+        assert.equal(JSON.parse(await readFile(statePath, "utf8")).notifications.acknowledged, "1");
     } finally {
         await rm(value.root, { force: true, recursive: true });
     }

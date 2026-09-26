@@ -5,10 +5,48 @@ import {
     type SyncPCloudSettings,
 } from "./config.ts";
 import { validateStaticVaultPassphrase } from "../../src/domain/security/static-vault.ts";
+import type { NotificationSettings } from "./notification-mail.ts";
 
 export interface SyncPCloudRuntimeConfig {
     readonly config: SyncPCloudSettings;
     readonly secrets: SyncPCloudSecrets;
+    readonly notifications?: NotificationSettings;
+}
+
+function notificationAddress(value: string): boolean {
+    if (
+        value.length < 3 || value.length > 254 ||
+        !/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+$/.test(value)
+    ) return false;
+    const domain = value.slice(value.lastIndexOf("@") + 1);
+    return domain.length <= 253 && domain.includes(".") &&
+        domain.split(".").every((label) =>
+            label.length > 0 && label.length <= 63 &&
+            /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/.test(label)
+        );
+}
+
+function loadNotificationSettings(
+    environment: NodeJS.ProcessEnv,
+): NotificationSettings | undefined {
+    const to = environment.MYEXPENSES_NOTIFICATION_TO;
+    const from = environment.MYEXPENSES_NOTIFICATION_FROM;
+    const password = environment.MYEXPENSES_SMTP_PASSWORD;
+    if ([to, from, password].every((value) => value === undefined || value === "")) {
+        return undefined;
+    }
+    if (
+        to === undefined || from === undefined || password === undefined ||
+        !notificationAddress(to) || !notificationAddress(from) ||
+        password.length < 1 || Buffer.byteLength(password, "utf8") > 4_096 ||
+        Array.from(password).some((character) => {
+            const code = character.codePointAt(0)!;
+            return code < 32 || code === 127;
+        })
+    ) {
+        throw new SyncConfigError("Runtime notification configuration is invalid");
+    }
+    return { to, from, password };
 }
 
 export function loadSyncPCloudRuntimeConfig(
@@ -71,5 +109,6 @@ export function loadSyncPCloudRuntimeConfig(
     } catch {
         throw new SyncConfigError("MYEXPENSES_VAULT_PASSPHRASE is missing or invalid");
     }
-    return { config, secrets: { token, vaultPassphrase } };
+    const notifications = loadNotificationSettings(environment);
+    return { config, secrets: { token, vaultPassphrase }, ...(notifications === undefined ? {} : { notifications }) };
 }

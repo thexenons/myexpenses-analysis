@@ -3,7 +3,13 @@ import { open, rm } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
 
 import { acquireSyncLease } from "./lease.ts";
-import { prepareSyncLayout, runPCloudSync } from "./orchestrator.ts";
+import {
+    acknowledgePendingNotification,
+    peekPendingNotification,
+    prepareSyncLayout,
+    runPCloudSync,
+} from "./orchestrator.ts";
+import { sendBackupNotification, type NotificationSettings } from "./notification-mail.ts";
 import { processBackupForStaticRelease } from "./process-backup.ts";
 import { loadSyncPCloudRuntimeConfig } from "./runtime-config.ts";
 
@@ -22,6 +28,11 @@ export interface SyncWorkerOptions {
     readonly sync?: (force: boolean, signal: AbortSignal) => Promise<void>;
     readonly timeoutMs?: number;
     readonly logger?: { readonly info: (message: string) => void };
+    readonly sendNotification?: (
+        settings: NotificationSettings,
+        sequence: string,
+    ) => Promise<void>;
+    readonly acknowledgeNotification?: typeof acknowledgePendingNotification;
 }
 
 function durationSeconds(value: string | undefined, fallback: number): number {
@@ -79,8 +90,28 @@ export async function runSyncPCloudWorker(
             loadSecrets: async () => runtime.secrets,
             logger: options.logger,
             processBackup: processBackupForStaticRelease,
-        }, { force, lease, signal: cycleSignal });
+        }, {
+            force, lease, notificationsEnabled: runtime.notifications !== undefined,
+            signal: cycleSignal,
+        });
     });
+    const deliverOne = async (): Promise<void> => {
+        if (runtime.notifications === undefined || signal.aborted) return;
+        try {
+            const sequence = await peekPendingNotification(runtime.config.deployRoot, lease);
+            if (sequence === null) return;
+            const sender: NonNullable<SyncWorkerOptions["sendNotification"]> =
+                options.sendNotification ?? (async (settings) => sendBackupNotification(settings));
+            await sender(runtime.notifications, sequence);
+            await (options.acknowledgeNotification ?? acknowledgePendingNotification)(
+                runtime.config.deployRoot, lease, sequence,
+            );
+            options.logger?.info("Backup notification accepted by SMTP.");
+        } catch {
+            // Transport errors and responses can contain credentials or addresses.
+            options.logger?.info("Backup notification pending; retrying later.");
+        }
+    };
     const cycle = async (force: boolean) => {
         const timeout = new AbortController();
         const timer = setTimeout(() => timeout.abort(), timeoutMs);
@@ -103,6 +134,7 @@ export async function runSyncPCloudWorker(
         }
         if (signal.aborted) return;
         await writeReadiness(readyPath);
+        await deliverOne();
         while (!signal.aborted) {
             try {
                 // oxlint-disable-next-line no-await-in-loop -- each cycle waits before starting the next one.
@@ -119,6 +151,8 @@ export async function runSyncPCloudWorker(
                 if (signal.aborted) break;
                 options.logger?.info("Periodic synchronization failed; retrying.");
             }
+            // oxlint-disable-next-line no-await-in-loop -- delivery attempts are serial and bounded to one per cycle.
+            await deliverOne();
         }
     } finally {
         try {
