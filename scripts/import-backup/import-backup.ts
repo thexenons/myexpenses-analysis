@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { createReadStream } from "node:fs";
+import { realpath } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { parseBackupDataset } from "../../src/domain/analytics/normalize-backup-dataset.ts";
@@ -26,23 +26,6 @@ export interface ImportBackupResult {
     categoryCount: number;
     outputPath: string;
     postingCount: number;
-}
-
-async function sha256File(filePath: string): Promise<string> {
-    const hash = createHash("sha256");
-    try {
-        for await (const chunk of createReadStream(filePath)) {
-            const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-            try {
-                hash.update(bytes);
-            } finally {
-                bytes.fill(0);
-            }
-        }
-    } catch (error) {
-        throw new Error("Could not hash the selected backup", { cause: error });
-    }
-    return hash.digest("hex");
 }
 
 function sha256Bytes(bytes: Uint8Array): string {
@@ -95,12 +78,17 @@ export async function importBackup(
         throw new Error("The output path must differ from the backup path");
     }
 
-    const backupSha256 = await sha256File(inputPath);
     const archive = await readBackupArchive(inputPath);
     try {
-        const verificationHash = await sha256File(inputPath);
-        if (verificationHash !== backupSha256) {
-            throw new Error("The selected backup changed while it was being read");
+        const existingOutputPath = await realpath(outputPath).catch((error: unknown) => {
+            if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+            throw error;
+        });
+        if (
+            existingOutputPath !== undefined &&
+            existingOutputPath === await realpath(inputPath)
+        ) {
+            throw new Error("The output path must differ from the backup path");
         }
         const databaseSha256 = sha256Bytes(archive.database);
         const rawPreferences = parseBackupPreferences(archive.preferencesXml);
@@ -155,7 +143,7 @@ export async function importBackup(
         archive.uiSettings?.fill(0);
         const dataset = parseBackupDataset(
             createAppDataset({
-                backupSha256,
+                backupSha256: archive.metadata.archiveSha256,
                 budgetUiSettings,
                 canonical,
                 databaseSha256,

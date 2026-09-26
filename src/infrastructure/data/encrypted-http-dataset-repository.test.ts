@@ -229,6 +229,24 @@ describe("encryptedHttpDatasetRepository", () => {
     );
   });
 
+  it.each<ResponseInit>([
+    { status: 503, headers: { "content-type": "application/json" } },
+    { status: 200, headers: { "content-type": "text/html" } },
+    { status: 200, headers: {
+      "content-type": "application/json",
+      "content-length": String(STATIC_VAULT_MAX_ENVELOPE_BYTES + 1),
+    } },
+  ])("cancels unread responses rejected by their status or headers: %j", async (init) => {
+    const cancel = vi.fn<() => void>();
+    const response = new Response(new ReadableStream({ cancel }), init);
+    const repository = createEncryptedHttpDatasetRepository({
+      fetch: vi.fn<typeof fetch>(async () => response),
+    });
+    await expect(repository.load(PASSPHRASE)).rejects.toBeInstanceOf(DatasetTransportError);
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(response.body?.locked).toBe(false);
+  });
+
   it("rejects authenticated plaintext that is not a valid dataset", async () => {
     const invalidEnvelope = await encryptCompressedDataset(
       await gzip(JSON.stringify({ version: 1 })),

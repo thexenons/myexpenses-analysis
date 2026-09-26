@@ -136,19 +136,14 @@ function safeIntegerInRange(
 }
 
 function encodeBase64(bytes: Uint8Array): string {
-  let result = "";
-  for (let offset = 0; offset < bytes.length; offset += 3) {
-    const first = bytes[offset]!;
-    const second = bytes[offset + 1];
-    const third = bytes[offset + 2];
-    const bits =
-      (first << 16) | ((second ?? 0) << 8) | (third ?? 0);
-    result += BASE64_ALPHABET[(bits >>> 18) & 63];
-    result += BASE64_ALPHABET[(bits >>> 12) & 63];
-    result += second === undefined ? "=" : BASE64_ALPHABET[(bits >>> 6) & 63];
-    result += third === undefined ? "=" : BASE64_ALPHABET[bits & 63];
+  const chunks: string[] = [];
+  // A multiple of three avoids padding between chunks; bounded argument counts
+  // also keep large vaults below the engine's function-call argument limit.
+  const chunkBytes = 24_576;
+  for (let offset = 0; offset < bytes.length; offset += chunkBytes) {
+    chunks.push(btoa(String.fromCharCode(...bytes.subarray(offset, offset + chunkBytes))));
   }
-  return result;
+  return chunks.join("");
 }
 
 function decodeBase64(
@@ -195,7 +190,7 @@ function decodeBase64(
   return bytes;
 }
 
-function envelopeHeader(envelope: StaticVaultEnvelopeV1): StaticVaultHeaderV1 {
+function envelopeHeader(envelope: StaticVaultHeaderV1): StaticVaultHeaderV1 {
   return {
     format: STATIC_VAULT_FORMAT,
     version: STATIC_VAULT_VERSION,
@@ -302,7 +297,9 @@ function parseEnvelopeParts(value: unknown): ParsedEnvelopeParts {
     compressedBytes,
     cipher: cipherHeader,
     kdf: kdfHeader,
-    ciphertext: encodeBase64(ciphertext),
+    // decodeBase64 already verified alphabet, padding and unused padding bits.
+    // Preserve that canonical string instead of allocating it again per byte.
+    ciphertext: root.ciphertext as string,
   });
   const headerJson = JSON.stringify(
     canonicalHeaderObject(envelopeHeader(envelope)),
@@ -480,7 +477,7 @@ export async function encryptCompressedDataset(
   const iv = cryptoProvider.getRandomValues(
     new Uint8Array(STATIC_VAULT_IV_BYTES),
   );
-  const provisional: StaticVaultEnvelopeV1 = {
+  const provisional: StaticVaultHeaderV1 = {
     format: STATIC_VAULT_FORMAT,
     version: STATIC_VAULT_VERSION,
     compression: "gzip",
@@ -496,7 +493,6 @@ export async function encryptCompressedDataset(
       iterations: STATIC_VAULT_PBKDF2_ITERATIONS,
       salt: encodeBase64(salt),
     },
-    ciphertext: encodeBase64(new Uint8Array(bytes.byteLength + STATIC_VAULT_TAG_BYTES)),
   };
   const aad = new TextEncoder().encode(
     JSON.stringify(canonicalHeaderObject(envelopeHeader(provisional))),

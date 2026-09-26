@@ -226,31 +226,37 @@ export function createEncryptedHttpDatasetRepository(
         responsePromise,
         securityPromise,
       ]);
-      if (!response.ok) {
-        throw new DatasetTransportError(
-          `Could not fetch encrypted dataset: HTTP ${response.status}`,
-        );
-      }
-      const contentType = response.headers.get("content-type");
-      if (contentType === null || !/\bapplication\/json\b/i.test(contentType)) {
-        throw new DatasetTransportError(
-          "Could not fetch encrypted dataset: expected JSON",
-        );
-      }
       try {
-        const source = await readVaultEnvelopeText(
-          response,
-          security.STATIC_VAULT_MAX_ENVELOPE_BYTES,
-          signal,
-        );
-        abortIfNeeded(signal);
-        cachedEnvelope = security.parseStaticVaultEnvelopeJson(source);
-      } catch (error) {
-        if (isAbortError(error)) throw error;
-        throw new DatasetTransportError(
-          "Published encrypted dataset is invalid",
-          { cause: error },
-        );
+        if (!response.ok) {
+          throw new DatasetTransportError(
+            `Could not fetch encrypted dataset: HTTP ${response.status}`,
+          );
+        }
+        const contentType = response.headers.get("content-type");
+        if (contentType === null || !/\bapplication\/json\b/i.test(contentType)) {
+          throw new DatasetTransportError(
+            "Could not fetch encrypted dataset: expected JSON",
+          );
+        }
+        try {
+          const source = await readVaultEnvelopeText(
+            response,
+            security.STATIC_VAULT_MAX_ENVELOPE_BYTES,
+            signal,
+          );
+          abortIfNeeded(signal);
+          cachedEnvelope = security.parseStaticVaultEnvelopeJson(source);
+        } catch (error) {
+          if (isAbortError(error)) throw error;
+          throw new DatasetTransportError(
+            "Published encrypted dataset is invalid",
+            { cause: error },
+          );
+        }
+      } finally {
+        // Header/status rejection happens before a reader exists. Stop that
+        // response too, so retries do not leave unused downloads open.
+        await response.body?.cancel().catch(() => undefined);
       }
       return await decryptVaultResponse(
         cachedEnvelope,

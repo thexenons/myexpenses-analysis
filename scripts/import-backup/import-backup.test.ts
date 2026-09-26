@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lstat, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 import { parseBackupDataset } from "../../src/domain/analytics/normalize-backup-dataset.ts";
 import { importBackup } from "./import-backup.ts";
+import { BackupArchiveError } from "./archive.ts";
 import {
     createBackupZipFixture,
     createImportDatabaseFixture,
@@ -237,4 +241,77 @@ test("requires explicit distinct paths and an explicit valid time zone", async (
         }),
         /timeZone is required/iu,
     );
+});
+
+test("rejects symbolic links before reading or hashing their targets", async () => {
+    const directoryPath = await mkdtemp(join(tmpdir(), "myexpenses-import-link-test-"));
+    try {
+        const inputPath = join(directoryPath, "backup.zip");
+        await symlink(join(directoryPath, "missing-target"), inputPath);
+        await assert.rejects(
+            importBackup({
+                inputPath,
+                outputPath: join(directoryPath, "dataset.json"),
+                timeZone: "UTC",
+            }),
+            (error: unknown) =>
+                error instanceof BackupArchiveError &&
+                error.code === "INVALID_ARCHIVE_PATH",
+        );
+    } finally {
+        await rm(directoryPath, { force: true, recursive: true });
+    }
+});
+
+test("preserves the backup when the output aliases it through a symlinked ancestor", async () => {
+    const directoryPath = await mkdtemp(join(tmpdir(), "myexpenses-import-alias-test-"));
+    try {
+        const parentPath = join(directoryPath, "real");
+        await mkdir(join(parentPath, "nested"), { recursive: true });
+        const aliasPath = join(directoryPath, "alias");
+        await symlink(parentPath, aliasPath, "dir");
+        const inputPath = join(parentPath, "nested", "backup.zip");
+        const backup = await createBackupZipFixture({
+            database: await createImportDatabaseFixture(),
+        });
+        await writeFile(inputPath, backup);
+        await assert.rejects(
+            importBackup({
+                inputPath,
+                outputPath: join(aliasPath, "nested", "backup.zip"),
+                timeZone: "UTC",
+            }),
+            /output path must differ/iu,
+        );
+        assert.deepEqual(await readFile(inputPath), Buffer.from(backup));
+        assert.deepEqual(await readdir(join(parentPath, "nested")), ["backup.zip"]);
+    } finally {
+        await rm(directoryPath, { force: true, recursive: true });
+    }
+});
+
+test("rejects infinite device inputs without hashing them", {
+    skip: process.platform === "win32",
+}, async () => {
+    const directoryPath = await mkdtemp(join(tmpdir(), "myexpenses-import-device-test-"));
+    try {
+        await assert.rejects(
+            promisify(execFile)(process.execPath, [
+                "--import", "tsx",
+                fileURLToPath(new URL("./cli.ts", import.meta.url)),
+                "--input", "/dev/zero",
+                "--output", join(directoryPath, "dataset.json"),
+            ], { timeout: 10_000 }),
+            (error: unknown) => {
+                const failure = error as { code?: number; killed?: boolean; stderr?: string };
+                assert.equal(failure.killed, false);
+                assert.equal(failure.code, 1);
+                assert.match(failure.stderr ?? "", /regular file/u);
+                return true;
+            },
+        );
+        assert.deepEqual(await readdir(directoryPath), []);
+    } finally {
+        await rm(directoryPath, { force: true, recursive: true });
+    }
 });

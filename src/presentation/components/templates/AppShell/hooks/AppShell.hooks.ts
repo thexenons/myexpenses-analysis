@@ -33,6 +33,10 @@ function useAutomaticLock(onLock: () => void): void {
     const recordActivity = () => {
       if (document.visibilityState === "hidden" || locked) return
       const now = Date.now()
+      if (now - lastActivity >= AUTOMATIC_LOCK_DELAY_MS) {
+        lock()
+        return
+      }
       lastActivity = now
       // Scroll and repeated keys can fire dozens of times per frame. The lock
       // callback rechecks the exact deadline, so refreshing once a second is exact.

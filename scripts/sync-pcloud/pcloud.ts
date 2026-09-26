@@ -299,6 +299,7 @@ async function responseBytes(
         }
         return result;
     } finally {
+        reader.releaseLock();
         for (const chunk of chunks) chunk.fill(0);
     }
 }
@@ -450,8 +451,9 @@ export class PCloudClient {
         externalSignal?: AbortSignal,
     ): Promise<JsonObject> {
         const timeout = timeoutSignal(externalSignal, this.apiTimeoutMs);
+        let response: Response | undefined;
         try {
-            const response = await this.fetchImplementation(
+            response = await this.fetchImplementation(
                 `https://${this.apiHost}/${method}?${parameters}`,
                 {
                     headers: { Authorization: `Bearer ${this.token}` },
@@ -468,6 +470,7 @@ export class PCloudClient {
                       cause: error,
                   });
         } finally {
+            await response?.body?.cancel().catch(() => undefined);
             timeout.cleanup();
         }
     }
@@ -552,8 +555,10 @@ export class PCloudClient {
             `.${destinationPath.slice(destinationPath.lastIndexOf("/") + 1)}.${randomUUID()}.tmp`,
         );
         let handle: Awaited<ReturnType<typeof open>> | undefined;
+        let response: Response | undefined;
+        let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
         try {
-            const response = await this.fetchImplementation(url, {
+            response = await this.fetchImplementation(url, {
                 method: "GET",
                 redirect: "error",
                 signal: timeout.signal,
@@ -573,7 +578,7 @@ export class PCloudClient {
             }
             handle = await open(temporaryPath, "wx", 0o600);
             const outputHandle = handle;
-            const reader = response.body.getReader();
+            reader = response.body.getReader();
             const sha1Hash = createHash("sha1");
             const sha256Hash = createHash("sha256");
             let total = 0;
@@ -649,6 +654,8 @@ export class PCloudClient {
                       cause: error,
                   });
         } finally {
+            reader?.releaseLock();
+            await response?.body?.cancel().catch(() => undefined);
             timeout.cleanup();
             await handle?.close().catch(() => undefined);
             await rm(temporaryPath, { force: true }).catch(() => undefined);

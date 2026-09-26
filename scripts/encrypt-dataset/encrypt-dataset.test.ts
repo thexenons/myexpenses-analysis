@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { webcrypto } from "node:crypto";
 import {
     chmod,
+    mkdir,
     mkdtemp,
     readFile,
     rm,
     stat,
+    symlink,
     writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -93,4 +95,25 @@ test("refuses to overwrite the plaintext input path", async () => {
         }),
         /paths must differ/iu,
     );
+});
+
+test("refuses an output alias that would replace the plaintext input", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "vault-alias-test-"));
+    const realDirectory = join(directory, "real");
+    const inputPath = join(realDirectory, "nested", "app-dataset.json");
+    const source = JSON.stringify(createDatasetFixture());
+    try {
+        await mkdir(join(realDirectory, "nested"), { recursive: true });
+        await writeFile(inputPath, source, "utf8");
+        await symlink(realDirectory, join(directory, "alias"), "dir");
+        await assert.rejects(encryptDataset({
+            cryptoProvider: CRYPTO,
+            inputPath,
+            outputPath: join(directory, "alias", "nested", "app-dataset.json"),
+            passphrase: PASSPHRASE,
+        }), /paths must differ/iu);
+        assert.equal(await readFile(inputPath, "utf8"), source);
+    } finally {
+        await rm(directory, { force: true, recursive: true });
+    }
 });

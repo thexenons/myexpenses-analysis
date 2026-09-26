@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { constants } from "node:fs";
 import { open, lstat } from "node:fs/promises";
 
 import yauzl from "yauzl";
@@ -84,6 +86,7 @@ export class BackupArchiveError extends Error {
 
 export interface BackupArchiveMetadata {
     archiveBytes: number;
+    archiveSha256: string;
     entryCount: number;
     ignoredPictureBytes: number;
     pictureCount: number;
@@ -377,7 +380,12 @@ export async function readBackupArchive(
     let selectedEntries: Map<string, Buffer> | undefined;
     let keepSelectedEntries = false;
     try {
-        fileHandle = await open(filePath, "r");
+        fileHandle = await open(
+            filePath,
+            constants.O_RDONLY |
+                (constants.O_NOFOLLOW ?? 0) |
+                (constants.O_NONBLOCK ?? 0),
+        );
     } catch (error) {
         throw archiveError(
             "INVALID_ARCHIVE_PATH",
@@ -408,8 +416,27 @@ export async function readBackupArchive(
             );
         }
         await assertZipMagic(fileHandle, fileStat.size);
-        archiveBuffer = await fileHandle.readFile();
-        if (archiveBuffer.byteLength !== fileStat.size) {
+        // Read at most the validated size, even if another process grows the file.
+        archiveBuffer = Buffer.alloc(fileStat.size);
+        let offset = 0;
+        while (offset < archiveBuffer.byteLength) {
+            // oxlint-disable-next-line no-await-in-loop -- partial reads determine the next offset.
+            const { bytesRead } = await fileHandle.read(
+                archiveBuffer,
+                offset,
+                archiveBuffer.byteLength - offset,
+                offset,
+            );
+            if (bytesRead === 0) break;
+            offset += bytesRead;
+        }
+        const completedStat = await fileHandle.stat();
+        if (
+            offset !== fileStat.size ||
+            completedStat.size !== fileStat.size ||
+            completedStat.mtimeMs !== fileStat.mtimeMs ||
+            completedStat.ctimeMs !== fileStat.ctimeMs
+        ) {
             throw archiveError(
                 "INVALID_ARCHIVE_PATH",
                 "The backup file changed while it was being read",
@@ -417,6 +444,7 @@ export async function readBackupArchive(
         }
         await fileHandle.close();
         fileHandle = undefined;
+        const archiveSha256 = createHash("sha256").update(archiveBuffer).digest("hex");
 
         try {
             zipFile = await yauzl.fromBufferPromise(archiveBuffer, {
@@ -538,6 +566,7 @@ export async function readBackupArchive(
             database,
             metadata: {
                 archiveBytes: fileStat.size,
+                archiveSha256,
                 entryCount,
                 ignoredPictureBytes,
                 pictureCount,

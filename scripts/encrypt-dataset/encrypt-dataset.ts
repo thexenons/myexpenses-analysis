@@ -1,4 +1,5 @@
 import { webcrypto } from "node:crypto";
+import { realpath } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { parseBackupDataset } from "../../src/domain/analytics/normalize-backup-dataset.ts";
@@ -90,6 +91,18 @@ export async function encryptDataset(
     );
     let compressed: Uint8Array | undefined;
     try {
+        const realOutputPath = await realpath(outputPath).catch((error: unknown) => {
+            if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+                return undefined;
+            }
+            throw error;
+        });
+        if (realOutputPath !== undefined && realOutputPath === await realpath(inputPath)) {
+            throw new DatasetEncryptionError(
+                "INVALID_INPUT",
+                "Input and output paths must differ",
+            );
+        }
         parseDatasetSource(input);
         compressed = await gzipDataset(input);
         const envelope = await encryptCompressedDataset(

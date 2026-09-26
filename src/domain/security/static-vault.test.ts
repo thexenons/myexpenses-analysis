@@ -61,6 +61,25 @@ describe("static dataset vault", () => {
     ).resolves.toEqual(COMPRESSED_FIXTURE);
   });
 
+  it.each([49_134, 49_135, 49_136])(
+    "round-trips %i bytes across base64 chunks and padding lengths",
+    async (length) => {
+      const compressed = Uint8Array.from({ length }, (_, index) => index % 256);
+      compressed.set(COMPRESSED_FIXTURE.subarray(0, 3));
+      const envelope = await encryptCompressedDataset(
+        compressed,
+        PASSPHRASE,
+        globalThis.crypto,
+      );
+      const parsed = parseStaticVaultEnvelopeJson(serializeStaticVaultEnvelope(envelope));
+
+      expect(parsed.ciphertext).toBe(envelope.ciphertext);
+      await expect(
+        decryptCompressedDataset(parsed, PASSPHRASE, globalThis.crypto),
+      ).resolves.toEqual(compressed);
+    },
+  );
+
   it("uses independent random salt, IV and ciphertext for every encryption", async () => {
     const [first, second] = await Promise.all([
       encryptCompressedDataset(COMPRESSED_FIXTURE, PASSPHRASE, globalThis.crypto),

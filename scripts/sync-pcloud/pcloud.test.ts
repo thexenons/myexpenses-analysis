@@ -50,6 +50,52 @@ function metadata(overrides: Record<string, unknown> = {}) {
     };
 }
 
+test("cancels rejected API bodies and releases their stream locks", async () => {
+    let cancelled = false;
+    const response = new Response(new ReadableStream({
+        cancel() { cancelled = true; },
+    }), { headers: { "content-length": String(8 * 1024 * 1024 + 1) } });
+    const client = new PCloudClient({
+        apiHost: "api.pcloud.com",
+        fetch: mockFetch(() => response),
+        token: "token",
+    });
+    await assert.rejects(client.listLatestBackup({ folderId: "1" }), /size limit/iu);
+    assert.equal(cancelled, true);
+    assert.equal(response.body?.locked, false);
+});
+
+test("cancels download bodies rejected before reading any bytes", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "pcloud-cancel-test-"));
+    let cancelled = false;
+    const response = new Response(new ReadableStream({
+        cancel() { cancelled = true; },
+    }), { headers: { "content-length": "5" } });
+    const client = new PCloudClient({
+        apiHost: "api.pcloud.com",
+        fetch: mockFetch((url) => url.pathname === "/getfilelink"
+            ? json({ result: 0, hosts: ["c1.pcloud.com"], path: "/content", expires: 2_000_000_000 })
+            : response),
+        now: () => 0,
+        token: "token",
+    });
+    try {
+        await assert.rejects(client.downloadBackup({
+            checksumSha1: "a".repeat(40),
+            fileId: "10",
+            modifiedEpochSeconds: 1,
+            name: "myexpenses-backup-20260822-210453.zip",
+            nameTimestamp: "20260822210453",
+            size: 4,
+        }, join(directory, "backup.zip")), /length disagrees/iu);
+        assert.equal(cancelled, true);
+        assert.equal(response.body?.locked, false);
+        assert.deepEqual(await readdir(directory), []);
+    } finally {
+        await rm(directory, { force: true, recursive: true });
+    }
+});
+
 test("uses regional Bearer API calls and deterministic backup selection", async () => {
     let calls = 0;
     const fetch = mockFetch((url, init) => {

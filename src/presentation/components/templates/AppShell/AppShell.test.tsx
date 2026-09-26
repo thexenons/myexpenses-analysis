@@ -127,4 +127,24 @@ describe("AppShell", () => {
     expect(appStore.getState().loadPhase).toBe("ready")
     unmount()
   })
+
+  it.each(["keydown", "pointerdown", "scroll"])("does not revive an expired session when %s arrives before a suspended timer", (eventType) => {
+    vi.useFakeTimers()
+    const history = createMemoryHistory({ initialEntries: ["/resumen"] })
+    const router = createAppRouter({ history })
+    const { unmount } = render(
+      <RouterContextProvider router={router}>
+        <AppStoreProvider store={appStore}>
+          <AppShell><h1>Panel de prueba</h1></AppShell>
+        </AppStoreProvider>
+      </RouterContextProvider>,
+    )
+
+    // A suspended browser can resume with an input event before overdue timers.
+    vi.setSystemTime(Date.now() + 16 * 60 * 1_000)
+    act(() => window.dispatchEvent(new Event(eventType)))
+
+    expect(appStore.getState().loadPhase).toBe("locked")
+    unmount()
+  })
 })

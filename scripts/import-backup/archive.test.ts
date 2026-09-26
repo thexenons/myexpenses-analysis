@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtemp, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -66,6 +67,10 @@ test("reads only allowlisted backup entries in memory and ignores pictures", asy
             Buffer.from(uiSettings),
         );
         assert.equal(contents.metadata.entryCount, 4);
+        assert.equal(
+            contents.metadata.archiveSha256,
+            createHash("sha256").update(fixture).digest("hex"),
+        );
         assert.equal(contents.metadata.pictureCount, 1);
         assert.equal(contents.metadata.ignoredPictureBytes, 3);
         assert.deepEqual(await readdir(directoryPath), ["backup.zip"]);
@@ -100,6 +105,27 @@ test("rejects corrupt ZIPs and missing required entries", async () => {
             readBackupArchive(filePath),
             hasArchiveErrorCode("INVALID_ZIP"),
         );
+    });
+});
+
+test("hashes the exact ZIP snapshot including stored entries before clearing read buffers", async () => {
+    const database = await createSchema189DatabaseFixture();
+    const fixture = await createBackupZipFixture({
+        includeDatabase: false,
+        includePreferences: false,
+        extraEntries: [
+            { name: "BACKUP", data: database, compress: false },
+            { name: "BACKUP_PREF", data: SAFE_PREFERENCES_XML_FIXTURE, compress: false },
+        ],
+    });
+    await withFixtureFile(fixture, async (filePath) => {
+        const contents = await readBackupArchive(filePath);
+        assert.equal(
+            contents.metadata.archiveSha256,
+            createHash("sha256").update(fixture).digest("hex"),
+        );
+        assert.deepEqual(Buffer.from(contents.database), Buffer.from(database));
+        assert.equal(new TextDecoder().decode(contents.preferencesXml), SAFE_PREFERENCES_XML_FIXTURE);
     });
 });
 
