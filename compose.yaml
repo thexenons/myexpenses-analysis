@@ -1,0 +1,70 @@
+services:
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+    init: true
+    restart: on-failure
+    stop_grace_period: 45s
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      PCLOUD_API_HOST: ${PCLOUD_API_HOST:?Set the pCloud API host}
+      PCLOUD_FOLDER_ID: ${PCLOUD_FOLDER_ID:-}
+      PCLOUD_FOLDER_PATH: ${PCLOUD_FOLDER_PATH:-}
+      PCLOUD_TOKEN: ${PCLOUD_TOKEN:?Set the pCloud token}
+      MYEXPENSES_VAULT_PASSPHRASE: ${MYEXPENSES_VAULT_PASSPHRASE:?Set the vault passphrase}
+      MYEXPENSES_TIME_ZONE: ${MYEXPENSES_TIME_ZONE:-Europe/Madrid}
+      MYEXPENSES_SYNC_INTERVAL_SECONDS: ${MYEXPENSES_SYNC_INTERVAL_SECONDS:-3600}
+      MYEXPENSES_SYNC_TIMEOUT_SECONDS: ${MYEXPENSES_SYNC_TIMEOUT_SECONDS:-1800}
+    volumes:
+      - myexpenses_data:/srv/myexpenses
+    tmpfs:
+      - /tmp:uid=1000,gid=1000,mode=1777,size=256m
+      - /run/myexpenses:uid=1000,gid=1000,mode=0700,size=1m
+      - /app/node_modules/.tmp:uid=1000,gid=1000,mode=0700,size=128m
+      - /app/node_modules/.vite-temp:uid=1000,gid=1000,mode=0700,size=64m
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('node:fs').accessSync('/run/myexpenses/ready')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 35m
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    restart: unless-stopped
+    depends_on:
+      worker:
+        condition: service_healthy
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    expose:
+      - "8080"
+    volumes:
+      - type: volume
+        source: myexpenses_data
+        target: /srv/myexpenses
+        read_only: true
+        volume:
+          nocopy: true
+    tmpfs:
+      - /tmp:uid=101,gid=101,mode=0700,size=16m
+    healthcheck:
+      test: ["CMD", "curl", "-fsSI", "--max-time", "3", "http://127.0.0.1:8080/data/app-dataset.vault.json"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  myexpenses_data:

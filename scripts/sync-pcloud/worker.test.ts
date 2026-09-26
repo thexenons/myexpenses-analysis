@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { acquireSyncLease } from "./lease.ts";
 import { runPCloudSync } from "./orchestrator.ts";
 import { runSyncPCloudWorker } from "./worker.ts";
 
@@ -121,6 +122,53 @@ test("worker lease excludes one-shot sync without touching active workspace", { 
         await running;
     } finally {
         controller.abort();
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("rejected second worker cannot clear the active worker's readiness", { timeout: 5_000 }, async () => {
+    const value = await fixture();
+    const controller = new AbortController();
+    let signalBootstrap!: () => void;
+    const bootstrapped = new Promise<void>((resolve) => { signalBootstrap = resolve; });
+    try {
+        const owner = runSyncPCloudWorker(value.environment, {
+            readinessPath: value.readyPath,
+            signal: controller.signal,
+            sync: async () => { signalBootstrap(); },
+        });
+        await bootstrapped;
+        // oxlint-disable-next-line no-await-in-loop -- wait until this owner publishes readiness.
+        for (let attempt = 0; attempt < 100 && !(await exists(value.readyPath)); attempt += 1) {
+            // oxlint-disable-next-line no-await-in-loop -- wait until this owner publishes readiness.
+            await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+        assert.equal(await exists(value.readyPath), true);
+        await assert.rejects(runSyncPCloudWorker(value.environment, {
+            readinessPath: value.readyPath,
+            sync: async () => { throw new Error("must not run"); },
+        }), /active/iu);
+        assert.equal(await exists(value.readyPath), true);
+        controller.abort();
+        await owner;
+        assert.equal(await exists(value.readyPath), false);
+    } finally {
+        controller.abort();
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("readiness cleanup failure still releases the worker lease", async () => {
+    const value = await fixture();
+    await mkdir(value.readyPath);
+    try {
+        await assert.rejects(runSyncPCloudWorker(value.environment, {
+            readinessPath: value.readyPath,
+            sync: async () => { throw new Error("must not run"); },
+        }), /EISDIR|EPERM/iu);
+        const lease = await acquireSyncLease(value.deployRoot);
+        await lease.close();
+    } finally {
         await rm(value.root, { force: true, recursive: true });
     }
 });

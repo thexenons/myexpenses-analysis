@@ -72,7 +72,6 @@ export async function runSyncPCloudWorker(
     ));
     const readyPath = options.readinessPath ?? DEFAULT_READY_PATH;
     const signal = options.signal ?? new AbortController().signal;
-    await rm(readyPath, { force: true });
     await prepareSyncLayout(runtime.config);
     const lease = await acquireSyncLease(runtime.config.deployRoot);
     const sync = options.sync ?? (async (force: boolean, cycleSignal: AbortSignal) => {
@@ -94,6 +93,7 @@ export async function runSyncPCloudWorker(
         }
     };
     try {
+        await rm(readyPath, { force: true });
         signal.throwIfAborted();
         try {
             await cycle(true);
@@ -121,7 +121,10 @@ export async function runSyncPCloudWorker(
             }
         }
     } finally {
-        await rm(readyPath, { force: true });
-        await lease.close();
+        try {
+            await rm(readyPath, { force: true });
+        } finally {
+            await lease.close();
+        }
     }
 }

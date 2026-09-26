@@ -47,7 +47,8 @@ environment adapter with in-memory credentials rather than shell/JSON interpolat
   tests, infrastructure and guide. C02 requires one coherent cross-process
   lifecycle boundary and its crash/shutdown tests; splitting by file type would
   leave that behavior incomplete. This is an estimate, not a per-task hard cap.
-- Commits: C01 `636368f` (471 authored changed lines). No push/PR will be created without
+- Commits: C01 `636368f` (471 authored changed lines), C02 `ff62398` (1153).
+  Running authored total: 1624 lines. No push/PR will be created without
   separate authorization. The delivery choice is resolved; do not ask again.
 
 ## Tasks
@@ -101,16 +102,58 @@ environment adapter with in-memory credentials rather than shell/JSON interpolat
   cancellation probe kept the competing lease blocked while the descendant was
   alive, returned after 5120ms with no live descendant, then allowed reacquisition.
   Container execution remains pending.
-- [ ] C03: Package worker and non-root web service with Compose, reproducible
+  Commit: `ff62398`. Native assessment: high (`process_boundary`). User granted;
+  four lenses approved with a nonblocking duplicate readiness-path advisory.
+  Exact acknowledgement consumed `review-ad0dbbcb1f4e1b5a`; that candidate is
+  closed. Address the advisory separately during C03 health integration.
+- [x] C03: Package worker and non-root web service with Compose, reproducible
   dependency installation, persistent storage ownership, read-only web mounts,
   runtime-only secrets, nginx policy and healthchecks. Keep private work and
   release staging on the same filesystem. Add deployment contract tests.
   Route: delegated; coordinated infrastructure files and security checks.
+  Readiness follow-up: acquire writer ownership before removing a marker; a
+  rejected second worker sharing that path must preserve the owner's readiness.
+  Add a failing two-worker regression before the fix. This is a new candidate,
+  not a reopening of the completed C02 review.
+  Evidence: observed RED in the focused suite (4/10 failures: absent packaging
+  files and a rejected contender deleting the owner's readiness), then GREEN.
+  Added a cleanup-error lease-release check. Focused tests passed 11/11; full
+  sync-pCloud tests passed 63/63; type-check, lint and `git diff --check`
+  passed. PyYAML parsed the Compose file and verified service/volume structure.
+  Parent structural readback found the full nginx configuration omitted MIME
+  mappings; with `nosniff`, module assets would not load. A new contract check
+  failed RED, then passed after including nginx's MIME table with an
+  `application/octet-stream` fallback. Focused 11/11, full sync-pCloud 63/63,
+  type-check, lint and diff checks passed again after this correction.
+  Build-context privacy follow-up: changed `.dockerignore` from a denylist to
+  default-deny with only Dockerfile input trees and the nginx config allowed;
+  private dataset/credential/archive/database patterns override those trees.
+  Contract test failed RED on the prior denylist, then focused tests passed
+  11/11 with type-check, lint and diff checks. Actual Docker context transfer
+  remains unverified without Docker.
+  Docker, Podman and nginx are unavailable, so image build, Compose runtime,
+  nginx syntax and health behavior remain pending live-container proof. This
+  task is locally complete, pending its work-unit commit and native assessment.
+  Independent final spot check passed 11/11 focused tests and type-check. A
+  bounded inventory confirmed the final ignore rules retain all 475 inputs
+  used by the successful synthetic builds plus nginx configuration, with zero
+  missing inputs or source-tree JSON files. This is not Docker execution proof.
 - [ ] C04: Deliver the exact Coolify setup and recovery guide; run full applicable
   local checks and record container/live-environment limitations explicitly.
   Include bootstrap, noop, new backup, code update, restart, rollback, secret
   isolation and financial smoke-test acceptance steps.
   Route: delegated writing and independent verification.
+  Early functional proof: the independent synthetic harness passed nine checks
+  with the real environment adapter, injected pCloud transport, import, encryption,
+  TypeScript, Vite and atomic publication. Three successful builds covered initial
+  deployment, forced same-backup code updates and a changed SQLite backup. Noop
+  skipped download/build; an expected compiler failure preserved current/state/
+  releases. Decryption, child environment and asset/log secret canaries, 3097
+  atomic visibility samples and four-account/11-posting financial checks passed.
+  Zero noninjected network calls; synthetic source/data/releases were cleaned.
+  Reusable proof: `/tmp/myexpenses-coolify-proof-xmx8Ph/proof.mts` and its
+  `report.json`/`final-context-inventory.json`. Local dependencies were reused;
+  image installation and live container semantics remain unverified.
 
 ## Acceptance criteria
 
@@ -127,10 +170,11 @@ environment adapter with in-memory credentials rather than shell/JSON interpolat
 
 ## Progress and next step
 
-C01 committed, functionally verified and independently reviewed. The last reviewed
-boundary is `636368fd124908f63105295b71c7e796f3c0f757`.
-C02 correction and local proof complete, pending parent review, commit and
-native assessment. Next: package the runtime in C03 after that work unit closes.
+C01 and C02 are committed, functionally verified and independently reviewed.
+The last reviewed boundary is `ff62398e05a8add074694bd57d8421ea9c7c9fd0`.
+The C03 packaging and readiness fix are implemented and locally checked; next:
+commit and native assessment/review, then the C04 operator guide and durable
+integration checks using the successful independent synthetic proof.
 Existing unrelated changes remain untouched. The functional verifier confirmed
 that Docker, Podman and nginx are absent from PATH; no live container test ran.
 
