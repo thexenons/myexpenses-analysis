@@ -35,6 +35,8 @@ periodic sync keeps the last complete release served. The 35-minute startup
 health window exceeds the default 30-minute cycle timeout, but slow external
 operations or custom timeout values may require a longer deployment window.
 
-This packaging has contract tests, not a live container proof: Docker,
-Podman, and nginx are unavailable in the current development environment.
-The full operator setup, rollback, and smoke-test guide is a separate task.
+This packaging has contract and synthetic integration tests, not live
+container proof: Docker and Podman are unavailable in the development
+environment. The [Coolify operator guide](../docs/coolify-deployment.md)
+covers setup, rollback and live smoke checks. A separate local nginx binary
+test exercised HTTP policy, but not Compose or proxy behavior.

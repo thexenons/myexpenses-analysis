@@ -30,7 +30,7 @@ Correct security, deployment, budget, and recovery guidance to match the current
 - Verification: 27 local Markdown links/anchors across 12 files passed. `git diff --check` passed.
 - Verification: `logrotate --debug` passed on a temporary log/config with the local user substituted. The exact production example could not be checked locally because this machine has no `myexpenses` account; an initial debug run returned `unknown user 'myexpenses'`. No real log was touched.
 - Full application tests/build and oxlint were not run: only prose and shell examples changed.
-- Work-unit commit evidence: pending parent commit under the user's explicit authorization.
+- Work-unit commit evidence: `811eaef` on local `main`, under the user's explicit authorization. Current native assessment of the pending slice (including registry-cache commit `58af359`) is medium, `under_budget` at 264 lines; independent checks passed, but no native approval is claimed yet.
 - Independent verification: no blocking findings; nine temporary-directory rollback scenarios passed, including active cron lock, symlink release, missing vault, and invalid `current`. Generated normal/forced release IDs matched the documented validation. Logrotate debug with local substitutions and seven scoped links/anchors also passed.
 - Native assessment: `medium`, `review_due: false`, `under_budget` (141 changed lines at assessment). The configuration reason refers to the pre-existing `.atl/.skill-registry.cache.json` change, not these documentation edits. No native approval is claimed.
 - DOC-3 corrected after C02: the old rollback example checked that `.sync.lock` did not exist, but C02 retains a safe zero-byte inode even while idle; the old example also serialized only with `.cron.lock`, not the worker lease. The new example opens both locks with `O_NOFOLLOW`, validates descriptor/path identity and metadata, acquires nonblocking kernel leases, retains both descriptors through the atomic `current` swap, and never truncates or unlinks either lock. Cron and Coolify instructions are labeled as alternatives.
@@ -41,4 +41,4 @@ Correct security, deployment, budget, and recovery guidance to match the current
 
 ## Next step
 
-Parent review and commit the documentation work unit. On a configured deployment host, validate the production logrotate policy with the `myexpenses` account present. Engram mirror remains pending because the runtime session identity is rejected as unknown.
+Documentation is committed and independently checked. The native review slice remains pending until the following Coolify guide/integration work unit. On a configured deployment host, validate the production logrotate policy with the `myexpenses` account present. Engram mirror remains pending because the runtime session identity is rejected as unknown.

@@ -47,8 +47,8 @@ environment adapter with in-memory credentials rather than shell/JSON interpolat
   tests, infrastructure and guide. C02 requires one coherent cross-process
   lifecycle boundary and its crash/shutdown tests; splitting by file type would
   leave that behavior incomplete. This is an estimate, not a per-task hard cap.
-- Commits: C01 `636368f` (471 authored changed lines), C02 `ff62398` (1153).
-  Running authored total: 1624 lines. No push/PR will be created without
+- Commits: C01 `636368f` (471 authored changed lines), C02 `ff62398` (1153),
+  C03 `372ea40` (477). Running authored total: 2101 lines. No push/PR will be created without
   separate authorization. The delivery choice is resolved; do not ask again.
 
 ## Tasks
@@ -133,12 +133,14 @@ environment adapter with in-memory credentials rather than shell/JSON interpolat
   remains unverified without Docker.
   Docker, Podman and nginx are unavailable, so image build, Compose runtime,
   nginx syntax and health behavior remain pending live-container proof. This
-  task is locally complete, pending its work-unit commit and native assessment.
+  task is locally complete and committed as `372ea40`. Native assessment:
+  medium (slice budget reached); user granted; reliability review found no
+  defects. Exact acknowledgement consumed `review-fb4ab10d7cf7d8ea`.
   Independent final spot check passed 11/11 focused tests and type-check. A
   bounded inventory confirmed the final ignore rules retain all 475 inputs
   used by the successful synthetic builds plus nginx configuration, with zero
   missing inputs or source-tree JSON files. This is not Docker execution proof.
-- [ ] C04: Deliver the exact Coolify setup and recovery guide; run full applicable
+- [x] C04: Deliver the exact Coolify setup and recovery guide; run full applicable
   local checks and record container/live-environment limitations explicitly.
   Include bootstrap, noop, new backup, code update, restart, rollback, secret
   isolation and financial smoke-test acceptance steps.
@@ -154,6 +156,29 @@ environment adapter with in-memory credentials rather than shell/JSON interpolat
   Reusable proof: `/tmp/myexpenses-coolify-proof-xmx8Ph/proof.mts` and its
   `report.json`/`final-context-inventory.json`. Local dependencies were reused;
   image installation and live container semantics remain unverified.
+  Durable C04 implementation: `docs/coolify-deployment.md` gives the private
+  GitHub App → normal Compose migration, runtime-only/Literal credentials,
+  bootstrap, health, operations, rollback boundaries and live smoke checklist.
+  `pnpm test:deployment` stages Dockerfile inputs into a private temporary
+  project, reuses local dependencies and exercises real import/encryption/
+  TypeScript/Vite/publication with an injected pCloud transport. Strict TDD:
+  the new runner first failed RED as missing; an intermediate harness run then
+  failed on a TypeScript DOM-only type and was corrected before GREEN. Final
+  `pnpm test:deployment` passed 1/1; `pnpm test:node` passed 210/212 with 2
+  existing reference-backup goldens skipped; `pnpm test:ui` passed 216/216 in
+  72 files. `pnpm type-check`, `pnpm lint` and `git diff --check` passed.
+  Independent nginx evidence: the checksum-verified nginx 1.30.5 binary from
+  the pinned official image passed syntax plus ten loopback HTTP policy checks
+  with synthetic paths, as UID 1000, without containers. Report:
+  `/tmp/myexpenses-nginx-proof-eOrWe0/report.json`. Docker image installation,
+  Compose/named-volume copy-up, actual web UID 101 permissions, runtime
+  health/replacement lifecycle, Coolify proxy/TLS, browser smoke checks and
+  real pCloud remain unverified. C04 is locally complete but uncommitted and
+  not yet assessed/reviewed; live operator acceptance remains pending.
+  Independent final spot check passed `pnpm test:deployment` (1/1, 33.07s),
+  `pnpm type-check` and `git diff --check`, with no actionable findings. The
+  verifier confirmed four real TypeScript invocations, three Vite builds,
+  all claimed assertions and temporary-workspace cleanup.
 
 ## Acceptance criteria
 
@@ -170,13 +195,22 @@ environment adapter with in-memory credentials rather than shell/JSON interpolat
 
 ## Progress and next step
 
-C01 and C02 are committed, functionally verified and independently reviewed.
-The last reviewed boundary is `ff62398e05a8add074694bd57d8421ea9c7c9fd0`.
-The C03 packaging and readiness fix are implemented and locally checked; next:
-commit and native assessment/review, then the C04 operator guide and durable
-integration checks using the successful independent synthetic proof.
-Existing unrelated changes remain untouched. The functional verifier confirmed
-that Docker, Podman and nginx are absent from PATH; no live container test ran.
+C01, C02 and C03 are committed, functionally verified and independently reviewed.
+The last reviewed boundary is `372ea40653a458fccb4c6ef528b8d2534f3dc1ff`.
+The C04 guide and durable synthetic integration test are implemented and locally
+checked; next: parent structural readback, commit/native assessment and review,
+then authorized live deployment acceptance by an operator.
+The original pending documentation was preserved and reconciled separately.
+The functional verifier confirmed
+that Docker, Podman and nginx are absent from PATH. A separate pinned nginx
+binary passed local synthetic HTTP checks; no live container test ran.
+
+The separately pending registry cache is committed as `58af359`; its native
+assessment is medium, `under_budget` (2 lines), so it stays in the pending
+review slice based on `372ea40`. Legacy documentation was reconciled with
+the persistent kernel lease in `811eaef`, after 13 synthetic writer checks
+and an independent rollback spot check passed. That slice remains medium,
+`under_budget` at 264 authored lines; C04 will complete the pending slice.
 
 Engram mirror: pending. Writes currently fail with `unknown_session` even when
 `session_id` is omitted; no identity has been invented or registered.

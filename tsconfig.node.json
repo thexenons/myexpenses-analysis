@@ -27,6 +27,7 @@
     "scripts/**/*.ts",
     "tests/domain/**/*.ts",
     "tests/architecture/**/*.ts",
+    "tests/deployment/**/*.ts",
     "data/**/*.ts"
   ],
 }
