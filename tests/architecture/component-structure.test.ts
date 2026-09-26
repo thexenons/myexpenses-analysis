@@ -4,7 +4,7 @@ import { basename, dirname, extname, join, relative, sep } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import * as ts from "typescript";
+import { parseSync, traverse, types as t } from "@babel/core";
 
 const PROJECT_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const PRESENTATION_ROOT = join(PROJECT_ROOT, "src/presentation");
@@ -58,87 +58,82 @@ function isComponentDirectory(directory: string): boolean {
   return PASCAL_CASE.test(name) && presentationFiles.has(join(directory, `${name}.tsx`));
 }
 
-function sourceFileFor(path: string): ts.SourceFile {
-  const scriptKind = extname(path) === ".tsx" ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-
-  return ts.createSourceFile(
-    presentationPath(path),
-    readFileSync(path, "utf8"),
-    ts.ScriptTarget.Latest,
-    true,
-    scriptKind,
-  );
+function sourceFileFor(path: string, contents = readFileSync(path, "utf8")): t.File {
+  const source = parseSync(contents, {
+    babelrc: false,
+    configFile: false,
+    filename: path,
+    parserOpts: {
+      sourceType: "module",
+      sourceFilename: presentationPath(path),
+      plugins: extname(path) === ".tsx" ? ["typescript", "jsx"] : ["typescript"],
+    },
+  });
+  assert.ok(source, `Could not parse ${presentationPath(path)}`);
+  return source;
 }
 
-function sourceLocation(sourceFile: ts.SourceFile, node: ts.Node): string {
-  const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
-  return `${sourceFile.fileName}:${line + 1}`;
+function sourceLocation(node: t.Node): string {
+  assert.ok(node.loc);
+  return `${node.loc.filename}:${node.loc.start.line}`;
 }
 
-function isReactComponentWrapper(expression: ts.Expression): boolean {
-  if (!ts.isCallExpression(expression)) {
+function isReactComponentWrapper(expression: t.Expression): boolean {
+  if (!t.isCallExpression(expression)) {
     return false;
   }
 
-  const callee = expression.expression;
-  const name = ts.isIdentifier(callee)
-    ? callee.text
-    : ts.isPropertyAccessExpression(callee)
-      ? callee.name.text
+  const callee = expression.callee;
+  const name = t.isIdentifier(callee)
+    ? callee.name
+    : t.isMemberExpression(callee) && !callee.computed && t.isIdentifier(callee.property)
+      ? callee.property.name
       : "";
 
   return name === "forwardRef" || name === "lazy" || name === "memo";
 }
 
-function isReactClass(node: ts.ClassDeclaration): boolean {
-  return (
-    node.heritageClauses?.some((clause) =>
-      clause.types.some((heritageType) => {
-        const expression = heritageType.expression;
-        const name = ts.isIdentifier(expression)
-          ? expression.text
-          : ts.isPropertyAccessExpression(expression)
-            ? expression.name.text
-            : "";
-
-        return name === "Component" || name === "PureComponent";
-      }),
-    ) ?? false
-  );
+function isReactClass(node: t.ClassDeclaration): boolean {
+  const parent = node.superClass;
+  const name = t.isIdentifier(parent)
+    ? parent.name
+    : t.isMemberExpression(parent) && !parent.computed && t.isIdentifier(parent.property)
+      ? parent.property.name
+      : "";
+  return name === "Component" || name === "PureComponent";
 }
 
-function reactComponentDeclarations(sourceFile: ts.SourceFile): readonly string[] {
+function reactComponentDeclarations(sourceFile: t.File): readonly string[] {
   const declarations = new Map<string, string>();
 
-  function register(name: ts.Identifier, node: ts.Node): void {
-    if (PASCAL_CASE.test(name.text) && !declarations.has(name.text)) {
-      declarations.set(name.text, sourceLocation(sourceFile, node));
+  function register(name: t.Identifier, node: t.Node): void {
+    if (PASCAL_CASE.test(name.name) && !declarations.has(name.name)) {
+      declarations.set(name.name, sourceLocation(node));
     }
   }
 
-  function visit(node: ts.Node): void {
-    if (ts.isFunctionDeclaration(node) && node.name !== undefined && node.body !== undefined) {
-      register(node.name, node);
-    } else if (ts.isClassDeclaration(node) && node.name !== undefined && isReactClass(node)) {
-      register(node.name, node);
-    } else if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
-      const initializer = node.initializer;
+  traverse(sourceFile, {
+    noScope: true,
+    enter({ node }) {
+      if (t.isFunctionDeclaration(node) && node.id != null) {
+        register(node.id, node);
+      } else if (t.isClassDeclaration(node) && node.id != null && isReactClass(node)) {
+        register(node.id, node);
+      } else if (t.isVariableDeclarator(node) && t.isIdentifier(node.id)) {
+        const initializer = node.init;
 
-      if (
-        initializer !== undefined &&
-        (ts.isArrowFunction(initializer) ||
-          ts.isFunctionExpression(initializer) ||
-          ts.isClassExpression(initializer) ||
-          isReactComponentWrapper(initializer))
-      ) {
-        register(node.name, node);
+        if (
+          initializer != null &&
+          (t.isArrowFunctionExpression(initializer) ||
+            t.isFunctionExpression(initializer) ||
+            t.isClassExpression(initializer) ||
+            isReactComponentWrapper(initializer))
+        ) {
+          register(node.id, node);
+        }
       }
-    }
-
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sourceFile);
+    },
+  });
 
   return [...declarations].map(([name, location]) => `${name} (${location})`);
 }
@@ -149,6 +144,33 @@ const indexFiles = tree.files.filter((path) => basename(path) === "index.ts");
 const componentDirectories = tree.directories.filter((directory) => {
   const name = basename(directory);
   return presentationFiles.has(join(directory, `${name}.tsx`));
+});
+
+test("component parser detects declarations, React wrappers and source locations", () => {
+  const source = sourceFileFor(join(PRESENTATION_ROOT, "fixture.tsx"), [
+    "export function Declared() { return <div />; }",
+    "export const Arrow = () => <div />;",
+    "const Expression = function () { return null; };",
+    "const Wrapped = React.memo(() => null);",
+    "const Forwarded = forwardRef(() => null);",
+    "const Lazy = lazy(() => import('./view'));",
+    "class ClassView extends React.PureComponent {}",
+    "const ClassExpression = class {};",
+    "class Utility {}",
+    "function helper() { return null; }",
+    "declare function Overload(): void;",
+  ].join("\n"));
+
+  assert.deepEqual(reactComponentDeclarations(source), [
+    "Declared (fixture.tsx:1)",
+    "Arrow (fixture.tsx:2)",
+    "Expression (fixture.tsx:3)",
+    "Wrapped (fixture.tsx:4)",
+    "Forwarded (fixture.tsx:5)",
+    "Lazy (fixture.tsx:6)",
+    "ClassView (fixture.tsx:7)",
+    "ClassExpression (fixture.tsx:8)",
+  ]);
 });
 
 test("components use a local named-export entry point", () => {
@@ -257,13 +279,14 @@ test("presentation modules do not use wildcard exports", () => {
     .flatMap((path) => {
       const sourceFile = sourceFileFor(path);
 
-      return sourceFile.statements.flatMap((statement) => {
+      return sourceFile.program.body.flatMap((statement) => {
         const isWildcardExport =
-          ts.isExportDeclaration(statement) &&
-          (statement.exportClause === undefined || ts.isNamespaceExport(statement.exportClause));
+          t.isExportAllDeclaration(statement) ||
+          (t.isExportNamedDeclaration(statement) &&
+            statement.specifiers.some((specifier) => t.isExportNamespaceSpecifier(specifier)));
 
         return isWildcardExport
-          ? [`${sourceLocation(sourceFile, statement)}: replace export * with named exports`]
+          ? [`${sourceLocation(statement)}: replace export * with named exports`]
           : [];
       });
     });

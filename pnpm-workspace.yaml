@@ -1,2 +1,11 @@
 allowBuilds:
   esbuild: true
+# Exact releases selected by the September 2026 dependency update.
+minimumReleaseAgeExclude:
+  - '@types/node@26.6.3'
+  - '@vitest/coverage-v8@5.0.2'
+  - '@vitest/mocker@5.0.2'
+  - '@vitest/spy@5.0.2'
+  - vitest@5.0.2
+patchedDependencies:
+  babel-plugin-react-compiler@1.0.0: patches/babel-plugin-react-compiler@1.0.0.patch

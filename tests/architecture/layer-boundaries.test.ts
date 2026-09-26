@@ -4,7 +4,7 @@ import { basename, dirname, extname, join, normalize, relative, resolve, sep } f
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import * as ts from "typescript";
+import { parseSync, traverse, types as t } from "@babel/core";
 
 const PROJECT_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const SOURCE_ROOT = join(PROJECT_ROOT, "src");
@@ -39,39 +39,72 @@ function projectPath(path: string): string {
   return relative(PROJECT_ROOT, path).split(sep).join("/");
 }
 
-function sourceFile(path: string): ts.SourceFile {
-  return ts.createSourceFile(
-    projectPath(path),
-    readFileSync(path, "utf8"),
-    ts.ScriptTarget.Latest,
-    true,
-    extname(path) === ".tsx" ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+function sourceFile(path: string, contents = readFileSync(path, "utf8")): t.File {
+  const source = parseSync(contents, {
+    babelrc: false,
+    configFile: false,
+    filename: path,
+    parserOpts: {
+      sourceType: "module",
+      createImportExpressions: true,
+      plugins: extname(path) === ".tsx" ? ["typescript", "jsx"] : ["typescript"],
+    },
+  });
+  assert.ok(source, `Could not parse ${projectPath(path)}`);
+  return source;
+}
+
+function moduleSpecifiers(source: t.File): readonly string[] {
+  const result: string[] = [];
+  traverse(source, {
+    noScope: true,
+    enter({ node }) {
+      if (
+        (t.isImportDeclaration(node) ||
+          t.isExportNamedDeclaration(node) ||
+          t.isExportAllDeclaration(node) ||
+          t.isImportExpression(node)) &&
+        t.isStringLiteral(node.source)
+      ) {
+        result.push(node.source.value);
+      }
+    },
+  });
+  return result;
+}
+
+function isWildcardExport(statement: t.Statement): boolean {
+  return (
+    t.isExportAllDeclaration(statement) ||
+    (t.isExportNamedDeclaration(statement) &&
+      statement.specifiers.some((specifier) => t.isExportNamespaceSpecifier(specifier)))
   );
 }
 
-function moduleSpecifiers(source: ts.SourceFile): readonly string[] {
-  const result: string[] = [];
-  const visit = (node: ts.Node): void => {
-    if (
-      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
-      node.moduleSpecifier !== undefined &&
-      ts.isStringLiteral(node.moduleSpecifier)
-    ) {
-      result.push(node.moduleSpecifier.text);
-    } else if (
-      ts.isCallExpression(node) &&
-      node.expression.kind === ts.SyntaxKind.ImportKeyword
-    ) {
-      const argument = node.arguments[0];
-      if (node.arguments.length === 1 && argument !== undefined && ts.isStringLiteral(argument)) {
-        result.push(argument.text);
-      }
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  return result;
-}
+test("architecture parser preserves imports and wildcard exports across TypeScript and JSX", () => {
+  const source = sourceFile(join(SOURCE_ROOT, "architecture-fixture.tsx"), `
+    import type { Props } from "./types";
+    import "./side-effect";
+    export { value } from "./named";
+    export * from "./all";
+    export * as namespace from "./namespace";
+    export const View = (props: Props) => <div>{props.value}</div>;
+    async function load() { return import("./lazy"); }
+    const unrelated = "import('./text-only')";
+    // export * from "./comment-only";
+  `);
+
+  assert.deepEqual(moduleSpecifiers(source), [
+    "./types", "./side-effect", "./named", "./all", "./namespace", "./lazy",
+  ]);
+  assert.deepEqual(source.program.body.filter(isWildcardExport).map((node) => node.type), [
+    "ExportAllDeclaration", "ExportNamedDeclaration",
+  ]);
+  assert.equal(
+    sourceFile(join(SOURCE_ROOT, "architecture-fixture.ts"), "const value = <number>1;").type,
+    "File",
+  );
+});
 
 test("production modules respect clean-architecture dependency direction", () => {
   const violations: string[] = [];
@@ -105,11 +138,8 @@ test("production modules respect clean-architecture dependency direction", () =>
 
 test("TypeScript modules never use wildcard exports", () => {
   const violations = AUDITED_ROOTS.flatMap(filesBelow).flatMap((path) =>
-    sourceFile(path).statements.flatMap((statement) =>
-      ts.isExportDeclaration(statement) &&
-      (statement.exportClause === undefined || ts.isNamespaceExport(statement.exportClause))
-        ? [projectPath(path)]
-        : [],
+    sourceFile(path).program.body.flatMap((statement) =>
+      isWildcardExport(statement) ? [projectPath(path)] : [],
     ),
   );
 
