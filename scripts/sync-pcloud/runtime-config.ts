@@ -16,6 +16,7 @@ export interface SyncPCloudRuntimeConfig {
 function notificationAddress(value: string): boolean {
     if (
         value.length < 3 || value.length > 254 ||
+        /\s/.test(value) ||
         !/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+$/.test(value)
     ) return false;
     const domain = value.slice(value.lastIndexOf("@") + 1);
