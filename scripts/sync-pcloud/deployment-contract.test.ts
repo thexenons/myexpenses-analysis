@@ -61,6 +61,13 @@ test("Compose isolates secrets, ownership, health, and writable paths", async ()
     assert.match(compose, /PCLOUD_FOLDER_PATH: \$\{PCLOUD_FOLDER_PATH:-\}/u);
     assert.match(compose, /MYEXPENSES_SYNC_INTERVAL_SECONDS: \$\{MYEXPENSES_SYNC_INTERVAL_SECONDS:-3600\}/u);
     assert.match(compose, /MYEXPENSES_SYNC_TIMEOUT_SECONDS: \$\{MYEXPENSES_SYNC_TIMEOUT_SECONDS:-1800\}/u);
+    for (const key of [
+        "MYEXPENSES_NOTIFICATION_TO",
+        "MYEXPENSES_NOTIFICATION_FROM",
+        "MYEXPENSES_SMTP_PASSWORD",
+    ]) {
+        assert.ok(compose.includes(key + ": ${" + key + ":-}"));
+    }
     assert.match(compose, /condition: service_healthy/u);
     assert.match(compose, /stop_grace_period: 45s/u);
     assert.match(compose, /nocopy: true/u);
@@ -77,7 +84,7 @@ test("Compose isolates secrets, ownership, health, and writable paths", async ()
     assert.doesNotMatch(compose, /^\s*args:/mu);
     assert.doesNotMatch(compose, /MYEXPENSES_DEPLOY_ROOT|MYEXPENSES_REPOSITORY_ROOT/u);
     const web = compose.slice(compose.indexOf("  web:"), compose.indexOf("\nvolumes:"));
-    assert.doesNotMatch(web, /PCLOUD_|PASSPHRASE/u);
+    assert.doesNotMatch(web, /PCLOUD_|PASSPHRASE|NOTIFICATION|SMTP_PASSWORD/u);
 });
 
 test("web nginx serves only the vault and static assets behind the proxy", async () => {
