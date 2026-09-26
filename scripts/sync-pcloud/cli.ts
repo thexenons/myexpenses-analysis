@@ -5,6 +5,7 @@ import {
     loadSyncPCloudConfig,
     SyncConfigError,
 } from "./config.ts";
+import { SyncLeaseError } from "./lease.ts";
 import {
     PCloudSyncError,
     runPCloudSync,
@@ -48,6 +49,7 @@ export function parseSyncPCloudArguments(
 function publicError(error: unknown): string {
     if (
         error instanceof SyncConfigError ||
+        error instanceof SyncLeaseError ||
         error instanceof PCloudError ||
         error instanceof PCloudSyncError
     ) {
@@ -67,6 +69,7 @@ export async function runSyncPCloudCli(
         stderr: (message) => process.stderr.write(message),
         stdout: (message) => process.stdout.write(message),
     },
+    signal?: AbortSignal,
 ): Promise<number> {
     try {
         const options = parseSyncPCloudArguments(args);
@@ -77,7 +80,7 @@ export async function runSyncPCloudCli(
                 ...dependencies,
                 logger: { info: (message) => io.stdout(`${message}\n`) },
             },
-            { force: options.force },
+            { force: options.force, signal },
         );
         if (result.status === "noop") {
             io.stdout("Synchronization completed without changes.\n");

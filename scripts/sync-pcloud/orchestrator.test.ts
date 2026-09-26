@@ -16,6 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { acquireSyncLease } from "./lease.ts";
 import {
     runPCloudSync,
     type PCloudSyncClient,
@@ -486,55 +487,62 @@ test("does not follow a symlink disguised as a stale workspace", async () => {
     }
 });
 
-test("recovers a private lock owned by a dead PID", async () => {
+test("refuses legacy PID locks until old writers are stopped and migrated", async () => {
     const value = await fixture();
     const count = { value: 0 };
     try {
         const lock = join(value.deployRoot, ".sync.lock");
         await writeFile(lock, "2147483647\n", { mode: 0o600 });
-        const result = await runPCloudSync(
-            value.config,
-            dependencies(fakeClient(verified()), pipeline(count)),
-        );
-        assert.equal(result.status, "published");
-        await assert.rejects(lstat(lock));
-    } finally {
-        await rm(value.root, { force: true, recursive: true });
-    }
-});
-
-test("refuses a lock owned by a live process", async () => {
-    const value = await fixture();
-    try {
-        const lock = join(value.deployRoot, ".sync.lock");
-        await writeFile(lock, `${process.pid}\n`, { mode: 0o600 });
         await assert.rejects(
             runPCloudSync(
                 value.config,
-                dependencies(fakeClient(verified()), pipeline({ value: 0 })),
+                dependencies(fakeClient(verified()), pipeline(count)),
             ),
-            /synchronization is active/iu,
+            /unsafe metadata/iu,
         );
-        assert.equal(await readFile(lock, "utf8"), `${process.pid}\n`);
+        assert.equal(count.value, 0);
+        assert.equal((await lstat(lock)).isFile(), true);
     } finally {
         await rm(value.root, { force: true, recursive: true });
     }
 });
 
-test("publishes a complete private PID lock before entering the operation", async () => {
+test("refuses a kernel lease held by another writer", async () => {
+    const value = await fixture();
+    try {
+        const lock = join(value.deployRoot, ".sync.lock");
+        const lease = await acquireSyncLease(value.deployRoot);
+        try {
+            await assert.rejects(
+                runPCloudSync(
+                    value.config,
+                    dependencies(fakeClient(verified()), pipeline({ value: 0 })),
+                ),
+                /synchronization is active/iu,
+            );
+        } finally {
+            await lease.close();
+        }
+        assert.equal((await lstat(lock)).isFile(), true);
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("holds a private kernel lease through publication", async () => {
     const value = await fixture();
     try {
         const result = await runPCloudSync(
             value.config,
             dependencies(fakeClient(verified()), async (input) => {
                 const lock = join(value.deployRoot, ".sync.lock");
-                assert.equal(await readFile(lock, "utf8"), `${process.pid}\n`);
                 assert.equal((await lstat(lock)).mode & 0o777, 0o600);
+                await assert.rejects(acquireSyncLease(value.deployRoot), /active/iu);
                 return pipeline({ value: 0 })(input);
             }),
         );
         assert.equal(result.status, "published");
-        await assert.rejects(lstat(join(value.deployRoot, ".sync.lock")));
+        assert.equal((await lstat(join(value.deployRoot, ".sync.lock"))).isFile(), true);
     } finally {
         await rm(value.root, { force: true, recursive: true });
     }

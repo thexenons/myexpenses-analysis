@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+    access,
     mkdir,
     mkdtemp,
     readFile,
@@ -12,8 +13,10 @@ import { tmpdir } from "node:os";
 
 import {
     createStaticBuildEnvironment,
+    executeStaticBuildChild,
     processBackupForStaticRelease,
 } from "./process-backup.ts";
+import { acquireSyncLease, SyncLeaseBusyError } from "./lease.ts";
 
 async function fixtureDirectories(): Promise<{
     readonly repositoryRoot: string;
@@ -58,6 +61,166 @@ test("passes only an allowlisted environment to build tooling", () => {
         NODE_ENV: "production",
         PATH: "/usr/bin",
     });
+});
+
+test("build child holds the lease descriptor after parent closes it", async () => {
+    const root = await mkdtemp(join(tmpdir(), "sync-child-lease-"));
+    const script = join(root, "hold.mjs");
+    const lease = await acquireSyncLease(root);
+    try {
+        await writeFile(script, "process.send?.('ready'); setTimeout(() => {}, 250);");
+        const running = executeStaticBuildChild(script, [], {
+            cwd: root,
+            leaseFd: lease.fd,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        await lease.close();
+        await assert.rejects(acquireSyncLease(root), SyncLeaseBusyError);
+        await running;
+        const next = await acquireSyncLease(root);
+        await next.close();
+    } finally {
+        await lease.close();
+        await rm(root, { force: true, recursive: true });
+    }
+});
+
+test("aborting a build awaits child exit before returning", async () => {
+    const root = await mkdtemp(join(tmpdir(), "sync-child-abort-"));
+    const script = join(root, "wait.mjs");
+    const started = join(root, "started");
+    const exited = join(root, "exited");
+    const controller = new AbortController();
+    try {
+        await writeFile(script, `import { writeFileSync } from 'node:fs';
+process.on('SIGTERM', () => { setTimeout(() => { writeFileSync(${JSON.stringify(exited)}, 'yes'); process.exit(0); }, 50); });
+writeFileSync(${JSON.stringify(started)}, 'yes');
+setInterval(() => {}, 1000);`);
+        const running = executeStaticBuildChild(script, [], {
+            cwd: root,
+            signal: controller.signal,
+        });
+        for (let attempt = 0; attempt < 100; attempt++) {
+            // oxlint-disable-next-line no-await-in-loop -- wait for the child to install its TERM handler.
+            if (await access(started).then(() => true, () => false)) break;
+            // oxlint-disable-next-line no-await-in-loop -- bounded fixture readiness poll.
+            await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        await access(started);
+        controller.abort();
+        await assert.rejects(running);
+        assert.equal(await readFile(exited, "utf8"), "yes");
+    } finally {
+        controller.abort();
+        await rm(root, { force: true, recursive: true });
+    }
+});
+
+test("abort waits for SIGTERM-resistant descendants after the direct child exits", { timeout: 5_000 }, async () => {
+    const root = await mkdtemp(join(tmpdir(), "sync-child-group-abort-"));
+    const parentScript = join(root, "parent.mjs");
+    const grandchildScript = join(root, "grandchild.mjs");
+    const ready = join(root, "ready.json");
+    const controller = new AbortController();
+    const processState = async (pid: number) => {
+        const raw = await readFile(`/proc/${pid}/stat`, "utf8").catch(() => undefined);
+        if (raw === undefined) return undefined;
+        const fields = raw.slice(raw.lastIndexOf(")") + 2).split(" ");
+        return { state: fields[0], group: Number(fields[2]), start: fields[19] };
+    };
+    let grandchildPid: number | undefined;
+    let grandchildStart: string | undefined;
+    try {
+        await writeFile(grandchildScript, `import { writeFileSync } from 'node:fs';
+process.on('SIGTERM', () => {});
+writeFileSync(${JSON.stringify(ready)}, JSON.stringify({ pid: process.pid }));
+setInterval(() => {}, 1000);`);
+        await writeFile(parentScript, `import { spawn } from 'node:child_process';
+process.on('SIGTERM', () => process.exit(0));
+spawn(process.execPath, [${JSON.stringify(grandchildScript)}], {
+  stdio: 'ignore', detached: false,
+}).unref();
+setInterval(() => {}, 1000);`);
+        const running = executeStaticBuildChild(parentScript, [], {
+            cwd: root,
+            signal: controller.signal,
+            terminationGraceMs: 100,
+        });
+        for (let attempt = 0; attempt < 100; attempt++) {
+            // oxlint-disable-next-line no-await-in-loop -- wait for descendant readiness before cancellation.
+            if (await access(ready).then(() => true, () => false)) break;
+            // oxlint-disable-next-line no-await-in-loop -- bounded fixture readiness poll.
+            await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        grandchildPid = JSON.parse(await readFile(ready, "utf8")).pid as number;
+        const before = await processState(grandchildPid);
+        assert.ok(before !== undefined && before.state !== "Z");
+        grandchildStart = before.start;
+        controller.abort();
+        await assert.rejects(running, /interrupted/iu);
+        const after = await processState(grandchildPid);
+        assert.ok(after === undefined || after.start !== grandchildStart ||
+            after.state === "Z" || after.state === "X", "live descendant outlived build shutdown");
+    } finally {
+        controller.abort();
+        if (grandchildPid !== undefined) {
+            const state = await processState(grandchildPid);
+            if (state !== undefined && state.start === grandchildStart &&
+                state.state !== "Z" && state.state !== "X") {
+                process.kill(grandchildPid, "SIGKILL");
+            }
+        }
+        await rm(root, { force: true, recursive: true });
+    }
+});
+
+test("normal direct-child exit cannot leave a live same-group writer", { timeout: 5_000 }, async () => {
+    const root = await mkdtemp(join(tmpdir(), "sync-child-normal-exit-"));
+    const grandchildScript = join(root, "grandchild.mjs");
+    const parentScript = join(root, "parent.mjs");
+    const ready = join(root, "ready.json");
+    let grandchildPid: number | undefined;
+    let grandchildStart: string | undefined;
+    try {
+        await writeFile(grandchildScript, `import { writeFileSync } from 'node:fs';
+process.on('SIGTERM', () => {});
+writeFileSync(${JSON.stringify(ready)}, JSON.stringify({ pid: process.pid }));
+setInterval(() => {}, 1000);`);
+        await writeFile(parentScript, `import { spawn } from 'node:child_process';
+const child = spawn(process.execPath, [${JSON.stringify(grandchildScript)}], {
+  stdio: 'ignore', detached: false,
+});
+child.unref();
+setTimeout(() => process.exit(0), 75);`);
+        const running = executeStaticBuildChild(parentScript, [], {
+            cwd: root,
+            terminationGraceMs: 100,
+        });
+        for (let attempt = 0; attempt < 100; attempt++) {
+            // oxlint-disable-next-line no-await-in-loop -- wait for the descendant identity before its parent exits.
+            if (await access(ready).then(() => true, () => false)) break;
+            // oxlint-disable-next-line no-await-in-loop -- bounded fixture readiness poll.
+            await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        grandchildPid = JSON.parse(await readFile(ready, "utf8")).pid as number;
+        const before = await readFile(`/proc/${grandchildPid}/stat`, "utf8");
+        grandchildStart = before.slice(before.lastIndexOf(")") + 2).split(" ")[19];
+        await assert.rejects(running, /interrupted/iu);
+        const raw = await readFile(`/proc/${grandchildPid}/stat`, "utf8").catch(() => undefined);
+        const fields = raw?.slice(raw.lastIndexOf(")") + 2).split(" ");
+        assert.ok(fields === undefined || fields[19] !== grandchildStart ||
+            fields[0] === "Z" || fields[0] === "X");
+    } finally {
+        if (grandchildPid !== undefined) {
+            const raw = await readFile(`/proc/${grandchildPid}/stat`, "utf8").catch(() => undefined);
+            const fields = raw?.slice(raw.lastIndexOf(")") + 2).split(" ");
+            if (fields !== undefined && fields[19] === grandchildStart &&
+                fields[0] !== "Z" && fields[0] !== "X") {
+                process.kill(grandchildPid, "SIGKILL");
+            }
+        }
+        await rm(root, { force: true, recursive: true });
+    }
 });
 
 test("imports, encrypts and builds without leaving plaintext in the release", async () => {

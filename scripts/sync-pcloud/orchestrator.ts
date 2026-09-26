@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
     chmod,
-    link,
     lstat,
     mkdir,
     mkdtemp,
@@ -16,6 +15,7 @@ import {
 } from "node:fs/promises";
 import { isAbsolute, join, relative, sep } from "node:path";
 
+import { acquireSyncLease, type SyncLease } from "./lease.ts";
 import {
     loadSyncPCloudSecrets,
     type SyncPCloudConfig,
@@ -33,7 +33,6 @@ import {
 
 const STATE_VERSION = 1 as const;
 const STATE_FILE = ".sync-state.json";
-const LOCK_FILE = ".sync.lock";
 const CURRENT_LINK = "current";
 const RELEASES_DIRECTORY = "releases";
 const WORK_DIRECTORY = ".work";
@@ -50,6 +49,7 @@ const FORBIDDEN_RELEASE_BASENAMES = new Set([
 
 export interface ProcessBackupInput {
     readonly backupPath: string;
+    readonly leaseFd?: number;
     readonly repositoryRoot: string;
     readonly timeZone: string;
     readonly vaultPassphrase: string;
@@ -106,6 +106,7 @@ export interface PCloudSyncDependencies {
 
 export interface RunPCloudSyncOptions {
     readonly force?: boolean;
+    readonly lease?: SyncLease;
     readonly signal?: AbortSignal;
 }
 
@@ -234,7 +235,7 @@ async function assertOwnedDeploymentDirectory(
     }
 }
 
-async function prepareLayout(config: SyncPCloudSettings): Promise<void> {
+export async function prepareSyncLayout(config: SyncPCloudSettings): Promise<void> {
     await ensureRealDirectory(config.repositoryRoot, 0o755, false);
     await ensureRealDirectory(config.deployRoot, 0o755, true);
     await Promise.all([
@@ -279,148 +280,6 @@ async function prepareLayout(config: SyncPCloudSettings): Promise<void> {
             "deployRoot and repositoryRoot resolve to overlapping directory trees",
         );
     }
-}
-
-async function defaultWithLock<T>(
-    deployRoot: string,
-    operation: () => Promise<T>,
-): Promise<T> {
-    const path = join(deployRoot, LOCK_FILE);
-    const createCompleteLock = async () => {
-        const temporary = join(
-            deployRoot,
-            `.${LOCK_FILE}.${randomUUID()}.tmp`,
-        );
-        let handle: Awaited<ReturnType<typeof open>> | undefined;
-        try {
-            handle = await open(temporary, "wx", 0o600);
-            await handle.writeFile(`${process.pid}\n`, "utf8");
-            await handle.sync();
-            // Hard-linking within deployRoot is an atomic create-if-absent commit.
-            // The visible lock therefore never has an empty/partial PID payload.
-            await link(temporary, path);
-            return handle;
-        } catch (error) {
-            await handle?.close().catch(() => undefined);
-            throw error;
-        } finally {
-            await rm(temporary, { force: true }).catch(() => undefined);
-        }
-    };
-    const acquire = async (allowRecovery: boolean) => {
-        try {
-            return await createCompleteLock();
-        } catch (error) {
-            if (
-                !allowRecovery ||
-                !(error instanceof Error) ||
-                !("code" in error) ||
-                error.code !== "EEXIST"
-            ) {
-                throw new PCloudSyncError(
-                    "Another pCloud synchronization is active",
-                    { cause: error },
-                );
-            }
-            const lock = await readStablePrivateFile(
-                path,
-                "Existing synchronization lock",
-                32,
-            );
-            const source = lock.bytes.toString("utf8");
-            lock.bytes.fill(0);
-            if (!/^\d+\n$/.test(source)) {
-                throw new PCloudSyncError("Existing synchronization lock is invalid");
-            }
-            const pid = Number(source.trim());
-            if (!Number.isSafeInteger(pid) || pid < 1) {
-                throw new PCloudSyncError("Existing synchronization lock is invalid");
-            }
-            try {
-                process.kill(pid, 0);
-                throw new PCloudSyncError(
-                    "Another pCloud synchronization is active",
-                );
-            } catch (probeError) {
-                if (
-                    probeError instanceof Error &&
-                    "code" in probeError &&
-                    probeError.code === "EPERM"
-                ) {
-                    throw new PCloudSyncError(
-                        "Another pCloud synchronization is active",
-                    );
-                }
-                if (
-                    probeError instanceof PCloudSyncError ||
-                    !(probeError instanceof Error) ||
-                    !("code" in probeError) ||
-                    probeError.code !== "ESRCH"
-                ) {
-                    throw probeError;
-                }
-            }
-            const beforeUnlink = await lstat(path);
-            if (
-                beforeUnlink.dev !== lock.dev ||
-                beforeUnlink.ino !== lock.ino
-            ) {
-                throw new PCloudSyncError(
-                    "Existing synchronization lock changed before recovery",
-                );
-            }
-            await unlink(path).catch((unlinkError: unknown) => {
-                if (!isMissing(unlinkError)) throw unlinkError;
-            });
-            return acquire(false);
-        }
-    };
-    const handle = await acquire(true);
-    const ownedLock = await handle.stat();
-    let completion: { error: unknown; ok: false } | { ok: true; value: T };
-    try {
-        completion = { ok: true, value: await operation() };
-    } catch (error) {
-        completion = { error, ok: false };
-    }
-
-    let cleanupError: unknown;
-    try {
-        await handle.close().catch(() => undefined);
-        const currentLock = await lstat(path).catch((error: unknown) => {
-            if (isMissing(error)) return null;
-            throw error;
-        });
-        if (currentLock !== null) {
-            if (
-                currentLock.dev !== ownedLock.dev ||
-                currentLock.ino !== ownedLock.ino
-            ) {
-                throw new PCloudSyncError(
-                    "Synchronization lock changed while it was owned",
-                );
-            }
-            await unlink(path);
-        }
-    } catch (error) {
-        cleanupError = error;
-    }
-    if (cleanupError !== undefined) {
-        if (!completion.ok) {
-            throw new PCloudSyncError(
-                "Synchronization and lock cleanup both failed",
-                {
-                    cause: new AggregateError([
-                        completion.error,
-                        cleanupError,
-                    ]),
-                },
-            );
-        }
-        throw cleanupError;
-    }
-    if (!completion.ok) throw completion.error;
-    return completion.value;
 }
 
 async function cleanupStaleWorkspaces(deployRoot: string): Promise<void> {
@@ -733,9 +592,9 @@ export async function runPCloudSync(
     dependencies: PCloudSyncDependencies,
     options: RunPCloudSyncOptions = {},
 ): Promise<PCloudSyncResult> {
-    await prepareLayout(config);
-    const withLock = dependencies.withLock ?? defaultWithLock;
-    return withLock(config.deployRoot, async () => {
+    await prepareSyncLayout(config);
+    const operation = async (lease?: SyncLease): Promise<PCloudSyncResult> => {
+        options.signal?.throwIfAborted();
         await cleanupStaleWorkspaces(config.deployRoot);
         const loadSecrets = dependencies.loadSecrets ?? (
             "tokenFile" in config && "vaultPassphraseFile" in config
@@ -790,6 +649,7 @@ export async function runPCloudSync(
             const processed = await dependencies.processBackup(
                 {
                     backupPath,
+                    leaseFd: lease?.fd,
                     repositoryRoot: config.repositoryRoot,
                     timeZone: config.timeZone,
                     vaultPassphrase: secrets.vaultPassphrase,
@@ -820,7 +680,9 @@ export async function runPCloudSync(
             ) {
                 throw new PCloudSyncError("Release target escapes deployRoot");
             }
+            options.signal?.throwIfAborted();
             await rename(processed.buildDirectory, releasePath);
+            options.signal?.throwIfAborted();
             // Remove the source backup before making the new release visible.
             await rm(workspacePath, { force: true, recursive: true });
             const previousRelease = await readCurrentRelease(config.deployRoot);
@@ -867,5 +729,18 @@ export async function runPCloudSync(
         } finally {
             await rm(workspacePath, { force: true, recursive: true });
         }
-    });
+    };
+    if (options.lease !== undefined) {
+        options.lease.assertFor(config.deployRoot);
+        return operation(options.lease);
+    }
+    if (dependencies.withLock !== undefined) {
+        return dependencies.withLock(config.deployRoot, () => operation());
+    }
+    const lease = await acquireSyncLease(config.deployRoot);
+    try {
+        return await operation(lease);
+    } finally {
+        await lease.close();
+    }
 }

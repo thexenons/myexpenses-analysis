@@ -6,9 +6,18 @@ import { processBackupForStaticRelease } from "./process-backup.ts";
 export async function runSyncPCloudMain(
     args: readonly string[],
 ): Promise<number> {
-    return runSyncPCloudCli(args, {
-        processBackup: processBackupForStaticRelease,
-    });
+    const controller = new AbortController();
+    const stop = () => controller.abort();
+    process.once("SIGTERM", stop);
+    process.once("SIGINT", stop);
+    try {
+        return await runSyncPCloudCli(args, {
+            processBackup: processBackupForStaticRelease,
+        }, undefined, controller.signal);
+    } finally {
+        process.off("SIGTERM", stop);
+        process.off("SIGINT", stop);
+    }
 }
 
 const entryPoint = process.argv[1];

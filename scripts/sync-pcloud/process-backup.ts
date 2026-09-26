@@ -1,6 +1,7 @@
-import { execFile } from "node:child_process";
+import { spawn } from "node:child_process";
 import { lstat, readFile, readdir, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -17,6 +18,7 @@ import type {
 } from "./orchestrator.ts";
 
 const MAX_BUILD_OUTPUT_BYTES = 4 * 1024 * 1024;
+const DEFAULT_TERMINATION_GRACE_MS = 5_000;
 const EXPECTED_PACKAGE_NAME = "myexpenses-analysis";
 const TSC_PATH = fileURLToPath(
     new URL("../../node_modules/typescript/bin/tsc", import.meta.url),
@@ -37,6 +39,7 @@ const SAFE_BUILD_ENVIRONMENT_KEYS = [
 ] as const;
 
 export interface StaticReleaseBuildInput {
+    readonly leaseFd?: number;
     readonly outputDirectory: string;
     readonly repositoryRoot: string;
     readonly signal?: AbortSignal;
@@ -75,28 +78,123 @@ export function createStaticBuildEnvironment(
     return safeEnvironment;
 }
 
-function executeNode(
+async function liveProcessGroupMembers(groupId: number): Promise<boolean> {
+    for (const entry of await readdir("/proc")) {
+        if (!/^\d+$/.test(entry)) continue;
+        let stat: string;
+        try {
+            // oxlint-disable-next-line no-await-in-loop -- process state is sampled sequentially without unbounded reads.
+            stat = await readFile(`/proc/${entry}/stat`, "utf8");
+        } catch (error) {
+            if (error instanceof Error && "code" in error && error.code === "ENOENT") continue;
+            throw error;
+        }
+        const fields = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+        if (Number(fields[2]) === groupId && fields[0] !== "Z" && fields[0] !== "X") {
+            return true;
+        }
+    }
+    return false;
+}
+
+async function groupMayStillBeLive(groupId: number): Promise<boolean> {
+    try {
+        return await liveProcessGroupMembers(groupId);
+    } catch {
+        // A transient /proc read failure is not proof that descendants exited.
+        return true;
+    }
+}
+
+export function executeStaticBuildChild(
     scriptPath: string,
     args: readonly string[],
     options: {
         readonly cwd: string;
         readonly env?: NodeJS.ProcessEnv;
+        readonly leaseFd?: number;
         readonly signal?: AbortSignal;
+        readonly terminationGraceMs?: number;
     },
 ): Promise<void> {
+    options.signal?.throwIfAborted();
+    const graceMs = options.terminationGraceMs ?? DEFAULT_TERMINATION_GRACE_MS;
+    if (!Number.isSafeInteger(graceMs) || graceMs < 1 || graceMs > 30_000) {
+        throw new StaticReleasePipelineError("Production build shutdown timing is invalid");
+    }
     return new Promise((resolvePromise, reject) => {
-        execFile(
-            process.execPath,
-            [scriptPath, ...args],
-            {
-                cwd: options.cwd,
-                env: options.env,
-                maxBuffer: MAX_BUILD_OUTPUT_BYTES,
-                signal: options.signal,
-                windowsHide: true,
-            },
-            (error) => (error === null ? resolvePromise() : reject(error)),
-        );
+        const child = spawn(process.execPath, [scriptPath, ...args], {
+            cwd: options.cwd,
+            detached: true,
+            env: options.env,
+            stdio: ["ignore", "pipe", "pipe", options.leaseFd ?? "ignore"],
+            windowsHide: true,
+        });
+        let failure: Error | undefined;
+        let outputBytes = 0;
+        let escalation: ReturnType<typeof setTimeout> | undefined;
+        const killGroup = (signal: NodeJS.Signals) => {
+            if (child.pid === undefined) return;
+            try { process.kill(-child.pid, signal); } catch { /* Already exited. */ }
+        };
+        const stop = () => {
+            if (escalation !== undefined) return;
+            failure = new StaticReleasePipelineError("Production build was interrupted");
+            killGroup("SIGTERM");
+            escalation = setTimeout(() => {
+                void (async () => {
+                    if (child.pid !== undefined && await groupMayStillBeLive(child.pid)) {
+                        killGroup("SIGKILL");
+                    }
+                })();
+            }, graceMs);
+            escalation.unref();
+        };
+        const countOutput = (chunk: Buffer) => {
+            outputBytes += chunk.byteLength;
+            if (outputBytes > MAX_BUILD_OUTPUT_BYTES) stop();
+        };
+        child.stdout?.on("data", countOutput);
+        child.stderr?.on("data", countOutput);
+        child.once("error", () => {
+            failure = new StaticReleasePipelineError("Production build could not start");
+        });
+        const directExit = new Promise<number | null>((resolveExit) => {
+            child.once("exit", (code) => resolveExit(code));
+            child.once("error", () => resolveExit(null));
+        });
+        const directClose = new Promise<void>((resolveClose) => {
+            child.once("close", () => resolveClose());
+        });
+        void (async () => {
+            const code = await directExit;
+            if (child.pid !== undefined && await groupMayStillBeLive(child.pid)) {
+                // A successful direct child may still leave writers in its process group.
+                stop();
+                // TERM-to-KILL escalation is bounded; ownership stays held until
+                // the group stops. An uninterruptible kernel task can extend that wait.
+                while (true) {
+                    // oxlint-disable-next-line no-await-in-loop -- recheck the known group after each shutdown interval.
+                    if (!(await groupMayStillBeLive(child.pid))) break;
+                    // oxlint-disable-next-line no-await-in-loop -- wait for the known process group to cease writing.
+                    await delay(25);
+                }
+            }
+            await directClose;
+            options.signal?.removeEventListener("abort", stop);
+            if (escalation !== undefined) clearTimeout(escalation);
+            if (failure !== undefined) reject(failure);
+            else if (code !== 0) reject(new StaticReleasePipelineError("Production build failed"));
+            else resolvePromise();
+        })().catch((error: unknown) => {
+            options.signal?.removeEventListener("abort", stop);
+            if (escalation !== undefined) clearTimeout(escalation);
+            reject(new StaticReleasePipelineError("Production build shutdown could not be verified", {
+                cause: error,
+            }));
+        });
+        options.signal?.addEventListener("abort", stop, { once: true });
+        if (options.signal?.aborted) stop();
     });
 }
 
@@ -129,17 +227,19 @@ async function defaultBuild(input: StaticReleaseBuildInput): Promise<void> {
         process.env,
         input.vaultPath,
     );
-    await executeNode(TSC_PATH, ["-b"], {
+    await executeStaticBuildChild(TSC_PATH, ["-b"], {
         cwd: input.repositoryRoot,
         env: environment,
+        leaseFd: input.leaseFd,
         signal: input.signal,
     });
-    await executeNode(
+    await executeStaticBuildChild(
         VITE_PATH,
         ["build", "--outDir", input.outputDirectory, "--emptyOutDir"],
         {
             cwd: input.repositoryRoot,
             env: environment,
+            leaseFd: input.leaseFd,
             signal: input.signal,
         },
     );
@@ -215,6 +315,7 @@ export async function processBackupForStaticRelease(
     await unlink(datasetPath);
     signal?.throwIfAborted();
     await (dependencies.build ?? defaultBuild)({
+        leaseFd: input.leaseFd,
         outputDirectory: buildDirectory,
         repositoryRoot: input.repositoryRoot,
         signal,
