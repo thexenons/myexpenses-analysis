@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
     chmod,
     lstat,
@@ -107,7 +107,14 @@ export interface PCloudSyncDependencies {
 export interface RunPCloudSyncOptions {
     readonly force?: boolean;
     readonly lease?: SyncLease;
+    readonly notificationsEnabled?: boolean;
     readonly signal?: AbortSignal;
+}
+
+export interface NotificationLedger {
+    readonly lastEnqueuedIdentity: string;
+    readonly enqueued: string;
+    readonly acknowledged: string;
 }
 
 export interface PCloudSyncState {
@@ -119,6 +126,7 @@ export interface PCloudSyncState {
     readonly releaseId: string;
     readonly size: number;
     readonly version: typeof STATE_VERSION;
+    readonly notifications?: NotificationLedger;
 }
 
 export type PCloudSyncResult =
@@ -326,8 +334,9 @@ function stateObject(value: unknown): PCloudSyncState {
         "localSha256",
         "releaseId",
     ];
+    const hasNotifications = Object.hasOwn(object, "notifications");
     if (
-        Object.keys(object).length !== keys.length ||
+        Object.keys(object).length !== keys.length + Number(hasNotifications) ||
         keys.some((key) => !Object.hasOwn(object, key)) ||
         object.version !== STATE_VERSION ||
         typeof object.fileId !== "string" ||
@@ -348,7 +357,94 @@ function stateObject(value: unknown): PCloudSyncState {
     ) {
         throw new PCloudSyncError("Synchronization state is invalid");
     }
+    if (hasNotifications) {
+        const ledger = object.notifications;
+        if (
+            typeof ledger !== "object" ||
+            ledger === null ||
+            Array.isArray(ledger)
+        ) {
+            throw new PCloudSyncError("Synchronization state is invalid");
+        }
+        const entry = ledger as Record<string, unknown>;
+        const counter = (candidate: unknown) =>
+            typeof candidate === "string" && /^(0|[1-9]\d*)$/.test(candidate) &&
+            candidate.length <= 256;
+        if (
+            Object.keys(entry).length !== 3 ||
+            !Object.hasOwn(entry, "lastEnqueuedIdentity") ||
+            !Object.hasOwn(entry, "enqueued") ||
+            !Object.hasOwn(entry, "acknowledged") ||
+            typeof entry.lastEnqueuedIdentity !== "string" ||
+            !/^[a-f0-9]{64}$/.test(entry.lastEnqueuedIdentity) ||
+            !counter(entry.enqueued) ||
+            !counter(entry.acknowledged) ||
+            BigInt(entry.acknowledged as string) > BigInt(entry.enqueued as string)
+        ) {
+            throw new PCloudSyncError("Synchronization state is invalid");
+        }
+    }
     return object as unknown as PCloudSyncState;
+}
+
+function backupIdentity(file: PCloudVerifiedBackupFile): string {
+    return createHash("sha256").update(JSON.stringify([
+        file.fileId, file.size, file.checksumSha1, file.checksumSha256 ?? null,
+    ])).digest("hex");
+}
+
+function nextNotificationLedger(
+    previous: PCloudSyncState | null,
+    file: PCloudVerifiedBackupFile,
+    enabled: boolean,
+): NotificationLedger | undefined {
+    const ledger = previous?.notifications;
+    if (!enabled) return ledger;
+    const identity = backupIdentity(file);
+    if (ledger?.lastEnqueuedIdentity === identity) return ledger;
+    const enqueued = (BigInt(ledger?.enqueued ?? "0") + 1n).toString();
+    if (enqueued.length > 256) {
+        throw new PCloudSyncError("Notification ledger capacity is exhausted");
+    }
+    return {
+        lastEnqueuedIdentity: identity,
+        enqueued,
+        acknowledged: ledger?.acknowledged ?? "0",
+    };
+}
+
+/** Caller must retain the matching exclusive sync lease through acknowledgement. */
+export async function peekPendingNotification(
+    deployRoot: string,
+    lease: SyncLease,
+): Promise<string | null> {
+    lease.assertFor(deployRoot);
+    const ledger = (await readState(deployRoot))?.notifications;
+    if (ledger === undefined || ledger.enqueued === ledger.acknowledged) return null;
+    return (BigInt(ledger.acknowledged) + 1n).toString();
+}
+
+export async function acknowledgePendingNotification(
+    deployRoot: string,
+    lease: SyncLease,
+    sequence: string,
+): Promise<void> {
+    lease.assertFor(deployRoot);
+    const state = await readState(deployRoot);
+    const ledger = state?.notifications;
+    if (
+        state === null ||
+        ledger === undefined ||
+        !/^[1-9]\d*$/.test(sequence) ||
+        BigInt(sequence) !== BigInt(ledger.acknowledged) + 1n ||
+        BigInt(sequence) > BigInt(ledger.enqueued)
+    ) {
+        throw new PCloudSyncError("Notification acknowledgement is invalid");
+    }
+    await defaultWriteState(deployRoot, {
+        ...state,
+        notifications: { ...ledger, acknowledged: sequence },
+    });
 }
 
 async function readState(deployRoot: string): Promise<PCloudSyncState | null> {
@@ -685,6 +781,9 @@ export async function runPCloudSync(
             options.signal?.throwIfAborted();
             // Remove the source backup before making the new release visible.
             await rm(workspacePath, { force: true, recursive: true });
+            const notifications = nextNotificationLedger(
+                state, file, options.notificationsEnabled === true,
+            );
             const previousRelease = await readCurrentRelease(config.deployRoot);
             await replaceCurrentRelease(config.deployRoot, releaseId);
             const nextState: PCloudSyncState = {
@@ -696,6 +795,7 @@ export async function runPCloudSync(
                 modifiedEpochSeconds: file.modifiedEpochSeconds,
                 localSha256: download.sha256,
                 releaseId,
+                ...(notifications === undefined ? {} : { notifications }),
             };
             try {
                 await (dependencies.writeState ?? defaultWriteState)(

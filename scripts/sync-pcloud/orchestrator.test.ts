@@ -18,6 +18,8 @@ import test from "node:test";
 
 import { acquireSyncLease } from "./lease.ts";
 import {
+    acknowledgePendingNotification,
+    peekPendingNotification,
     runPCloudSync,
     type PCloudSyncClient,
     type PCloudSyncDependencies,
@@ -193,6 +195,95 @@ test("force processes again and retains the previous release", async () => {
         const releases = await readdir(join(value.deployRoot, "releases"));
         assert.equal(releases.includes(first.releaseId), true);
         assert.equal(releases.includes(forced.releaseId), true);
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("notification ledger starts on first enabled processing and counts new backups without forced duplicates", async () => {
+    const value = await fixture();
+    const count = { value: 0 };
+    try {
+        await runPCloudSync(value.config, dependencies(fakeClient(verified()), pipeline(count)));
+        const legacy = JSON.parse(await readFile(join(value.deployRoot, ".sync-state.json"), "utf8"));
+        assert.equal(Object.hasOwn(legacy, "notifications"), false);
+        const first = dependencies(fakeClient(verified()), pipeline(count));
+        await runPCloudSync(value.config, first, { force: true, notificationsEnabled: true });
+        await runPCloudSync(value.config, first, { force: true, notificationsEnabled: true });
+        await runPCloudSync(value.config, dependencies(
+            fakeClient(verified("101", SHA1_B, SHA256_B)), pipeline(count),
+        ), { notificationsEnabled: true });
+        const lease = await acquireSyncLease(value.deployRoot);
+        try {
+            assert.equal(await peekPendingNotification(value.deployRoot, lease), "1");
+            await acknowledgePendingNotification(value.deployRoot, lease, "1");
+            assert.equal(await peekPendingNotification(value.deployRoot, lease), "2");
+            await acknowledgePendingNotification(value.deployRoot, lease, "2");
+            assert.equal(await peekPendingNotification(value.deployRoot, lease), null);
+        } finally {
+            await lease.close();
+        }
+        await runPCloudSync(value.config, dependencies(
+            fakeClient(verified("102", SHA1_A, SHA256_A)), pipeline(count),
+        ));
+        await runPCloudSync(value.config, dependencies(
+            fakeClient(verified("102", SHA1_A, SHA256_A)), pipeline(count),
+        ), { force: true, notificationsEnabled: true });
+        const after = JSON.parse(await readFile(join(value.deployRoot, ".sync-state.json"), "utf8"));
+        assert.equal(after.notifications.enqueued, "3");
+        assert.equal(after.notifications.acknowledged, "2");
+        assert.equal(count.value, 6);
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("failed processing and state commit cannot enqueue a notification", async () => {
+    const value = await fixture();
+    try {
+        await assert.rejects(runPCloudSync(value.config, dependencies(
+            fakeClient(verified()), async () => { throw new Error("pipeline failed"); },
+        ), { notificationsEnabled: true }), /pipeline failed/u);
+        await assert.rejects(readFile(join(value.deployRoot, ".sync-state.json")));
+        await runPCloudSync(value.config, dependencies(
+            fakeClient(verified()), pipeline({ value: 0 }),
+        ), { notificationsEnabled: true });
+        const before = await readFile(join(value.deployRoot, ".sync-state.json"));
+        await assert.rejects(runPCloudSync(value.config, {
+            ...dependencies(fakeClient(verified("101", SHA1_B, SHA256_B)), pipeline({ value: 0 })),
+            writeState: async () => { throw new Error("cannot persist"); },
+        }, { notificationsEnabled: true }), /state could not be committed/iu);
+        assert.deepEqual(await readFile(join(value.deployRoot, ".sync-state.json")), before);
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("notification counters remain exact beyond Number.MAX_SAFE_INTEGER", async () => {
+    const value = await fixture();
+    try {
+        await runPCloudSync(value.config, dependencies(
+            fakeClient(verified()), pipeline({ value: 0 }),
+        ), { notificationsEnabled: true });
+        const path = join(value.deployRoot, ".sync-state.json");
+        const state = JSON.parse(await readFile(path, "utf8"));
+        state.notifications.enqueued = "9007199254740993";
+        state.notifications.acknowledged = "9007199254740992";
+        await writeFile(path, JSON.stringify(state));
+        const lease = await acquireSyncLease(value.deployRoot);
+        try {
+            assert.equal(await peekPendingNotification(value.deployRoot, lease), "9007199254740993");
+            await acknowledgePendingNotification(value.deployRoot, lease, "9007199254740993");
+            assert.equal(await peekPendingNotification(value.deployRoot, lease), null);
+        } finally {
+            await lease.close();
+        }
+        await runPCloudSync(value.config, dependencies(
+            fakeClient(verified("101", SHA1_B, SHA256_B)), pipeline({ value: 0 }),
+        ), { notificationsEnabled: true });
+        const updated = JSON.parse(await readFile(path, "utf8"));
+        assert.equal(updated.notifications.enqueued, "9007199254740994");
+        assert.equal(updated.notifications.acknowledged, "9007199254740993");
     } finally {
         await rm(value.root, { force: true, recursive: true });
     }
