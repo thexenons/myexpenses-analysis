@@ -1,6 +1,6 @@
 # Worker backup email notifications
 
-**Status:** Implemented, committed, and fast-forward integrated into local `main`; remote push awaits SSH credential/session authorization.
+**Status:** Implemented, verified, committed, merged into `main`, and pushed to `origin/main`. Coolify runtime configuration and live delivery remain manual steps.
 
 ## Latest delivery checkpoint
 
@@ -10,13 +10,13 @@
 - Final functional verification: focused 75 passed; Node 222 passed / 2 reference-dataset skips; UI 216 passed; deployment 1 passed; type-check, lint, build, and diff checks passed. No live SMTP or Docker-image build performed.
 - Second native review `review-355dd7eedfaa2956`: consent granted; one bounded correction plan captured (20 planned lines, 1 actual source line). Its exact returned STATUS after the corrective commit stopped with `captured_artifacts_unverifiable`. No approval or acknowledgement exists for this second review; no recovery/retry or new lineage has been attempted.
 - User chose “continue without reporting.” The exact captured provider-owned decline invocation was executed once and refused with `stale_target_identity` (`mutation_outcome: not_started`): it targets the original candidate, while the bounded correction changed the committed candidate. No decline was recorded. No retry, substitute binding, history change, review-mode toggle, or GitHub report was performed. The native transaction remains stopped; it has no approval or decline to report.
-- The user subsequently directed ordinary commit, `main` integration, and push despite incomplete native review. This authorizes delivery work without converting the stopped review into an approval, disabling RDD, or changing review authority. Local `main` was fast-forwarded through `308bdf0`; remote push has not happened. The GitHub SSH credential/session still needs explicit authorization before remote access.
+- The user subsequently directed ordinary commit, `main` integration, and push despite incomplete native review. This authorizes delivery work without converting the stopped review into an approval, disabling RDD, or changing review authority. Local `main` was fast-forwarded through `308bdf0`. The user explicitly authorized the configured SSH credentials and `git push origin main`; push succeeded and remote `main` was verified at `c25ba2f7d80db2edf16edcb2773a94e1252ac639` before this final documentation checkpoint.
 
 ## Objective and authority
 
 Email a runtime-configured recipient when the worker successfully processes the first backup after notifications are enabled, then each subsequently observed new backup. The requested recipient is `jaume97.cs@gmail.com`, but it must **not** be a source-code default. Use the existing OVH MXPLAN 5 mailbox `notifications@xenosoul.com` as the intended sender; sender is runtime-configurable too.
 
-Authorized: local implementation, tests, dependency/lockfile, Compose wiring, deployment documentation, staging, work-unit commits, merging into `main`, and pushing `main` as explicitly requested after implementation. Remote authentication still requires confirmation of the SSH credential/session to use. Excluded: live SMTP credentials, real email sends, changes in Coolify, and PR creation. This original backlog file belongs to the user; retain its intent.
+Authorized: local implementation, tests, dependency/lockfile, Compose wiring, deployment documentation, staging, work-unit commits, merging into `main`, and pushing `main` as explicitly requested after implementation. The user explicitly authorized the configured Git SSH credentials for pushing `main` to the existing GitHub origin. Excluded: live SMTP credentials, real email sends, changes in Coolify, and PR creation. This original backlog file belongs to the user; retain its intent.
 
 ## Design decision
 
@@ -56,4 +56,4 @@ Forecast was 600–900 authored changed lines; the writer handoff counted 622 au
 - Native review of durable-intent commit `3faf008` was approved and acknowledged; its authority is burned and must not be reopened. The later R3-001 advisory was disproved by direct Node v24.21.0 probes and permanent WN-04 tests; the later explicit address-whitespace guard in `f7c9779` preserved observed behavior. The second review stopped without approval or decline; ordinary delivery remains informational/unmanaged and must not be represented as native approval.
 - Deployment work unit `308bdf0` contains worker-only Compose variables, Coolify runtime documentation, deployment contract tests, and tracking. Its separate native assessment returned medium / under_budget (102 lines), with no review due; this is not an approval receipt. Rollback removes only notification deployment wiring/docs/contracts, not published backup releases.
 - Post-integration spot check on `main`: `pnpm exec tsx --test scripts/sync-pcloud/runtime-config.test.ts` passed 9/9. Final full-suite counts at the top supersede the historical pre-characterization counts below.
-- Next: obtain explicit authorization for the GitHub SSH credential/session, push `main`, and verify its remote commit. Coolify configuration and live SMTP validation remain external manual steps.
+- Next: configure `MYEXPENSES_NOTIFICATION_FROM`, `MYEXPENSES_NOTIFICATION_TO`, and `MYEXPENSES_SMTP_PASSWORD` privately as worker-only runtime variables in Coolify (Build OFF, Literal ON), then redeploy. The first successfully processed backup after activation queues an alert. Actual OVH acceptance/inbox delivery remains unverified; no production credentials or live SMTP were used during implementation.
