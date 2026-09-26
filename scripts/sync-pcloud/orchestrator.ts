@@ -20,6 +20,7 @@ import {
     loadSyncPCloudSecrets,
     type SyncPCloudConfig,
     type SyncPCloudSecrets,
+    type SyncPCloudSettings,
 } from "./config.ts";
 import {
     PCloudClient,
@@ -80,7 +81,7 @@ export interface PCloudSyncClient {
         signal?: AbortSignal,
     ) => Promise<PCloudVerifiedBackupFile>;
     readonly listLatestBackup: (
-        selector: SyncPCloudConfig["folder"],
+        selector: SyncPCloudSettings["folder"],
         signal?: AbortSignal,
     ) => Promise<PCloudBackupFile>;
 }
@@ -88,7 +89,7 @@ export interface PCloudSyncClient {
 export interface PCloudSyncDependencies {
     readonly createClient?: (options: PCloudClientOptions) => PCloudSyncClient;
     readonly loadSecrets?: (
-        config: SyncPCloudConfig,
+        config: SyncPCloudSettings,
     ) => Promise<SyncPCloudSecrets>;
     readonly logger?: SyncLogger;
     readonly now?: () => number;
@@ -233,7 +234,7 @@ async function assertOwnedDeploymentDirectory(
     }
 }
 
-async function prepareLayout(config: SyncPCloudConfig): Promise<void> {
+async function prepareLayout(config: SyncPCloudSettings): Promise<void> {
     await ensureRealDirectory(config.repositoryRoot, 0o755, false);
     await ensureRealDirectory(config.deployRoot, 0o755, true);
     await Promise.all([
@@ -728,7 +729,7 @@ async function validateBuildDirectory(
 }
 
 export async function runPCloudSync(
-    config: SyncPCloudConfig,
+    config: SyncPCloudSettings,
     dependencies: PCloudSyncDependencies,
     options: RunPCloudSyncOptions = {},
 ): Promise<PCloudSyncResult> {
@@ -736,9 +737,15 @@ export async function runPCloudSync(
     const withLock = dependencies.withLock ?? defaultWithLock;
     return withLock(config.deployRoot, async () => {
         await cleanupStaleWorkspaces(config.deployRoot);
-        const secrets = await (dependencies.loadSecrets ?? loadSyncPCloudSecrets)(
-            config,
+        const loadSecrets = dependencies.loadSecrets ?? (
+            "tokenFile" in config && "vaultPassphraseFile" in config
+                ? () => loadSyncPCloudSecrets(config as SyncPCloudConfig)
+                : undefined
         );
+        if (loadSecrets === undefined) {
+            throw new PCloudSyncError("Synchronization secrets are unavailable");
+        }
+        const secrets = await loadSecrets(config);
         const client = (dependencies.createClient ??
             ((clientOptions) => new PCloudClient(clientOptions)))(
             {

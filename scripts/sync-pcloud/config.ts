@@ -17,12 +17,15 @@ import {
 const MAX_CONFIG_BYTES = 64 * 1024;
 const MAX_TOKEN_BYTES = 4 * 1024;
 
-export interface SyncPCloudConfig {
+export interface SyncPCloudSettings {
     readonly apiHost: PCloudApiHost;
     readonly deployRoot: string;
     readonly folder: PCloudFolderSelector;
     readonly repositoryRoot: string;
     readonly timeZone: string;
+}
+
+export interface SyncPCloudConfig extends SyncPCloudSettings {
     readonly tokenFile: string;
     readonly vaultPassphraseFile: string;
 }
@@ -84,6 +87,49 @@ function pathContains(parent: string, child: string): boolean {
         path === "" ||
         (path !== ".." && !path.startsWith(`..${sep}`) && !isAbsolute(path))
     );
+}
+
+/** Shared non-secret validation for file and runtime configuration. */
+export function validateSyncPCloudSettings(
+    object: Record<string, unknown>,
+): SyncPCloudSettings {
+    const hasFolderId = object.folderId !== undefined;
+    const hasPath = object.path !== undefined;
+    if (hasFolderId === hasPath) {
+        throw new SyncConfigError("Sync config requires exactly one of folderId or path");
+    }
+    const deployRoot = absoluteTarget(object.deployRoot, "deployRoot");
+    const repositoryRoot = absoluteTarget(object.repositoryRoot, "repositoryRoot");
+    if (
+        pathContains(deployRoot, repositoryRoot) ||
+        pathContains(repositoryRoot, deployRoot)
+    ) {
+        throw new SyncConfigError(
+            "deployRoot and repositoryRoot must be separate directory trees",
+        );
+    }
+    const timeZone = stringValue(object.timeZone, "timeZone");
+    try {
+        new Intl.DateTimeFormat("en", { timeZone }).format(0);
+    } catch (error) {
+        throw new SyncConfigError("timeZone must be a valid IANA zone", {
+            cause: error,
+        });
+    }
+    return {
+        apiHost: validateApiHost(stringValue(object.apiHost, "apiHost")),
+        deployRoot,
+        folder: hasFolderId
+            ? {
+                  folderId: normalizePCloudId(
+                      object.folderId,
+                      "Config folderId",
+                  ),
+              }
+            : { path: validateFolderPath(stringValue(object.path, "path")) },
+        repositoryRoot,
+        timeZone,
+    };
 }
 
 async function readRegularFile(
@@ -175,42 +221,8 @@ export async function loadSyncPCloudConfig(
         ],
         ["folderId", "path"],
     );
-    const hasFolderId = object.folderId !== undefined;
-    const hasPath = object.path !== undefined;
-    if (hasFolderId === hasPath) {
-        throw new SyncConfigError("Sync config requires exactly one of folderId or path");
-    }
-    const deployRoot = absoluteTarget(object.deployRoot, "deployRoot");
-    const repositoryRoot = absoluteTarget(object.repositoryRoot, "repositoryRoot");
-    if (
-        pathContains(deployRoot, repositoryRoot) ||
-        pathContains(repositoryRoot, deployRoot)
-    ) {
-        throw new SyncConfigError(
-            "deployRoot and repositoryRoot must be separate directory trees",
-        );
-    }
-    const timeZone = stringValue(object.timeZone, "timeZone");
-    try {
-        new Intl.DateTimeFormat("en", { timeZone }).format(0);
-    } catch (error) {
-        throw new SyncConfigError("timeZone must be a valid IANA zone", {
-            cause: error,
-        });
-    }
     return {
-        apiHost: validateApiHost(stringValue(object.apiHost, "apiHost")),
-        deployRoot,
-        folder: hasFolderId
-            ? {
-                  folderId: normalizePCloudId(
-                      object.folderId,
-                      "Config folderId",
-                  ),
-              }
-            : { path: validateFolderPath(stringValue(object.path, "path")) },
-        repositoryRoot,
-        timeZone,
+        ...validateSyncPCloudSettings(object),
         tokenFile: absoluteTarget(object.tokenFile, "tokenFile"),
         vaultPassphraseFile: absoluteTarget(
             object.vaultPassphraseFile,
