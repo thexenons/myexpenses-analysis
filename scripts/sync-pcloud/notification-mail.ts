@@ -9,8 +9,9 @@ export interface NotificationSettings {
 export function smtpOptionsForNotification(settings: NotificationSettings) {
     return {
         host: "smtp.mail.ovh.net",
-        port: 465,
-        secure: true,
+        port: 587,
+        secure: false,
+        requireTLS: true,
         auth: { user: settings.from, pass: settings.password },
         tls: { rejectUnauthorized: true },
         connectionTimeout: 10_000,

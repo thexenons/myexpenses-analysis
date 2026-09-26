@@ -40,9 +40,10 @@ configure all three as worker-only Coolify **runtime** variables, with Build OFF
 and Literal ON. Store the SMTP password as a secret. The intended mailbox is
 `notifications@xenosoul.com` and the requested recipient is
 `jaume97.cs@gmail.com`; enter both in Coolify rather than source code. The
-worker connects to `smtp.mail.ovh.net:465` using implicit TLS and validates
-the certificate. Do not expose these variables to the web service or build
-subprocess.
+worker connects to `smtp.mail.ovh.net:587` and requires STARTTLS with normal
+certificate validation. Hetzner Cloud blocks outbound port 465 by default;
+port 587 is available for external SMTP. Do not expose these variables to the
+web service or build subprocess.
 
 On the first successful processing after initial enablement, the worker queues
 an email even if that backup was already synchronized before notifications

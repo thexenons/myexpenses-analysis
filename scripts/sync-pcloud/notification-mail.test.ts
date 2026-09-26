@@ -13,11 +13,12 @@ const settings: NotificationSettings = {
     password: "private-password",
 };
 
-test("SMTP uses OVH implicit TLS and bounded timeouts", () => {
+test("SMTP requires OVH STARTTLS on port 587 with bounded timeouts", () => {
     const options = smtpOptionsForNotification(settings);
     assert.equal(options.host, "smtp.mail.ovh.net");
-    assert.equal(options.port, 465);
-    assert.equal(options.secure, true);
+    assert.equal(options.port, 587);
+    assert.equal(options.secure, false);
+    assert.equal(options.requireTLS, true);
     assert.deepEqual(options.auth, { user: settings.from, pass: settings.password });
     for (const key of ["connectionTimeout", "greetingTimeout", "dnsTimeout", "socketTimeout"] as const) {
         assert.ok(options[key] > 0 && options[key] <= 10_000);
