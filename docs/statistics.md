@@ -89,6 +89,8 @@ Las categorías se pueden buscar por ruta exacta o incluyendo descendientes,
 y en el apunte o en cualquiera de las dos contrapartidas registradas. Esta
 última opción amplía la coincidencia del filtro: no copia ni reclasifica la
 categoría del apunte. Estado, etiquetas y texto se comprueban en cada apunte.
+Los apuntes sin ruta se agrupan y seleccionan como «Sin categoría» y también
+participan en los totales de la página de categorías.
 
 Por ejemplo, para consultar un pago de «Banco → Pareja» en Supermercado, se
 seleccionan esos extremos, la categoría y las fechas. El ámbito de flujo real
@@ -101,11 +103,17 @@ MyExpenses distingue cuentas con tasa estática y dinámica. La copia sí incluy
 esta configuración, `account_exchangerates`, `equivalent_amounts` y `prices`,
 por lo que ya no se mantiene un registro manual ni se infieren tasas.
 
-- `STATIC`: todos los apuntes usan la tasa fija.
+- `STATIC`: todos los apuntes usan la tasa fija. Una cuenta totalmente vacía o
+  con sólo importes cero puede conservar una tasa ausente; cualquier importe
+  nativo o EUR distinto de cero exige la tasa.
 - `DYNAMIC`: los apuntes usan el equivalente histórico almacenado; los splits
   se prorratean desde el equivalente del padre.
 - La apertura de una cuenta extranjera siempre usa la tasa fija.
 - EUR usa identidad y no consulta la red.
+
+Un equivalente dinámico conservado como cero por redondeo sigue siendo cero.
+Cuando no permite deducir una tasa positiva, ésta se conserva como ausente y
+la interfaz muestra «No disponible».
 
 Las cuentas GBP y USD actuales son estáticas y usan exactamente las tasas de la
 base. El proveedor configurado sigue siendo Frankfurter, pero esta importación
@@ -126,7 +134,7 @@ Todas las agregaciones parten de la misma secuencia canónica:
 
 | Ámbito | Semántica |
 |---|---|
-| `all` | Todas las cuentas incluidas por el selector oficial |
+| `all` | Todas las cuentas raíz, incluidas las excluidas del total en MyExpenses |
 | `realCashFlow` | Cuentas cuyo tipo nativo no es `_LIABILITY_` |
 | `debtsOnly` | Sólo cuentas cuyo tipo nativo es `_LIABILITY_` |
 
@@ -148,10 +156,20 @@ Cuentas y Deudas también usa el historial completo de esas cuentas.
 La «Valoración actual por cuenta» del Resumen corresponde al corte final de la
 copia. No es una valoración histórica recalculada para la fecha seleccionada.
 
-Las cuentas marcadas `includedInAll=false` conservan su metadata para
-trazabilidad, pero no participan en los selectores ni en las estadísticas: el
-importador no incluye sus movimientos y sumar sólo su apertura produciría un
-saldo incompleto. La flag de visibilidad, por sí sola, no excluye una cuenta.
+La aplicación ignora `exclude_from_totals` para **todas las cuentas raíz**, por
+decisión expresa del usuario. Las cuentas de deuda y las demás cuentas siguen
+participando en selectores, límites temporales, saldos y estadísticas aunque
+estén excluidas del total en MyExpenses. El flag original se conserva como
+metadata; `includedInAll` se deriva de que la cuenta no tenga padre, también
+al abrir datasets importados antes de esta política.
+
+Si un dataset antiguo ya había omitido apuntes por ese flag, hay que reimportar
+el ZIP para recuperarlos. La base de septiembre se ha regenerado completa.
+
+Las cuentas hijas conservan sus movimientos canónicos para trazabilidad, pero
+no se agregan por separado para evitar doble conteo. La flag de visibilidad,
+por sí sola, tampoco excluye una cuenta. El total de esta aplicación puede
+diferir del total nativo de MyExpenses por esta política de inclusión.
 
 MyExpenses utiliza ambas fórmulas de balance. Con la copia de referencia
 `20260822-210453`,
@@ -159,7 +177,24 @@ MyExpenses utiliza ambas fórmulas de balance. Con la copia de referencia
 `78.649,39 EUR`. La diferencia de un céntimo procede de redondear apuntes
 individuales frente a convertir el saldo nativo final por cuenta.
 
-## Referencia validada `20260822-210453`
+## Base de trabajo `20260926-070855`
+
+La base actual procede de `myexpenses-backup-20260926-070855.zip`, esquema 190:
+39 cuentas, 81 categorías, 13.527 apuntes y 2 presupuestos. Se ha regenerado el
+dataset y su bóveda local, conservando el modo de desarrollo existente.
+
+La prueba opcional `tests/domain/local-backup-parity.test.ts` compara esta copia
+con consultas SQLite independientes del adaptador: importes nativos y EUR,
+clasificación, estado, fechas de operación y valor, saldos de todas las cuentas
+y composición de ámbitos y categorías. Las 216.824 comprobaciones pasaron sin
+imprimir nombres ni importes. También se verificaron el hash intacto del ZIP y
+la igualdad exacta entre el dataset y el contenido descifrado de la bóveda.
+
+La prueba usa `data/app-dataset.json`; `MYEXPENSES_PARITY_DATASET` permite
+comprobar una salida temporal antes de sustituir la base local. Se omite si la
+copia privada no está disponible o el dataset predeterminado procede de otra.
+
+## Referencia histórica validada `20260822-210453`
 
 ```text
 openingBalance:          39.210,91 EUR

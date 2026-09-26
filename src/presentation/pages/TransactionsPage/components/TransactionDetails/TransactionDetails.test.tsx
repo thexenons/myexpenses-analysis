@@ -6,6 +6,16 @@ import { TRANSACTION_POSTING_FIXTURE } from "../../TransactionsPage.test.helpers
 import { TransactionDetails } from "./TransactionDetails.tsx";
 
 describe("TransactionDetails", () => {
+  it("shows a missing conversion rate without inventing a zero or identity rate", async () => {
+    const user = userEvent.setup();
+    render(<TransactionDetails posting={{ ...TRANSACTION_POSTING_FIXTURE, currency: "JPY", exchangeRateToEur: null, exchangeRateSource: "unavailable", amountEurMinor: 0, amountNativeMinor: 0, categoryPath: [] }} />);
+    await user.click(screen.getByText("Ver trazabilidad"));
+    expect(screen.getByText("Tasa aplicada").nextElementSibling).toHaveTextContent("No disponible");
+    expect(screen.getByText("Fuente de la tasa").nextElementSibling).toHaveTextContent("Importe cero sin tasa (unavailable)");
+    expect(screen.getByText("Sin categoría")).toBeVisible();
+    expect(screen.queryByText(/1 JPY =/)).not.toBeInTheDocument();
+  });
+
   it("exposes complete split provenance through a native disclosure", async () => {
     const user = userEvent.setup();
     const posting = {

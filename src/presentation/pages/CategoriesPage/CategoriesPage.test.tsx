@@ -9,7 +9,7 @@ import type {
 } from "../../../domain/analytics/types.ts";
 import { applyFilters, createDefaultFilterState } from "../../../domain/analytics/filters.ts";
 import { normalizeDataset } from "../../../domain/analytics/normalize.ts";
-import { createCategoriesPageModel } from "./CategoriesPage.helpers.ts";
+import { createCategoriesPageModel, createCategoryDrilldownFilters } from "./CategoriesPage.helpers.ts";
 import { CategoriesPageView } from "./CategoriesPage.view.tsx";
 
 const summary: AmountSummary = {
@@ -71,6 +71,67 @@ describe("CategoriesPageView", () => {
 });
 
 describe("createCategoriesPageModel", () => {
+  it("does not broaden a chart partition admitted through its counterpart category", () => {
+    const initial = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cuenta", type: "DEFAULT" }, debt: { label: "Deuda", type: "DEBT" } } },
+      categories: { Compra: { categoryType: "EXPENSE" }, Reparto: { categoryType: "EXPENSE" } },
+      parsedData: [
+        { uuid: "cash", label: "Cuenta", currency: "EUR", openingBalance: 0, transactions: [
+          { uuid: "purchase", date: "2026-01-01", amount: -10, category: ["Compra"], sourceTransactionUuid: "purchase", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+          { uuid: "unrelated", date: "2026-01-01", amount: -5, category: ["Reparto"], sourceTransactionUuid: "unrelated", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+        ] },
+        { uuid: "debt", label: "Deuda", currency: "EUR", openingBalance: 0, transactions: [
+          { uuid: "peer", date: "2026-01-01", amount: 10, category: ["Reparto"], sourceTransactionUuid: "peer", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+        ] },
+      ],
+    });
+    const purchaseId = initial.postings.find(({ transactionId }) => transactionId === "purchase")!.id;
+    const peerId = initial.postings.find(({ transactionId }) => transactionId === "peer")!.id;
+    const analytics = structuredClone(initial);
+    for (const posting of analytics.postings) {
+      if (posting.transactionId !== "unrelated") {
+        Object.assign(posting, { linked: true, transferPeerPostingId: posting.transactionId === "purchase" ? peerId : purchaseId });
+      }
+    }
+    const filters = { ...createDefaultFilterState(), categoryPrefixes: [["Compra"]], categoryDepth: "exact" as const, categoryMatch: "either" as const };
+    const filtered = applyFilters(analytics, filters);
+    const model = createCategoriesPageModel(analytics, filtered, filters.categoryPrefixes, "month", vi.fn(), vi.fn(), undefined, undefined, vi.fn());
+
+    expect(filtered.postings.map(({ transactionId }) => transactionId).toSorted()).toEqual(["peer", "purchase"]);
+    expect(model.categoryBars.find(({ label }) => label === "Reparto")?.value).toBe(10);
+    expect(model.onViewCategory).toBeUndefined();
+  });
+
+  it("keeps uncategorized postings in a separate selectable chart partition", async () => {
+    const user = userEvent.setup();
+    const initial = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cuenta", type: "DEFAULT" } } },
+      categories: { Gastos: { categoryType: "EXPENSE" } },
+      parsedData: [{ uuid: "cash", label: "Cuenta", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "categorized", date: "2026-01-01", amount: -10, category: ["Gastos"], sourceTransactionUuid: "categorized", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+        { uuid: "uncategorized", date: "2026-01-02", amount: -20, category: ["Gastos"], sourceTransactionUuid: "uncategorized", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+      ] }],
+    });
+    const analytics = structuredClone(initial);
+    for (const posting of analytics.postings) {
+      if (posting.transactionId === "uncategorized") Object.assign(posting, { categoryPath: [] });
+    }
+    const onToggle = vi.fn<(path: readonly string[]) => void>();
+    const model = createCategoriesPageModel(analytics, applyFilters(analytics, createDefaultFilterState()), [], "month", vi.fn(), onToggle);
+
+    expect(model.activityEurMinor).toBe(-3_000);
+    expect(model.categoryBars.find(({ id }) => id === "[]")).toMatchObject({ label: "Sin categoría", value: -20 });
+    expect(model.categorySeries.find(({ id }) => id === "[]")?.data).toEqual([{ label: "2026-01", value: -20 }]);
+    render(<CategoriesPageView {...model} />);
+    await user.click(screen.getByRole("button", { name: "Filtrar: Sin categoría" }));
+    expect(onToggle).toHaveBeenCalledWith([]);
+
+    const selected = [[], ["Gastos"]];
+    const selection = createCategoriesPageModel(analytics, applyFilters(analytics, { ...createDefaultFilterState(), categoryPrefixes: selected }), selected, "month", vi.fn(), onToggle);
+    expect(selection.categoryBars).toHaveLength(2);
+    expect(selection.categoryBars.reduce((sum, bar) => sum + bar.value, 0)).toBe(-30);
+  });
+
   it("does not display a net expense credit as positive spending", () => {
     const analytics = normalizeDataset({
       accounts: { version: 2, accounts: { cash: { label: "Cuenta", type: "DEFAULT" } } },
@@ -204,6 +265,27 @@ describe("createCategoriesPageModel", () => {
     const exactRootModel = createCategoriesPageModel(analytics, exactRoot, [["Gastos"]], "year", vi.fn(), vi.fn());
     expect(exactRootModel.categoryBars[0]?.value).toBe(-5);
     expect(exactRootModel.categorySeries[0]?.data[0]?.value).toBe(-5);
+
+    // An exact-depth control without selected paths does not filter the chart.
+    const unconstrainedExact = { ...createDefaultFilterState(), categoryDepth: "exact" as const };
+    const rootDrilldown = applyFilters(analytics, {
+      ...unconstrainedExact,
+      ...createCategoryDrilldownFilters(unconstrainedExact, ["Gastos"], "roots"),
+    });
+    expect(rootDrilldown.postings).toHaveLength(3);
+
+    // A root bar can aggregate several exact selections; retain their union.
+    const exactPaths = { ...unconstrainedExact, categoryPrefixes: [["Gastos"], ["Gastos", "Comida"]] };
+    const selectedRootDrilldown = applyFilters(analytics, {
+      ...exactPaths,
+      ...createCategoryDrilldownFilters(exactPaths, ["Gastos"], "roots"),
+    });
+    expect(selectedRootDrilldown.postings.map(({ transactionId }) => transactionId).toSorted()).toEqual(["food", "root-expense"]);
+    const directDrilldown = applyFilters(analytics, {
+      ...exactPaths,
+      ...createCategoryDrilldownFilters(exactPaths, ["Gastos"], "direct"),
+    });
+    expect(directDrilldown.postings.map(({ transactionId }) => transactionId)).toEqual(["root-expense"]);
   });
 
   it("never silently drops a selected category beyond the fourth series", () => {

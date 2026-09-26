@@ -406,6 +406,8 @@ export function aggregateTimeSeries(
   while (period.startDate <= lastPeriod.startDate) {
     const group = groups.get(period.key);
     points.push(timePoint(period, group?.summary ?? createMutableSummary()));
+    // Do not derive an unused next period beyond the last supported ISO year.
+    if (period.startDate === lastPeriod.startDate) break;
     period = periodFor(
       addIsoDays(period.endDate, 1),
       granularity,
@@ -455,6 +457,21 @@ export function aggregateCategoryBreakdown(
 ): readonly CategoryBreakdownNode[] {
   const roots = new Map<string, MutableCategoryNode>();
   for (const posting of metricPostings(filtered)) {
+    if (posting.categoryPath.length === 0) {
+      let uncategorized = roots.get("");
+      if (uncategorized === undefined) {
+        uncategorized = createCategoryNode("Sin categoría", [], "NEUTRAL");
+        roots.set("", uncategorized);
+      }
+      addPostingToSummary(uncategorized.summary, posting);
+      addPostingToSummary(uncategorized.directSummary, posting);
+      uncategorized.activityEurMinor = addMinor(
+        uncategorized.activityEurMinor,
+        Math.abs(posting.amountEurMinor),
+        "Uncategorized activity",
+      );
+      continue;
+    }
     let level = roots;
     let current: MutableCategoryNode | undefined;
     const path: string[] = [];

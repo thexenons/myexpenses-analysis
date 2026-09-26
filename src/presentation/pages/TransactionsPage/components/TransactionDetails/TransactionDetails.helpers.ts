@@ -23,6 +23,7 @@ const exchangeRateSourceLabels: Readonly<Record<ExchangeRateSource, string>> = {
   "dynamic-rate": "Tasa dinámica",
   identity: "Identidad EUR",
   static: "Tasa estática",
+  unavailable: "Importe cero sin tasa",
 };
 
 const exchangeRateFormatter = new Intl.NumberFormat("es-ES", {
@@ -37,7 +38,9 @@ const reconciliationStatusLabels = {
 } as const;
 
 export function formatExchangeRate(posting: NormalizedPosting): string {
-  return `1 ${posting.currency} = ${exchangeRateFormatter.format(posting.exchangeRateToEur)} EUR`;
+  return posting.exchangeRateToEur === null
+    ? "No disponible"
+    : `1 ${posting.currency} = ${exchangeRateFormatter.format(posting.exchangeRateToEur)} EUR`;
 }
 
 export function formatSplit(posting: NormalizedPosting): string {

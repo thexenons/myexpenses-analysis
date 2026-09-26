@@ -36,7 +36,7 @@ export function AccountDetails({
           </dd>
         </div>
         <div className={styles.item}>
-          <dt className={styles.term}>Incluida en totales</dt>
+          <dt className={styles.term}>Incluida en los totales de MyExpenses</dt>
           <dd className={styles.description}>
             {account.excludedFromTotals === true ? "No" : "Sí"}
           </dd>

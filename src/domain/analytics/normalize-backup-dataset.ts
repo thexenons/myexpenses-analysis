@@ -276,8 +276,9 @@ function validateAccount(value: unknown, index: number): BackupAccountV1 {
   if (mode === "IDENTITY" && object.exchangeRateToHome !== 1) {
     fail(context, "IDENTITY account requires exchangeRateToHome=1");
   }
-  if (mode === "STATIC" && object.exchangeRateToHome === null) {
-    fail(context, "STATIC account requires exchangeRateToHome");
+  if (mode === "STATIC" && object.exchangeRateToHome === null &&
+    (object.openingNativeMinor !== 0 || object.openingHomeMinor !== 0)) {
+    fail(context, "STATIC account requires exchangeRateToHome for non-zero amounts");
   }
 
   const flags = objectValue(object.flags, `${context}.flags`);
@@ -319,6 +320,9 @@ function validateAccount(value: unknown, index: number): BackupAccountV1 {
       "valuationHomeMinor",
     ] as const) {
       safeInteger(balances[key], `${context}.balances.${key}`);
+      if (mode === "STATIC" && object.exchangeRateToHome === null && balances[key] !== 0) {
+        fail(context, "STATIC account requires exchangeRateToHome for non-zero balances");
+      }
     }
   }
   return object as unknown as BackupAccountV1;
@@ -550,14 +554,14 @@ function validatePosting(value: unknown, index: number): BackupPostingV1 {
   if (object.exchangeRateToHome !== null) {
     finiteNumber(object.exchangeRateToHome, `${context}.exchangeRateToHome`, true);
   }
-  if (
-    (fxSource === "ZERO_AMOUNT_WITHOUT_RATE") !==
-    (object.exchangeRateToHome === null)
-  ) {
-    fail(
-      context,
-      "only ZERO_AMOUNT_WITHOUT_RATE may have a null exchangeRateToHome",
-    );
+  const roundedDynamicAmount = object.amountHomeMinor === 0 &&
+    (fxSource === "DYNAMIC_EQUIVALENT" || fxSource === "DYNAMIC_SPLIT_PRORATION");
+  if (object.exchangeRateToHome === null &&
+    fxSource !== "ZERO_AMOUNT_WITHOUT_RATE" && !roundedDynamicAmount) {
+    fail(context, "null exchangeRateToHome requires a zero amount without an inferred rate");
+  }
+  if (fxSource === "ZERO_AMOUNT_WITHOUT_RATE" && object.exchangeRateToHome !== null) {
+    fail(context, "ZERO_AMOUNT_WITHOUT_RATE requires a null exchangeRateToHome");
   }
   if (
     fxSource === "ZERO_AMOUNT_WITHOUT_RATE" &&
@@ -959,6 +963,10 @@ export function parseBackupDataset(value: unknown): BackupDatasetV1 {
   for (const posting of postings) {
     const account = accountByUuid.get(posting.accountUuid);
     if (account === undefined) fail(`Posting ${posting.id}`, "unknown accountUuid");
+    if (account.exchangeRateMode === "STATIC" && account.exchangeRateToHome === null &&
+      (posting.amountNativeMinor !== 0 || posting.amountHomeMinor !== 0)) {
+      fail(`Posting ${posting.id}`, "STATIC account requires exchangeRateToHome for non-zero amounts");
+    }
     if (
       (posting.fxSource === "HOME_CURRENCY") !==
       (account.currency === preferences.homeCurrency)
@@ -1094,8 +1102,9 @@ function transactionStatus(status: BackupTransactionStatus): TransactionStatus {
 function legacyFxSource(source: BackupFxSource): ExchangeRateSource {
   switch (source) {
     case "HOME_CURRENCY":
-    case "ZERO_AMOUNT_WITHOUT_RATE":
       return "identity";
+    case "ZERO_AMOUNT_WITHOUT_RATE":
+      return "unavailable";
     case "STATIC_ACCOUNT_RATE":
       return "static";
     case "DYNAMIC_EQUIVALENT":
@@ -1129,7 +1138,7 @@ function categoriesRegistry(categories: readonly BackupCategoryV1[]): Categories
     categoryType: CategoryType;
     children?: Record<string, MutableEntry>;
   };
-  const root: Record<string, MutableEntry> = {};
+  const root: Record<string, MutableEntry> = Object.create(null);
   const ordered = categories.toSorted((left, right) => left.path.length - right.path.length);
   for (const category of ordered) {
     let level = root;
@@ -1140,7 +1149,7 @@ function categoriesRegistry(categories: readonly BackupCategoryV1[]): Categories
         ({ categoryType: categoryType(category.type) } satisfies MutableEntry);
       level[name] = entry;
       if (index < category.path.length - 1) {
-        entry.children ??= {};
+        entry.children ??= Object.create(null) as Record<string, MutableEntry>;
         level = entry.children;
       } else {
         entry.categoryType = categoryType(category.type);
@@ -1209,7 +1218,7 @@ function normalizePosting(
       : accounts.get(posting.transferPeer.accountUuid);
   const rate =
     posting.exchangeRateToHome === null
-      ? 1
+      ? null
       : rateForMajorUnits(
           posting.exchangeRateToHome,
           account.fractionDigits,
@@ -1417,8 +1426,10 @@ export function normalizeBackupDataset(value: BackupDatasetV1): AnalyticsDataset
         `Account ${account.uuid} historical balance`,
       );
     }
-    minDate = earliest(minDate, normalized.date);
-    maxDate = latest(maxDate, normalized.date);
+    if (account.parentUuid === null) {
+      minDate = earliest(minDate, normalized.date);
+      maxDate = latest(maxDate, normalized.date);
+    }
     return normalized;
   });
 
@@ -1444,7 +1455,9 @@ export function normalizeBackupDataset(value: BackupDatasetV1): AnalyticsDataset
       ...(account.description === null ? {} : { description: account.description }),
       visible: account.flags.visible,
       excludedFromTotals: account.flags.excludedFromTotals,
-      includedInAll: account.flags.includedInAll,
+      // Native total exclusions are source metadata, not analytics exclusions.
+      // Derive inclusion here too so previously imported datasets remain usable.
+      includedInAll: account.parentUuid === null,
       supportsReconciliation: account.flags.supportsReconciliation,
     };
   });

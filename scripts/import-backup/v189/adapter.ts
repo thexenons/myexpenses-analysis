@@ -41,7 +41,6 @@ interface CategoryDraft {
 interface NormalizedOptions {
     timeZone: string;
     preferences: V189Preferences;
-    includeExcludedAccounts: boolean;
 }
 
 interface ResolvedCategory {
@@ -222,7 +221,6 @@ function normalizeOptions(options: V189AdapterOptions): NormalizedOptions {
 
     return {
         timeZone: options.timeZone,
-        includeExcludedAccounts: options.includeExcludedAccounts ?? false,
         preferences: {
             homeCurrency,
             monthStart,
@@ -472,6 +470,7 @@ function loadAccounts(
                   ? (latestExchangeRate ?? exchangeRate)
                   : exchangeRate;
         const typeId = requiredInteger(row, "type_id");
+        const isLiability = typeId === 5;
         const uuid = optionalString(row, "uuid")?.trim();
         if (uuid === undefined || uuid === null || uuid.length === 0) {
             throw new Error(`Account ${id} must define a non-empty UUID`);
@@ -489,7 +488,7 @@ function loadAccounts(
             typeId,
             typeLabel: requiredString(row, "type_label"),
             isAsset: asBoolean(requiredInteger(row, "is_asset"), "isAsset"),
-            isLiability: typeId === 5,
+            isLiability,
             supportsReconciliation: asBoolean(
                 requiredInteger(row, "supports_reconciliation"),
                 "supportsReconciliation",
@@ -497,9 +496,8 @@ function loadAccounts(
             flagId: requiredInteger(row, "flag_id"),
             visible: asBoolean(requiredInteger(row, "visible"), "visible"),
             excludedFromTotals,
-            includedInAll:
-                parentId === null &&
-                (options.includeExcludedAccounts || !excludedFromTotals),
+            // The source exclusion flag is retained only for provenance.
+            includedInAll: parentId === null,
             dynamicExchangeRates,
             parentId,
             openingBalanceMinor,
@@ -769,18 +767,24 @@ function convertedAmount(
                         rate * amountMinor,
                         `transaction ${requiredInteger(row, "_id")} split conversion`,
                     ),
-                    fxRateToHome: rate,
+                    // A stored equivalent rounded to zero does not identify a rate.
+                    fxRateToHome: rate === 0 ? null : rate,
                     fxSource: "DYNAMIC_SPLIT_PRORATION",
                 };
             }
         } else {
             const equivalent = optionalInteger(row, "equivalent_amount");
             if (equivalent !== null) {
+                if (amountMinor === 0 && equivalent !== 0) {
+                    throw new Error(
+                        `Transaction ${requiredInteger(row, "_id")} has a non-zero equivalent for a zero native amount`,
+                    );
+                }
                 return {
                     amountHomeMinor: equivalent,
                     fxRateToHome:
-                        amountMinor === 0
-                            ? (account.exchangeRateToHome ?? 1)
+                        equivalent === 0
+                            ? null
                             : equivalent / amountMinor,
                     fxSource: "DYNAMIC_EQUIVALENT",
                 };
@@ -885,9 +889,6 @@ function loadPostings(
         const account = accountById.get(accountId);
         if (account === undefined) {
             throw new Error(`Transaction ${id} references missing account ${accountId}`);
-        }
-        if (!account.includedInAll) {
-            return [];
         }
         const amountMinor = asMinorUnits(
             requiredInteger(row, "amount"),
@@ -1230,25 +1231,29 @@ export function adaptV189(
     const accounts = finalizeAccounts(accountDrafts, postings);
 
     const allAccounts = accounts.filter((account) => account.includedInAll);
+    const includedAccountIds = new Set(allAccounts.map((account) => account.id));
+    const allPostings = postings.filter((posting) =>
+        includedAccountIds.has(posting.accountId),
+    );
     const debtAccounts = allAccounts.filter((account) => account.isLiability);
     const realCashAccounts = allAccounts.filter(
         (account) => !account.isLiability,
     );
-    const debtPostings = postings.filter(
+    const debtPostings = allPostings.filter(
         (posting) => posting.leafScope === "DEBT",
     );
-    const realCashPostings = postings.filter(
+    const realCashPostings = allPostings.filter(
         (posting) => posting.leafScope === "REAL_CASH",
     );
     const postingsByScope: Readonly<
         Record<V189ScopeName, readonly V189Posting[]>
     > = {
-        ALL: postings,
+        ALL: allPostings,
         DEBT: debtPostings,
         REAL_CASH: realCashPostings,
     };
     const scopes: Readonly<Record<V189ScopeName, V189Scope>> = {
-        ALL: createScope("ALL", allAccounts, postings),
+        ALL: createScope("ALL", allAccounts, allPostings),
         DEBT: createScope("DEBT", debtAccounts, debtPostings),
         REAL_CASH: createScope(
             "REAL_CASH",

@@ -108,6 +108,11 @@ El adaptador toma como referencia las consultas de MyExpenses r871:
 
 Las reglas fijadas son:
 
+- «excluir del total» (`exclude_from_totals`) se conserva como dato de origen,
+  pero no excluye ninguna cuenta de los análisis: participan todas las cuentas
+  raíz (`parent_id IS NULL`), incluidas las de deuda. Las cuentas hijas siguen
+  fuera de los totales para evitar doble conteo; por esta decisión, los totales
+  de la aplicación pueden diferir del total nativo que respeta ese flag;
 - se excluye el padre técnico de un split y se conserva cada parte con toda su
   procedencia;
 - en datos archivados se excluye la envoltura y se conserva su contenido, para

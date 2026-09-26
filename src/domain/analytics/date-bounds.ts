@@ -21,7 +21,11 @@ export function datasetDateBounds(
   if (existing !== undefined) return existing;
   let minDate: IsoDate | null = null;
   let maxDate: IsoDate | null = null;
+  const includedAccounts = new Set(
+    dataset.accounts.filter((account) => account.includedInAll !== false).map((account) => account.id),
+  );
   for (const posting of dataset.postings) {
+    if (!includedAccounts.has(posting.accountId)) continue;
     const date = dateBasis === "value" ? posting.valueDate ?? posting.date : posting.date;
     if (minDate === null || date < minDate) minDate = date;
     if (maxDate === null || date > maxDate) maxDate = date;

@@ -44,6 +44,26 @@ function resetAppStore() {
 describe("FilterDrawer", () => {
   beforeEach(resetAppStore)
 
+  it("can select and remove uncategorized postings without selecting every category", async () => {
+    const user = userEvent.setup()
+    const initial = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cuenta", type: "DEFAULT" } } },
+      categories: { Gastos: { categoryType: "EXPENSE" } },
+      parsedData: [{ uuid: "cash", label: "Cuenta", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "uncategorized", date: "2026-01-02", amount: -20, category: ["Gastos"], sourceTransactionUuid: "uncategorized", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+      ] }],
+    })
+    const analytics = structuredClone(initial)
+    for (const posting of analytics.postings) Object.assign(posting, { categoryPath: [] })
+    appStore.setState({ analytics, filterDrawerOpen: true })
+    render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Añadir categoría o subcategoría" }), "[]")
+    expect(appStore.getState().filters.categoryPrefixes).toEqual([[]])
+    await user.click(screen.getByRole("button", { name: "Quitar Sin categoría" }))
+    expect(appStore.getState().filters.categoryPrefixes).toEqual([])
+  })
+
   it("closes with Escape and restores focus to the opener", async () => {
     const user = userEvent.setup()
     const opener = document.createElement("button")

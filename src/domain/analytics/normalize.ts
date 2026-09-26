@@ -139,7 +139,7 @@ function categoryDetails(
     throw new Error(`${context}: category path cannot be empty`);
   }
   let bucket: PostingBucket;
-  if (categoryPath[0] === "Transferencia") {
+  if (rootType === "TRANSFER") {
     bucket = "transfer";
   } else if (rootType === "EXPENSE") {
     bucket = "expense";

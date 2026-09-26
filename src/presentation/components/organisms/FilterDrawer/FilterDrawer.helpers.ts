@@ -1,4 +1,5 @@
 import { accountMatchesScope } from "../../../../domain/analytics/filters.ts"
+import { formatCategoryPath } from "../../../utils/format.ts"
 import type {
   AnalyticsScope,
   AnalyticsDataset,
@@ -46,12 +47,13 @@ export function collectFilterDrawerCategoryPaths(dataset: AnalyticsDataset | nul
   if (dataset === null) return []
   const paths = new Map<string, readonly string[]>()
   for (const posting of dataset.postings) {
+    if (posting.categoryPath.length === 0) paths.set("[]", [])
     for (let length = 1; length <= posting.categoryPath.length; length += 1) {
       const path = posting.categoryPath.slice(0, length)
       paths.set(JSON.stringify(path), path)
     }
   }
-  return [...paths.values()].toSorted((left, right) => SPANISH_COLLATOR.compare(left.join(" › "), right.join(" › ")))
+  return [...paths.values()].toSorted((left, right) => SPANISH_COLLATOR.compare(formatCategoryPath(left), formatCategoryPath(right)))
 }
 
 export function toggleFilterDrawerUniversalValue<Value extends string>(

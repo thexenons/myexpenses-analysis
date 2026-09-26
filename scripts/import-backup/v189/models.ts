@@ -54,8 +54,6 @@ export interface V189AdapterOptions {
         unmappedTransactionsAsTransfers?: boolean;
         dynamicExchangeRatesMode?: V189DynamicExchangeRatesMode;
     };
-    /** Mirrors MyExpenses' `includeAll`; portfolio children remain excluded. */
-    includeExcludedAccounts?: boolean;
 }
 
 export interface V189LocalTimestamp {

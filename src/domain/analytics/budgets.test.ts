@@ -329,6 +329,63 @@ describe("budget periods", () => {
 });
 
 describe("budget analysis", () => {
+  it("rolls child base amounts and carryovers up exactly once", () => {
+    const analytics = analyticsFixture();
+    const childOnly = budgetFixture({
+      allocations: [{
+        categoryUuid: "child",
+        year: 2026,
+        period: 7,
+        amountMinor: 3_000,
+        rolloverPreviousMinor: 500,
+        rolloverNextMinor: 200,
+        oneTime: false,
+      }],
+    });
+    const result = analyzeBudgetPeriod(
+      analytics,
+      applyFilters(analytics, createDefaultFilterState()),
+      childOnly,
+    );
+    if (result.status !== "ready") throw new Error(result.reason);
+    expect(result.analysis.allocations[0]).toMatchObject({
+      allocationSource: "ROLLUP",
+      baseMinor: 3_000,
+      rolloverPreviousMinor: 500,
+      rolloverNextMinor: 200,
+      assignedMinor: 3_500,
+      childAssignedMinor: 3_500,
+      consumedMinor: 4_500,
+      availableMinor: -1_000,
+    });
+    expect(result.analysis.categoryAssignedMinor).toBe(3_500);
+  });
+
+  it("leaves future allocations out of earlier category totals", () => {
+    const analytics = analyticsFixture();
+    const budget = budgetFixture({
+      allocations: budgetFixture().allocations.map((allocation) =>
+        allocation.categoryUuid === "root" ? Object.assign({}, allocation, { period: 9 }) : allocation,
+      ),
+    });
+    const result = analyzeBudgetPeriod(
+      analytics,
+      applyFilters(analytics, createDefaultFilterState()),
+      budget,
+      "MONTH:2026:7",
+    );
+    if (result.status !== "ready") throw new Error(result.reason);
+    expect(result.analysis.allocations[0]).toMatchObject({
+      allocationSource: "ROLLUP",
+      hasDirectAllocation: false,
+      assignedMinor: 3_000,
+    });
+    expect(resolveBudgetAllocation([], result.analysis.period)).toMatchObject({
+      source: "NONE",
+      baseMinor: 0,
+    });
+  });
+
   it("uses the selected value date for both the global filter and the budget period", () => {
     const initial = analyticsFixture();
     const analytics = { ...initial, postings: initial.postings.map((row) => row.id === "outside" ? Object.assign({}, row, { valueDate: "2026-08-02" as const }) : row) };

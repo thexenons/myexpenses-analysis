@@ -17,6 +17,8 @@ describe("InsightsAccounts", () => {
       screen.getByRole("img", { name: "Composición de cuentas" }),
     ).toBeVisible();
     expect(screen.getByText("Visibilidad del inventario")).toBeVisible();
+    expect(screen.getByText("Excluidas de totales en MyExpenses")).toBeVisible();
+    expect(screen.getByText(/La exclusión de totales no se aplica en este análisis/)).toBeVisible();
     expect(screen.getByText("aaaaaaaa…aaaaaa")).toBeVisible();
     expect(screen.getByText("Europe/Madrid")).toBeVisible();
   });

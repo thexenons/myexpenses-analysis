@@ -52,7 +52,7 @@ function mapFixture(
     });
 }
 
-test("excluded account metadata does not add an unsupported opening balance to frontend scopes", async () => {
+test("preserves source exclusion metadata while including top-level movements and balances in frontend scopes", async () => {
     const bytes = await createImportDatabaseFixture({
         extraSql: ["UPDATE accounts SET exclude_from_totals = 1, opening_balance = 500 WHERE _id = 4"],
     });
@@ -60,20 +60,213 @@ test("excluded account metadata does not add an unsupported opening balance to f
         timeZone: "Europe/Madrid", preferences: PREFERENCES,
     }));
     const dataset = mapFixture(canonical);
-    const omittedAccount = dataset.accounts.find((account) => account.sourceId === 4);
-    assert.ok(omittedAccount);
-    assert.equal(omittedAccount.flags.includedInAll, false);
+    const sourceExcludedAccount = dataset.accounts.find((account) => account.sourceId === 4);
+    assert.ok(sourceExcludedAccount);
+    assert.ok(sourceExcludedAccount.balances);
+    assert.equal(sourceExcludedAccount.flags.excludedFromTotals, true);
+    assert.equal(sourceExcludedAccount.flags.includedInAll, true);
+    assert.equal(sourceExcludedAccount.balances.currentNativeMinor, 550);
+    assert.equal(sourceExcludedAccount.balances.historicalHomeMinor, 1_130);
+    assert.equal(sourceExcludedAccount.balances.valuationHomeMinor, 1_650);
+    assert.equal(dataset.postings.filter((posting) => posting.accountUuid === sourceExcludedAccount.uuid).length, 2);
+    assert.equal(canonical.postingsByScope.ALL.some((posting) => posting.accountId === 4), true);
     const normalized = normalizeBackupDataset(dataset);
     for (const [scope, canonicalScope] of [["all", "ALL"], ["realCashFlow", "REAL_CASH"], ["debtsOnly", "DEBT"]] as const) {
         const filtered = applyFilters(normalized, { ...createDefaultFilterState(), scope });
         const totals = aggregateKpis(filtered);
-        assert.equal(filtered.accounts.some((account) => account.id === omittedAccount.uuid), false);
+        assert.equal(filtered.accounts.some((account) => account.id === sourceExcludedAccount.uuid), scope !== "debtsOnly");
         assert.equal(totals.periodOpeningBalanceEurMinor, canonical.scopes[canonicalScope].openingBalanceHomeMinor);
         assert.equal(totals.periodClosingBalanceEurMinor, canonical.scopes[canonicalScope].closingFlowBalanceHomeMinor);
     }
     assert.equal(applyFilters(normalized, {
-        ...createDefaultFilterState(), accountIds: [omittedAccount.uuid],
-    }).accounts.length, 0);
+        ...createDefaultFilterState(), accountIds: [sourceExcludedAccount.uuid],
+    }).accounts.length, 1);
+});
+
+test("includes both transfer peers when a non-debt destination has the source exclusion flag", async () => {
+    const bytes = await createImportDatabaseFixture({
+        extraSql: ["UPDATE accounts SET exclude_from_totals = 1, type = 1 WHERE _id = 2"],
+    });
+    const canonical = await withBackupDatabase(bytes, (database) => adaptV189(database, {
+        timeZone: "Europe/Madrid", preferences: PREFERENCES,
+    }));
+    const dataset = parseBackupDataset(mapFixture(canonical));
+    const transfer = dataset.postings.find((posting) => posting.sourceId === 4);
+    const peer = dataset.postings.find((posting) => posting.sourceId === 5);
+    assert.ok(transfer);
+    assert.ok(peer);
+    assert.equal(transfer.transferPeer?.postingId, peer.id);
+    assert.equal(peer.transferPeer?.postingId, transfer.id);
+    assert.equal(dataset.accounts.find((account) => account.sourceId === 2)?.balances?.currentNativeMinor, 250);
+    const normalized = normalizeBackupDataset(dataset);
+    const filtered = applyFilters(normalized, createDefaultFilterState());
+    assert.equal(filtered.postings.some((posting) => posting.id === peer.id), true);
+    assert.equal(aggregateKpis(filtered).periodClosingBalanceEurMinor, canonical.scopes.ALL.closingFlowBalanceHomeMinor);
+});
+
+test("includes debt and non-debt top-level accounts regardless of the source exclusion flag", async () => {
+    const bytes = await createImportDatabaseFixture({
+        extraSql: ["UPDATE accounts SET exclude_from_totals = 1 WHERE _id IN (2, 3)"],
+    });
+    const canonical = await withBackupDatabase(bytes, (database) => adaptV189(database, {
+        timeZone: "Europe/Madrid", preferences: PREFERENCES,
+    }));
+    const dataset = parseBackupDataset(mapFixture(canonical));
+    const debt = dataset.accounts.find((account) => account.sourceId === 2)!;
+    const nonDebt = dataset.accounts.find((account) => account.sourceId === 3)!;
+    assert.equal(debt.nativeType, "LIABILITY");
+    assert.equal(debt.flags.excludedFromTotals, true);
+    assert.equal(debt.flags.includedInAll, true);
+    assert.equal(nonDebt.flags.excludedFromTotals, true);
+    assert.equal(nonDebt.flags.includedInAll, true);
+    assert.equal(canonical.scopes.DEBT.accountIds.includes(2), true);
+    assert.equal(canonical.scopes.ALL.accountIds.includes(2), true);
+    assert.equal(canonical.scopes.ALL.accountIds.includes(3), true);
+    const normalized = normalizeBackupDataset(dataset);
+    for (const [scope, canonicalScope] of [["all", "ALL"], ["realCashFlow", "REAL_CASH"], ["debtsOnly", "DEBT"]] as const) {
+        const filtered = applyFilters(normalized, { ...createDefaultFilterState(), scope });
+        const totals = aggregateKpis(filtered);
+        assert.equal(filtered.accounts.some((account) => account.id === debt.uuid), scope !== "realCashFlow");
+        assert.equal(filtered.accounts.some((account) => account.id === nonDebt.uuid), scope !== "debtsOnly");
+        assert.equal(totals.periodOpeningBalanceEurMinor, canonical.scopes[canonicalScope].openingBalanceHomeMinor);
+        assert.equal(totals.periodClosingBalanceEurMinor, canonical.scopes[canonicalScope].closingFlowBalanceHomeMinor);
+    }
+    assert.equal(
+        canonical.scopes.ALL.closingFlowBalanceHomeMinor,
+        canonical.scopes.DEBT.closingFlowBalanceHomeMinor + canonical.scopes.REAL_CASH.closingFlowBalanceHomeMinor,
+    );
+});
+
+test("keeps child debt accounts outside app totals while ignoring source exclusion flags", async () => {
+    const bytes = await createImportDatabaseFixture({
+        extraSql: ["UPDATE accounts SET exclude_from_totals = 1, parent_id = 1 WHERE _id = 2"],
+    });
+    const canonical = await withBackupDatabase(bytes, (database) => adaptV189(database, {
+        timeZone: "Europe/Madrid", preferences: PREFERENCES,
+    }));
+    const dataset = parseBackupDataset(mapFixture(canonical));
+    const childDebt = dataset.accounts.find((account) => account.sourceId === 2)!;
+    assert.equal(childDebt.nativeType, "LIABILITY");
+    assert.equal(childDebt.flags.excludedFromTotals, true);
+    assert.equal(childDebt.flags.includedInAll, false);
+    assert.notEqual(childDebt.parentUuid, null);
+    assert.equal(canonical.scopes.DEBT.accountIds.includes(2), false);
+    const filtered = applyFilters(normalizeBackupDataset(dataset), {
+        ...createDefaultFilterState(), scope: "debtsOnly",
+    });
+    assert.equal(filtered.accounts.some((account) => account.id === childDebt.uuid), false);
+});
+
+test("preserves zero dynamic equivalents without inventing an exchange rate", async () => {
+    const bytes = await createImportDatabaseFixture({
+        extraSql: [
+            "UPDATE equivalent_amounts SET equivalent_amount = 0 WHERE transaction_id IN (10, 11)",
+        ],
+    });
+    const canonical = await withBackupDatabase(bytes, (database) => adaptV189(database, {
+        timeZone: "Europe/Madrid", preferences: PREFERENCES,
+    }));
+    const dataset = parseBackupDataset(mapFixture(canonical));
+    for (const [sourceId, fxSource] of [[10, "DYNAMIC_EQUIVALENT"], [12, "DYNAMIC_SPLIT_PRORATION"]] as const) {
+        const posting = dataset.postings.find((entry) => entry.sourceId === sourceId);
+        assert.ok(posting);
+        assert.notEqual(posting.amountNativeMinor, 0);
+        assert.equal(posting.amountHomeMinor, 0);
+        assert.equal(posting.exchangeRateToHome, null);
+        assert.equal(posting.fxSource, fxSource);
+    }
+});
+
+test("rejects a non-zero dynamic equivalent for a zero native amount", async () => {
+    const bytes = await createImportDatabaseFixture({
+        extraSql: ["UPDATE transactions SET amount = 0 WHERE _id = 10"],
+    });
+    await assert.rejects(
+        withBackupDatabase(bytes, (database) => adaptV189(database, {
+            timeZone: "Europe/Madrid", preferences: PREFERENCES,
+        })),
+        /non-zero equivalent for a zero native amount/u,
+    );
+});
+
+for (const empty of [true, false]) {
+    test(`imports static foreign accounts without an exchange rate: ${empty ? "empty" : "zero postings"}`, async () => {
+        const bytes = await createImportDatabaseFixture({
+            extraSql: [
+                "DELETE FROM account_exchangerates WHERE account_id = 3",
+                "DELETE FROM equivalent_amounts WHERE transaction_id = 9",
+                empty
+                    ? "DELETE FROM transactions WHERE _id = 9"
+                    : "UPDATE transactions SET amount = 0 WHERE _id = 9",
+            ],
+        });
+        const canonical = await withBackupDatabase(bytes, (database) => adaptV189(database, {
+            timeZone: "Europe/Madrid", preferences: PREFERENCES,
+        }));
+        const dataset = parseBackupDataset(mapFixture(canonical));
+        const account = dataset.accounts.find((entry) => entry.sourceId === 3);
+        assert.ok(account);
+        assert.equal(account.exchangeRateMode, "STATIC");
+        assert.equal(account.exchangeRateToHome, null);
+        assert.equal(account.openingNativeMinor, 0);
+        assert.equal(account.openingHomeMinor, 0);
+        assert.deepEqual(account.balances, {
+            currentNativeMinor: 0,
+            historicalHomeMinor: 0,
+            valuationHomeMinor: 0,
+        });
+        const posting = dataset.postings.find((entry) => entry.sourceId === 9);
+        if (empty) {
+            assert.equal(posting, undefined);
+        } else {
+            assert.ok(posting);
+            assert.equal(posting.amountNativeMinor, 0);
+            assert.equal(posting.amountHomeMinor, 0);
+            assert.equal(posting.exchangeRateToHome, null);
+            assert.equal(posting.fxSource, "ZERO_AMOUNT_WITHOUT_RATE");
+        }
+    });
+}
+
+test("requires a static rate for offsetting postings even when every account balance is zero", async () => {
+    const original = await canonicalFixture();
+    const accountIndex = original.accounts.findIndex((account) => account.id === 3);
+    const account = original.accounts[accountIndex]!;
+    const positivePosting = original.postings.find((posting) => posting.accountId === 3)!;
+    const negativePosting = {
+        ...positivePosting,
+        id: 100,
+        uuid: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbff",
+        amountMinor: -positivePosting.amountMinor,
+        amountHomeMinor: -positivePosting.amountHomeMinor,
+    };
+    const canonical: V189CanonicalDataset = {
+        ...original,
+        metadata: {
+            ...original.metadata,
+            counts: { ...original.metadata.counts, postings: original.postings.length + 1 },
+        },
+        accounts: original.accounts.with(accountIndex, {
+            ...account,
+            exchangeRateToHome: null,
+            openingBalanceMinor: 0,
+            openingBalanceHomeMinor: 0,
+            nativeClosingBalanceMinor: 0,
+            historicalClosingBalanceHomeMinor: 0,
+            valuationBalanceHomeMinor: 0,
+        }),
+        postings: [...original.postings, negativePosting],
+    };
+    assert.throws(
+        () => mapFixture(canonical),
+        /STATIC account requires an exchange rate for non-zero amounts/u,
+    );
+    assert.throws(() => mapFixture({
+        ...canonical,
+        postings: canonical.postings.map((posting) => posting.accountId === 3
+            ? Object.assign({}, posting, { isVoid: true, reconciliationStatus: "VOID" as const })
+            : posting),
+    }), /STATIC account requires an exchange rate for non-zero amounts/u);
 });
 
 test("maps allowlisted budget filters to stable entity UUIDs", async () => {

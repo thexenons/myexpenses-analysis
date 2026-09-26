@@ -3,6 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { DebtBreakdownItem } from "../../../domain/analytics/types.ts";
+import type { BackupDatasetV1 } from "../../../domain/analytics/backup-dataset.types.ts";
+import { normalizeBackupDataset } from "../../../domain/analytics/normalize-backup-dataset.ts";
+import { createOverviewPageModel } from "../OverviewPage/OverviewPage.helpers.ts";
+import { OverviewPageView } from "../OverviewPage/OverviewPage.view.tsx";
 import { createDebtsPageModel, toggleDebtAccountIds } from "./DebtsPage.helpers.ts";
 import { applyFilters, createDefaultFilterState } from "../../../domain/analytics/filters.ts";
 import type { AnalyticsDataset, NormalizedPosting } from "../../../domain/analytics/types.ts";
@@ -40,6 +44,57 @@ const debt: DebtBreakdownItem = {
 };
 
 describe("DebtsPageView", () => {
+  it.each([false, true])("shows debt and cash balances despite the source exclusion flag (legacy includedInAll=%s)", (includedInAll) => {
+    const source: BackupDatasetV1 = {
+      version: 1,
+      source: { format: "myexpenses-backup", schemaVersion: 190, backupSha256: "a".repeat(64), databaseSha256: "b".repeat(64) },
+      preferences: { homeCurrency: "EUR", timeZone: "Europe/Madrid", monthStart: 1, weekStart: 1, includeTransfers: false },
+      currencies: [{ sourceId: 1, code: "EUR", fractionDigits: 2, label: "Euro", symbol: "€", commodityType: "FIAT" }],
+      accounts: [
+        {
+          uuid: "debt", sourceId: 1, label: "Préstamo", description: null, currency: "EUR", fractionDigits: 2,
+          nativeType: "LIABILITY", scope: "DEBT", parentUuid: null, openingNativeMinor: 10_000, openingHomeMinor: 10_000,
+          exchangeRateMode: "IDENTITY", exchangeRateToHome: 1,
+          flags: { sourceId: 1, visible: true, excludedFromTotals: true, includedInAll, isAsset: false, supportsReconciliation: false },
+        },
+        {
+          uuid: "cash", sourceId: 2, label: "Reserva", description: null, currency: "EUR", fractionDigits: 2,
+          nativeType: "CASH", scope: "DEFAULT", parentUuid: null, openingNativeMinor: 3_000, openingHomeMinor: 3_000,
+          exchangeRateMode: "IDENTITY", exchangeRateToHome: 1,
+          flags: { sourceId: 1, visible: true, excludedFromTotals: true, includedInAll, isAsset: true, supportsReconciliation: false },
+        },
+      ],
+      categories: [{ uuid: "income", sourceId: 1, name: "Ingreso", type: "INCOME", parentUuid: null, path: ["Ingreso"], color: null, icon: null }],
+      postings: [{
+        id: "debt:movement", sourceId: 1, transactionUuid: "movement", sourceTransactionUuid: "movement", accountUuid: "debt",
+        epochSeconds: 1_767_225_600, localDate: "2026-01-01", localTime: "01:00:00",
+        valueEpochSeconds: null, valueLocalDate: null, valueLocalTime: null, amountNativeMinor: 2_000, amountHomeMinor: 2_000,
+        categoryUuid: "income", categoryPath: ["Ingreso"], categoryType: "INCOME", bucket: "income", status: "RECONCILED",
+        isVoid: false, isArchivedContent: false, payeeSourceId: null, paymentMethodSourceId: null, tagSourceIds: [],
+        comment: null, referenceNumber: null, originalAmountMinor: null, originalCurrency: null, split: null,
+        fxSource: "HOME_CURRENCY", exchangeRateToHome: 1,
+      }],
+      payees: [], paymentMethods: [], tags: [], budgets: [],
+    };
+    const analytics = normalizeBackupDataset(source);
+    const filtered = applyFilters(analytics, createDefaultFilterState());
+    const model = createDebtsPageModel(analytics, filtered, "month", new Set(["debt"]), vi.fn(), vi.fn(), vi.fn());
+    const { rerender } = render(<DebtsPageView {...model} />);
+
+    expect(screen.getByText("Saldo conjunto en deudas").nextElementSibling).toHaveTextContent(/120,00\s*€/);
+    expect(screen.getByRole("article", { name: "Movimiento neto" })).toHaveTextContent(/20,00\s*€/);
+    expect(screen.getByRole("button", { name: "Ver movimientos de Préstamo" })).toBeVisible();
+    expect(screen.queryByText("No hay deudas en este ámbito")).not.toBeInTheDocument();
+
+    const debtOnly = applyFilters(analytics, { ...createDefaultFilterState(), scope: "debtsOnly" });
+    rerender(<DebtsPageView {...createDebtsPageModel(analytics, debtOnly, "month", new Set(["debt"]), vi.fn(), vi.fn(), vi.fn())} />);
+    expect(screen.getByRole("article", { name: "Movimiento neto" })).toHaveTextContent(/20,00\s*€/);
+
+    rerender(<OverviewPageView {...createOverviewPageModel(filtered, "month", false)} />);
+    expect(screen.getByRole("article", { name: "Saldo en deudas" })).toHaveTextContent(/120,00\s*€/);
+    expect(screen.getByText("Saldo al cierre del periodo").nextElementSibling).toHaveTextContent(/150,00\s*€/);
+  });
+
   it("combines and clears debt ids through the global account selection", () => {
     const debtIds = new Set(["one", "two"]);
     expect(toggleDebtAccountIds([], debtIds, "one")).toEqual(["two"]);

@@ -14,6 +14,7 @@ import {
   analyzeBudgetPeriod,
   flattenBudgetAllocationNodes,
 } from "../../src/domain/analytics/budgets.ts";
+import { datasetDateBounds } from "../../src/domain/analytics/date-bounds.ts";
 import {
   applyFilters,
   createDefaultFilterState,
@@ -148,7 +149,7 @@ function fixtureSource(): AnalyticsSourceData {
           }),
           direct("income", "2024-01-03", 100, ["Ingresos"]),
           direct("reversal", "2024-01-04", -5, ["Ingresos"]),
-          // My Expenses uses the literal category, not structural linkage.
+          // My Expenses uses the category type, not structural linkage.
           direct("transfer", "2024-01-05", 20, ["Transferencia"]),
           direct("negative-neutral", "2024-01-06", -3, ["Reajuste*"]),
           direct("positive-neutral", "2024-01-07", 4, ["Reajuste*"]),
@@ -195,6 +196,29 @@ function withFilters(overrides: Partial<FilterState>): FilterState {
     dateRange: overrides.dateRange ?? defaults.dateRange,
   };
 }
+
+test("transfer classification follows the root type independently of its label", () => {
+  const source = fixtureSource();
+  const dataset = normalizeDataset({
+    ...source,
+    categories: {
+      Mover: { categoryType: "TRANSFER", children: { Ahorro: { categoryType: "NEUTRAL" } } },
+      Transferencia: { categoryType: "EXPENSE" },
+    },
+    parsedData: [{
+      ...source.parsedData[0]!,
+      transactions: [
+        direct("transfer-in", "2024-01-01", 10, ["Mover", "Ahorro"]),
+        direct("transfer-out", "2024-01-01", -5, ["Mover"]),
+        direct("label-only", "2024-01-01", -2, ["Transferencia"]),
+      ],
+    }],
+  });
+  const summary = aggregateKpis(applyFilters(dataset, createDefaultFilterState()));
+  assert.equal(summary.transfersEurMinor, 500);
+  assert.equal(summary.expensesEurMinor, -200);
+  assert.equal(summary.incomesEurMinor, 0);
+});
 
 test("normalizes static currencies and preserves My Expenses classification rules", () => {
   const dataset = normalizeDataset(fixtureSource());
@@ -494,6 +518,55 @@ test("restores period mode and migrates the previous single category path", () =
   );
 });
 
+test("uncategorized movements reconcile and retain an exact, serializable selection", () => {
+  const initial = normalizeDataset(fixtureSource());
+  const dataset: AnalyticsDataset = {
+    ...initial,
+    postings: initial.postings.map((posting) => posting.transactionId === "expense"
+      ? Object.assign({}, posting, { categoryPath: [], categoryType: "NEUTRAL" as const })
+      : posting.transactionId === "advance"
+        ? Object.assign({}, posting, { categoryPath: ["Sin categoría"] })
+        : posting),
+  };
+  const all = applyFilters(dataset, createDefaultFilterState());
+  const breakdown = aggregateCategoryBreakdown(all);
+  const uncategorized = breakdown.find((category) => category.path.length === 0);
+  assert.equal(uncategorized?.id, "[]");
+  assert.equal(uncategorized?.name, "Sin categoría");
+  assert.equal(uncategorized?.summary.netEurMinor, -1_000);
+  assert.equal(uncategorized?.directSummary.postingCount, 1);
+  assert.equal(breakdown.filter((category) => category.name === "Sin categoría").length, 2);
+  assert.equal(breakdown.reduce((total, category) => total + category.summary.netEurMinor, 0), aggregateKpis(all).netEurMinor);
+
+  const restored = restoreFilterState(JSON.parse(JSON.stringify({ categoryPrefixes: [[], [], [null], "invalid"] })));
+  assert.deepEqual(restored.categoryPrefixes, [[]]);
+  assert.deepEqual(restoreFilterState({ categoryPrefix: [] }).categoryPrefixes, []);
+  for (const categoryDepth of ["exact", "subtree"] as const) {
+    const selected = applyFilters(dataset, { ...restored, categoryDepth });
+    assert.deepEqual(selected.postings.map((posting) => posting.transactionId), ["expense"]);
+  }
+  assert.deepEqual(toggleCategoryPath([[]], []), []);
+  assert.equal(applyFilters(dataset, { ...restored, categoryPrefixes: [[], ["Sin categoría"]] }).postings.length, 2);
+});
+
+test("child-account postings retain provenance without extending analytics date coverage", () => {
+  const initial = normalizeDataset(fixtureSource());
+  const dataset: AnalyticsDataset = {
+    ...initial,
+    accounts: initial.accounts.map((account) => account.id === "gbp"
+      ? Object.assign({}, account, { includedInAll: false })
+      : account),
+    postings: initial.postings.map((posting) => posting.accountId === "gbp"
+      ? Object.assign({}, posting, { date: "2000-01-01" as const, valueDate: "2099-12-31" as const })
+      : posting),
+  };
+  for (const dateBasis of ["operation", "value"] as const) {
+    assert.deepEqual(datasetDateBounds(dataset, dateBasis), { minDate: "2024-01-01", maxDate: "2024-01-09" });
+  }
+  assert.equal(applyFilters(dataset, createDefaultFilterState()).postings.some((posting) => posting.accountId === "gbp"), false);
+  assert.equal(dataset.postings.some((posting) => posting.accountId === "gbp"), true);
+});
+
 test("KPIs expose net flows, gross/refunds/reversals and status counts in cents", () => {
   const filtered = applyFilters(
     normalizeDataset(fixtureSource()),
@@ -618,6 +691,16 @@ test("time series fill empty periods and use official start-year week boundaries
     })),
     [{ key: "2024", postingCount: 11 }],
   );
+});
+
+test("the final supported ISO year produces a finite series without advancing into year 10000", () => {
+  const filtered = applyFilters(normalizeDataset(fixtureSource()), withFilters({
+    dateRange: { from: "9999-01-01", to: "9999-12-31" },
+  }));
+  const points = aggregateTimeSeries(filtered, "year");
+  assert.equal(points.length, 1);
+  assert.equal(points[0]?.key, "9999");
+  assert.equal(points[0]?.postingCount, 0);
 });
 
 test("time series honor backup week and month starts across year and leap boundaries", () => {

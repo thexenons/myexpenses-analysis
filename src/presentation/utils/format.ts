@@ -64,6 +64,10 @@ export function formatDate(date: IsoDate): string {
   return dayFormatter.format(new Date(`${date}T00:00:00Z`));
 }
 
+export function formatCategoryPath(path: readonly string[]): string {
+  return path.length === 0 ? "Sin categoría" : path.join(" › ");
+}
+
 export function formatPeriodLabel(key: string): string {
   if (/^\d{4}-\d{2}$/.test(key)) {
     return monthFormatter.format(new Date(`${key}-01T00:00:00Z`)).replace(".", "");

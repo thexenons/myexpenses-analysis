@@ -7,6 +7,13 @@ import {
 import { TRANSACTION_POSTING_FIXTURE } from "./TransactionsPage.test.helpers.ts";
 
 describe("createPostingsCsv", () => {
+  it("leaves an unavailable exchange rate empty while preserving a zero equivalent", () => {
+    const csv = createPostingsCsv([{ ...TRANSACTION_POSTING_FIXTURE, exchangeRateToEur: null, amountEurMinor: 0 }]);
+    const [header, row] = csv.split("\n").map((line) => line.split(","));
+    expect(row?.[header!.indexOf("tasa_eur")]).toBe("");
+    expect(row?.[header!.indexOf("importe_eur")]).toBe("0");
+  });
+
   it("exports audit fields and neutralizes formulas without changing numbers", () => {
     const csv = createPostingsCsv([
       {

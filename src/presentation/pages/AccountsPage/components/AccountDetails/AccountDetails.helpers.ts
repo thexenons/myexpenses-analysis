@@ -32,11 +32,12 @@ export function resolveAccountExchangeRate(
   if (account.exchangeRateMode === "STATIC") {
     return registryEntry?.exchangeRateToEur ?? null;
   }
-  if (account.currentBalanceNativeMinor === 0) {
+  if (account.currentBalanceNativeMinor === 0 || account.valuationBalanceEurMinor === 0) {
     return null;
   }
   return Math.abs(
-    account.valuationBalanceEurMinor / account.currentBalanceNativeMinor,
+    (account.valuationBalanceEurMinor / 100) /
+      (account.currentBalanceNativeMinor / 10 ** account.fractionDigits),
   );
 }
 
@@ -59,6 +60,6 @@ export function formatAccountExchangeRate(
   exchangeRateToEur: number | null,
 ): string {
   return exchangeRateToEur === null
-    ? "No disponible con saldo nativo cero"
+    ? "No disponible"
     : `1 ${currency} = ${exchangeRateFormatter.format(exchangeRateToEur)} EUR`;
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 
 import { resolvePostingAccounts } from "../../../../../domain/analytics/transfer-relations.ts";
-import { formatDate, formatEuroMinor } from "../../../../utils/format.ts";
+import { formatCategoryPath, formatDate, formatEuroMinor } from "../../../../utils/format.ts";
 import { reconciliationStatusLabel } from "../TransactionDetails/TransactionDetails.helpers.ts";
 import { relatedTransactionPostings } from "./TransactionLinks.helpers.ts";
 import styles from "./TransactionLinks.module.css";
@@ -20,7 +20,7 @@ export function TransactionLinks({ dataset, posting }: TransactionLinksProps) {
         {related.length === 0 ? <p>No hay otros apuntes disponibles de esta operación.</p> : <ul>
           {related.map((row) => <li key={row.id}>
             <strong>{row.accountLabel} · {formatEuroMinor(row.amountEurMinor)}</strong>
-            <span>{formatDate(row.date)} · {row.categoryPath.join(" › ")} · {reconciliationStatusLabel(row)}</span>
+            <span>{formatDate(row.date)} · {formatCategoryPath(row.categoryPath)} · {reconciliationStatusLabel(row)}</span>
             <span>{row.id === peer?.id ? "Contrapartida" : "Parte de la misma operación"} · {row.id}</span>
           </li>)}
         </ul>}

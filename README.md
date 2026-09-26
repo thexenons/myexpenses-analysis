@@ -70,6 +70,10 @@ banco con el ámbito de flujo real, o la parte atribuida a la pareja con el de
 deudas. El reparto procede de los splits registrados. Un apunte positivo en la
 cuenta de deuda no se considera dinero recuperado por su signo.
 
+Los análisis incluyen las cuentas aunque tengan «excluir del total» activo en
+MyExpenses. El flag se conserva como dato de origen; las cuentas hijas siguen
+fuera de los totales para evitar contabilizar dos veces los archivos agrupados.
+
 Las gráficas de barras permiten ampliar el ranking y exportar todos sus datos;
 las series se pueden mostrar u ocultar desde la leyenda. Cuentas y categorías
 ofrecen selección de métricas, evolución y acceso a movimientos. La comparación
@@ -191,4 +195,4 @@ El modelo de amenaza y la operación automática están en
 [protección de la build estática](docs/static-authentication.md) y
 [sincronización pCloud](docs/pcloud-sync.md).
 El alcance, hallazgos y evidencia reproducible están en la
-[auditoría integral del proyecto](docs/project-audit.md).
+[auditoría integral del proyecto](docs/review-2026-09-26.md).

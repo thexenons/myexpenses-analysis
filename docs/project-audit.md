@@ -1,5 +1,9 @@
 # Auditoría integral del proyecto
 
+Este documento conserva la auditoría histórica de agosto. La revisión actual,
+sus correcciones y la nueva base de datos están en
+[revisión del 26 de septiembre de 2026](review-2026-09-26.md).
+
 Fecha: 23 de agosto de 2026. La revisión usa como oráculo local la copia
 `myexpenses-backup-20260822-210453.zip`, esquema SQLite 189, con 39 cuentas,
 81 categorías, 13.022 apuntes y un presupuesto. La conexión a una cuenta real

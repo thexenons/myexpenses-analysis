@@ -1,4 +1,5 @@
 import { useAppStore } from "../../../../providers/AppStoreProvider/index.ts"
+import { formatCategoryPath } from "../../../../utils/format.ts"
 import { countGlobalFilters } from "../GlobalFilters.helpers"
 import type { GlobalFiltersViewProps } from "../GlobalFilters.types"
 
@@ -17,7 +18,7 @@ export function useGlobalFilters(): GlobalFiltersViewProps {
     }
   }
   for (const path of filters.categoryPrefixes) {
-    activeSelections.push({ id: `category:${JSON.stringify(path)}`, label: path.join(" › "), onRemove: () => patchFilters({ categoryPrefixes: filters.categoryPrefixes.filter((candidate) => candidate !== path) }) })
+    activeSelections.push({ id: `category:${JSON.stringify(path)}`, label: formatCategoryPath(path), onRemove: () => patchFilters({ categoryPrefixes: filters.categoryPrefixes.filter((candidate) => candidate !== path) }) })
   }
   if (filters.scope !== "all") activeSelections.push({ id: "scope", label: filters.scope === "realCashFlow" ? "Flujo real" : "Solo deudas", onRemove: () => patchFilters({ scope: "all" }) })
   if (filters.dateRange.from !== null || filters.dateRange.to !== null) activeSelections.push({ id: "dates", label: `${filters.dateRange.from ?? "Inicio"} → ${filters.dateRange.to ?? "Fin"}`, onRemove: () => patchFilters({ dateRange: { from: null, to: null }, periodMode: "all" }) })

@@ -436,11 +436,11 @@ export function resolveBudgetAllocation(
     ),
     oneTime: baseSource?.oneTime ?? false,
     source:
-      baseSource === exact
-        ? "EXACT"
-        : baseSource === fallback
-          ? "FALLBACK"
-          : "NONE",
+      baseSource === undefined
+        ? "NONE"
+        : baseSource === exact
+          ? "EXACT"
+          : "FALLBACK",
     sourceYear: baseSource?.year ?? null,
     sourceSecond: baseSource?.period ?? null,
   };
@@ -699,7 +699,10 @@ function finalizeAllocationNode(
     `Child allocations for ${mutable.category.uuid}`,
   );
   const direct = mutable.directAllocation;
-  const baseMinor = direct?.baseMinor ?? childAssignedMinor;
+  const baseMinor = direct?.baseMinor ?? sumMinor(
+    children.map((child) => child.baseMinor),
+    `Child base allocations for ${mutable.category.uuid}`,
+  );
   const rolloverPreviousMinor =
     direct?.rolloverPreviousMinor ??
     sumMinor(

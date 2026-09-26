@@ -137,6 +137,6 @@ riesgo de perder procedencia. Con el volumen y las medidas actuales no es un
 hallazgo accionable; debe reconsiderarse sólo si crecen sustancialmente el
 dataset o el tiempo de desbloqueo.
 
-El soporte de lectura está fijado al esquema SQLite 189. Un cambio de
+El soporte de lectura cubre los esquemas SQLite 189 y 190. Un cambio de
 `PRAGMA user_version` debe introducir un adaptador nuevo antes de habilitar
 nuevas filas o pantallas.

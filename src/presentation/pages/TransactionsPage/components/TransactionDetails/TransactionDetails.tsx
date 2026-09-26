@@ -1,5 +1,6 @@
 import {
   formatCurrencyMinor,
+  formatCategoryPath,
   formatDate,
   formatEuroMinor,
 } from "../../../../utils/format.ts";
@@ -79,7 +80,7 @@ export function TransactionDetails({ posting }: TransactionDetailsProps) {
         <div className={`${styles.item} ${styles.wide}`}>
           <dt className={styles.term}>Categoría</dt>
           <dd className={styles.description}>
-            {posting.categoryPath.join(" › ")}
+            {formatCategoryPath(posting.categoryPath)}
           </dd>
         </div>
         <div className={styles.item}>

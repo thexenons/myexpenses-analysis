@@ -5,7 +5,7 @@ import { toggleCategoryPath } from "../../../../domain/analytics/filters.ts";
 import { aggregateTimeSeries } from "../../../../domain/analytics/aggregations.ts";
 import { useFilteredAnalytics } from "../../../hooks/filtered-analytics/filtered-analytics.hooks.ts";
 import { useAppStore } from "../../../providers/AppStoreProvider/index.ts";
-import { createCategoriesPageModel, DEFAULT_CATEGORY_CHART_OPTIONS } from "../CategoriesPage.helpers.ts";
+import { createCategoriesPageModel, createCategoryDrilldownFilters, DEFAULT_CATEGORY_CHART_OPTIONS } from "../CategoriesPage.helpers.ts";
 import type { CategoriesPageViewProps } from "../CategoriesPage.types.ts";
 
 export function useCategoriesPage(): CategoriesPageViewProps | null {
@@ -29,13 +29,9 @@ export function useCategoriesPage(): CategoriesPageViewProps | null {
     void navigate({ to: "/transacciones", search: { page: 1, sort: "date", direction: "desc" } });
   }, [navigate]);
   const onViewCategory = useCallback((id: string) => {
-    patchFilters({
-      categoryPrefixes: [JSON.parse(id) as string[]],
-      categoryDepth: chartOptions.level === "direct" ? "exact" : filters.categoryDepth ?? "subtree",
-      categoryMatch: "posting",
-    });
+    patchFilters(createCategoryDrilldownFilters(filters, JSON.parse(id) as string[], chartOptions.level));
     onViewTransactions();
-  }, [chartOptions.level, filters.categoryDepth, onViewTransactions, patchFilters]);
+  }, [chartOptions.level, filters, onViewTransactions, patchFilters]);
   const onViewPeriod = useCallback((label: string) => {
     if (filtered === null) return;
     const period = aggregateTimeSeries(filtered, granularity).find((point) => point.key === label);

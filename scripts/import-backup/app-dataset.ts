@@ -260,10 +260,22 @@ function accountExchangeRateMode(
     if (account.dynamicExchangeRates) {
         return "DYNAMIC";
     }
-    positiveRate(
-        account.exchangeRateToHome,
-        `Account ${account.id} exchangeRateToHome`,
-    );
+    if (account.exchangeRateToHome === null) {
+        if ([
+            account.openingBalanceMinor,
+            account.openingBalanceHomeMinor,
+            account.nativeClosingBalanceMinor,
+            account.historicalClosingBalanceHomeMinor,
+            account.valuationBalanceHomeMinor,
+        ].some((amount) => amount !== 0)) {
+            fail(`Account ${account.id}`, "STATIC account requires an exchange rate for non-zero amounts");
+        }
+    } else {
+        positiveRate(
+            account.exchangeRateToHome,
+            `Account ${account.id} exchangeRateToHome`,
+        );
+    }
     return "STATIC";
 }
 
@@ -686,6 +698,13 @@ function mapPosting(
         posting.amountHomeMinor,
         `${context} home amount`,
     );
+    if (
+        !account.dynamicExchangeRates &&
+        account.exchangeRateToHome === null &&
+        (amountNativeMinor !== 0 || amountHomeMinor !== 0)
+    ) {
+        fail(context, "STATIC account requires an exchange rate for non-zero amounts");
+    }
     const fxSource = mapFxSource(posting.fxSource, `${context} FX source`);
     let exchangeRateToHome: number | null;
     if (fxSource === "ZERO_AMOUNT_WITHOUT_RATE") {
@@ -697,6 +716,13 @@ function mapPosting(
         ) {
             fail(context, "invalid zero-amount missing-rate metadata");
         }
+        exchangeRateToHome = null;
+    } else if (
+        posting.fxRateToHome === null &&
+        amountHomeMinor === 0 &&
+        (fxSource === "DYNAMIC_EQUIVALENT" || fxSource === "DYNAMIC_SPLIT_PRORATION")
+    ) {
+        // Rounded stored equivalents retain their exact amount without inventing a rate.
         exchangeRateToHome = null;
     } else {
         exchangeRateToHome = positiveRate(

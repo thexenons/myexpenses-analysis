@@ -10,11 +10,12 @@ import type {
   AnalyticsDataset,
   CategoryBreakdownNode,
   FilteredAnalyticsDataset,
+  FilterState,
   NormalizedPosting,
   TimeGranularity,
 } from "../../../domain/analytics/types.ts";
-import { euroFromMinor } from "../../utils/format.ts";
-import type { CategoriesPageViewProps, CategoryChartOptions } from "./CategoriesPage.types.ts";
+import { euroFromMinor, formatCategoryPath } from "../../utils/format.ts";
+import type { CategoriesPageViewProps, CategoryChartOptions, CategoryLevel } from "./CategoriesPage.types.ts";
 
 export const DEFAULT_CATEGORY_CHART_OPTIONS: CategoryChartOptions = {
   metric: "netEurMinor", level: "roots", seriesLimit: 4,
@@ -27,6 +28,24 @@ export const CATEGORY_METRIC_LABELS = {
   realCashFlowEurMinor: "Flujo de caja real",
   debtFlowEurMinor: "Movimiento en deudas",
 } as const;
+
+export function createCategoryDrilldownFilters(
+  filters: FilterState,
+  path: readonly string[],
+  level: CategoryLevel,
+): Pick<FilterState, "categoryPrefixes" | "categoryDepth" | "categoryMatch"> {
+  const preserveExactSelection = level !== "direct" &&
+    filters.categoryDepth === "exact" && filters.categoryPrefixes.length > 0;
+  return {
+    categoryPrefixes: preserveExactSelection
+      ? filters.categoryPrefixes.filter((selected) => path.length === 0
+        ? selected.length === 0
+        : path.every((segment, index) => selected[index] === segment))
+      : [path],
+    categoryDepth: level === "direct" || preserveExactSelection ? "exact" : "subtree",
+    categoryMatch: "posting",
+  };
+}
 
 function categoryColor(category: CategoryBreakdownNode): string {
   return category.categoryType === "EXPENSE" ? "#a33f36"
@@ -86,7 +105,7 @@ export function createCategoriesPageModel(
     ? []
     : flattenCategories(categories).filter((category) => categoryPrefixes.some((path) => categoryPathsEqual(category.path, path)));
   const nonOverlappingSelection = selectedFilteredCategories.filter((category) =>
-    !selectedFilteredCategories.some((parent) => parent.path.length < category.path.length &&
+    !selectedFilteredCategories.some((parent) => parent.path.length > 0 && parent.path.length < category.path.length &&
       parent.path.every((segment, index) => category.path[index] === segment)),
   );
   const barCategories = (chartOptions.level === "direct"
@@ -104,7 +123,7 @@ export function createCategoriesPageModel(
     activityEurMinor,
     categoryBars: barCategories.map((category) => ({
       id: category.id,
-      label: category.path.join(" › "),
+      label: formatCategoryPath(category.path),
       value: euroFromMinor(category[chartOptions.level === "direct" ? "directSummary" : "summary"][chartOptions.metric]),
       color: categoryColor(category),
     })),
@@ -112,7 +131,7 @@ export function createCategoriesPageModel(
     categorySeries: comparisonCategories.map((category) => {
       // Partition the already filtered postings. Reapplying only this category
       // would broaden an exact-path or counterpart-category selection.
-      const matchesCategory = (posting: NormalizedPosting) => chartOptions.level === "direct"
+      const matchesCategory = (posting: NormalizedPosting) => chartOptions.level === "direct" || category.path.length === 0
         ? categoryPathsEqual(posting.categoryPath, category.path)
         : category.path.every((segment, pathIndex) => posting.categoryPath[pathIndex] === segment);
       const scoped = {
@@ -122,7 +141,7 @@ export function createCategoriesPageModel(
       };
       return {
         id: category.id,
-        label: category.path.join(" › "),
+        label: formatCategoryPath(category.path),
         color: categoryColor(category),
         data: aggregateTimeSeries(scoped, granularity).map((point) => ({
           label: point.key,
@@ -148,7 +167,7 @@ export function createCategoriesPageModel(
       categoryPrefixes.length === 0
         ? "Árbol completo"
         : categoryPrefixes.length === 1
-          ? categoryPrefixes[0]!.join(" › ")
+          ? formatCategoryPath(categoryPrefixes[0]!)
           : `${categoryPrefixes.length} categorías seleccionadas`,
     showClearCategory: categoryPrefixes.length > 0,
   };

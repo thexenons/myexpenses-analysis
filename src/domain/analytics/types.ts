@@ -105,6 +105,7 @@ export type AnalyticsRegistries = Pick<AppDataset, "accounts" | "categories">;
 export type PostingBucket = "expense" | "income" | "transfer";
 export type ExchangeRateSource =
   | "identity"
+  | "unavailable"
   | "static"
   | "dynamic-equivalent"
   | "dynamic-rate";
@@ -152,7 +153,8 @@ export interface NormalizedPosting {
   readonly valueTime?: string;
   readonly amountNativeMinor: number;
   readonly amountEurMinor: number;
-  readonly exchangeRateToEur: number;
+  /** Null when no rate is available, including rounded zero equivalents. */
+  readonly exchangeRateToEur: number | null;
   readonly exchangeRateSource: ExchangeRateSource;
   /** Exact v1 source, including the zero-amount case without an invented rate. */
   readonly backupFxSource?: BackupFxSource;
@@ -252,7 +254,7 @@ export interface FilterState {
   readonly dateBasis?: "operation" | "value";
   readonly categoryMatch?: "posting" | "either";
   readonly categoryDepth?: "subtree" | "exact";
-  /** Empty means all; otherwise a transaction starts with any selected path. */
+  /** Empty means all; an empty path within the list selects uncategorized rows. */
   readonly categoryPrefixes: readonly (readonly string[])[];
   /** Empty means every status. VOID can remain visible in tables. */
   readonly statuses: readonly TransactionStatus[];

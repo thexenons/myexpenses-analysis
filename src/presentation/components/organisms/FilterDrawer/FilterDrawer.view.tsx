@@ -4,6 +4,7 @@ import type {
   TransactionStatus,
 } from "../../../../domain/analytics/types"
 import { categoryPathsEqual } from "../../../../domain/analytics/filters.ts"
+import { formatCategoryPath } from "../../../utils/format.ts"
 import { Button } from "../../atoms/Button"
 import { Icon } from "../../atoms/Icon"
 import { IconButton } from "../../atoms/IconButton"
@@ -181,7 +182,7 @@ export function FilterDrawerView({
                 >
                   <option value="">Selecciona una ruta…</option>
                   {categoryPaths.filter((path) => !filters.categoryPrefixes.some((selected) => categoryPathsEqual(selected, path))).map((path) => (
-                    <option key={JSON.stringify(path)} value={JSON.stringify(path)}>{path.join(" › ")}</option>
+                    <option key={JSON.stringify(path)} value={JSON.stringify(path)}>{formatCategoryPath(path)}</option>
                   ))}
                 </select>
               </label>
@@ -203,11 +204,11 @@ export function FilterDrawerView({
                   {filters.categoryPrefixes.map((path) => (
                     <li key={JSON.stringify(path)}>
                       <button
-                        aria-label={`Quitar ${path.join(" › ")}`}
+                        aria-label={`Quitar ${formatCategoryPath(path)}`}
                         onClick={() => onCategoryToggle(path)}
                         type="button"
                       >
-                        <span>{path.join(" › ")}</span>
+                        <span>{formatCategoryPath(path)}</span>
                         <span aria-hidden="true">×</span>
                       </button>
                     </li>

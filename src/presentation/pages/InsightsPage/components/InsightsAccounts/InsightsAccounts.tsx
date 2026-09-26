@@ -27,7 +27,7 @@ export function InsightsAccounts({
         <Panel
           actions={<Badge tone="warning">{accounts.hiddenCount} ocultas</Badge>}
           className={styles.deferredPanel}
-          description="Visibilidad y exclusión son metadatos de cuenta; no se infieren a partir del saldo."
+          description="Visibilidad y exclusión originales de MyExpenses. La exclusión de totales no se aplica en este análisis."
           title="Visibilidad del inventario"
         >
           <div className={styles.visibilityHero}>
@@ -44,7 +44,7 @@ export function InsightsAccounts({
               <dd>{countFormatter.format(accounts.hiddenCount)}</dd>
             </div>
             <div>
-              <dt>Excluidas de totales</dt>
+              <dt>Excluidas de totales en MyExpenses</dt>
               <dd>{countFormatter.format(accounts.excludedFromTotalsCount)}</dd>
             </div>
             <div>

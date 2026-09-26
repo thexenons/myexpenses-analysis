@@ -1,7 +1,7 @@
 import { resolvePostingAccounts } from "../../../../../domain/analytics/transfer-relations.ts";
 import type { AnalyticsDataset, NormalizedPosting } from "../../../../../domain/analytics/types.ts";
 import type { DataTableColumn } from "../../../../components/organisms/DataTable/index.ts";
-import { formatDate } from "../../../../utils/format.ts";
+import { formatCategoryPath, formatDate } from "../../../../utils/format.ts";
 import type { TransactionSortKey } from "../../TransactionsPage.types.ts";
 import { TransactionAccount } from "../TransactionAccount/index.ts";
 import { TransactionAmount } from "../TransactionAmount/index.ts";
@@ -39,7 +39,7 @@ export function createTransactionTableColumns(
     {
       key: "category",
       header: "Categoría",
-      cell: (posting) => posting.categoryPath.join(" › "),
+      cell: (posting) => formatCategoryPath(posting.categoryPath),
     },
     {
       key: "account",

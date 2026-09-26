@@ -98,10 +98,10 @@ function restoreStringList(value: unknown): readonly string[] {
     : [];
 }
 
-function restoreCategoryPath(value: unknown): readonly string[] {
-  return Array.isArray(value) && value.length > 0 && value.every(isNonEmptyString)
+function restoreCategoryPath(value: unknown): readonly string[] | null {
+  return Array.isArray(value) && value.every(isNonEmptyString)
     ? [...value]
-    : [];
+    : null;
 }
 
 function restoreCategoryPrefixes(value: unknown): readonly (readonly string[])[] {
@@ -110,7 +110,7 @@ function restoreCategoryPrefixes(value: unknown): readonly (readonly string[])[]
   const seen = new Set<string>();
   for (const candidate of value) {
     const path = restoreCategoryPath(candidate);
-    if (path.length === 0) continue;
+    if (path === null) continue;
     const key = JSON.stringify(path);
     if (!seen.has(key)) {
       seen.add(key);
@@ -165,7 +165,7 @@ export function restoreFilterState(value: unknown): FilterState {
     categoryPrefixes:
       categoryPrefixes.length > 0
         ? categoryPrefixes
-        : legacyCategoryPrefix.length > 0
+        : legacyCategoryPrefix !== null && legacyCategoryPrefix.length > 0
           ? [legacyCategoryPrefix]
           : [],
     statuses: Array.isArray(value.statuses)
@@ -191,8 +191,8 @@ function snapshotCategoryPrefixes(
   const result: string[][] = [];
   const seen = new Set<string>();
   for (const [index, path] of values.entries()) {
-    if (!Array.isArray(path) || path.length === 0) {
-      throw new Error(`categoryPrefixes[${index}] must be a non-empty path`);
+    if (!Array.isArray(path)) {
+      throw new Error(`categoryPrefixes[${index}] must be a category path`);
     }
     validateStringList(path, `categoryPrefixes[${index}]`);
     const key = JSON.stringify(path);
@@ -278,9 +278,8 @@ export function accountMatchesScope(
   account: NormalizedAccount,
   scope: AnalyticsScope,
 ): boolean {
-  // The importer retains account metadata for references, but intentionally
-  // omits movements of accounts outside MyExpenses' supported total scope.
-  // Including only their opening balance would present a fictitious balance.
+  // Canonical postings retain every account for balances and transfer links.
+  // Normalization includes all root accounts, regardless of native total flags.
   if (account.includedInAll === false) return false;
   if (scope === "realCashFlow") {
     return account.type === "DEFAULT";
@@ -295,6 +294,8 @@ function categoryStartsWith(
   categoryPath: readonly string[],
   prefix: readonly string[],
 ): boolean {
+  // An empty selected path means uncategorized, not every category subtree.
+  if (prefix.length === 0) return categoryPath.length === 0;
   if (prefix.length > categoryPath.length) {
     return false;
   }

@@ -94,7 +94,7 @@ export function createPostingsCsv(
       posting.amountNativeMinor / 10 ** posting.fractionDigits,
       posting.categoryType,
       posting.bucket,
-      posting.exchangeRateToEur,
+      posting.exchangeRateToEur ?? "",
       posting.exchangeRateSource,
       posting.transferAccount ?? "",
       posting.tags.join(" | "),

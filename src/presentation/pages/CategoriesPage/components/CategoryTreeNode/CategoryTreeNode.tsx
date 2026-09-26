@@ -2,6 +2,7 @@ import { Badge } from "../../../../components/atoms/Badge/index.ts";
 import { Icon } from "../../../../components/atoms/Icon/index.ts";
 import {
   countFormatter,
+  formatCategoryPath,
   formatEuroMinor,
 } from "../../../../utils/format.ts";
 import {
@@ -25,7 +26,7 @@ export function CategoryTreeNode({
     onToggleExpanded,
     selected,
   } = useCategoryTreeNode({ category, depth, selectedCategoryIds });
-  const pathLabel = category.path.join(" › ");
+  const pathLabel = formatCategoryPath(category.path);
 
   return (
     <li className={styles.node}>
