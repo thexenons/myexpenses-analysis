@@ -106,6 +106,7 @@ describe("App integration", () => {
 
     expect(router.state.location.pathname).toBe("/resumen");
     await navigateTo("Flujo de caja", "/flujo-de-caja", "Flujo de caja");
+    await navigateTo("Comparativa", "/comparativa", "Comparativa de perspectivas");
     await navigateTo("Deudas", "/deudas", "Deudas");
     await navigateTo("Presupuestos", "/presupuestos", "Presupuestos");
     await navigateTo("Categorías", "/categorias", "Categorías");
@@ -147,6 +148,17 @@ describe("App integration", () => {
     await user.click(screen.getByRole("link", { name: "Resumen" }));
     await waitForRouterReady(router, "/resumen");
     expect(appStore.getState().filters.scope).toBe("all");
+  });
+
+  it("opens the comparison directly without changing the selected perspective", async () => {
+    installAppFetchMock();
+    const user = userEvent.setup();
+    const { router } = renderAppAt("/comparativa");
+    await waitForRouterReady(router, "/comparativa");
+    await unlockApp(user);
+    expect(await screen.findByRole("heading", { level: 1, name: "Comparativa de perspectivas" })).toBeVisible();
+    expect(appStore.getState().filters.scope).toBe("realCashFlow");
+    expect(screen.getByRole("table", { name: /Comparación de movimientos/ })).toBeVisible();
   });
 
   it("applies a global search to statistics and transaction data", async () => {

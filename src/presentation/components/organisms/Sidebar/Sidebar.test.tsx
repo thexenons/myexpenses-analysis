@@ -57,7 +57,8 @@ describe("Sidebar", () => {
       name: "Secciones principales",
     })
     expect(navigation).toBeVisible()
-    expect(within(navigation).getAllByRole("link")).toHaveLength(8)
+    expect(within(navigation).getAllByRole("link")).toHaveLength(9)
+    expect(within(navigation).getByRole("link", { name: "Comparativa" })).toHaveAttribute("href", "/comparativa")
     expect(screen.getByRole("link", { name: "Resumen" })).toHaveAttribute(
       "aria-current",
       "page",

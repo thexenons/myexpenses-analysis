@@ -1,0 +1,108 @@
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-bright);
+}
+
+.summaryItem {
+  min-width: 0;
+  padding: 1.15rem;
+  border-right: 1px solid var(--line);
+}
+
+.summaryItem:last-child {
+  border-right: 0;
+}
+
+.summaryLabel {
+  margin: 0 0 0.6rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.summaryValue {
+  display: block;
+  font-family: var(--mono);
+  font-size: clamp(1.15rem, 2vw, 1.8rem);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.summaryDetail {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.tableScroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 32rem;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.table caption {
+  margin-bottom: 0.5rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-align: left;
+}
+
+.table th,
+.table td {
+  padding: 0.85rem 0.65rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.table th {
+  text-align: left;
+}
+
+.table td,
+.table thead th:not(:first-child) {
+  text-align: right;
+}
+
+.table td {
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+
+.netRow {
+  background: var(--surface-bright);
+  font-weight: 700;
+}
+
+.empty,
+.explanation {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.explanation {
+  max-width: 70ch;
+}
+
+@media (max-width: 42rem) {
+  .summary {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryItem {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .summaryItem:last-child {
+    border-bottom: 0;
+  }
+}

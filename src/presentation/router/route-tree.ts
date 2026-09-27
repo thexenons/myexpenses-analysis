@@ -39,6 +39,15 @@ export function createRouteTree() {
     path: "flujo-de-caja",
   });
 
+  const comparisonRoute = createRoute({
+    component: lazyRouteComponent(
+      () => import("../pages/PerspectiveComparisonPage/index.ts"),
+      "PerspectiveComparisonPage",
+    ),
+    getParentRoute: () => rootRoute,
+    path: "comparativa",
+  });
+
   const debtsRoute = createRoute({
     component: lazyRouteComponent(
       () => import("../pages/DebtsPage/index.ts"),
@@ -98,6 +107,7 @@ export function createRouteTree() {
     indexRoute,
     overviewRoute,
     cashFlowRoute,
+    comparisonRoute,
     debtsRoute,
     budgetsRoute,
     categoriesRoute,

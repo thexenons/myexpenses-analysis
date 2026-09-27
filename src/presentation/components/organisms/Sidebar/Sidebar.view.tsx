@@ -12,6 +12,7 @@ interface NavigationItem {
   to:
     | "/resumen"
     | "/flujo-de-caja"
+    | "/comparativa"
     | "/deudas"
     | "/presupuestos"
     | "/categorias"
@@ -28,6 +29,7 @@ const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     mobileLabel: "Flujo",
     icon: "transfer",
   },
+  { to: "/comparativa", label: "Comparativa", mobileLabel: "Comparativa", icon: "trend" },
   { to: "/deudas", label: "Deudas", mobileLabel: "Deudas", icon: "debt" },
   {
     to: "/presupuestos",
