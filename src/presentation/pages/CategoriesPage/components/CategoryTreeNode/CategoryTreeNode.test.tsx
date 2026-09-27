@@ -47,6 +47,7 @@ describe("CategoryTreeNode", () => {
           category={root}
           averageEurMinorByCategoryId={new Map([[root.id, -1_000], [child.id, -1_000]])}
           averageUnit="month"
+          averageScope="filtered"
           completedPeriodCount={1}
           depth={1}
           onToggleCategory={onToggleCategory}

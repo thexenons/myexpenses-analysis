@@ -27,6 +27,7 @@ export function CategoriesPageView({
   categorySeries,
   categoryTree,
   completedPeriodCount,
+  averageScope,
   averageUnit,
   directPostingCount,
   expenseEurMinor,
@@ -159,6 +160,7 @@ export function CategoriesPageView({
               averageEurMinorByCategoryId={categoryAverageEurMinorById}
               averageUnit={averageUnit}
               completedPeriodCount={completedPeriodCount}
+              averageScope={averageScope}
               depth={0}
               key={category.id}
               onToggleCategory={onToggleCategory}

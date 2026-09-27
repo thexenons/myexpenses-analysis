@@ -41,6 +41,7 @@ describe("CategoriesPageView", () => {
       <CategoriesPageView
         activityEurMinor={-2_500}
         averageUnit="month"
+        averageScope="filtered"
         categoryAverageEurMinorById={new Map([[category.id, -2_500]])}
         categoryBars={[]}
         categoryCount={1}
@@ -133,6 +134,29 @@ describe("createCategoriesPageModel", () => {
     render(<CategoriesPageView {...model} />);
     expect(screen.getByText("Sin períodos completos")).toBeVisible();
     expect(screen.getAllByText(/50,00/).length).toBeGreaterThan(0);
+  });
+
+  it("labels the historical average and keeps the current tree, total, and chart unchanged", () => {
+    const analytics = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+      categories: { Expenses: { categoryType: "EXPENSE", children: { Food: { categoryType: "EXPENSE" }, Rent: { categoryType: "EXPENSE" } } } },
+      parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "historic", date: "2025-01-01", amount: -100, category: ["Expenses", "Food"], sourceTransactionUuid: "historic", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+        { uuid: "current", date: "2026-09-10", amount: -500, category: ["Expenses", "Rent"], sourceTransactionUuid: "current", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+      ] }],
+    });
+    const selected = [["Expenses", "Rent"]];
+    const filters = { ...createDefaultFilterState(), periodMode: "month" as const, categoryPrefixes: selected, dateRange: { from: "2026-09-01" as const, to: "2026-09-27" as const } };
+    const model = createCategoriesPageModel(analytics, applyFilters(analytics, filters), selected, "month", vi.fn(), vi.fn(), undefined, undefined, undefined, undefined, undefined, "2026-09-27");
+
+    expect(model.averageScope).toBe("historical");
+    expect(model.completedPeriodCount).toBe(20);
+    expect(model.categoryTree[0]?.children.map(({ name }) => name)).toEqual(["Rent"]);
+    expect(model.categoryTree[0]?.summary.netEurMinor).toBe(-50_000);
+    expect(model.categoryBars).toEqual([expect.objectContaining({ value: -500 })]);
+    expect(model.categoryAverageEurMinorById.get('["Expenses","Rent"]') ?? 0).toBe(0);
+    render(<CategoriesPageView {...model} />);
+    expect(screen.getAllByText(/Promedio histórico:.*mes.*20 períodos completos/)).toHaveLength(2);
   });
 
   it("recalculates with date/granularity while preserving the tree's broader category scope", () => {

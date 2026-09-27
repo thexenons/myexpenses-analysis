@@ -19,6 +19,7 @@ export interface CategoriesPageViewProps {
   readonly categorySeries: readonly ChartSeries[];
   readonly categoryTree: readonly CategoryBreakdownNode[];
   readonly completedPeriodCount: number;
+  readonly averageScope: "filtered" | "historical";
   readonly averageUnit: TimeGranularity;
   readonly directPostingCount: number;
   readonly expenseEurMinor: number;

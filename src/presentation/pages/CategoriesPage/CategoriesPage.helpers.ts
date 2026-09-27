@@ -139,6 +139,7 @@ export function createCategoriesPageModel(
     categoryCount: flattenedCategories.length,
     categoryAverageEurMinorById: categoryAverages.averageEurMinorByCategoryId,
     completedPeriodCount: categoryAverages.completedPeriodCount,
+    averageScope: categoryAverages.scope,
     averageUnit: granularity,
     categorySeries: comparisonCategories.map((category) => {
       // Partition the already filtered postings. Reapplying only this category

@@ -1,6 +1,6 @@
 import { aggregateCategoryBreakdown, aggregateTimeSeries } from "./aggregations.ts";
 import { datasetDateBounds } from "./date-bounds.ts";
-import { postingDate } from "./filters.ts";
+import { applyFilters, postingDate } from "./filters.ts";
 import type {
   CategoryBreakdownNode,
   FilteredAnalyticsDataset,
@@ -9,6 +9,7 @@ import type {
 } from "./types.ts";
 
 export interface CategoryPeriodAverages {
+  readonly scope: "filtered" | "historical";
   readonly completedPeriodCount: number;
   /** Categories without activity in completed periods are absent and average zero. */
   readonly averageEurMinorByCategoryId: ReadonlyMap<string, number>;
@@ -26,21 +27,22 @@ function collectAverages(
 }
 
 /** The numerator and divisor use exactly the same fully completed units. */
-export function aggregateCategoryPeriodAverages(
+function averagesWithinRange(
   filtered: FilteredAnalyticsDataset,
   granularity: TimeGranularity,
   today: IsoDate,
+  scope: CategoryPeriodAverages["scope"],
 ): CategoryPeriodAverages {
   const bounds = datasetDateBounds(filtered.source, filtered.filters.dateBasis);
   const from = filtered.filters.dateRange.from ?? bounds.minDate;
   const to = filtered.filters.dateRange.to ?? bounds.maxDate;
   const averages = new Map<string, number>();
   if (from === null || to === null || from > to) {
-    return { completedPeriodCount: 0, averageEurMinorByCategoryId: averages };
+    return { scope, completedPeriodCount: 0, averageEurMinorByCategoryId: averages };
   }
   const cappedTo = to < today ? to : today;
   if (from > cappedTo) {
-    return { completedPeriodCount: 0, averageEurMinorByCategoryId: averages };
+    return { scope, completedPeriodCount: 0, averageEurMinorByCategoryId: averages };
   }
 
   // Supplying the common range fills zero-activity units even when a category
@@ -53,7 +55,7 @@ export function aggregateCategoryPeriodAverages(
     period.startDate >= from && period.endDate <= to && period.endDate < today,
   );
   if (periods.length === 0) {
-    return { completedPeriodCount: 0, averageEurMinorByCategoryId: averages };
+    return { scope, completedPeriodCount: 0, averageEurMinorByCategoryId: averages };
   }
 
   const first = periods[0]!.startDate;
@@ -68,7 +70,38 @@ export function aggregateCategoryPeriodAverages(
   });
   collectAverages(completedCategories, periods.length, averages);
   return {
+    scope,
     completedPeriodCount: periods.length,
     averageEurMinorByCategoryId: averages,
   };
+}
+
+const GRANULARITY_RANK: Readonly<Record<TimeGranularity, number>> = {
+  day: 0,
+  week: 1,
+  month: 2,
+  year: 3,
+};
+
+export function aggregateCategoryPeriodAverages(
+  filtered: FilteredAnalyticsDataset,
+  granularity: TimeGranularity,
+  today: IsoDate,
+): CategoryPeriodAverages {
+  const mode = filtered.filters.periodMode;
+  const useHistory = mode !== "all" && mode !== "custom" &&
+    GRANULARITY_RANK[granularity] >= GRANULARITY_RANK[mode];
+  if (!useHistory) {
+    const withinFilter = averagesWithinRange(filtered, granularity, today, "filtered");
+    if (withinFilter.completedPeriodCount > 0) return withinFilter;
+  }
+
+  // Keep every non-date filter (and the caller's category scope) intact. The
+  // original dataset's common bounds, not category activity, limit history.
+  const historical = applyFilters(filtered.source, {
+    ...filtered.filters,
+    periodMode: "all",
+    dateRange: { from: null, to: null },
+  });
+  return averagesWithinRange(historical, granularity, today, "historical");
 }

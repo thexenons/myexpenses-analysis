@@ -4,6 +4,7 @@ export interface CategoryTreeNodeProps {
   readonly category: CategoryBreakdownNode;
   readonly averageEurMinorByCategoryId: ReadonlyMap<string, number>;
   readonly averageUnit: TimeGranularity;
+  readonly averageScope: "filtered" | "historical";
   readonly completedPeriodCount: number;
   readonly depth: number;
   readonly onToggleCategory: (path: readonly string[]) => void;

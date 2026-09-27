@@ -19,6 +19,7 @@ export function CategoryTreeNode({
   category,
   averageEurMinorByCategoryId,
   averageUnit,
+  averageScope,
   completedPeriodCount,
   depth,
   onToggleCategory,
@@ -81,7 +82,7 @@ export function CategoryTreeNode({
           <span className={styles.average}>
             {averageEurMinor === null
               ? "Sin períodos completos"
-              : `Promedio: ${formatEuroMinor(averageEurMinor)}/${UNIT_LABELS[averageUnit]}`}
+              : `${averageScope === "historical" ? "Promedio histórico" : "Promedio"}: ${formatEuroMinor(averageEurMinor)}/${UNIT_LABELS[averageUnit]} · ${completedPeriodCount} ${completedPeriodCount === 1 ? "período completo" : "períodos completos"}`}
           </span>
         </span>
       </div>
@@ -93,6 +94,7 @@ export function CategoryTreeNode({
               category={child}
               averageEurMinorByCategoryId={averageEurMinorByCategoryId}
               averageUnit={averageUnit}
+              averageScope={averageScope}
               completedPeriodCount={completedPeriodCount}
               depth={depth + 1}
               key={child.id}

@@ -155,3 +155,103 @@ test("configured month and week starts define complete accounting units", () => 
   assert.equal(week.completedPeriodCount, 3); // Tue–Mon weeks ending Sep 7, 14, and 21.
   assert.equal(week.averageEurMinorByCategoryId.get(foodId), -10_000 / 3);
 });
+
+test("a selected current month with monthly granularity uses all complete historical months", () => {
+  const data = filtered(dataset([
+    ["first", "2025-01-01", -200],
+    ["august", "2026-08-10", -800],
+    ["september", "2026-09-10", -500],
+  ]), "2026-09-01", "2026-09-27", { periodMode: "month" });
+  const result = aggregateCategoryPeriodAverages(data, "month", "2026-09-27");
+  assert.equal(result.scope, "historical");
+  assert.equal(result.completedPeriodCount, 20);
+  assert.equal(result.averageEurMinorByCategoryId.get(foodId), -5_000);
+  assert.equal(aggregateCategoryBreakdown(data)[0]?.summary.netEurMinor, -50_000);
+});
+
+test("a selected current month with yearly granularity counts complete earlier years only", () => {
+  const data = filtered(dataset([
+    ["first", "2024-01-01", -100],
+    ["current", "2026-09-10", -900],
+  ]), "2026-09-01", "2026-09-27", { periodMode: "month" });
+  const result = aggregateCategoryPeriodAverages(data, "year", "2026-09-27");
+  assert.equal(result.scope, "historical");
+  assert.equal(result.completedPeriodCount, 2);
+  assert.equal(result.averageEurMinorByCategoryId.get(foodId), -5_000);
+});
+
+test("finer granularity keeps completed filtered units and excludes the current unit", () => {
+  const data = filtered(dataset([
+    ["first", "2026-01-01", -800],
+    ["current", "2026-09-10", -900],
+  ]), "2026-01-01", "2026-09-27", { periodMode: "year" });
+  const result = aggregateCategoryPeriodAverages(data, "month", "2026-09-27");
+  assert.equal(result.scope, "filtered");
+  assert.equal(result.completedPeriodCount, 8);
+  assert.equal(result.averageEurMinorByCategoryId.get(foodId), -10_000);
+});
+
+test("short custom ranges fall back to history; broad custom and all use filtered units", () => {
+  const source = dataset([
+    ["first", "2025-01-01", -100],
+    ["current", "2026-09-10", -900],
+  ]);
+  const short = aggregateCategoryPeriodAverages(filtered(source, "2026-09-01", "2026-09-27", { periodMode: "custom" }), "month", "2026-09-27");
+  assert.equal(short.scope, "historical");
+  assert.equal(short.completedPeriodCount, 20);
+  assert.equal(short.averageEurMinorByCategoryId.get(foodId), -500);
+  const broad = aggregateCategoryPeriodAverages(filtered(source, "2025-01-01", "2025-12-31", { periodMode: "custom" }), "month", "2026-09-27");
+  assert.equal(broad.scope, "filtered");
+  assert.equal(broad.completedPeriodCount, 12);
+  const all = aggregateCategoryPeriodAverages(filtered(source, null, null), "month", "2026-09-27");
+  assert.equal(all.scope, "filtered");
+  assert.equal(all.completedPeriodCount, 20);
+});
+
+test("historical fallback returns no completed units when common coverage has no full unit", () => {
+  const data = filtered(dataset([["today", "2026-09-27", -50]]), "2026-09-27", "2026-09-27", { periodMode: "day" });
+  const result = aggregateCategoryPeriodAverages(data, "month", "2026-09-27");
+  assert.equal(result.scope, "historical");
+  assert.equal(result.completedPeriodCount, 0);
+  assert.equal(result.averageEurMinorByCategoryId.get(foodId), undefined);
+});
+
+test("historical reference retains non-date filters and value-date coverage", () => {
+  const initial = dataset([
+    ["selected", "2024-01-01", -100],
+    ["excluded", "2025-01-01", -300],
+    ["current", "2026-09-10", -900],
+  ]);
+  const source = structuredClone(initial);
+  for (const posting of source.postings) {
+    Object.assign(posting, {
+      valueDate: posting.transactionId === "selected" ? "2025-01-01" : posting.date,
+      tags: posting.transactionId === "excluded" ? ["other"] : ["chosen"],
+    });
+  }
+  const data = filtered(source, "2026-09-01", "2026-09-27", {
+    periodMode: "month", dateBasis: "value", tags: ["chosen"],
+  });
+  const result = aggregateCategoryPeriodAverages(data, "year", "2026-09-27");
+  assert.equal(result.scope, "historical");
+  assert.equal(result.completedPeriodCount, 1);
+  assert.equal(result.averageEurMinorByCategoryId.get(foodId), -10_000);
+  assert.equal(aggregateCategoryBreakdown(data)[0]?.summary.netEurMinor, -90_000);
+});
+
+test("historical units honor the configured accounting-month boundary", () => {
+  const base = dataset([["first", "2025-09-15", -40], ["current", "2026-10-20", -60]]);
+  const source = {
+    ...base,
+    backup: {
+      source: { format: "myexpenses-backup" as const, schemaVersion: 189, backupSha256: "a".repeat(64), databaseSha256: "b".repeat(64) },
+      preferences: { homeCurrency: "EUR", timeZone: "Europe/Madrid", monthStart: 15, weekStart: 2, includeTransfers: false },
+      currencies: [], accounts: [], categories: [], payees: [], paymentMethods: [], tags: [], budgets: [],
+    },
+  } satisfies AnalyticsDataset;
+  const data = filtered(source, "2026-10-01", "2026-10-20", { periodMode: "month" });
+  const result = aggregateCategoryPeriodAverages(data, "month", "2026-10-20");
+  assert.equal(result.scope, "historical");
+  assert.equal(result.completedPeriodCount, 13);
+  assert.equal(result.averageEurMinorByCategoryId.get(foodId), -4_000 / 13);
+});
