@@ -1,6 +1,6 @@
 # Category statistics: completed-period average
 
-**Status:** Implemented and locally verified; parent review and authorized delivery remain pending. The user explicitly authorized a feature-branch commit, merge to `main`, and push to `origin/main` after verification; the parent agent owns that delivery. Private-data access remains out of scope.
+**Status:** Implemented, verified, reviewed, and committed in `111fb26e2c1791fe4899419b04344e450deac3c4`. Merge to `main` and push to `origin/main` are authorized and pending delivery. Private-data access remains out of scope.
 
 ## Objective
 
@@ -35,6 +35,6 @@ Implement the domain calculation, category-tree model and UI, and behavioral tes
 
 **Verification:** RED focused tests before production writes; then GREEN focused tests; `pnpm test:node`, `pnpm test:ui`, `pnpm type-check`, `pnpm lint`, `pnpm build`. Runtime harness: N/A; this is a pure local analytics calculation rendered by existing UI, covered by domain and DOM tests.
 
-**Observed closure:** `pnpm test:node` 231 passed, 2 skipped (reference backup not present), 0 failed; `pnpm test:ui` 219 passed across 72 files; `pnpm type-check`, `pnpm lint`, `pnpm build`, and `git diff --check` all passed. The first full lint attempt found a test-only `no-map-spread` warning; it was corrected and the final full checks passed. Approximate authored change size before this progress update: 409 added/deleted lines including the task document. No commit or native review has been made by this worker. Next: parent review, then authorized commit/merge/push.
+**Observed closure:** `pnpm test:node` 231 passed, 2 skipped (reference backup not present), 0 failed; `pnpm test:ui` 219 passed across 72 files; `pnpm type-check`, `pnpm lint`, `pnpm build`, and `git diff --check` all passed. The first full lint attempt found a test-only `no-map-spread` warning; it was corrected and the final full checks passed. Parent spot-check: all nine domain average tests passed. Commit `111fb26e2c1791fe4899419b04344e450deac3c4` contains both work units, tests, and documentation (401 additions, 10 deletions). Native review assessed medium risk, the user granted review, and the consolidated reliability reviewer reported no findings; exact acknowledgement closed lineage `review-a7da23c96fa2a5df`. The reviewer inspected immutable patches and did not rerun tests. Next: authorized merge/push, followed by the separately requested read-only frontend audit.
 
 **Engram mirror:** Pending (runtime session identity unavailable to this worker; a write was previously reported as `unknown_session`).
