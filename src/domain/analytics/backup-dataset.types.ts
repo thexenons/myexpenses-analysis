@@ -30,6 +30,10 @@ export interface BackupDatasetSourceV1 {
   readonly schemaVersion: 189 | 190;
   readonly backupSha256: string;
   readonly databaseSha256: string;
+  /** Date and time indicated by the source filename, with no known time zone. */
+  readonly backupFilenameTimestamp?: string;
+  /** Actual import event as a canonical UTC instant. */
+  readonly importedAt?: string;
 }
 
 export interface BackupDatasetPreferencesV1 {

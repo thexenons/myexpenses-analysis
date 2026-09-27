@@ -37,11 +37,15 @@ test("imports a synthetic v189 backup deterministically with complete provenance
             inputPath,
             outputPath: firstOutputPath,
             timeZone: "Europe/Madrid",
+            backupFilenameTimestamp: "20240229140506",
+            importedAt: "2026-09-27T14:15:16.123Z",
         });
         const secondResult = await importBackup({
             inputPath,
             outputPath: secondOutputPath,
             timeZone: "Europe/Madrid",
+            backupFilenameTimestamp: "20240229140506",
+            importedAt: "2026-09-27T14:15:16.123Z",
         });
         const [firstBytes, secondBytes] = await Promise.all([
             readFile(firstOutputPath),
@@ -66,6 +70,8 @@ test("imports a synthetic v189 backup deterministically with complete provenance
         );
         assert.equal(dataset.source.backupSha256, sha256(backup));
         assert.equal(dataset.source.databaseSha256, sha256(database));
+        assert.equal(dataset.source.backupFilenameTimestamp, "20240229140506");
+        assert.equal(dataset.source.importedAt, "2026-09-27T14:15:16.123Z");
         assert.deepEqual(dataset.preferences, {
             homeCurrency: "EUR",
             timeZone: "Europe/Madrid",
@@ -240,6 +246,24 @@ test("requires explicit distinct paths and an explicit valid time zone", async (
             timeZone: "",
         }),
         /timeZone is required/iu,
+    );
+    await assert.rejects(
+        importBackup({
+            inputPath: "backup.zip",
+            outputPath: "out.json",
+            timeZone: "UTC",
+            backupFilenameTimestamp: "20260230000000",
+        }),
+        /backupFilenameTimestamp must be a valid filename timestamp/iu,
+    );
+    await assert.rejects(
+        importBackup({
+            inputPath: "backup.zip",
+            outputPath: "out.json",
+            timeZone: "UTC",
+            importedAt: "2026-09-27T14:15:16+02:00",
+        }),
+        /importedAt must be a canonical UTC instant/iu,
     );
 });
 

@@ -80,6 +80,26 @@ test("passes only an allowlisted environment to build tooling", () => {
         NODE_ENV: "production",
         PATH: "/usr/bin",
     });
+    const withRevision = createStaticBuildEnvironment({
+        PATH: "/usr/bin",
+        SOURCE_COMMIT: "A".repeat(40),
+        PCLOUD_ACCESS_TOKEN: "must-not-leak",
+    }, "/private/workspace/app-dataset.vault.json");
+    assert.equal(withRevision.MYEXPENSES_APP_REVISION, "a".repeat(40));
+    assert.equal(withRevision.SOURCE_COMMIT, undefined);
+    assert.equal(withRevision.PCLOUD_ACCESS_TOKEN, undefined);
+    const withEmptyComposeDefault = createStaticBuildEnvironment({
+        MYEXPENSES_APP_REVISION: "",
+        SOURCE_COMMIT: "B".repeat(40),
+        PCLOUD_ACCESS_TOKEN: "must-not-leak",
+    }, "/private/workspace/app-dataset.vault.json");
+    assert.equal(withEmptyComposeDefault.MYEXPENSES_APP_REVISION, "b".repeat(40));
+    assert.equal(withEmptyComposeDefault.SOURCE_COMMIT, undefined);
+    assert.equal(withEmptyComposeDefault.PCLOUD_ACCESS_TOKEN, undefined);
+    assert.equal(createStaticBuildEnvironment({
+        MYEXPENSES_APP_REVISION: "not-a-hash",
+        SOURCE_COMMIT: "b".repeat(40),
+    }, "/private/workspace/app-dataset.vault.json").MYEXPENSES_APP_REVISION, undefined);
 });
 
 test("build child holds the lease descriptor after parent closes it", async () => {
@@ -249,6 +269,7 @@ test("imports, encrypts and builds without leaving plaintext in the release", as
         const result = await processBackupForStaticRelease(
             {
                 backupPath: join(fixture.workspacePath, "source.zip"),
+                backupFilenameTimestamp: "20260822210453",
                 repositoryRoot: fixture.repositoryRoot,
                 timeZone: "Europe/Madrid",
                 vaultPassphrase: "correct horse battery staple",
@@ -256,8 +277,11 @@ test("imports, encrypts and builds without leaving plaintext in the release", as
             },
             undefined,
             {
+                now: () => Date.parse("2026-09-27T14:15:16.123Z"),
                 import: async (options) => {
                     calls.push(`import:${options.timeZone}`);
+                    assert.equal(options.backupFilenameTimestamp, "20260822210453");
+                    assert.equal(options.importedAt, "2026-09-27T14:15:16.123Z");
                     await writeFile(options.outputPath, "private plaintext", {
                         mode: 0o600,
                     });

@@ -87,13 +87,31 @@ test("runs the importer and emits only a non-sensitive count summary", async () 
         inputPath: "/private/path/backup.zip",
         outputPath: "data/app-dataset.json",
         timeZone: "Europe/Madrid",
+        importedAt: received?.importedAt,
     });
+    assert.match(received?.importedAt ?? "", /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u);
     assert.deepEqual(stderr, []);
     assert.equal(
         stdout.join(""),
         "Import complete: 39 accounts, 81 categories, 13022 postings, 1 budgets.\n",
     );
     assert.doesNotMatch(stdout.join(""), /private|sha|backup\.zip/iu);
+});
+
+test("injects an actual import instant and only a recognized filename timestamp", async () => {
+    const received: ImportBackupOptions[] = [];
+    const implementation = async (options: ImportBackupOptions): Promise<ImportBackupResult> => {
+        received.push(options);
+        return { accountCount: 0, budgetCount: 0, categoryCount: 0, outputPath: options.outputPath, postingCount: 0 };
+    };
+    const io = { stdout: () => undefined, stderr: () => undefined };
+    const dependencies = { importBackup: implementation, now: () => Date.parse("2026-09-27T14:15:16.123Z") };
+    assert.equal(await runImportBackupCli(["--input", "myexpenses-backup-20240229-140506.zip"], dependencies, io), 0);
+    assert.equal(await runImportBackupCli(["--input", "source.zip"], dependencies, io), 0);
+    assert.equal(received[0]?.backupFilenameTimestamp, "20240229140506");
+    assert.equal(received[0]?.importedAt, "2026-09-27T14:15:16.123Z");
+    assert.equal(received[1]?.backupFilenameTimestamp, undefined);
+    assert.equal(received[1]?.importedAt, "2026-09-27T14:15:16.123Z");
 });
 
 test("returns failure without invoking the importer for invalid arguments", async () => {
@@ -151,7 +169,9 @@ test("resolves the latest backup before importing without disclosing its path", 
         inputPath: "/private/latest.zip",
         outputPath: "data/app-dataset.json",
         timeZone: "Europe/Madrid",
+        importedAt: received?.importedAt,
     });
+    assert.match(received?.importedAt ?? "", /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u);
     assert.equal(exitCode, 0);
     assert.doesNotMatch(stdout.join(""), /private|latest\.zip/iu);
 });

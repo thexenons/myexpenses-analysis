@@ -44,6 +44,9 @@ test("synthetic pCloud backup publishes validated static releases and preserves 
     const originalToken = process.env.PCLOUD_TOKEN;
     const originalPassphrase = process.env.MYEXPENSES_VAULT_PASSPHRASE;
     const originalCanary = process.env.VITE_SYNTHETIC_CANARY;
+    const originalSourceCommit = process.env.SOURCE_COMMIT;
+    const originalAppRevision = process.env.MYEXPENSES_APP_REVISION;
+    const revision = "c".repeat(40);
     const buildKinds: string[] = [];
     const logs: string[] = [];
     const visibilityErrors: string[] = [];
@@ -119,6 +122,8 @@ test("synthetic pCloud backup publishes validated static releases and preserves 
         process.env.PCLOUD_TOKEN = token;
         process.env.MYEXPENSES_VAULT_PASSPHRASE = passphrase;
         process.env.VITE_SYNTHETIC_CANARY = canary;
+        process.env.SOURCE_COMMIT = revision;
+        process.env.MYEXPENSES_APP_REVISION = "";
         Object.defineProperty(childProcess, "spawn", { configurable: true, writable: true, value: ((...args: Parameters<typeof originalSpawn>) => {
             const options = args[2];
             const script = args[1]?.[0];
@@ -128,6 +133,8 @@ test("synthetic pCloud backup publishes validated static releases and preserves 
                 for (const secret of [token, passphrase, canary]) {
                     assert.ok(!Object.values(options.env).some((value) => String(value).includes(secret)));
                 }
+                assert.equal(options.env.MYEXPENSES_APP_REVISION, revision);
+                assert.equal(options.env.SOURCE_COMMIT, undefined);
                 buildKinds.push(script.endsWith("/tsc") ? "tsc" : "vite");
             }
             const child = originalSpawn(...args);
@@ -220,9 +227,12 @@ test("synthetic pCloud backup publishes validated static releases and preserves 
             const compressed: Uint8Array = await decryptCompressedDataset(envelope, passphrase, globalThis.crypto);
             const plain = gunzipSync(compressed);
             compressed.fill(0);
-            assert.equal(hash(plain), hash(expected[expectedIndex]!));
             const dataset = parseBackupDataset(JSON.parse(plain.toString()));
             plain.fill(0);
+            const { backupFilenameTimestamp, importedAt, ...legacySource } = dataset.source;
+            assert.deepEqual({ ...dataset, source: legacySource }, JSON.parse(expected[expectedIndex]!.toString()));
+            assert.equal(backupFilenameTimestamp, "20260822210453");
+            assert.match(importedAt ?? "", /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u);
             assert.equal(dataset.accounts.length, 4);
             assert.equal(dataset.postings.length, 11);
             assert.equal(dataset.source.backupSha256, hash(remote.archive));
@@ -244,12 +254,15 @@ test("synthetic pCloud backup publishes validated static releases and preserves 
             assert.equal(aggregateDebtBreakdown(debtOnly)[0].account.currentBalanceNativeMinor, 250);
             assert.equal(aggregateKpis(all).periodClosingBalanceEurMinor,
                 aggregateKpis(debtOnly).periodClosingBalanceEurMinor + aggregateKpis(cashOnly).periodClosingBalanceEurMinor);
+            let revisionPublished = false;
             for (const file of await files(release)) {
                 assert.doesNotMatch(file, /(?:app-dataset\.json|BACKUP(?:_PREF)?|\.zip|\.sqlite|\.db)$/u);
                 // oxlint-disable-next-line no-await-in-loop -- scan every published asset for fixture canaries.
                 const bytes = await readFile(file);
+                if (file.endsWith(".js") && bytes.includes(Buffer.from(revision))) revisionPublished = true;
                 for (const secret of forbidden) assert.equal(bytes.includes(Buffer.from(secret)), false);
             }
+            assert.equal(revisionPublished, true);
             assert.deepEqual(await readdir(join(deploy, ".work")), []);
             const state = JSON.parse(await readFile(join(deploy, ".sync-state.json"), "utf8"));
             assert.equal(state.localSha256, hash(remote.archive));
@@ -305,6 +318,8 @@ test("synthetic pCloud backup publishes validated static releases and preserves 
             ["PCLOUD_TOKEN", originalToken],
             ["MYEXPENSES_VAULT_PASSPHRASE", originalPassphrase],
             ["VITE_SYNTHETIC_CANARY", originalCanary],
+            ["SOURCE_COMMIT", originalSourceCommit],
+            ["MYEXPENSES_APP_REVISION", originalAppRevision],
         ] as const) {
             if (value === undefined) delete process.env[key];
             else process.env[key] = value;

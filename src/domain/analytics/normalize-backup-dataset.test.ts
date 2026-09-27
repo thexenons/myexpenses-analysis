@@ -137,6 +137,36 @@ function datasetFixture(): BackupDatasetV1 {
 }
 
 describe("backup dataset v1", () => {
+  it("accepts optional truthful source freshness and rejects invalid or unknown metadata", () => {
+    const legacy = parseBackupDataset(datasetFixture());
+    expect(legacy.source.backupFilenameTimestamp).toBeUndefined();
+    expect(legacy.source.importedAt).toBeUndefined();
+
+    const valid = parseBackupDataset({
+      ...datasetFixture(),
+      source: {
+        ...datasetFixture().source,
+        backupFilenameTimestamp: "20240229140506",
+        importedAt: "2026-09-27T14:15:16.123Z",
+      },
+    });
+    expect(normalizeBackupDataset(valid).backup?.source).toEqual(valid.source);
+
+    for (const source of [
+      { backupFilenameTimestamp: "20260230000000" },
+      { backupFilenameTimestamp: "20261301000000" },
+      { backupFilenameTimestamp: "20260101120000Z" },
+      { importedAt: "2026-09-27T14:15:16+02:00" },
+      { importedAt: "2026-02-30T14:15:16.000Z" },
+      { importedAt: "private-server-name" },
+      { unknownTimestamp: "2026-09-27" },
+    ]) {
+      expect(() => parseBackupDataset({
+        ...datasetFixture(),
+        source: { ...datasetFixture().source, ...source },
+      })).toThrow(/source|timestamp|import|unexpected|invalid/i);
+    }
+  });
   it("keeps reserved category names as data without changing object prototypes", () => {
     const source = datasetFixture();
     const sourceCategory = source.categories[0]!;

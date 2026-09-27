@@ -1,6 +1,8 @@
+import { basename } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
+import { BackupFileNameError, parseBackupFileName } from "../backup-file.ts";
 import {
     importBackup,
     type ImportBackupOptions,
@@ -47,6 +49,7 @@ type ImportBackupImplementation = (
 export interface ImportBackupCliDependencies {
     readonly findLatestBackup?: (directoryPath: string) => Promise<string>;
     readonly importBackup?: ImportBackupImplementation;
+    readonly now?: () => number;
 }
 
 class ImportBackupCliError extends Error {
@@ -59,7 +62,8 @@ function publicError(error: unknown): string {
         error instanceof LatestBackupError ||
         error instanceof BackupArchiveError ||
         error instanceof BackupDatabaseError ||
-        error instanceof BackupPreferencesError
+        error instanceof BackupPreferencesError ||
+        error instanceof BackupFileNameError
     ) {
         return error.message;
     }
@@ -129,10 +133,13 @@ export async function runImportBackupCli(
             (await (dependencies.findLatestBackup ?? findLatestBackupFile)(
                 parsed.inputDirectoryPath,
             ));
+        const sourceName = parseBackupFileName(basename(inputPath));
         const result = await (dependencies.importBackup ?? importBackup)({
             inputPath,
             outputPath: parsed.outputPath,
             timeZone: parsed.timeZone,
+            importedAt: new Date((dependencies.now ?? Date.now)()).toISOString(),
+            ...(sourceName === null ? {} : { backupFilenameTimestamp: sourceName.timestamp }),
         });
         io.stdout(
             `Import complete: ${result.accountCount} accounts, ` +

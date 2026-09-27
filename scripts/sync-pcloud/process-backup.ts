@@ -10,6 +10,7 @@ import {
     type EncryptDatasetOptions,
 } from "../encrypt-dataset/encrypt-dataset.ts";
 import { verifyProductionVault } from "../build-static/production-vault.ts";
+import { resolvePublicAppRevision } from "../build-static/public-revision.ts";
 import { readLimitedRegularFile } from "../encrypt-dataset/files.ts";
 import { STATIC_VAULT_MAX_ENVELOPE_BYTES } from "../../src/domain/security/static-vault.ts";
 import {
@@ -57,6 +58,7 @@ export interface ProcessBackupDependencies {
         options: EncryptDatasetOptions,
     ) => Promise<unknown>;
     readonly import?: (options: ImportBackupOptions) => Promise<unknown>;
+    readonly now?: () => number;
 }
 
 class StaticReleasePipelineError extends Error {
@@ -82,6 +84,11 @@ export function createStaticBuildEnvironment(
         const value = environment[key];
         if (value !== undefined) safeEnvironment[key] = value;
     }
+    const revision = resolvePublicAppRevision(
+        environment.MYEXPENSES_APP_REVISION,
+        environment.SOURCE_COMMIT,
+    );
+    if (revision !== null) safeEnvironment.MYEXPENSES_APP_REVISION = revision;
     return safeEnvironment;
 }
 
@@ -321,6 +328,8 @@ export async function processBackupForStaticRelease(
         inputPath: input.backupPath,
         outputPath: datasetPath,
         timeZone: input.timeZone,
+        importedAt: new Date((dependencies.now ?? Date.now)()).toISOString(),
+        ...(input.backupFilenameTimestamp === undefined ? {} : { backupFilenameTimestamp: input.backupFilenameTimestamp }),
     });
     signal?.throwIfAborted();
     await (dependencies.encrypt ?? encryptDataset)({

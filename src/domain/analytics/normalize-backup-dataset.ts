@@ -30,6 +30,7 @@ import type {
   PostingBucket,
   TransactionStatus,
 } from "./types.ts";
+import { isValidBackupFilenameTimestamp, isValidImportedAtUtc } from "./backup-provenance.ts";
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const CURRENCY_PATTERN = /^[A-Z][A-Z0-9]{2,11}$/;
@@ -838,7 +839,7 @@ export function parseBackupDataset(value: unknown): BackupDatasetV1 {
   exactKeys(
     source,
     ["format", "schemaVersion", "backupSha256", "databaseSha256"],
-    [],
+    ["backupFilenameTimestamp", "importedAt"],
     `${context} source`,
   );
   if (source.format !== "myexpenses-backup") {
@@ -851,6 +852,13 @@ export function parseBackupDataset(value: unknown): BackupDatasetV1 {
     if (typeof source[key] !== "string" || !SHA256_PATTERN.test(source[key])) {
       fail(`${context} source.${key}`, "expected a lowercase SHA-256 hex digest");
     }
+  }
+  if (Object.hasOwn(source, "backupFilenameTimestamp") &&
+      !isValidBackupFilenameTimestamp(source.backupFilenameTimestamp)) {
+    fail(`${context} source.backupFilenameTimestamp`, "expected a valid filename timestamp without a time zone");
+  }
+  if (Object.hasOwn(source, "importedAt") && !isValidImportedAtUtc(source.importedAt)) {
+    fail(`${context} source.importedAt`, "expected a canonical UTC import instant");
   }
 
   const preferences = objectValue(root.preferences, `${context} preferences`);

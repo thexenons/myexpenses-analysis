@@ -9,6 +9,7 @@ import { defineConfig } from "vite";
 import type { Plugin } from "vite";
 
 import { readBoundedFileHandle } from "./scripts/bounded-read.ts";
+import { resolvePublicAppRevision } from "./scripts/build-static/public-revision.ts";
 import { parseStaticVaultEnvelopeJson, STATIC_VAULT_MAX_ENVELOPE_BYTES } from "./src/domain/security/static-vault.ts";
 
 const DATA_FILES = ["app-dataset.vault.json"] as const;
@@ -260,6 +261,12 @@ function clientDataPlugin(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    MYEXPENSES_PUBLIC_REVISION: JSON.stringify(resolvePublicAppRevision(
+      process.env.MYEXPENSES_APP_REVISION,
+      process.env.SOURCE_COMMIT,
+    )),
+  },
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset()] }),

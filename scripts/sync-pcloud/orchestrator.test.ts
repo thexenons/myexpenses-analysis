@@ -108,6 +108,7 @@ function pipeline(counter: { value: number }): ProcessBackup {
         assert.equal(input.vaultPassphrase, "passphrase");
         assert.equal(input.repositoryRoot.endsWith("repository"), true);
         assert.equal(input.timeZone, "Europe/Madrid");
+        assert.equal(input.backupFilenameTimestamp, "20260822210453");
         assert.equal((await lstat(input.workspacePath)).mode & 0o777, 0o700);
         const buildDirectory = join(input.workspacePath, "build");
         await mkdir(buildDirectory);

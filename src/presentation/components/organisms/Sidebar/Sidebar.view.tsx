@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router"
 
 import { Icon, type IconName } from "../../atoms/Icon"
-import { compactSidebarDate } from "./Sidebar.helpers"
+import { compactSidebarDate, formatBackupFilenameTimestamp, formatImportedAt } from "./Sidebar.helpers"
 import styles from "./Sidebar.module.css"
 import type { SidebarViewProps } from "./Sidebar.types"
 
@@ -60,10 +60,12 @@ const NAVIGATION_ITEMS: readonly NavigationItem[] = [
 
 export function SidebarView({
   accountCount,
+  appRevision,
   currentPath,
   maxDate,
   minDate,
   onLock,
+  source,
 }: SidebarViewProps) {
   const currentPageLabel =
     NAVIGATION_ITEMS.find((item) => item.to === currentPath)?.label ??
@@ -130,11 +132,26 @@ export function SidebarView({
             <dd>EUR</dd>
           </div>
         </dl>
+        <p className={styles.coverageLabel}>Cobertura de movimientos</p>
         <p className={styles.dateRange}>
           <span>{compactSidebarDate(minDate)}</span>
           <span aria-hidden="true">—</span>
           <span>{compactSidebarDate(maxDate)}</span>
         </p>
+        <dl className={styles.freshnessList}>
+          <div>
+            <dt>Fecha del nombre (no confirma la captura)</dt>
+            <dd>{formatBackupFilenameTimestamp(source?.backupFilenameTimestamp)}</dd>
+          </div>
+          <div>
+            <dt>Importado</dt>
+            <dd>{formatImportedAt(source?.importedAt)}</dd>
+          </div>
+          <div>
+            <dt>Revisión de la aplicación</dt>
+            <dd>{appRevision ?? "No disponible"}</dd>
+          </div>
+        </dl>
       </div>
       <button
         aria-describedby="automatic-lock-note"

@@ -49,6 +49,7 @@ const FORBIDDEN_RELEASE_BASENAMES = new Set([
 
 export interface ProcessBackupInput {
     readonly backupPath: string;
+    readonly backupFilenameTimestamp?: string;
     readonly leaseFd?: number;
     readonly repositoryRoot: string;
     readonly timeZone: string;
@@ -745,6 +746,7 @@ export async function runPCloudSync(
             const processed = await dependencies.processBackup(
                 {
                     backupPath,
+                    backupFilenameTimestamp: file.nameTimestamp,
                     leaseFd: lease?.fd,
                     repositoryRoot: config.repositoryRoot,
                     timeZone: config.timeZone,

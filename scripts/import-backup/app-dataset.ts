@@ -55,8 +55,10 @@ export interface AppDatasetPreferenceInput {
 
 export interface CreateAppDatasetOptions {
     backupSha256: string;
+    backupFilenameTimestamp?: string;
     canonical: V189CanonicalDataset;
     databaseSha256: string;
+    importedAt?: string;
     budgetUiSettings: ReadonlyMap<number, BudgetUiSettings>;
     preferences: AppDatasetPreferenceInput;
     timeZone: string;
@@ -1320,6 +1322,8 @@ export function createAppDataset(
             schemaVersion: options.canonical.metadata.schemaVersion,
             backupSha256: options.backupSha256,
             databaseSha256: options.databaseSha256,
+            ...(options.backupFilenameTimestamp === undefined ? {} : { backupFilenameTimestamp: options.backupFilenameTimestamp }),
+            ...(options.importedAt === undefined ? {} : { importedAt: options.importedAt }),
         },
         preferences: {
             homeCurrency: "EUR",

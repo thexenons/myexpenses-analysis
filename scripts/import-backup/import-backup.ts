@@ -3,6 +3,7 @@ import { realpath } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { parseBackupDataset } from "../../src/domain/analytics/normalize-backup-dataset.ts";
+import { isValidBackupFilenameTimestamp, isValidImportedAtUtc } from "../../src/domain/analytics/backup-provenance.ts";
 import { MAX_DATASET_JSON_BYTES } from "../encrypt-dataset/compression.ts";
 import { writeJsonAtomically } from "../files.ts";
 import { createAppDataset } from "./app-dataset.ts";
@@ -18,6 +19,8 @@ export interface ImportBackupOptions {
     inputPath: string;
     outputPath: string;
     timeZone: string;
+    backupFilenameTimestamp?: string;
+    importedAt?: string;
 }
 
 export interface ImportBackupResult {
@@ -74,6 +77,13 @@ export async function importBackup(
     const inputPath = explicitPath(options.inputPath, "inputPath");
     const outputPath = explicitPath(options.outputPath, "outputPath");
     const timeZone = explicitTimeZone(options.timeZone);
+    if (Object.hasOwn(options, "backupFilenameTimestamp") &&
+        !isValidBackupFilenameTimestamp(options.backupFilenameTimestamp)) {
+        throw new Error("backupFilenameTimestamp must be a valid filename timestamp");
+    }
+    if (Object.hasOwn(options, "importedAt") && !isValidImportedAtUtc(options.importedAt)) {
+        throw new Error("importedAt must be a canonical UTC instant");
+    }
     if (resolve(inputPath) === resolve(outputPath)) {
         throw new Error("The output path must differ from the backup path");
     }
@@ -149,6 +159,8 @@ export async function importBackup(
                 databaseSha256,
                 preferences,
                 timeZone,
+                ...(options.backupFilenameTimestamp === undefined ? {} : { backupFilenameTimestamp: options.backupFilenameTimestamp }),
+                ...(options.importedAt === undefined ? {} : { importedAt: options.importedAt }),
             }),
         );
         await writeJsonAtomically(

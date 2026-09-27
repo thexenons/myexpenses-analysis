@@ -53,6 +53,11 @@ test("worker image installs locked runtime tools without copying repository secr
 
 test("Compose isolates secrets, ownership, health, and writable paths", async () => {
     const compose = await source("compose.yaml");
+    const worker = compose.slice(compose.indexOf("  worker:"), compose.indexOf("  web:"));
+    const web = compose.slice(compose.indexOf("  web:"), compose.indexOf("\nvolumes:"));
+    assert.match(worker, /MYEXPENSES_APP_REVISION: \$\{MYEXPENSES_APP_REVISION:-\}/u);
+    assert.match(worker, /SOURCE_COMMIT: \$\{SOURCE_COMMIT:-\}/u);
+    assert.doesNotMatch(web, /MYEXPENSES_APP_REVISION|SOURCE_COMMIT/u);
     assert.match(compose, /target: worker/u);
     assert.match(compose, /target: web/u);
     assert.match(compose, /PCLOUD_TOKEN: \$\{PCLOUD_TOKEN:\?[^}]+\}/u);
@@ -83,7 +88,6 @@ test("Compose isolates secrets, ownership, health, and writable paths", async ()
     assert.doesNotMatch(compose, /^\s*ports:/mu);
     assert.doesNotMatch(compose, /^\s*args:/mu);
     assert.doesNotMatch(compose, /MYEXPENSES_DEPLOY_ROOT|MYEXPENSES_REPOSITORY_ROOT/u);
-    const web = compose.slice(compose.indexOf("  web:"), compose.indexOf("\nvolumes:"));
     assert.doesNotMatch(web, /PCLOUD_|PASSPHRASE|NOTIFICATION|SMTP_PASSWORD/u);
 });
 

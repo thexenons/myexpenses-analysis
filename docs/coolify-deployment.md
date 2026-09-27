@@ -69,6 +69,24 @@ un token ni una frase de paso dentro del contenedor. La CLI histórica con
 
 ### Variables de entorno de `worker`
 
+#### Evidencias de actualización en la aplicación
+
+La barra lateral distingue la cobertura de movimientos, la fecha y hora
+indicadas por el nombre del backup, el instante real de importación (UTC) y la
+revisión pública de la aplicación. El nombre del archivo no indica una zona
+horaria ni confirma cuándo se capturó el backup. Los datasets antiguos y las
+compilaciones sin revisión válida muestran «No disponible».
+
+Para mostrar la revisión, define `MYEXPENSES_APP_REVISION` como un identificador
+Git hexadecimal de 7 a 64 caracteres en el entorno **de ejecución** de
+`worker`, y vuelve a desplegar o reiniciar el worker para que construya otra
+release. `compose.yaml` pasa también `SOURCE_COMMIT` a ese worker como respaldo
+opcional si Coolify lo proporciona en tiempo de ejecución; no hace falta
+inyectarlo como argumento de Docker build. Un valor vacío de
+`MYEXPENSES_APP_REVISION` permite usar ese respaldo; un valor explícito no
+vacío pero inválido deja la revisión como no disponible. Sólo el identificador
+hexadecimal validado llega al build del navegador, nunca las demás variables.
+
 En **Configuration → Environment Variables**, utiliza la vista normal para
 revisar cada variable. Coolify activa **Build Variable** y **Runtime Variable**
 por defecto: para **todas** las siguientes, deja **Runtime ON / Build OFF**.
@@ -87,6 +105,8 @@ Coolify/Docker sí pueden inspeccionar el entorno de ejecución.
 | `PCLOUD_FOLDER_ID` | ID decimal de hasta 64 bits **o vacío** si se usa ruta. |
 | `PCLOUD_FOLDER_PATH` | Ruta absoluta de pCloud **o vacía** si se usa ID. |
 | `MYEXPENSES_TIME_ZONE` | Opcional, zona IANA; defecto `Europe/Madrid`. |
+| `MYEXPENSES_APP_REVISION` | Opcional: identificador Git hexadecimal público de 7 a 64 caracteres; Runtime ON, Build OFF. Si está vacío, se intenta `SOURCE_COMMIT`. |
+| `SOURCE_COMMIT` | Opcional: respaldo hexadecimal si Coolify lo proporciona al worker en tiempo de ejecución; Runtime ON, Build OFF. No requiere argumentos de Docker build. |
 | `MYEXPENSES_SYNC_INTERVAL_SECONDS` | Opcional, defecto `3600`; entero de 30 a 86400. |
 | `MYEXPENSES_SYNC_TIMEOUT_SECONDS` | Opcional, defecto `1800`; entero de 30 a 86400 por ciclo. |
 
