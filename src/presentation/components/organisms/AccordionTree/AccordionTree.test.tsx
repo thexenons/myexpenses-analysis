@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { AccordionTree, AccordionTreeItem } from "./AccordionTree.tsx";
+import { AccordionTree, AccordionTreeItem } from "./index.ts";
 
 describe("AccordionTree", () => {
   it("keeps disclosure separate from row actions and supports keyboard toggling", async () => {

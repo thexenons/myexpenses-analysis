@@ -1,8 +1,5 @@
-import { useMemo } from "react";
-
-import { flattenBudgetAllocationNodes } from "../../../../../domain/analytics/budgets.ts";
-import { DataTable } from "../../../../components/organisms/DataTable/DataTable.tsx";
-import { createBudgetAllocationColumns } from "./BudgetAllocationTable.helpers.tsx";
+import { AccordionTree } from "../../../../components/organisms/AccordionTree/index.ts";
+import { BudgetAllocationItem } from "./BudgetAllocationTable.Item.tsx";
 import styles from "./BudgetAllocationTable.module.css";
 import type { BudgetAllocationTableProps } from "./BudgetAllocationTable.types.ts";
 
@@ -12,23 +9,22 @@ export function BudgetAllocationTable({
   fractionDigits,
   isFilteredComparison = false,
 }: BudgetAllocationTableProps) {
-  const rows = useMemo(
-    () => flattenBudgetAllocationNodes(allocations),
-    [allocations],
-  );
-  const columns = useMemo(
-    () => createBudgetAllocationColumns(currency, fractionDigits, isFilteredComparison),
-    [currency, fractionDigits, isFilteredComparison],
-  );
+  if (allocations.length === 0) {
+    return <p className={styles.empty}>Este periodo no tiene asignaciones por categoría.</p>;
+  }
 
   return (
-    <DataTable
-      caption="Asignaciones jerárquicas del presupuesto"
-      className={styles.table}
-      columns={columns}
-      empty="Este periodo no tiene asignaciones por categoría."
-      rowKey={(row) => row.id}
-      rows={rows}
-    />
+    <AccordionTree aria-label="Asignaciones jerárquicas del presupuesto">
+      {allocations.map((allocation) => (
+        <BudgetAllocationItem
+          allocation={allocation}
+          currency={currency}
+          depth={0}
+          fractionDigits={fractionDigits}
+          isFilteredComparison={isFilteredComparison}
+          key={allocation.id}
+        />
+      ))}
+    </AccordionTree>
   );
 }

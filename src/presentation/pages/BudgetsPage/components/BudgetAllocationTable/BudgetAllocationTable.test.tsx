@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import type { BudgetAllocationNode } from "../../../../../domain/analytics/budgets.ts";
@@ -50,7 +51,8 @@ const root: BudgetAllocationNode = {
 };
 
 describe("BudgetAllocationTable", () => {
-  it("flattens the hierarchy once and exposes fallback and overrun states", async () => {
+  it("discloses nested allocations without making category names filter controls", async () => {
+    const user = userEvent.setup();
     const { container } = render(
       <BudgetAllocationTable
         allocations={[root]}
@@ -59,13 +61,100 @@ describe("BudgetAllocationTable", () => {
       />,
     );
 
-    const rowHeaders = screen.getAllByRole("rowheader");
-    expect(rowHeaders).toHaveLength(2);
-    expect(rowHeaders[0]).toHaveTextContent("Gastos");
-    expect(rowHeaders[1]).toHaveTextContent("Comida");
+    const tree = screen.getByRole("list", { name: "Asignaciones jerárquicas del presupuesto" });
+    expect(within(tree).getAllByRole("listitem")).toHaveLength(2);
+    const disclosure = screen.getByRole("button", { name: "Contraer Gastos" });
+    expect(disclosure).toHaveAttribute("aria-expanded", "true");
+    expect(disclosure).toHaveAttribute("aria-controls");
+    expect(screen.getByText("Gastos › Comida")).toBeVisible();
+    expect(within(tree).queryByRole("button", { name: /Filtrar|Comida/ })).not.toBeInTheDocument();
+    expect(screen.getByText("Periodo")).toBeVisible();
+    expect(screen.getByText("En margen")).toBeVisible();
     expect(screen.getByText("Heredada")).toBeVisible();
     expect(screen.getByText("Excedido")).toBeVisible();
     expect(screen.getAllByRole("meter")).toHaveLength(2);
     expect(await getAxeViolations(container)).toEqual([]);
+
+    await user.click(disclosure);
+    expect(screen.getByRole("button", { name: "Desplegar Gastos" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Gastos › Comida")).not.toBeInTheDocument();
+    expect(await getAxeViolations(container)).toEqual([]);
+    await user.click(screen.getByRole("button", { name: "Desplegar Gastos" }));
+    expect(screen.getByText("Gastos › Comida")).toBeVisible();
+  });
+
+  it("keeps every financial measure and source badge at every depth", async () => {
+    const user = userEvent.setup();
+    const grandchild = {
+      ...child,
+      id: "grandchild",
+      name: "Mercado",
+      path: ["Gastos", "Comida", "Mercado"],
+      depth: 2,
+      allocationSource: "NONE" as const,
+      oneTime: true,
+      assignedMinor: 123,
+      rolloverPreviousMinor: 25,
+      rolloverNextMinor: -10,
+      consumedMinor: 50,
+      availableMinor: 73,
+      utilization: 50 / 123,
+      health: "watch" as const,
+    };
+    render(
+      <BudgetAllocationTable
+        allocations={[{
+          ...root,
+          allocationSource: "ROLLUP",
+          children: [
+            { ...child, children: [grandchild] },
+            { ...child, id: "unallocated", name: "Otros", path: ["Gastos", "Otros"], allocationSource: "NONE", health: "unallocated" },
+          ],
+        }]}
+        currency="EUR"
+        fractionDigits={2}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Desplegar Gastos › Comida" }));
+
+    expect(screen.getByText("Roll-up")).toBeVisible();
+    expect(screen.getByText("Heredada")).toBeVisible();
+    expect(screen.getAllByText("Sin base")).toHaveLength(2);
+    expect(screen.getByText("Única")).toBeVisible();
+    expect(screen.getByText("Vigilancia")).toBeVisible();
+    expect(screen.getByText("Sin asignar")).toBeVisible();
+    expect(screen.getByText("Gastos › Comida › Mercado")).toBeVisible();
+    for (const label of ["Origen", "Asignado", "Arrastre", "Consumido", "Disponible", "Utilización", "Estado"]) {
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    }
+    expect(screen.getByText("1,23 €")).toBeVisible();
+    expect(screen.getByText("0,25 €")).toBeVisible();
+    expect(screen.getByText("sig. -0,10 €")).toBeVisible();
+    expect(screen.getByText("0,50 €")).toBeVisible();
+    expect(screen.getByText("0,73 €")).toBeVisible();
+    expect(screen.getByRole("meter", { name: "Utilización de Gastos › Comida › Mercado" })).toBeVisible();
+  });
+
+  it("uses neutral cutoff labels and preserves precision", () => {
+    render(
+      <BudgetAllocationTable
+        allocations={[{ ...root, assignedMinor: 1001, availableMinor: 1001, health: "on-track", children: [] }]}
+        currency="KWD"
+        fractionDigits={3}
+        isFilteredComparison
+      />,
+    );
+    expect(screen.getByText("Asignado menos corte")).toBeVisible();
+    expect(screen.getByText("Corte filtrado")).toBeVisible();
+    expect(screen.queryByText("Disponible")).not.toBeInTheDocument();
+    expect(screen.queryByText("En margen")).not.toBeInTheDocument();
+    expect(screen.getByRole("meter", { name: "Utilización del corte de Gastos" })).toBeVisible();
+    expect(screen.getAllByText(/1,001/)).toHaveLength(2);
+  });
+
+  it("retains the empty state", () => {
+    render(<BudgetAllocationTable allocations={[]} currency="EUR" fractionDigits={2} />);
+    expect(screen.getByText("Este periodo no tiene asignaciones por categoría.")).toBeVisible();
   });
 });

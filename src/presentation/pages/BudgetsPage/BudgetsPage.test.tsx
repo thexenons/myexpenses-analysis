@@ -190,7 +190,9 @@ describe("BudgetsPageView", () => {
     expect(screen.getByRole("heading", { name: "Presupuestos" })).toBeVisible();
     expect(screen.getByText("Asignado global")).toBeVisible();
     expect(screen.getByText("Gasto neto")).toBeVisible();
-    expect(screen.getByRole("rowheader", { name: /Comida/ })).toBeVisible();
+    expect(screen.getByRole("list", { name: "Asignaciones jerárquicas del presupuesto" })).toBeVisible();
+    expect(screen.getByText("Gastos › Comida")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Filtrar.*Comida/ })).not.toBeInTheDocument();
     expect(screen.getByText("Heredada")).toBeVisible();
     expect(screen.getByText("Excedido")).toBeVisible();
     expect(screen.getByText("AND · 7 cuentas · 2 categorías")).toBeVisible();

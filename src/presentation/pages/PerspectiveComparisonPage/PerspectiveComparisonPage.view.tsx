@@ -1,14 +1,16 @@
 import { useState } from "react";
 
 import { Panel } from "../../components/molecules/Panel/index.ts";
-import { AccordionTree, AccordionTreeItem } from "../../components/organisms/AccordionTree/index.ts";
+import { AccordionTree } from "../../components/organisms/AccordionTree/index.ts";
 import { AnalyticsPage } from "../../components/templates/AnalyticsPage/index.ts";
-import { formatCategoryPath, formatEuroMinor } from "../../utils/format.ts";
+import { formatEuroMinor } from "../../utils/format.ts";
 import type {
   CategoryMetric,
   PerspectiveCategoryRow,
   PerspectiveComparisonRow,
 } from "./PerspectiveComparisonPage.helpers.ts";
+import { ComparisonCategoryNode } from "./PerspectiveComparisonPage.CategoryNode.tsx";
+import { SCOPE_LABELS } from "./PerspectiveComparisonPage.labels.ts";
 import styles from "./PerspectiveComparisonPage.module.css";
 
 interface PerspectiveComparisonPageViewProps {
@@ -24,56 +26,12 @@ const METRICS = [
   { label: "Movimiento neto", field: "netEurMinor" },
 ] as const;
 
-const SCOPE_LABELS = {
-  realCashFlow: "Flujo real",
-  all: "Yo",
-  debtsOnly: "Deudas",
-} as const;
-
 const CATEGORY_METRICS: readonly { value: CategoryMetric; label: string }[] = [
   { value: "netEurMinor", label: "Movimiento neto" },
   { value: "incomesEurMinor", label: "Ingresos" },
   { value: "expensesEurMinor", label: "Gastos" },
   { value: "transfersEurMinor", label: "Transferencias" },
 ];
-
-function ComparisonCategoryNode({
-  category,
-  depth,
-  metric,
-}: {
-  readonly category: PerspectiveCategoryRow;
-  readonly depth: number;
-  readonly metric: CategoryMetric;
-}) {
-  const label = category.path.length === 0
-    ? "Sin categoría (sin asignar)"
-    : formatCategoryPath(category.path);
-  return (
-    <AccordionTreeItem
-      header={
-        <>
-          <span className={styles.categoryName}>{label}</span>
-          <dl className={styles.categoryValues}>
-            {(["realCashFlow", "all", "debtsOnly"] as const).map((scope) => (
-              <div className={styles.categoryValue} key={scope}>
-                <dt>{SCOPE_LABELS[scope]}</dt>
-                <dd>{formatEuroMinor(category.amounts[scope][metric])}</dd>
-              </div>
-            ))}
-          </dl>
-        </>
-      }
-      initialExpanded={depth === 0}
-      label={label}
-      rowClassName={styles.categoryRow}
-    >
-      {category.children.map((child) => (
-        <ComparisonCategoryNode category={child} depth={depth + 1} key={child.id} metric={metric} />
-      ))}
-    </AccordionTreeItem>
-  );
-}
 
 export function PerspectiveComparisonPageView({
   rows,
