@@ -121,6 +121,13 @@
 }
 
 @media (width <= 32rem) {
+  .root[data-variant="compact"] > .compactMode,
+  .root[data-variant="compact"] > .field,
+  .root[data-variant="compact"] > .customFields,
+  .root[data-variant="compact"] > .allPeriod {
+    flex-basis: 100%;
+  }
+
   .customFields {
     grid-template-columns: 1fr;
   }

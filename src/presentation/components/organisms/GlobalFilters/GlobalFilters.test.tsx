@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it } from "vitest"
 
 import { appStore } from "../../../../composition/app-store.ts"
 import { AppStoreProvider } from "../../../providers/AppStoreProvider/index.ts"
+import periodCss from "../PeriodSelector/PeriodSelector.module.css?raw"
 import { GlobalFilters } from "./GlobalFilters"
+import toolbarCss from "./GlobalFilters.module.css?raw"
 
 function resetAppStore() {
   window.localStorage.clear()
@@ -13,6 +15,22 @@ function resetAppStore() {
 
 describe("GlobalFilters", () => {
   beforeEach(resetAppStore)
+
+  it("keeps time controls in the mobile toolbar while moving quick search into the drawer", () => {
+    // Static CSS contract: jsdom does not calculate responsive layout.
+    const tablet = toolbarCss.split("@media (width <= 52rem)")[1]?.split("@media (width <= 42rem)")[0]
+    const phone = toolbarCss.split("@media (width <= 42rem)")[1]
+    const narrowPeriod = periodCss.split("@media (width <= 32rem)")[1]
+
+    expect(tablet).toMatch(/\.search\s*\{\s*display:\s*none;/)
+    expect(tablet).not.toMatch(/\.(?:period|granularity)[^{]*\{[^}]*display:\s*none;/)
+    expect(phone).toMatch(/\.period\s*\{[^}]*grid-column:\s*1\s*\/\s*-1;/)
+    expect(phone).toMatch(/\.granularity\s*\{[^}]*grid-column:\s*1\s*\/\s*-1;/)
+    expect(phone).toMatch(/\.scope\s*\{[^}]*grid-row:\s*3;/)
+    expect(phone).toMatch(/\.drawerButton\s*\{[^}]*grid-row:\s*3;/)
+    expect(narrowPeriod).toMatch(/\.root\[data-variant="compact"\]\s*>\s*\.customFields\s*,/)
+    expect(narrowPeriod).toMatch(/flex-basis:\s*100%;/)
+  })
 
   it("orders perspectives, defaults to cash flow, and removes a manual Yo selection", async () => {
     const user = userEvent.setup()
@@ -92,6 +110,20 @@ describe("GlobalFilters", () => {
       dateRange: { from: "2026-04-01", to: "2026-04-30" },
     })
     expect(appStore.getState().granularity).toBe("auto")
+  })
+
+  it("keeps both custom date boundaries and granularity reachable in the compact toolbar", async () => {
+    const user = userEvent.setup()
+    render(<AppStoreProvider store={appStore}><GlobalFilters /></AppStoreProvider>)
+
+    await user.selectOptions(screen.getByRole("combobox", { name: "Tipo de periodo" }), "custom")
+    expect(screen.getByLabelText("Desde")).toHaveAttribute("type", "date")
+    expect(screen.getByLabelText("Hasta")).toHaveAttribute("type", "date")
+    await user.click(screen.getByRole("radio", { name: "Semana" }))
+
+    expect(appStore.getState().filters.periodMode).toBe("custom")
+    expect(appStore.getState().granularity).toBe("week")
+    expect(screen.getByRole("button", { name: /^Abrir todos los filtros/ })).toBeVisible()
   })
 
   it("announces and independently clears the new filter dimensions", async () => {

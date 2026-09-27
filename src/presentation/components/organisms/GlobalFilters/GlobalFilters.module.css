@@ -99,8 +99,7 @@
 }
 
 @media (width <= 52rem) {
-  .granularity,
-  .period {
+  .search {
     display: none;
   }
 }
@@ -113,15 +112,26 @@
     padding: 0.55rem 0.75rem;
   }
 
-  .scope {
+  .period {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
+  }
+
+  .granularity {
     grid-column: 1 / -1;
     grid-row: 2;
+    width: 100%;
   }
-  .drawerButton {
-    grid-column: 2;
+
+  .scope {
+    grid-column: 1;
+    grid-row: 3;
   }
 
   .drawerButton {
+    grid-column: 2;
+    grid-row: 3;
     width: 2.75rem;
     padding: 0;
   }
