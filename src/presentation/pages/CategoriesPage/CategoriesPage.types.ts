@@ -1,6 +1,14 @@
 import type { ChartBarDatum } from "../../components/organisms/HorizontalBarChart/index.ts";
 import type { ChartSeries } from "../../components/organisms/LineChart/index.ts";
 import type { CategoryBreakdownNode, TimeGranularity } from "../../../domain/analytics/types.ts";
+import type { CategoryPeriodAverages } from "../../../domain/analytics/category-period-average.ts";
+
+export interface CategoryAverageExplanation {
+  readonly selectedWindow: CategoryPeriodAverages["selectedWindow"];
+  readonly appliedWindow: CategoryPeriodAverages["appliedWindow"];
+  readonly fallbackReason: CategoryPeriodAverages["fallbackReason"];
+  readonly dateBasis: "operation" | "value";
+}
 
 export type CategoryMetric = "netEurMinor" | "expensesEurMinor" | "incomesEurMinor" | "realCashFlowEurMinor" | "debtFlowEurMinor";
 export type CategoryLevel = "roots" | "direct";
@@ -21,6 +29,7 @@ export interface CategoriesPageViewProps {
   readonly completedPeriodCount: number;
   readonly averageScope: "filtered" | "historical";
   readonly averageUnit: TimeGranularity;
+  readonly averageExplanation: CategoryAverageExplanation;
   readonly directPostingCount: number;
   readonly expenseEurMinor: number;
   readonly chartOptions?: CategoryChartOptions;

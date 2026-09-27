@@ -20,6 +20,22 @@ import chartStyles from "../../components/organisms/chart/chart.module.css";
 import styles from "./CategoriesPage.module.css";
 import type { CategoriesPageViewProps, CategoryLevel, CategoryMetric } from "./CategoriesPage.types.ts";
 
+const AVERAGE_UNITS = {
+  day: ["día", "días"],
+  week: ["semana", "semanas"],
+  month: ["mes", "meses"],
+  year: ["año", "años"],
+} as const;
+const EXCLUSION_REASONS = {
+  startsBeforeRange: "comienza antes del rango evaluado",
+  endsAfterRange: "termina después del rango evaluado",
+  currentOrFuture: "no terminó antes de hoy",
+} as const;
+
+function displayDate(value: string): string {
+  return `${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}`;
+}
+
 export function CategoriesPageView({
   activityEurMinor,
   categoryBars,
@@ -30,6 +46,7 @@ export function CategoriesPageView({
   completedPeriodCount,
   averageScope,
   averageUnit,
+  averageExplanation,
   directPostingCount,
   expenseEurMinor,
   chartOptions = DEFAULT_CATEGORY_CHART_OPTIONS,
@@ -43,6 +60,15 @@ export function CategoriesPageView({
   selectionDetail,
   showClearCategory,
 }: CategoriesPageViewProps) {
+  const averageWindows = averageExplanation.fallbackReason === null
+    ? [{ label: "Selección utilizada", window: averageExplanation.appliedWindow }]
+    : [
+      { label: "Selección no utilizada", window: averageExplanation.selectedWindow },
+      { label: "Historial utilizado", window: averageExplanation.appliedWindow },
+    ];
+  const divisor = averageExplanation.appliedWindow.completedPeriodCount;
+  const divisorUnit = AVERAGE_UNITS[averageUnit][divisor === 1 ? 0 : 1];
+
   return (
     <AnalyticsPage
       description="Compara categorías y convierte cualquier ruta en filtro global."
@@ -147,6 +173,55 @@ export function CategoriesPageView({
         description="Despliega ramas y combina varias rutas en el filtro global. El árbol muestra el neto total y el promedio por período completo; padres y descendientes no deben sumarse entre sí."
         title="Explorador jerárquico"
       >
+        <details className={styles.averageExplanation}>
+          <summary>Cómo se calcula el promedio</summary>
+          <div className={styles.averageExplanationBody}>
+            <p>
+              Se divide el importe neto de cada categoría en las unidades incluidas
+              entre un divisor común a todas las categorías. La selección de una
+              categoría no cambia ese divisor. Se usa la {averageExplanation.dateBasis === "value" ? "fecha valor" : "fecha de operación"}.
+            </p>
+            {averageExplanation.fallbackReason === "selectedPeriodNeedsHistory" ? (
+              <p>
+                La unidad elegida coincide con el período seleccionado o lo supera;
+                por eso se usa el historial como referencia en lugar de tomar sólo
+                la selección. Se conservan los filtros no temporales.
+              </p>
+            ) : averageExplanation.fallbackReason === "noCompleteFilteredUnits" ? (
+              <p>
+                La selección no contiene unidades completas; se usa el historial
+                disponible conservando los filtros no temporales.
+              </p>
+            ) : null}
+            <p>{divisor === 0
+              ? "Sin períodos completos: no se calcula ningún promedio."
+              : `Divisor: ${divisor} ${divisorUnit} ${divisor === 1 ? "completo" : "completos"}, incluidos los períodos sin actividad.`}</p>
+            {averageWindows.map(({ label, window: candidate }) => (
+              <div className={styles.averageWindow} key={label}>
+                <strong>{label}</strong>
+                <p>Rango evaluado: {candidate.from === null || candidate.to === null
+                  ? "sin fechas disponibles"
+                  : `${displayDate(candidate.from)} — ${displayDate(candidate.to)}`}.</p>
+                <p>Ventana incluida: {candidate.includedWindow === null
+                  ? "ninguna"
+                  : `${displayDate(candidate.includedWindow.from)} — ${displayDate(candidate.includedWindow.to)}`} ({candidate.completedPeriodCount} {candidate.completedPeriodCount === 1 ? "período completo" : "períodos completos"}).</p>
+                {candidate.excludedPeriods.length > 0 ? (
+                  <div>
+                    <p>Unidades excluidas:</p>
+                    <ul>
+                      {candidate.excludedPeriods.map((period) => (
+                        <li key={`${period.from}-${period.to}`}>
+                          {displayDate(period.from)} — {displayDate(period.to)}: {period.reasons.map((reason) => EXCLUSION_REASONS[reason]).join(" y ")}.
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {candidate.futureExcluded ? <p>Los períodos futuros no se incluyen.</p> : null}
+              </div>
+            ))}
+          </div>
+        </details>
         {categoryTree.length === 0 ? (
           <EmptyState
             description="Amplía el periodo o revisa los filtros que limitan la actividad."

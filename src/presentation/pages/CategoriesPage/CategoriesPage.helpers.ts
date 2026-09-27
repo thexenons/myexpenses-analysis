@@ -141,6 +141,12 @@ export function createCategoriesPageModel(
     completedPeriodCount: categoryAverages.completedPeriodCount,
     averageScope: categoryAverages.scope,
     averageUnit: granularity,
+    averageExplanation: {
+      selectedWindow: categoryAverages.selectedWindow,
+      appliedWindow: categoryAverages.appliedWindow,
+      fallbackReason: categoryAverages.fallbackReason,
+      dateBasis: filtered.filters.dateBasis ?? "operation",
+    },
     categorySeries: comparisonCategories.map((category) => {
       // Partition the already filtered postings. Reapplying only this category
       // would broaden an exact-path or counterpart-category selection.

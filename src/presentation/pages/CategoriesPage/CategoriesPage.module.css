@@ -6,3 +6,40 @@
   color: var(--muted);
   font-size: 0.75rem;
 }
+
+.averageExplanation {
+  margin-bottom: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+.averageExplanation summary {
+  min-height: 2.75rem;
+  padding: 0.7rem 0.85rem;
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.averageExplanation summary:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
+}
+
+.averageExplanationBody {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0 0.85rem 0.85rem;
+}
+
+.averageWindow {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.averageWindow ul {
+  padding-left: 1.2rem;
+  list-style: disc;
+}

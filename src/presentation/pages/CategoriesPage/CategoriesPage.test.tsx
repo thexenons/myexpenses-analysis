@@ -33,6 +33,27 @@ const category: CategoryBreakdownNode = {
 };
 
 describe("CategoriesPageView", () => {
+  it.each([
+    { unit: "month" as const, to: "2025-01-31" as const, label: "mes" },
+    { unit: "year" as const, to: "2025-12-31" as const, label: "año" },
+  ])("uses singular wording for one $unit divisor", async ({ unit, to, label }) => {
+    const user = userEvent.setup();
+    const analytics = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+      categories: { Gastos: { categoryType: "EXPENSE" } },
+      parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "jan", date: "2025-01-15", amount: -10, category: ["Gastos"], sourceTransactionUuid: "jan", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+      ] }],
+    });
+    const filters = { ...createDefaultFilterState(), dateRange: { from: "2025-01-01" as const, to } };
+    const model = createCategoriesPageModel(analytics, applyFilters(analytics, filters), [], unit, vi.fn(), vi.fn(), undefined, undefined, undefined, undefined, undefined, "2026-09-27");
+
+    expect(model.completedPeriodCount).toBe(1);
+    render(<CategoriesPageView {...model} />);
+    await user.click(screen.getByText("Cómo se calcula el promedio"));
+    expect(screen.getByText(`Divisor: 1 ${label} completo, incluidos los períodos sin actividad.`)).toBeVisible();
+  });
+
   it("applies and clears a category through global-filter callbacks", async () => {
     const user = userEvent.setup();
     const onClearCategory = vi.fn<() => void>();
@@ -42,6 +63,12 @@ describe("CategoriesPageView", () => {
         activityEurMinor={-2_500}
         averageUnit="month"
         averageScope="filtered"
+        averageExplanation={{
+          selectedWindow: { from: null, to: null, includedWindow: null, completedPeriodCount: 1, excludedPeriods: [], futureExcluded: false },
+          appliedWindow: { from: null, to: null, includedWindow: null, completedPeriodCount: 1, excludedPeriods: [], futureExcluded: false },
+          fallbackReason: null,
+          dateBasis: "operation",
+        }}
         categoryAverageEurMinorById={new Map([[category.id, -2_500]])}
         categoryBars={[]}
         categoryCount={1}
@@ -99,7 +126,8 @@ describe("createCategoriesPageModel", () => {
     ]);
   });
 
-  it("shows a completed-month average beside unchanged parent and child totals", () => {
+  it("discloses a shared completed-month divisor beside unchanged parent and child totals", async () => {
+    const user = userEvent.setup();
     const analytics = normalizeDataset({
       accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
       categories: { Gastos: { categoryType: "EXPENSE", children: { Comida: { categoryType: "EXPENSE" } } } },
@@ -114,11 +142,22 @@ describe("createCategoriesPageModel", () => {
     expect(model.categoryTree[0]?.summary.netEurMinor).toBe(-120_000);
     expect(model.categoryAverageEurMinorById.get('["Gastos","Comida"]')).toBe(-10_000);
     render(<CategoriesPageView {...model} />);
+    expect(screen.getAllByText("Cómo se calcula el promedio")).toHaveLength(1);
+    const disclosure = screen.getByText("Cómo se calcula el promedio");
+    expect(disclosure.tagName).toBe("SUMMARY");
+    expect(disclosure).toHaveAccessibleName("Cómo se calcula el promedio");
+    disclosure.focus();
+    expect(disclosure).toHaveFocus();
+    await user.click(disclosure);
+    expect(disclosure.closest("details")).toHaveAttribute("open");
+    expect(screen.getByText(/12 meses completos.*sin actividad/)).toBeVisible();
+    expect(screen.getByText(/Ventana incluida:.*01\/01\/2025.*31\/12\/2025/)).toBeVisible();
     expect(screen.getAllByText(/Promedio:.*100,00.*mes/)).toHaveLength(2);
     expect(screen.getAllByText(/-1200,00/).length).toBeGreaterThanOrEqual(2);
   });
 
-  it("shows no-complete-period state instead of zero while retaining the current-day total", () => {
+  it("explains no-history state instead of zero while retaining the current-day total", async () => {
+    const user = userEvent.setup();
     const analytics = normalizeDataset({
       accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
       categories: { Gastos: { categoryType: "EXPENSE" } },
@@ -132,11 +171,16 @@ describe("createCategoriesPageModel", () => {
     expect(model.completedPeriodCount).toBe(0);
     expect(model.categoryTree[0]?.summary.netEurMinor).toBe(-5_000);
     render(<CategoriesPageView {...model} />);
+    await user.click(screen.getByText("Cómo se calcula el promedio"));
+    expect(screen.getByText(/La selección no contiene unidades completas/)).toBeVisible();
+    expect(screen.getByText(/Sin períodos completos: no se calcula/)).toBeVisible();
+    expect(screen.getAllByText(/Ventana incluida: ninguna/)).toHaveLength(2);
     expect(screen.getByText("Sin períodos completos")).toBeVisible();
     expect(screen.getAllByText(/50,00/).length).toBeGreaterThan(0);
   });
 
-  it("labels the historical average and keeps the current tree, total, and chart unchanged", () => {
+  it("explains the historical fallback and keeps the current tree, total, and chart unchanged", async () => {
+    const user = userEvent.setup();
     const analytics = normalizeDataset({
       accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
       categories: { Expenses: { categoryType: "EXPENSE", children: { Food: { categoryType: "EXPENSE" }, Rent: { categoryType: "EXPENSE" } } } },
@@ -156,6 +200,11 @@ describe("createCategoriesPageModel", () => {
     expect(model.categoryBars).toEqual([expect.objectContaining({ value: -500 })]);
     expect(model.categoryAverageEurMinorById.get('["Expenses","Rent"]') ?? 0).toBe(0);
     render(<CategoriesPageView {...model} />);
+    await user.click(screen.getByText("Cómo se calcula el promedio"));
+    expect(screen.getByText(/La unidad elegida coincide con el período seleccionado/)).toBeVisible();
+    expect(screen.getByText(/Historial utilizado/)).toBeVisible();
+    expect(screen.getByText(/Ventana incluida:.*01\/01\/2025.*31\/08\/2026/)).toBeVisible();
+    expect(screen.getAllByText(/no terminó antes de hoy/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Promedio histórico:.*mes.*20 períodos completos/)).toHaveLength(2);
   });
 
@@ -175,6 +224,8 @@ describe("createCategoriesPageModel", () => {
       return createCategoriesPageModel(analytics, applyFilters(analytics, filters), selection, granularity, vi.fn(), vi.fn(), undefined, undefined, undefined, undefined, undefined, "2026-09-27");
     };
     const monthly = modelFor("2025-01-01", "month");
+    const all = createCategoriesPageModel(analytics, applyFilters(analytics, { ...createDefaultFilterState(), dateRange: { from: "2025-01-01", to: "2025-12-31" } }), [], "month", vi.fn(), vi.fn(), undefined, undefined, undefined, undefined, undefined, "2026-09-27");
+    expect(monthly.averageExplanation.appliedWindow).toEqual(all.averageExplanation.appliedWindow);
     expect(monthly.categoryBars[0]?.value).toBe(-120);
     expect(monthly.categoryTree[0]?.summary.netEurMinor).toBe(-36_000);
     expect(monthly.categoryAverageEurMinorById.get('["Gastos","Comida"]')).toBe(-1_000);

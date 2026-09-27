@@ -43,6 +43,8 @@ test("complete calendar year uses twelve months including zero-activity months",
   const data = filtered(dataset([["jan", "2025-01-10", -1200]]), "2025-01-01", "2025-12-31");
   const result = aggregateCategoryPeriodAverages(data, "month", "2026-09-27");
   assert.equal(result.completedPeriodCount, 12);
+  assert.deepEqual(result.appliedWindow.includedWindow, { from: "2025-01-01", to: "2025-12-31" });
+  assert.deepEqual(result.appliedWindow.excludedPeriods, []);
   assert.equal(result.averageEurMinorByCategoryId.get(foodId), -10_000);
   assert.equal(result.averageEurMinorByCategoryId.get(rootId), -10_000);
   assert.equal(aggregateCategoryBreakdown(data)[0]?.summary.netEurMinor, -120_000);
@@ -69,6 +71,9 @@ test("future dates do not become completed units or enter the numerator", () => 
   ]), "2026-01-01", "2026-12-31");
   const result = aggregateCategoryPeriodAverages(data, "month", "2026-09-27");
   assert.equal(result.completedPeriodCount, 8);
+  assert.deepEqual(result.appliedWindow.includedWindow, { from: "2026-01-01", to: "2026-08-31" });
+  assert.equal(result.appliedWindow.futureExcluded, true);
+  assert.deepEqual(result.appliedWindow.excludedPeriods.map(({ reasons }) => reasons), [["currentOrFuture"]]);
   assert.equal(result.averageEurMinorByCategoryId.get(foodId), -10_000);
   assert.equal(aggregateCategoryBreakdown(data)[0]?.summary.netEurMinor, -240_000);
 });
@@ -81,6 +86,10 @@ test("September weeks omit both crossing boundaries and the current incomplete w
   ]), "2026-09-01", "2026-09-27");
   const result = aggregateCategoryPeriodAverages(data, "week", "2026-09-27");
   assert.equal(result.completedPeriodCount, 2);
+  assert.deepEqual(result.appliedWindow.includedWindow, { from: "2026-09-07", to: "2026-09-20" });
+  assert.deepEqual(result.appliedWindow.excludedPeriods.map(({ reasons }) => reasons), [
+    ["startsBeforeRange"], ["currentOrFuture"],
+  ]);
   assert.equal(result.averageEurMinorByCategoryId.get(foodId), -10_000);
   assert.equal(aggregateCategoryBreakdown(data)[0]?.summary.netEurMinor, -60_000);
 });
@@ -89,6 +98,8 @@ test("no completed period returns null even when the category has activity", () 
   const data = filtered(dataset([["today", "2026-09-27", -50]]), "2026-09-27", "2026-09-27");
   const result = aggregateCategoryPeriodAverages(data, "day", "2026-09-27");
   assert.equal(result.completedPeriodCount, 0);
+  assert.equal(result.appliedWindow.includedWindow, null);
+  assert.equal(result.fallbackReason, "noCompleteFilteredUnits");
   assert.equal(result.averageEurMinorByCategoryId.get(foodId), undefined);
 });
 
@@ -97,6 +108,8 @@ test("day and year units follow resolved granularity, not the period selector la
   const data = filtered(source, "2025-01-01", "2025-12-31");
   const daily = aggregateCategoryPeriodAverages(data, "day", "2026-09-27");
   assert.equal(daily.completedPeriodCount, 365);
+  assert.deepEqual(daily.appliedWindow.includedWindow, { from: "2025-01-01", to: "2025-12-31" });
+  assert.equal(daily.appliedWindow.excludedPeriods.length, 0);
   assert.equal(daily.averageEurMinorByCategoryId.get(foodId), -3_000 / 365);
   const yearly = aggregateCategoryPeriodAverages(data, "year", "2026-09-27");
   assert.equal(yearly.completedPeriodCount, 1);
@@ -112,6 +125,7 @@ test("open range uses common dataset coverage, never category-local padded bound
   const data = filtered(source, null, null);
   const result = aggregateCategoryPeriodAverages(data, "month", "2026-09-27");
   assert.equal(result.completedPeriodCount, 1);
+  assert.deepEqual(result.appliedWindow.includedWindow, { from: "2025-02-01", to: "2025-02-28" });
   assert.equal(result.averageEurMinorByCategoryId.get(foodId), -2_000);
   assert.equal(result.averageEurMinorByCategoryId.get(rentId), undefined);
   assert.equal(result.averageEurMinorByCategoryId.get(rootId), -2_000);
@@ -132,6 +146,7 @@ test("value-date filtering and open coverage use value dates", () => {
   const result = aggregateCategoryPeriodAverages(data, "month", "2026-09-27");
   assert.equal(data.activePostings.length, 1);
   assert.equal(result.completedPeriodCount, 1);
+  assert.deepEqual(result.appliedWindow.includedWindow, { from: "2025-02-01", to: "2025-02-28" });
   assert.equal(result.averageEurMinorByCategoryId.get(foodId), -2_000);
   const open = aggregateCategoryPeriodAverages(filtered(source, null, null, { dateBasis: "value" }), "month", "2026-09-27");
   assert.equal(open.completedPeriodCount, 1); // February is wholly inside value-date coverage.
@@ -150,9 +165,14 @@ test("configured month and week starts define complete accounting units", () => 
   } satisfies AnalyticsDataset;
   const month = aggregateCategoryPeriodAverages(filtered(source, "2026-09-01", "2026-10-20"), "month", "2026-10-20");
   assert.equal(month.completedPeriodCount, 1); // Sep 15–Oct 14; only the Sep 21 posting.
+  assert.deepEqual(month.appliedWindow.includedWindow, { from: "2026-09-15", to: "2026-10-14" });
+  assert.deepEqual(month.appliedWindow.excludedPeriods.map(({ reasons }) => reasons), [
+    ["startsBeforeRange"], ["endsAfterRange", "currentOrFuture"],
+  ]);
   assert.equal(month.averageEurMinorByCategoryId.get(foodId), -6_000);
   const week = aggregateCategoryPeriodAverages(filtered(source, "2026-09-01", "2026-09-27"), "week", "2026-09-27");
   assert.equal(week.completedPeriodCount, 3); // Tue–Mon weeks ending Sep 7, 14, and 21.
+  assert.deepEqual(week.appliedWindow.includedWindow, { from: "2026-09-01", to: "2026-09-21" });
   assert.equal(week.averageEurMinorByCategoryId.get(foodId), -10_000 / 3);
 });
 
@@ -164,6 +184,9 @@ test("a selected current month with monthly granularity uses all complete histor
   ]), "2026-09-01", "2026-09-27", { periodMode: "month" });
   const result = aggregateCategoryPeriodAverages(data, "month", "2026-09-27");
   assert.equal(result.scope, "historical");
+  assert.equal(result.fallbackReason, "selectedPeriodNeedsHistory");
+  assert.equal(result.selectedWindow.includedWindow, null);
+  assert.deepEqual(result.appliedWindow.includedWindow, { from: "2025-01-01", to: "2026-08-31" });
   assert.equal(result.completedPeriodCount, 20);
   assert.equal(result.averageEurMinorByCategoryId.get(foodId), -5_000);
   assert.equal(aggregateCategoryBreakdown(data)[0]?.summary.netEurMinor, -50_000);
@@ -177,6 +200,8 @@ test("a selected current month with yearly granularity counts complete earlier y
   const result = aggregateCategoryPeriodAverages(data, "year", "2026-09-27");
   assert.equal(result.scope, "historical");
   assert.equal(result.completedPeriodCount, 2);
+  assert.deepEqual(result.appliedWindow.includedWindow, { from: "2024-01-01", to: "2025-12-31" });
+  assert.equal(result.selectedWindow.includedWindow, null);
   assert.equal(result.averageEurMinorByCategoryId.get(foodId), -5_000);
 });
 
@@ -213,6 +238,8 @@ test("historical fallback returns no completed units when common coverage has no
   const result = aggregateCategoryPeriodAverages(data, "month", "2026-09-27");
   assert.equal(result.scope, "historical");
   assert.equal(result.completedPeriodCount, 0);
+  assert.equal(result.appliedWindow.includedWindow, null);
+  assert.equal(result.selectedWindow.includedWindow, null);
   assert.equal(result.averageEurMinorByCategoryId.get(foodId), undefined);
 });
 
@@ -235,6 +262,8 @@ test("historical reference retains non-date filters and value-date coverage", ()
   const result = aggregateCategoryPeriodAverages(data, "year", "2026-09-27");
   assert.equal(result.scope, "historical");
   assert.equal(result.completedPeriodCount, 1);
+  assert.deepEqual(result.appliedWindow.includedWindow, { from: "2025-01-01", to: "2025-12-31" });
+  assert.equal(result.selectedWindow.includedWindow, null);
   assert.equal(result.averageEurMinorByCategoryId.get(foodId), -10_000);
   assert.equal(aggregateCategoryBreakdown(data)[0]?.summary.netEurMinor, -90_000);
 });
@@ -253,5 +282,24 @@ test("historical units honor the configured accounting-month boundary", () => {
   const result = aggregateCategoryPeriodAverages(data, "month", "2026-10-20");
   assert.equal(result.scope, "historical");
   assert.equal(result.completedPeriodCount, 13);
+  assert.deepEqual(result.appliedWindow.includedWindow, { from: "2025-09-15", to: "2026-10-14" });
   assert.equal(result.averageEurMinorByCategoryId.get(foodId), -4_000 / 13);
+});
+
+test("leap-day daily units and the final day of the current month follow strict completion", () => {
+  const leap = aggregateCategoryPeriodAverages(
+    filtered(dataset([["leap", "2024-02-29", -366]]), "2024-01-01", "2024-12-31"),
+    "day", "2026-09-27",
+  );
+  assert.equal(leap.completedPeriodCount, 366);
+  assert.deepEqual(leap.appliedWindow.includedWindow, { from: "2024-01-01", to: "2024-12-31" });
+  assert.equal(leap.averageEurMinorByCategoryId.get(foodId), -100);
+
+  const finalDay = aggregateCategoryPeriodAverages(
+    filtered(dataset([["today", "2026-09-30", -30]]), "2026-09-01", "2026-09-30"),
+    "month", "2026-09-30",
+  );
+  assert.equal(finalDay.completedPeriodCount, 0);
+  assert.equal(finalDay.appliedWindow.includedWindow, null);
+  assert.deepEqual(finalDay.selectedWindow.excludedPeriods[0]?.reasons, ["currentOrFuture"]);
 });

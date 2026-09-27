@@ -6,13 +6,86 @@ import type {
   FilteredAnalyticsDataset,
   IsoDate,
   TimeGranularity,
+  TimeSeriesPoint,
 } from "./types.ts";
+
+export interface AveragePeriodWindow {
+  /** Evaluated range; open ends use the common dataset bounds. */
+  readonly from: IsoDate | null;
+  readonly to: IsoDate | null;
+  /** First and last fully completed units; zero-activity units between them count. */
+  readonly includedWindow: { readonly from: IsoDate; readonly to: IsoDate } | null;
+  readonly completedPeriodCount: number;
+  /** Only intersecting edge/current units; future units are not enumerated. */
+  readonly excludedPeriods: readonly {
+    readonly from: IsoDate;
+    readonly to: IsoDate;
+    readonly reasons: readonly ("startsBeforeRange" | "endsAfterRange" | "currentOrFuture")[];
+  }[];
+  readonly futureExcluded: boolean;
+}
 
 export interface CategoryPeriodAverages {
   readonly scope: "filtered" | "historical";
   readonly completedPeriodCount: number;
   /** Categories without activity in completed periods are absent and average zero. */
   readonly averageEurMinorByCategoryId: ReadonlyMap<string, number>;
+  readonly selectedWindow: AveragePeriodWindow;
+  readonly appliedWindow: AveragePeriodWindow;
+  readonly fallbackReason: "selectedPeriodNeedsHistory" | "noCompleteFilteredUnits" | null;
+}
+
+interface WindowSelection {
+  readonly window: AveragePeriodWindow;
+  readonly completed: readonly TimeSeriesPoint[];
+}
+
+function selectWindow(
+  filtered: FilteredAnalyticsDataset,
+  granularity: TimeGranularity,
+  today: IsoDate,
+): WindowSelection {
+  const bounds = datasetDateBounds(filtered.source, filtered.filters.dateBasis);
+  const from = filtered.filters.dateRange.from ?? bounds.minDate;
+  const to = filtered.filters.dateRange.to ?? bounds.maxDate;
+  const empty = (): WindowSelection => ({
+    window: { from, to, includedWindow: null, completedPeriodCount: 0,
+      excludedPeriods: [], futureExcluded: to !== null && to > today },
+    completed: [],
+  });
+  if (from === null || to === null || from > to) return empty();
+  const cappedTo = to < today ? to : today;
+  if (from > cappedTo) return empty();
+
+  // Use exactly the same calendar candidates and completeness predicate as
+  // the numerator/divisor; only intersecting edge/current units are reported.
+  const candidates = aggregateTimeSeries({
+    ...filtered,
+    filters: { ...filtered.filters, dateRange: { from, to: cappedTo } },
+  }, granularity);
+  const completed: TimeSeriesPoint[] = [];
+  const excludedPeriods: AveragePeriodWindow["excludedPeriods"][number][] = [];
+  for (const period of candidates) {
+    const reasons: ("startsBeforeRange" | "endsAfterRange" | "currentOrFuture")[] = [];
+    if (period.startDate < from) reasons.push("startsBeforeRange");
+    if (period.endDate > to) reasons.push("endsAfterRange");
+    if (period.endDate >= today) reasons.push("currentOrFuture");
+    if (reasons.length === 0) completed.push(period);
+    else excludedPeriods.push({ from: period.startDate, to: period.endDate, reasons });
+  }
+  return {
+    window: {
+      from, to,
+      includedWindow: completed.length === 0 ? null : {
+        from: completed[0]!.startDate,
+        to: completed.at(-1)!.endDate,
+      },
+      completedPeriodCount: completed.length,
+      excludedPeriods,
+      futureExcluded: to > today,
+    },
+    completed,
+  };
 }
 
 function collectAverages(
@@ -29,34 +102,15 @@ function collectAverages(
 /** The numerator and divisor use exactly the same fully completed units. */
 function averagesWithinRange(
   filtered: FilteredAnalyticsDataset,
-  granularity: TimeGranularity,
-  today: IsoDate,
+  selection: WindowSelection,
   scope: CategoryPeriodAverages["scope"],
+  selectedWindow: AveragePeriodWindow,
+  fallbackReason: CategoryPeriodAverages["fallbackReason"],
 ): CategoryPeriodAverages {
-  const bounds = datasetDateBounds(filtered.source, filtered.filters.dateBasis);
-  const from = filtered.filters.dateRange.from ?? bounds.minDate;
-  const to = filtered.filters.dateRange.to ?? bounds.maxDate;
   const averages = new Map<string, number>();
-  if (from === null || to === null || from > to) {
-    return { scope, completedPeriodCount: 0, averageEurMinorByCategoryId: averages };
-  }
-  const cappedTo = to < today ? to : today;
-  if (from > cappedTo) {
-    return { scope, completedPeriodCount: 0, averageEurMinorByCategoryId: averages };
-  }
-
-  // Supplying the common range fills zero-activity units even when a category
-  // has no posting there. Cap enumeration at today rather than padding a future
-  // range; the returned period boundaries still respect backup preferences.
-  const periods = aggregateTimeSeries({
-    ...filtered,
-    filters: { ...filtered.filters, dateRange: { from, to: cappedTo } },
-  }, granularity).filter((period) =>
-    period.startDate >= from && period.endDate <= to && period.endDate < today,
-  );
-  if (periods.length === 0) {
-    return { scope, completedPeriodCount: 0, averageEurMinorByCategoryId: averages };
-  }
+  const { completed: periods, window } = selection;
+  if (periods.length === 0) return { scope, completedPeriodCount: 0,
+    averageEurMinorByCategoryId: averages, selectedWindow, appliedWindow: window, fallbackReason };
 
   const first = periods[0]!.startDate;
   const last = periods.at(-1)!.endDate;
@@ -73,6 +127,9 @@ function averagesWithinRange(
     scope,
     completedPeriodCount: periods.length,
     averageEurMinorByCategoryId: averages,
+    selectedWindow,
+    appliedWindow: window,
+    fallbackReason,
   };
 }
 
@@ -91,10 +148,9 @@ export function aggregateCategoryPeriodAverages(
   const mode = filtered.filters.periodMode;
   const useHistory = mode !== "all" && mode !== "custom" &&
     GRANULARITY_RANK[granularity] >= GRANULARITY_RANK[mode];
-  if (!useHistory) {
-    const withinFilter = averagesWithinRange(filtered, granularity, today, "filtered");
-    if (withinFilter.completedPeriodCount > 0) return withinFilter;
-  }
+  const selected = selectWindow(filtered, granularity, today);
+  if (!useHistory && selected.completed.length > 0)
+    return averagesWithinRange(filtered, selected, "filtered", selected.window, null);
 
   // Keep every non-date filter (and the caller's category scope) intact. The
   // original dataset's common bounds, not category activity, limit history.
@@ -103,5 +159,7 @@ export function aggregateCategoryPeriodAverages(
     periodMode: "all",
     dateRange: { from: null, to: null },
   });
-  return averagesWithinRange(historical, granularity, today, "historical");
+  return averagesWithinRange(historical, selectWindow(historical, granularity, today),
+    "historical", selected.window,
+    useHistory ? "selectedPeriodNeedsHistory" : "noCompleteFilteredUnits");
 }
