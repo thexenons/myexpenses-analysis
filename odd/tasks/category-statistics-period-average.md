@@ -1,6 +1,6 @@
 # Category statistics: completed-period average
 
-**Status:** Original average delivered in `111fb26e2c1791fe4899419b04344e450deac3c4`, with verification documentation in `f163b68`. Audit remediation is committed in `1705f43` and its four-lens review is acknowledged. Historical-average extension (T3) is implemented and verified locally; its commit and native assessment are pending with the parent. Merge to `main` and push to `origin/main` remain pending. Private-data access remains out of scope.
+**Status:** Original average delivered in `111fb26e2c1791fe4899419b04344e450deac3c4`, with verification documentation in `f163b68`. Audit remediation is committed in `1705f43` and its four-lens review is acknowledged. Historical-average extension (T3) is implemented, verified, and committed in `85913e083fc6a2e77c08eac4c74badcd6825f210`. Native assessment reports medium risk and `review_due: false` (`under_budget`, 190 authored lines against reviewed boundary `1705f43`); no separate T3 review is claimed. Authorized merge to `main` and push to `origin/main` are the remaining delivery steps. Private-data access remains out of scope.
 
 ## Objective
 
@@ -39,6 +39,8 @@ Implement the domain calculation, category-tree model and UI, and behavioral tes
 **Observed closure:** `pnpm test:node` 231 passed, 2 skipped (reference backup not present), 0 failed; `pnpm test:ui` 219 passed across 72 files; `pnpm type-check`, `pnpm lint`, `pnpm build`, and `git diff --check` all passed. The first full lint attempt found a test-only `no-map-spread` warning; it was corrected and the final full checks passed. Parent spot-check: all nine domain average tests passed. Commit `111fb26e2c1791fe4899419b04344e450deac3c4` contains both work units, tests, and documentation (401 additions, 10 deletions). Native review assessed medium risk, the user granted review, and the consolidated reliability reviewer reported no findings; exact acknowledgement closed lineage `review-a7da23c96fa2a5df`. The reviewer inspected immutable patches and did not rerun tests. Next: authorized merge/push, followed by the separately requested read-only frontend audit.
 
 **Engram mirror:** Pending (runtime session identity unavailable to this worker; a write was previously reported as `unknown_session`).
+
+**Parent verification:** Reran all 16 category-average domain tests successfully on the final implementation. Audit remediation separately passed the parent rerun of 26 focused Node tests and acknowledged four-lens native review `review-df791a97e01fa054` with no findings. Functional proof and native review remain distinct.
 
 **T3 forecast and delivery:** Approximately 400 authored changed lines (advisory only). One historical-average work unit; parent owns commit, native review, merge, and push after verification. Rollback boundary: T3 domain selection, UI scope labeling, related tests, and this T3 entry; retain T1/T2 and audit fixes.
 
