@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { lstat, open } from "node:fs/promises";
 import { isAbsolute, normalize, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,12 +8,7 @@ import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import type { Plugin } from "vite";
 
-import {
-  decryptCompressedDataset,
-  parseStaticVaultEnvelopeJson,
-  STATIC_VAULT_MAX_ENVELOPE_BYTES,
-  StaticVaultUnlockError,
-} from "./src/domain/security/static-vault.ts";
+import { parseStaticVaultEnvelopeJson, STATIC_VAULT_MAX_ENVELOPE_BYTES } from "./src/domain/security/static-vault.ts";
 
 const DATA_FILES = ["app-dataset.vault.json"] as const;
 
@@ -124,33 +120,18 @@ async function readClientDataFile(
   productionBuild = false,
 ): Promise<Buffer> {
   const source = await readValidatedVaultFile(dataFileSource(fileName));
-  if (productionBuild) await assertVaultRequiresPassphrase(source);
+  if (productionBuild) assertVerifiedVaultDigest(source, process.env.MYEXPENSES_VERIFIED_VAULT_SHA256);
   return source;
 }
 
-export async function assertVaultRequiresPassphrase(
-  source: Uint8Array,
-): Promise<void> {
-  const envelope = parseStaticVaultEnvelopeJson(
-    new TextDecoder("utf-8", { fatal: true }).decode(source),
-  );
-  let decrypted: Uint8Array | undefined;
-  try {
-    decrypted = await decryptCompressedDataset(
-      envelope,
-      "",
-      globalThis.crypto,
-      { allowEmptyPassphraseForDevelopment: true },
-    );
-  } catch (error) {
-    if (error instanceof StaticVaultUnlockError) return;
-    throw error;
-  } finally {
-    decrypted?.fill(0);
+export function assertVerifiedVaultDigest(source: Uint8Array, expected: string | undefined): void {
+  if (expected === undefined || !/^[a-f0-9]{64}$/u.test(expected)) {
+    throw new Error("Production build requires a valid vault preflight digest");
   }
-  throw new Error(
-    "Production build refuses a development vault with an empty passphrase",
-  );
+  const actual = createHash("sha256").update(source).digest("hex");
+  if (actual !== expected) {
+    throw new Error("Production vault differs from its preflight digest");
+  }
 }
 
 export function isPrivateDataFileSystemRoute(pathname: string): boolean {

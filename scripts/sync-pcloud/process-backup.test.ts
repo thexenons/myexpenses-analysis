@@ -10,6 +10,8 @@ import {
 import { join } from "node:path";
 import test from "node:test";
 import { tmpdir } from "node:os";
+import { createHash } from "node:crypto";
+import { encryptCompressedDataset, serializeStaticVaultEnvelope } from "../../src/domain/security/static-vault.ts";
 
 import {
     createStaticBuildEnvironment,
@@ -38,6 +40,12 @@ async function fixtureDirectories(): Promise<{
     return { repositoryRoot, root, workspacePath };
 }
 
+async function writeSyntheticVault(path: string): Promise<void> {
+    const compressed = Uint8Array.of(31, 139, 8, 0, 0, 0, 0, 0, 2, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    const envelope = await encryptCompressedDataset(compressed, "correct horse battery staple", globalThis.crypto);
+    await writeFile(path, serializeStaticVaultEnvelope(envelope), { mode: 0o600 });
+}
+
 test("passes only an allowlisted environment to build tooling", () => {
     const environment = createStaticBuildEnvironment(
         {
@@ -58,6 +66,17 @@ test("passes only an allowlisted environment to build tooling", () => {
         LANG: "es_ES.UTF-8",
         MYEXPENSES_VAULT_SOURCE_PATH:
             "/private/workspace/app-dataset.vault.json",
+        NODE_ENV: "production",
+        PATH: "/usr/bin",
+    });
+    assert.deepEqual(createStaticBuildEnvironment({
+        PATH: "/usr/bin",
+        MYEXPENSES_VERIFIED_VAULT_SHA256: "0".repeat(64),
+        MYEXPENSES_VAULT_PASSPHRASE: "must-not-leak",
+        VITE_SYNTHETIC_CANARY: "must-not-leak",
+    }, "/private/workspace/app-dataset.vault.json", "a".repeat(64)), {
+        MYEXPENSES_VAULT_SOURCE_PATH: "/private/workspace/app-dataset.vault.json",
+        MYEXPENSES_VERIFIED_VAULT_SHA256: "a".repeat(64),
         NODE_ENV: "production",
         PATH: "/usr/bin",
     });
@@ -250,9 +269,7 @@ test("imports, encrypts and builds without leaving plaintext in the release", as
                         await readFile(options.inputPath, "utf8"),
                         "private plaintext",
                     );
-                    await writeFile(options.outputPath, "encrypted envelope", {
-                        mode: 0o600,
-                    });
+                    await writeSyntheticVault(options.outputPath);
                     return {};
                 },
                 build: async (input) => {
@@ -261,10 +278,8 @@ test("imports, encrypts and builds without leaving plaintext in the release", as
                         readFile(join(fixture.workspacePath, "app-dataset.json")),
                         /ENOENT/,
                     );
-                    assert.equal(
-                        await readFile(input.vaultPath, "utf8"),
-                        "encrypted envelope",
-                    );
+                    const vault = await readFile(input.vaultPath);
+                    assert.equal(input.verifiedVaultSha256, createHash("sha256").update(vault).digest("hex"));
                     await mkdir(join(input.outputDirectory, "data"), {
                         recursive: true,
                     });
@@ -279,7 +294,7 @@ test("imports, encrypts and builds without leaving plaintext in the release", as
                                 "data",
                                 "app-dataset.vault.json",
                             ),
-                            "encrypted envelope",
+                            vault,
                         ),
                     ]);
                 },
@@ -312,7 +327,7 @@ test("rejects a build that publishes any plaintext data artifact", async () => {
                         return {};
                     },
                     encrypt: async (options) => {
-                        await writeFile(options.outputPath, "vault");
+                        await writeSyntheticVault(options.outputPath);
                         return {};
                     },
                     build: async (input) => {
@@ -343,6 +358,62 @@ test("rejects a build that publishes any plaintext data artifact", async () => {
             ),
             /unexpected private data artifact/,
         );
+    } finally {
+        await rm(fixture.root, { force: true, recursive: true });
+    }
+});
+
+test("sync refuses an unauthenticated vault before invoking its builder", async () => {
+    const fixture = await fixtureDirectories();
+    let built = false;
+    try {
+        await assert.rejects(processBackupForStaticRelease({
+            backupPath: join(fixture.workspacePath, "source.zip"),
+            repositoryRoot: fixture.repositoryRoot,
+            timeZone: "Europe/Madrid",
+            vaultPassphrase: "another valid but incorrect phrase",
+            workspacePath: fixture.workspacePath,
+        }, undefined, {
+            import: async (options) => {
+                await writeFile(options.outputPath, "synthetic plaintext", { mode: 0o600 });
+                return {};
+            },
+            encrypt: async (options) => {
+                await writeSyntheticVault(options.outputPath);
+                return {};
+            },
+            build: async () => { built = true; },
+        }), /authentication failed/iu);
+        assert.equal(built, false);
+    } finally {
+        await rm(fixture.root, { force: true, recursive: true });
+    }
+});
+
+test("sync rejects output vault bytes that differ from the authenticated input", async () => {
+    const fixture = await fixtureDirectories();
+    try {
+        await assert.rejects(processBackupForStaticRelease({
+            backupPath: join(fixture.workspacePath, "source.zip"),
+            repositoryRoot: fixture.repositoryRoot,
+            timeZone: "Europe/Madrid",
+            vaultPassphrase: "correct horse battery staple",
+            workspacePath: fixture.workspacePath,
+        }, undefined, {
+            import: async (options) => {
+                await writeFile(options.outputPath, "synthetic plaintext", { mode: 0o600 });
+                return {};
+            },
+            encrypt: async (options) => {
+                await writeSyntheticVault(options.outputPath);
+                return {};
+            },
+            build: async (input) => {
+                await mkdir(join(input.outputDirectory, "data"), { recursive: true });
+                await writeFile(join(input.outputDirectory, "index.html"), "ok");
+                await writeFile(join(input.outputDirectory, "data", "app-dataset.vault.json"), "different bytes");
+            },
+        }), /different from its authenticated source/iu);
     } finally {
         await rm(fixture.root, { force: true, recursive: true });
     }

@@ -9,6 +9,7 @@ export function UnlockScreen({
   blockedReason,
   error,
   onUnlock,
+  onReloadVault,
   phase,
 }: UnlockScreenProps) {
   const errorId = useId();
@@ -52,9 +53,16 @@ export function UnlockScreen({
             ) : null}
 
             {phase === "error" && error !== null ? (
-              <p className={styles.error} id={errorId} role="alert">
-                {error}
-              </p>
+              <div>
+                <p className={styles.error} id={errorId} role="alert">
+                  {error}
+                </p>
+                {onReloadVault !== undefined && !blocked ? (
+                  <button className={styles.reload} onClick={onReloadVault} type="button">
+                    Volver a descargar la bóveda
+                  </button>
+                ) : null}
+              </div>
             ) : null}
 
             <form className={styles.form} onSubmit={submit}>

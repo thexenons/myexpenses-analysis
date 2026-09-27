@@ -74,6 +74,30 @@ describe("CategoriesPageView", () => {
 });
 
 describe("createCategoriesPageModel", () => {
+  it("aligns filtered flow series across disjoint category activity", () => {
+    const analytics = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+      categories: { A: { categoryType: "EXPENSE" }, B: { categoryType: "EXPENSE" } },
+      parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "jan", date: "2026-01-10", amount: -10, category: ["A"], sourceTransactionUuid: "jan", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+        { uuid: "mar", date: "2026-03-10", amount: -20, category: ["B"], sourceTransactionUuid: "mar", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+      ] }],
+    });
+    const modelFor = (dateRange: { from: `${number}-${number}-${number}` | null; to: `${number}-${number}-${number}` | null }) =>
+      createCategoriesPageModel(analytics, applyFilters(analytics, { ...createDefaultFilterState(), dateRange }), [], "month", vi.fn(), vi.fn(),
+        { metric: "netEurMinor", level: "roots", seriesLimit: 0 });
+    const unbounded = modelFor({ from: null, to: null });
+    expect(unbounded.categorySeries.find(({ label }) => label === "A")?.data).toEqual([
+      { label: "2026-01", value: -10 }, { label: "2026-02", value: 0 }, { label: "2026-03", value: 0 },
+    ]);
+    expect(unbounded.categorySeries.find(({ label }) => label === "B")?.data).toEqual([
+      { label: "2026-01", value: 0 }, { label: "2026-02", value: 0 }, { label: "2026-03", value: -20 },
+    ]);
+    expect(modelFor({ from: "2026-02-01", to: null }).categorySeries[0]?.data).toEqual([
+      { label: "2026-02", value: 0 }, { label: "2026-03", value: -20 },
+    ]);
+  });
+
   it("shows a completed-month average beside unchanged parent and child totals", () => {
     const analytics = normalizeDataset({
       accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },

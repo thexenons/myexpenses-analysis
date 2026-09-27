@@ -7,5 +7,6 @@ export interface UnlockScreenProps {
   readonly blockedReason: string | null;
   readonly error: string | null;
   readonly onUnlock: (passphrase: string) => Promise<void>;
+  readonly onReloadVault?: () => void;
   readonly phase: UnlockScreenPhase;
 }

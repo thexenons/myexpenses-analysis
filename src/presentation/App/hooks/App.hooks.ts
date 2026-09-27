@@ -5,6 +5,7 @@ export function useApp(): AppViewProps {
   const error = useAppStore((state) => state.error);
   const loadPhase = useAppStore((state) => state.loadPhase);
   const onUnlock = useAppStore((state) => state.actions.unlock);
+  const onReloadVault = useAppStore((state) => state.actions.reloadVault);
   const unlockBlockedReason = useAppStore(
     (state) => state.unlockBlockedReason,
   );
@@ -14,6 +15,7 @@ export function useApp(): AppViewProps {
     error,
     loadPhase,
     onUnlock,
+    onReloadVault,
     unlockBlockedReason,
   };
 }

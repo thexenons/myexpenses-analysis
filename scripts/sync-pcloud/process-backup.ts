@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { lstat, readFile, readdir, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -8,6 +9,9 @@ import {
     encryptDataset,
     type EncryptDatasetOptions,
 } from "../encrypt-dataset/encrypt-dataset.ts";
+import { verifyProductionVault } from "../build-static/production-vault.ts";
+import { readLimitedRegularFile } from "../encrypt-dataset/files.ts";
+import { STATIC_VAULT_MAX_ENVELOPE_BYTES } from "../../src/domain/security/static-vault.ts";
 import {
     importBackup,
     type ImportBackupOptions,
@@ -44,6 +48,7 @@ export interface StaticReleaseBuildInput {
     readonly repositoryRoot: string;
     readonly signal?: AbortSignal;
     readonly vaultPath: string;
+    readonly verifiedVaultSha256: string;
 }
 
 export interface ProcessBackupDependencies {
@@ -66,10 +71,12 @@ class StaticReleasePipelineError extends Error {
 export function createStaticBuildEnvironment(
     environment: NodeJS.ProcessEnv,
     vaultPath: string,
+    verifiedVaultSha256?: string,
 ): NodeJS.ProcessEnv {
     const safeEnvironment: NodeJS.ProcessEnv = {
         MYEXPENSES_VAULT_SOURCE_PATH: vaultPath,
         NODE_ENV: "production",
+        ...(verifiedVaultSha256 === undefined ? {} : { MYEXPENSES_VERIFIED_VAULT_SHA256: verifiedVaultSha256 }),
     };
     for (const key of SAFE_BUILD_ENVIRONMENT_KEYS) {
         const value = environment[key];
@@ -226,6 +233,7 @@ async function defaultBuild(input: StaticReleaseBuildInput): Promise<void> {
     const environment = createStaticBuildEnvironment(
         process.env,
         input.vaultPath,
+        input.verifiedVaultSha256,
     );
     await executeStaticBuildChild(TSC_PATH, ["-b"], {
         cwd: input.repositoryRoot,
@@ -245,7 +253,7 @@ async function defaultBuild(input: StaticReleaseBuildInput): Promise<void> {
     );
 }
 
-async function assertSafeBuildOutput(buildDirectory: string): Promise<void> {
+async function assertSafeBuildOutput(buildDirectory: string, verifiedVaultSha256: string): Promise<void> {
     const expected = join(
         buildDirectory,
         "data",
@@ -270,6 +278,14 @@ async function assertSafeBuildOutput(buildDirectory: string): Promise<void> {
         throw new StaticReleasePipelineError(
             "Production build contains an unexpected private data artifact",
         );
+    }
+    const emitted = await readLimitedRegularFile(expected, STATIC_VAULT_MAX_ENVELOPE_BYTES, "Emitted dataset vault");
+    try {
+        if (createHash("sha256").update(emitted).digest("hex") !== verifiedVaultSha256) {
+            throw new StaticReleasePipelineError("Production build emitted a vault different from its authenticated source");
+        }
+    } finally {
+        emitted.fill(0);
     }
     const index = await lstat(join(buildDirectory, "index.html")).catch(
         (error: unknown) => {
@@ -314,13 +330,16 @@ export async function processBackupForStaticRelease(
     });
     await unlink(datasetPath);
     signal?.throwIfAborted();
+    const verifiedVaultSha256 = await verifyProductionVault(vaultPath, input.vaultPassphrase);
+    signal?.throwIfAborted();
     await (dependencies.build ?? defaultBuild)({
         leaseFd: input.leaseFd,
         outputDirectory: buildDirectory,
         repositoryRoot: input.repositoryRoot,
         signal,
         vaultPath,
+        verifiedVaultSha256,
     });
-    await assertSafeBuildOutput(buildDirectory);
+    await assertSafeBuildOutput(buildDirectory, verifiedVaultSha256);
     return { buildDirectory };
 }

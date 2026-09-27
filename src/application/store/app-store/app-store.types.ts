@@ -25,6 +25,7 @@ export interface AppStoreActions {
   lock(): void;
   openFilterDrawer(): void;
   patchFilters(patch: Partial<FilterState>): void;
+  reloadVault(): void;
   setDatePeriod(periodMode: DatePeriodMode, dateRange: DateRangeFilter): void;
   setAccountIds(accountIds: readonly string[]): void;
   setCategoryPrefixes(categoryPrefixes: readonly (readonly string[])[]): void;

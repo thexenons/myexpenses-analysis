@@ -52,6 +52,16 @@ pnpm dev
 pnpm build
 ```
 
+`pnpm build` vuelve a pedir la frase sin mostrarla. Un preflight Node descifra
+la bóveda con una frase no vacía y comprueba su autenticidad antes de ejecutar
+TypeScript y Vite. Si la frase es incorrecta o la bóveda está dañada, no se
+lanza la build. El preflight calcula un SHA-256 de los bytes exactos y pasa
+solamente ese valor y la ruta al proceso de Vite; Vite rechaza un hash ausente,
+mal formado o diferente y publica el mismo buffer comprobado. El hash NO es
+una firma independiente: depende de que el preflight y el lanzamiento del
+builder sean confiables. Esto no aísla procesos del mismo usuario ni protege
+frente a modificaciones del código del repositorio o del entorno de lanzamiento.
+
 Sólo para desarrollo local puede omitirse la frase:
 
 ```sh
@@ -60,8 +70,8 @@ pnpm dev
 ```
 
 El formulario admite entonces el campo vacío exclusivamente bajo `vite dev`.
-`pnpm build` detecta y rechaza esta bóveda de desarrollo para impedir que se
-publique por accidente; antes de construir hay que regenerarla con
+`pnpm build` rechaza esta bóveda de desarrollo porque no puede autenticarla
+con una frase válida; antes de construir hay que regenerarla con
 `pnpm data:encrypt` o con el fichero privado usado por la automatización.
 
 Para automatización se admite exclusivamente un fichero de frase privado:
@@ -70,7 +80,15 @@ Para automatización se admite exclusivamente un fichero de frase privado:
 chmod 0600 /etc/myexpenses/vault.passphrase
 pnpm data:encrypt -- \
   --passphrase-file /etc/myexpenses/vault.passphrase
+pnpm build -- --passphrase-file /etc/myexpenses/vault.passphrase
 ```
+
+Para una comprobación local con datos **sintéticos**, también se admiten
+`--vault /ruta/absoluta/vault.json` y `--out-dir /ruta/absoluta/dist`. Un
+directorio de salida personalizado debe estar fuera del repositorio y no
+existir o estar vacío; no puede contener la bóveda ni el fichero de frase.
+La build no fuerza el vaciado de rutas externas. Nunca uses la build
+predeterminada como prueba si `data/` contiene una bóveda real.
 
 No existe opción de contraseña por argumento ni variable de entorno. El fichero
 debe ser regular, no symlink, sin permisos para grupo/otros y contener una sola
@@ -125,6 +143,10 @@ El botón «Bloquear bóveda» aborta una carga activa, desmonta la aplicación 
 elimina la referencia a los datos del store. JavaScript no garantiza el
 zeroizado inmediato de strings u objetos por el recolector de basura; los
 buffers criptográficos sí se limpian de forma best-effort.
+Si una bóveda publicada estaba dañada y se sustituye en el servidor, usa
+«Volver a descargar la bóveda» después del error de desbloqueo: descarta el
+ciphertext en caché y el siguiente intento hace un fetch nuevo. Reintentar
+sólo la frase conserva la bóveda ya descargada y no repite la transferencia.
 
 ## Requisitos del servidor estático
 

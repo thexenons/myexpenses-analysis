@@ -156,8 +156,8 @@ export function BudgetsPageView({
       >
         <div className={styles.progressLayout}>
           <BudgetUtilization
-            health={global.health}
-            label="Ritmo de consumo global"
+            health={analysis.isFilteredComparison ? "unallocated" : global.health}
+            label={analysis.isFilteredComparison ? "Utilización del corte filtrado" : "Ritmo de consumo global"}
             utilization={global.utilization}
             variant="hero"
           />
@@ -228,6 +228,7 @@ export function BudgetsPageView({
         <BudgetAllocationTable
           allocations={analysis.allocations}
           currency={currency}
+          isFilteredComparison={analysis.isFilteredComparison}
           fractionDigits={fractionDigits}
         />
       </Panel>

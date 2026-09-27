@@ -177,10 +177,16 @@ export function createEncryptedHttpDatasetRepository(
   runtime: EncryptedDatasetRepositoryRuntime = {},
 ): DatasetRepository {
   let cachedEnvelope: StaticVaultEnvelopeV1 | undefined;
+  let cacheGeneration = 0;
 
   return {
+    invalidateCachedVault() {
+      cacheGeneration += 1;
+      cachedEnvelope = undefined;
+    },
     async load(passphrase, signal) {
       abortIfNeeded(signal);
+      const generation = cacheGeneration;
       const fetcher = runtime.fetch ?? globalThis.fetch;
       const cryptoProvider = runtime.crypto ?? globalThis.crypto;
       if (typeof fetcher !== "function") {
@@ -204,13 +210,18 @@ export function createEncryptedHttpDatasetRepository(
       );
       if (cachedEnvelope !== undefined) {
         const security = await securityPromise;
-        return await decryptVaultResponse(
+        const dataset = await decryptVaultResponse(
           cachedEnvelope,
           passphrase,
           cryptoProvider,
           security,
           signal,
         );
+        abortIfNeeded(signal);
+        if (generation !== cacheGeneration) {
+          throw new DOMException("The vault source was invalidated", "AbortError");
+        }
+        return dataset;
       }
       const responsePromise = fetcher(runtime.endpointUrl ?? endpointUrl(), {
         cache: "no-store",
@@ -245,7 +256,11 @@ export function createEncryptedHttpDatasetRepository(
             signal,
           );
           abortIfNeeded(signal);
-          cachedEnvelope = security.parseStaticVaultEnvelopeJson(source);
+          const envelope = security.parseStaticVaultEnvelopeJson(source);
+          if (generation !== cacheGeneration) {
+            throw new DOMException("The vault source was invalidated", "AbortError");
+          }
+          cachedEnvelope = envelope;
         } catch (error) {
           if (isAbortError(error)) throw error;
           throw new DatasetTransportError(
@@ -258,13 +273,18 @@ export function createEncryptedHttpDatasetRepository(
         // response too, so retries do not leave unused downloads open.
         await response.body?.cancel().catch(() => undefined);
       }
-      return await decryptVaultResponse(
+      const dataset = await decryptVaultResponse(
         cachedEnvelope,
         passphrase,
         cryptoProvider,
         security,
         signal,
       );
+      abortIfNeeded(signal);
+      if (generation !== cacheGeneration) {
+        throw new DOMException("The vault source was invalidated", "AbortError");
+      }
+      return dataset;
     },
   };
 }

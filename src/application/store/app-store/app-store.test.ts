@@ -221,6 +221,22 @@ describe("AppStore", () => {
     expect(store.getState().error).not.toContain("404");
   });
 
+  it("clears an error and invalidates encrypted cache without retrying a phrase", async () => {
+    const invalidateCachedVault = vi.fn<() => void>();
+    const repository: DatasetRepository = {
+      load: vi.fn<DatasetRepository["load"]>().mockRejectedValue(new Error("invalid tag")),
+      invalidateCachedVault,
+    };
+    const store = createSecureStore(repository);
+
+    await store.getState().actions.unlock("incorrecta");
+    expect(store.getState().loadPhase).toBe("error");
+    store.getState().actions.reloadVault();
+    expect(invalidateCachedVault).toHaveBeenCalledOnce();
+    expect(repository.load).toHaveBeenCalledOnce();
+    expect(store.getState()).toMatchObject({ loadPhase: "locked", error: null });
+  });
+
   it("keeps filter mutations inside the store action boundary", () => {
     const repository: DatasetRepository = {
       load: vi.fn<DatasetRepository["load"]>(),
@@ -362,6 +378,26 @@ describe("AppStore", () => {
       error: null,
       loadPhase: "locked",
     });
+  });
+
+  it("reload aborts an in-flight unlock and prevents its stale success", async () => {
+    let resolveDataset: ((dataset: BackupDatasetV1) => void) | undefined;
+    const invalidateCachedVault = vi.fn<() => void>();
+    const repository: DatasetRepository = {
+      load: vi.fn<DatasetRepository["load"]>(async (_passphrase, signal) =>
+        await new Promise<BackupDatasetV1>((resolve, reject) => {
+          resolveDataset = resolve;
+          signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+        })),
+      invalidateCachedVault,
+    };
+    const store = createSecureStore(repository);
+    const pending = store.getState().actions.unlock("correcta");
+    store.getState().actions.reloadVault();
+    resolveDataset?.(datasetFixture());
+    await pending;
+    expect(invalidateCachedVault).toHaveBeenCalledOnce();
+    expect(store.getState()).toMatchObject({ analytics: null, error: null, loadPhase: "locked" });
   });
 
   it("lock discards an already decrypted analytics graph", async () => {

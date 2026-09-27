@@ -122,6 +122,11 @@ export function createCategoriesPageModel(
   const comparisonCategories = categoryPrefixes.length > 0 || chartOptions.seriesLimit === 0
     ? barCategories
     : barCategories.slice(0, chartOptions.seriesLimit);
+  const flowTimeline = aggregateTimeSeries(filtered, granularity);
+  const flowDateRange = {
+    from: filtered.filters.dateRange.from ?? flowTimeline[0]?.startDate ?? null,
+    to: filtered.filters.dateRange.to ?? flowTimeline.at(-1)?.endDate ?? null,
+  };
 
   return {
     activityEurMinor,
@@ -143,6 +148,7 @@ export function createCategoriesPageModel(
         : category.path.every((segment, pathIndex) => posting.categoryPath[pathIndex] === segment);
       const scoped = {
         ...filtered,
+        filters: { ...filtered.filters, dateRange: flowDateRange },
         postings: filtered.postings.filter(matchesCategory),
         activePostings: filtered.activePostings.filter(matchesCategory),
       };

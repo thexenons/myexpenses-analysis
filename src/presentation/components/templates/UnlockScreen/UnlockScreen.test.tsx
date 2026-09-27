@@ -112,6 +112,23 @@ describe("UnlockScreen", () => {
     expect(screen.getByLabelText("Frase de desbloqueo")).toBeDisabled();
   });
 
+  it("offers an explicit vault reload after an unlock error without reusing the phrase", async () => {
+    const user = userEvent.setup();
+    const onReloadVault = vi.fn<() => void>();
+    render(
+      <UnlockScreen
+        blockedReason={null}
+        error="No se pudo abrir la bóveda. Comprueba la frase e inténtalo de nuevo."
+        onReloadVault={onReloadVault}
+        onUnlock={vi.fn<(passphrase: string) => Promise<void>>()}
+        phase="error"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Volver a descargar la bóveda" }));
+    expect(onReloadVault).toHaveBeenCalledOnce();
+  });
+
   it("blocks submission in an insecure remote context with an HTTPS explanation", () => {
     render(
       <UnlockScreen

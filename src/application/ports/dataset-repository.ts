@@ -6,4 +6,6 @@ export class DatasetTransportError extends Error {
 
 export interface DatasetRepository {
   load(passphrase: string, signal?: AbortSignal): Promise<BackupDatasetV1>;
+  /** Drop only cached encrypted source; the next load fetches it again. */
+  invalidateCachedVault?(): void;
 }

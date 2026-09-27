@@ -11,6 +11,7 @@ export function AppView({
   error,
   loadPhase,
   onUnlock,
+  onReloadVault,
   unlockBlockedReason,
 }: AppViewProps) {
   if (loadPhase !== "ready") {
@@ -20,6 +21,7 @@ export function AppView({
         blockedReason={unlockBlockedReason}
         error={error}
         onUnlock={onUnlock}
+        onReloadVault={onReloadVault}
         phase={loadPhase}
       />
     );

@@ -14,11 +14,14 @@ ejecución:
 4. consulta checksums, detecta si ya está publicado y, si cambió, descarga por
    streaming;
 5. valida el ZIP/SQLite, genera el dataset, lo cifra y elimina el JSON claro;
-6. ejecuta TypeScript y Vite hacia una release inmutable;
+6. autentica la bóveda con la frase que ya mantiene en memoria y sólo entonces
+   ejecuta TypeScript y Vite hacia una release inmutable; el builder recibe
+   exclusivamente la ruta y el SHA-256 de los bytes comprobados, nunca la frase;
 7. verifica que `data/` contiene exclusivamente la bóveda;
 8. cambia atómicamente `deployRoot/current` y sólo después guarda el estado.
 
-Un fallo en descarga, importación, cifrado, type-check, build o estado conserva
+Un fallo en descarga, importación, cifrado, autenticación de la bóveda,
+type-check, build o estado conserva
 la release anterior.
 
 ## Autorización pCloud

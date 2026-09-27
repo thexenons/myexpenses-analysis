@@ -76,9 +76,12 @@ function referenceDateRange(
   }
   if (filtered.filters.periodMode === "month") {
     const monthStart = filtered.source.backup?.preferences.monthStart ?? 1;
-    const selectedMonth = monthPeriodForDate(current.from, monthStart);
+    // A calendar-month selection must not become an equal-day span merely
+    // because the imported backup uses a different accounting month start.
+    const selectedMonthStart = current.from.endsWith("-01") ? 1 : monthStart;
+    const selectedMonth = monthPeriodForDate(current.from, selectedMonthStart);
     if (selectedMonth.startDate === current.from && current.to <= selectedMonth.endDate) {
-      const previousMonth = monthPeriodForDate(addIsoDays(current.from, -1), monthStart);
+      const previousMonth = monthPeriodForDate(addIsoDays(current.from, -1), selectedMonthStart);
       if (current.to === selectedMonth.endDate) {
         return { from: previousMonth.startDate, to: previousMonth.endDate };
       }

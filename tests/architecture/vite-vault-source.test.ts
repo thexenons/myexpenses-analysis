@@ -16,7 +16,7 @@ import {
   STATIC_VAULT_MAX_ENVELOPE_BYTES,
 } from "../../src/domain/security/static-vault.ts";
 import {
-  assertVaultRequiresPassphrase,
+  assertVerifiedVaultDigest,
   readValidatedVaultFile,
 } from "../../vite.config.ts";
 
@@ -70,16 +70,11 @@ test("Vite validates and caches only a bounded regular vault file", async () => 
   }
 });
 
-test("production rejects a development vault encrypted with an empty phrase", async () => {
+test("production requires the exact preflight digest for the emitted vault bytes", async () => {
   const compressed = Uint8Array.of(
     31, 139, 8, 0, 0, 0, 0, 0, 2, 3, 171, 86, 74, 203, 172, 40, 41,
     45, 74, 85, 178, 42, 41, 42, 77, 173, 5, 0, 66, 143, 28, 218, 16,
     0, 0, 0,
-  );
-  const protectedEnvelope = await encryptCompressedDataset(
-    compressed,
-    "correct horse battery staple",
-    globalThis.crypto,
   );
   const developmentEnvelope = await encryptCompressedDataset(
     compressed,
@@ -88,15 +83,10 @@ test("production rejects a development vault encrypted with an empty phrase", as
     { allowEmptyPassphraseForDevelopment: true },
   );
 
-  await assert.doesNotReject(
-    assertVaultRequiresPassphrase(
-      new TextEncoder().encode(serializeStaticVaultEnvelope(protectedEnvelope)),
-    ),
-  );
-  await assert.rejects(
-    assertVaultRequiresPassphrase(
-      new TextEncoder().encode(serializeStaticVaultEnvelope(developmentEnvelope)),
-    ),
-    /refuses a development vault/iu,
-  );
+  const source = new TextEncoder().encode(serializeStaticVaultEnvelope(developmentEnvelope));
+  const digest = (await import("node:crypto")).createHash("sha256").update(source).digest("hex");
+  assert.throws(() => assertVerifiedVaultDigest(source, undefined), /preflight digest/iu);
+  assert.throws(() => assertVerifiedVaultDigest(source, "not-a-digest"), /preflight digest/iu);
+  assert.throws(() => assertVerifiedVaultDigest(source, "0".repeat(64)), /preflight digest/iu);
+  assert.doesNotThrow(() => assertVerifiedVaultDigest(source, digest));
 });

@@ -165,6 +165,42 @@ describe("encryptedHttpDatasetRepository", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
+  it("refetches a repaired published vault only after explicit cache invalidation", async () => {
+    const damaged = {
+      ...envelope,
+      ciphertext: `${envelope.ciphertext.startsWith("A") ? "B" : "A"}${envelope.ciphertext.slice(1)}`,
+    };
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(envelopeResponse(damaged))
+      .mockResolvedValue(envelopeResponse());
+    const repository = createEncryptedHttpDatasetRepository({
+      crypto: globalThis.crypto,
+      fetch: fetchMock,
+    });
+
+    await expect(repository.load(PASSPHRASE)).rejects.toBeInstanceOf(StaticVaultUnlockError);
+    await expect(repository.load(PASSPHRASE)).rejects.toBeInstanceOf(StaticVaultUnlockError);
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    repository.invalidateCachedVault?.();
+    await expect(repository.load(PASSPHRASE)).resolves.toMatchObject({ version: 1 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not let a response started before reload repopulate the cache", async () => {
+    let finishFirst: ((response: Response) => void) | undefined;
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockImplementationOnce(async () => await new Promise<Response>((resolve) => { finishFirst = resolve; }))
+      .mockResolvedValue(envelopeResponse());
+    const repository = createEncryptedHttpDatasetRepository({ crypto: globalThis.crypto, fetch: fetchMock });
+    const pending = repository.load(PASSPHRASE);
+    repository.invalidateCachedVault?.();
+    finishFirst?.(envelopeResponse());
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    await expect(repository.load(PASSPHRASE)).resolves.toMatchObject({ version: 1 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("rejects HTTP and content-type failures before any KDF work", async () => {
     const httpRepository = createEncryptedHttpDatasetRepository({
       crypto: globalThis.crypto,

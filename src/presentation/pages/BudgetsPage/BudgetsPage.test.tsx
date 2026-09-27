@@ -131,9 +131,35 @@ describe("BudgetsPageView", () => {
         selectedPeriodKey="MONTH:2026:7"
       />,
     );
-    expect(screen.getByText("Asignado menos corte")).toBeVisible();
+    expect(screen.getAllByText("Asignado menos corte")).toHaveLength(2);
     expect(screen.getByText(/sin prorratear/)).toHaveTextContent("Consumo consultado: 10 ago 2026 – 12 ago 2026");
     expect(screen.getByText(/no indican la disponibilidad real del presupuesto completo/)).toBeVisible();
+  });
+
+  it("does not describe a filtered slice as on track when the full budget is exceeded", () => {
+    render(
+      <BudgetsPageView
+        analysis={{
+          ...analysis,
+          isFilteredComparison: true,
+          global: { ...analysis.global, assignedMinor: 10_000, consumedMinor: 1_000, availableMinor: 9_000, utilization: 0.1, health: "on-track" },
+          allocations: [{ ...allocation, assignedMinor: 10_000, consumedMinor: 1_000, availableMinor: 9_000, utilization: 0.1, health: "on-track" }],
+        }}
+        budgetOptions={[]}
+        emptyDescription={null}
+        emptyTitle={null}
+        onBudgetChange={vi.fn<(value: string) => void>()}
+        onPeriodChange={vi.fn<(value: string) => void>()}
+        periodOptions={[]}
+        searchPending={false}
+        selectedBudgetUuid="budget"
+        selectedPeriodKey="MONTH:2026:7"
+      />,
+    );
+    // The unselected 120 € may push actual spending to 130 €.
+    expect(screen.queryByText("En margen")).not.toBeInTheDocument();
+    expect(screen.queryByText("Disponible", { exact: true })).not.toBeInTheDocument();
+    expect(screen.getByText("Corte filtrado")).toBeVisible();
   });
 
   it("renders budget KPIs, the technical global allocation and hierarchy", async () => {

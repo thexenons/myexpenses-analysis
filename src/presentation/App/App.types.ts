@@ -5,5 +5,6 @@ export interface AppViewProps {
   error: string | null;
   loadPhase: LoadPhase;
   onUnlock: (passphrase: string) => Promise<void>;
+  onReloadVault: () => void;
   unlockBlockedReason: string | null;
 }

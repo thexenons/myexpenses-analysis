@@ -63,6 +63,12 @@ export function createAccountsPageModel(
     from: filtered?.filters.dateRange.from ?? fromCandidates[0] ?? null,
     to: filtered?.filters.dateRange.to ?? toCandidates.at(-1) ?? null,
   };
+  const flowTimeline = filtered === null || metric === "periodClosingBalanceEurMinor"
+    ? [] : aggregateTimeSeries(filtered, granularity);
+  const flowDateRange = {
+    from: filtered?.filters.dateRange.from ?? flowTimeline[0]?.startDate ?? null,
+    to: filtered?.filters.dateRange.to ?? flowTimeline.at(-1)?.endDate ?? null,
+  };
 
   return {
     accountBars: accounts.toSorted((left, right) => Math.abs(right[metric]) - Math.abs(left[metric])).map((account) => ({
@@ -85,7 +91,7 @@ export function createAccountsPageModel(
           dateBasis: filtered.filters.dateBasis,
           periodMode: filtered.filters.periodMode,
         }
-        : { ...filtered.filters, accountIds: [item.account.id] });
+        : { ...filtered.filters, accountIds: [item.account.id], dateRange: flowDateRange });
       let balance = scoped.periodOpeningBalanceEurMinor;
       return {
         id: item.account.id,

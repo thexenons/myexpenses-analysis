@@ -10,14 +10,15 @@ export function BudgetAllocationTable({
   allocations,
   currency,
   fractionDigits,
+  isFilteredComparison = false,
 }: BudgetAllocationTableProps) {
   const rows = useMemo(
     () => flattenBudgetAllocationNodes(allocations),
     [allocations],
   );
   const columns = useMemo(
-    () => createBudgetAllocationColumns(currency, fractionDigits),
-    [currency, fractionDigits],
+    () => createBudgetAllocationColumns(currency, fractionDigits, isFilteredComparison),
+    [currency, fractionDigits, isFilteredComparison],
   );
 
   return (

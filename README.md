@@ -34,6 +34,10 @@ pnpm dev
 En ese modo basta con pulsar «Abrir bóveda» con el campo vacío. Esta excepción
 sólo existe durante `vite dev`: una build de producción rechaza la bóveda vacía
 y exige regenerarla con `pnpm data:encrypt` o mediante el pipeline automatizado.
+`pnpm build` solicita de nuevo la frase para autenticar la bóveda antes de
+construir; en entornos no interactivos, usa `pnpm build -- --passphrase-file
+/ruta/privada/vault.passphrase`. No pases la frase por argumentos ni variables
+de entorno. Consulta el [procedimiento de build](docs/static-authentication.md).
 
 La interfaz ofrece ocho rutas coordinadas por filtros globales:
 
@@ -179,6 +183,10 @@ pnpm type-check
 pnpm lint
 pnpm build
 ```
+
+La build solicita la frase de la bóveda; no usa la frase ni un hash de
+verificación heredados del entorno. Usa un fichero privado con
+`--passphrase-file` para ejecutar esta comprobación sin TTY.
 
 `pnpm test` ejecuta por separado las pruebas de dominio y las pruebas de
 componentes/integración con Vitest, Testing Library y jsdom. Para trabajar en

@@ -41,6 +41,19 @@ test("compares calendar months retaining every non-date filter", () => {
   assert.equal(cash?.deltaPercent, -50, "negative flows use the absolute reference denominator");
 });
 
+test("calendar-month comparison ignores an accounting month start", () => {
+  const filtered = fixture();
+  const shifted = {
+    ...filtered,
+    source: {
+      ...filtered.source,
+      backup: { preferences: { monthStart: 15 } },
+    },
+  } as unknown as typeof filtered;
+  const result = buildPeriodComparison(shifted, { mode: "previousPeriod" });
+  assert.deepEqual(result?.referenceRange, { from: "2025-02-01", to: "2025-02-28" });
+});
+
 test("an ongoing month compares the same elapsed part of the previous calendar month", () => {
   const result = buildPeriodComparison(fixture({ dateRange: { from: "2025-03-01", to: "2025-03-09" } }), { mode: "previousPeriod" });
   assert.deepEqual(result?.referenceRange, { from: "2025-02-01", to: "2025-02-09" });

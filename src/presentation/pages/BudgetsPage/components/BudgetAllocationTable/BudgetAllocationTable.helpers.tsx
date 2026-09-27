@@ -23,6 +23,7 @@ const HEALTH_TONES: Readonly<Record<BudgetAllocationNode["health"], Tone>> = {
 export function createBudgetAllocationColumns(
   currency: string,
   fractionDigits: number,
+  isFilteredComparison = false,
 ): readonly DataTableColumn<BudgetAllocationNode>[] {
   return [
     {
@@ -88,10 +89,10 @@ export function createBudgetAllocationColumns(
     },
     {
       key: "available",
-      header: "Disponible",
+      header: isFilteredComparison ? "Asignado menos corte" : "Disponible",
       align: "end",
       cell: (row) => (
-        <strong className={styles[`${row.health}Amount`]}>
+        <strong className={styles[isFilteredComparison ? "unallocatedAmount" : `${row.health}Amount`]}>
           {formatBudgetMinor(row.availableMinor, currency, fractionDigits)}
         </strong>
       ),
@@ -101,8 +102,8 @@ export function createBudgetAllocationColumns(
       header: "Utilización",
       cell: (row) => (
         <BudgetUtilization
-          health={row.health}
-          label={`Utilización de ${row.path.join(" › ")}`}
+          health={isFilteredComparison ? "unallocated" : row.health}
+          label={`${isFilteredComparison ? "Utilización del corte de" : "Utilización de"} ${row.path.join(" › ")}`}
           utilization={row.utilization}
         />
       ),
@@ -112,8 +113,8 @@ export function createBudgetAllocationColumns(
       header: "Estado",
       align: "center",
       cell: (row) => (
-        <Badge tone={HEALTH_TONES[row.health]}>
-          {row.health === "on-track"
+        <Badge tone={isFilteredComparison ? "info" : HEALTH_TONES[row.health]}>
+          {isFilteredComparison ? "Corte filtrado" : row.health === "on-track"
             ? "En margen"
             : row.health === "watch"
               ? "Vigilancia"

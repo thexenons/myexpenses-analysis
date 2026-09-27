@@ -61,6 +61,12 @@ export function createAppStore(
                 filters: reconcileFilterAccounts(filters, state.analytics),
               };
             }),
+          reloadVault: () => {
+            activeController?.abort();
+            activeController = null;
+            repository.invalidateCachedVault?.();
+            set({ analytics: null, error: null, loadPhase: "locked" });
+          },
           setAccountIds: (accountIds) =>
             set((state) => ({
               filters: reconcileFilterAccounts(

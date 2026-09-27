@@ -255,6 +255,24 @@
   transform: translateY(-1px);
 }
 
+.reload {
+  min-height: 2.75rem;
+  margin-top: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  color: var(--accent-ink);
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.reload:hover {
+  background: var(--paper-deep);
+}
+
 .submit:disabled,
 .visibility:disabled,
 .input:disabled {

@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsx scripts/build-static/cli.ts",
     "lint": "oxlint --jsx-a11y-plugin --vitest-plugin --deny-warnings",
     "preview": "vite preview",
     "data:import-backup": "tsx scripts/import-backup/cli.ts",

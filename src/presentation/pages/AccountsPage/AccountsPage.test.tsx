@@ -36,6 +36,36 @@ const account: AccountBreakdownItem = {
 };
 
 describe("AccountsPageView", () => {
+  it("aligns filtered flow series across disjoint account activity and one-sided dates", () => {
+    const analytics = normalizeDataset({
+      accounts: { version: 2, accounts: { a: { label: "A", type: "DEFAULT" }, b: { label: "B", type: "DEFAULT" } } },
+      categories: { Expenses: { categoryType: "EXPENSE" } },
+      parsedData: [
+        { uuid: "a", label: "A", currency: "EUR", openingBalance: 0, transactions: [
+          { uuid: "jan", date: "2026-01-10", amount: -10, category: ["Expenses"], sourceTransactionUuid: "jan", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+        ] },
+        { uuid: "b", label: "B", currency: "EUR", openingBalance: 0, transactions: [
+          { uuid: "mar", date: "2026-03-10", amount: -20, category: ["Expenses"], sourceTransactionUuid: "mar", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+        ] },
+      ],
+    });
+    const seriesFor = (dateRange: { from: `${number}-${number}-${number}` | null; to: `${number}-${number}-${number}` | null }) =>
+      createAccountsPageModel(applyFilters(analytics, { ...createDefaultFilterState(), dateRange }), vi.fn(), "netEurMinor").accountSeries;
+    const unbounded = seriesFor({ from: null, to: null });
+    expect(unbounded?.find(({ id }) => id === "a")?.data).toEqual([
+      { label: "2026-01", value: -10 }, { label: "2026-02", value: 0 }, { label: "2026-03", value: 0 },
+    ]);
+    expect(unbounded?.find(({ id }) => id === "b")?.data).toEqual([
+      { label: "2026-01", value: 0 }, { label: "2026-02", value: 0 }, { label: "2026-03", value: -20 },
+    ]);
+    expect(seriesFor({ from: "2026-02-01", to: null })?.find(({ id }) => id === "b")?.data).toEqual([
+      { label: "2026-02", value: 0 }, { label: "2026-03", value: -20 },
+    ]);
+    expect(seriesFor({ from: null, to: "2026-02-28" })?.find(({ id }) => id === "a")?.data).toEqual([
+      { label: "2026-01", value: -10 }, { label: "2026-02", value: 0 },
+    ]);
+  });
+
   it("carries every balance over one common range, including accounts without postings", () => {
     const analytics = normalizeDataset({
       accounts: { version: 2, accounts: {
