@@ -19,13 +19,14 @@
     "deploy:sync-pcloud": "tsx scripts/sync-pcloud/main.ts",
     "test": "pnpm test:node && pnpm test:ui",
     "test:deployment": "tsx --test tests/deployment/runtime-pipeline.test.ts",
+    "test:browser": "tsx tests/browser/run-isolated.ts",
     "test:coverage": "pnpm test:node:coverage && pnpm test:ui:coverage",
     "test:node": "tsx --test \"scripts/**/*.test.ts\" \"tests/domain/**/*.test.ts\" \"tests/architecture/**/*.test.ts\"",
     "test:node:coverage": "tsx --test --experimental-test-coverage \"scripts/**/*.test.ts\" \"tests/domain/**/*.test.ts\" \"tests/architecture/**/*.test.ts\"",
     "test:ui": "vitest run",
     "test:ui:coverage": "vitest run --coverage --maxWorkers=1 --testTimeout=60000 --hookTimeout=60000 --coverage.reporter=text --coverage.reporter=json-summary",
     "test:ui:watch": "vitest",
-    "type-check": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.app.json --noEmit"
+    "type-check": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.browser.json --noEmit"
   },
   "dependencies": {
     "@tanstack/react-router": "1.170.39",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@babel/core": "8.0.6",
+    "@playwright/test": "1.63.0",
     "@rolldown/plugin-babel": "0.2.4",
     "@testing-library/dom": "10.4.2",
     "@testing-library/jest-dom": "7.0.1",

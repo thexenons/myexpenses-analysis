@@ -1,4 +1,5 @@
-import { render, screen, within } from "@testing-library/react";
+import { StrictMode } from "react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -49,6 +50,66 @@ function contribution(index: number): BudgetContribution {
 }
 
 describe("BudgetConsumptionDialog", () => {
+  it("ignores a delayed close event from StrictMode effect replay", async () => {
+    Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+      configurable: true,
+      value(this: HTMLDialogElement) { this.open = true; },
+    });
+    Object.defineProperty(HTMLDialogElement.prototype, "close", {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.open = false;
+        setTimeout(() => this.dispatchEvent(new Event("close")), 0);
+      },
+    });
+    const trigger = document.createElement("button");
+    document.body.append(trigger);
+    const onDismiss = vi.fn<() => void>();
+    const { unmount } = render(
+      <StrictMode>
+        <BudgetConsumptionDialog
+          contributions={[contribution(1)]}
+          currency="EUR"
+          dateBasis="operation"
+          fractionDigits={2}
+          onDismiss={onDismiss}
+          title="Gasto neto"
+          trigger={trigger}
+        />
+      </StrictMode>,
+    );
+    await waitFor(() => expect(onDismiss).not.toHaveBeenCalled(), { timeout: 50 });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.getByRole("dialog", { name: "Gasto neto · apuntes" })).toBeVisible();
+    expect(onDismiss).not.toHaveBeenCalled();
+    unmount();
+    trigger.remove();
+  });
+
+  it("dismisses a genuine native close event", () => {
+    installDialogStub();
+    const trigger = document.createElement("button");
+    document.body.append(trigger);
+    const onDismiss = vi.fn<() => void>();
+    const { unmount } = render(
+      <BudgetConsumptionDialog
+        contributions={[]}
+        currency="EUR"
+        dateBasis="operation"
+        fractionDigits={2}
+        onDismiss={onDismiss}
+        title="Gasto neto"
+        trigger={trigger}
+      />,
+    );
+    const dialog = screen.getByRole("dialog");
+    dialog.removeAttribute("open");
+    dialog.dispatchEvent(new Event("close"));
+    expect(onDismiss).toHaveBeenCalledOnce();
+    unmount();
+    trigger.remove();
+  });
+
   it("paginates a large exact set and shows budget and original currency", async () => {
     installDialogStub();
     const user = userEvent.setup();

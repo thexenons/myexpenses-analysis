@@ -52,7 +52,9 @@ export function BudgetConsumptionDialog({
         event.preventDefault();
         onDismiss();
       }}
-      onClose={onDismiss}
+      onClose={() => {
+        if (!dialogRef.current?.open) onDismiss();
+      }}
       ref={dialogRef}
     >
       <header className={styles.header}>
