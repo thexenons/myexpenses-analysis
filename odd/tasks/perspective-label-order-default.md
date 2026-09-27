@@ -1,0 +1,37 @@
+# Perspective label, order, and default
+
+## Outcome and boundaries
+
+Show `Flujo real`, `Yo`, then `Deudas` in the perspective controls, with `Flujo real` selected on a fresh app state and after the existing filter reset. `Yo` is only the visible name of the existing `all` scope. Preserve the `all`/`realCashFlow`/`debtsOnly` identifiers and financial calculations, explicit in-session selections, routing behavior, and current persistence boundary. Do not implement the separate perspective comparison or modify `odd/tasks/perspective-comparison.md`.
+
+## Route and delivery
+
+- Branch: `feat/perspective-views`, based on `4379ddd` (completed audit remediation). Authorized scope is this feature's selector/default behavior, tests, and this document. Route: **delegated direct**, because source and tests span multiple non-trivial files; the parent owns native review, remote delivery, and the later comparison work.
+- Strict TDD: **enabled by repository `AGENTS.md`**. Write failing focused tests first, observe RED, then implement and observe GREEN before refactor. Runner: installed Node 24.21 directly through `node_modules/vitest/vitest.mjs`; no `pnpm`, Corepack, `npx`, installs, network, private data, or unsafe broad Node suite.
+- Forecast: **about 140–230 authored additions + deletions**, including this new task document and regression tests. This is a planning estimate, not a code-size target. Delivery strategy remains `ask-on-risk`; the user already chose **`feature-branch-chain`** ("Acumulados") for the accumulated branch. Keep this one behavior and its tests in one Conventional Commit; the parent decides PR slices, native assessment, push, and merge. No PR is created here.
+
+## Current behavior and intended boundary
+
+- `GlobalFilters` currently presents `Todo`, `Flujo real`, `Deudas`; the drawer presents `Todas`, `Flujo real`, `Solo deudas`. Both use the same scope values. The app store initializes and clears filters from `createDefaultFilterState()` (`all`), while the active-filter badge/chip and drawer-reset availability treat `all` as the baseline.
+- The router has no perspective search parameter; transaction URL search is sorting/pagination only. The app-store persistence layer retains granularity only, not scope. Thus a valid manual perspective remains selected during in-app navigation, but a fresh session uses the new fallback. Do not add URL or persistence features.
+- `createDefaultFilterState()` is also a neutral domain baseline for financial helpers (not only the UI). Keep that domain meaning `all`; set the **application UI** initial/reset perspective to `realCashFlow` without changing domain calculations or the existing valid-scope restoration contract.
+
+## Tasks and acceptance
+
+- [x] **P1 — Map the perspective state boundary.** Confirm both controls, app-store initialization/reset, active-filter affordances, route search, persistence, and neutral financial helper uses before source edits. Route: delegated direct; multi-file preparation trigger. Evidence: CodeGraph plus focused source/test inspection above.
+- [x] **P2 — Rename/order perspectives and change only the UI fallback.** Strict RED → GREEN → REFACTOR observed. Both controls show `Flujo real` first, `Yo` second, and their existing debt option third. A fresh app and `Restablecer` select `realCashFlow`; manual `all`/`debtsOnly` selections survive in-app navigation until explicitly changed or reset. Default scope produces no false active-filter badge/chip/reset availability, while non-default scope remains removable back to `realCashFlow`. Existing financial scope IDs and calculations stay untouched. Focused results and rollback boundary are below.
+- [ ] **P3 — Verify and commit the work unit.** Run focused Vitest then full UI in a safe isolated current-candidate snapshot, both TypeScript configurations, oxlint, and `git diff --check`; report any failed/skipped/deferred check. Inspect staged scope and commit once with tests/documentation and no AI attribution. Parent handles native RDD assessment and delivery. No browser tool is available; manual UI/assistive-technology verification remains a gap.
+
+## Verification and rollback
+
+- Focused command (after test-path confirmation): `node node_modules/vitest/vitest.mjs run src/presentation/components/organisms/GlobalFilters/GlobalFilters.test.tsx src/presentation/components/organisms/FilterDrawer/FilterDrawer.test.tsx src/application/store/app-store/app-store.test.ts src/presentation/App/App.test.tsx`.
+- Full UI: `node node_modules/vitest/vitest.mjs run` in a safe snapshot of tracked/current source and tests, excluding `data/`, `public/`, `.git/`, and all `odd/` artifacts; use only installed package-directory links and isolated HOME/TMPDIR/cache. Full Node and deployment checks may be deferred to combined feature closure because this unit changes UI defaults only; never claim them as passed without running them.
+- Type/lint: `node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit`, `node node_modules/typescript/bin/tsc -p tsconfig.app.json --noEmit`, `node node_modules/oxlint/bin/oxlint --jsx-a11y-plugin --vitest-plugin --deny-warnings`, and `git diff --check`.
+- Rollback boundary: revert only this unit's UI perspective options, application initial/reset scope, baseline badge/chip/reset logic, and their regression tests/document. Preserve the earlier audit commits and the separate comparison backlog. Commit SHA, authored line count, native review outcome, and exact check results are pending.
+
+## Progress
+
+- RED: direct installed-Node focused Vitest command above failed 6/36, with 30 existing tests passing. New regressions covered control order/names, fresh default, reset, active-filter affordances, and manual `Yo` selection across routes without a scope URL parameter.
+- GREEN: same focused command passed 36/36. Two existing assumptions were reconciled: the account-pruning test explicitly selects `all` before testing all-account behavior, and reset expectations now use the application fallback rather than the neutral domain baseline.
+- Full UI: safe isolated current-candidate snapshot `/tmp/myexpenses-perspective-default-safe-5ghazx27` (497 tracked source/test/config files, 31 installed package-directory links; no `data/`, `public/`, `.git/`, or `odd/`; zero byte mismatches) passed 240/240. Both `tsconfig.node.json` and `tsconfig.app.json` typechecks passed; oxlint reported 0 warnings/0 errors. `git diff --check` passed. Full Node/deployment, browser, and assistive-technology checks were not run for this UI-only unit; full Node/deployment are deferred to combined feature closure.
+- Implementation keeps `createDefaultFilterState()` and all financial scope calculations untouched. The app-store-only `DEFAULT_APP_SCOPE` drives initial/reset state and the presentation's badge/chip/reset baseline; valid manual scopes remain unchanged. Rollback is limited to the 11 scoped source/test files plus this task document. Work-unit commit SHA, exact authored lines, and parent native assessment remain pending. Engram full mirror `odd/perspective-label-order-default/tasks` remains pending because `mem_save` returns `unknown_session` despite omitting `session_id`.

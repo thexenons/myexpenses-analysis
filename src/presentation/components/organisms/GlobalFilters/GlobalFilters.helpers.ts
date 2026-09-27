@@ -2,13 +2,14 @@ import type {
   FilterState,
   TimeGranularitySetting,
 } from "../../../../domain/analytics/types"
+import { DEFAULT_APP_SCOPE } from "../../../../application/store/app-store/app-store.helpers.ts"
 
 export function countGlobalFilters(
   filters: FilterState,
   granularity: TimeGranularitySetting,
 ): number {
   let count = 0
-  if (filters.scope !== "all") count += 1
+  if (filters.scope !== DEFAULT_APP_SCOPE) count += 1
   if (filters.dateRange.from !== null || filters.dateRange.to !== null) count += 1
   if (filters.accountIds.length > 0) count += 1
   if ((filters.originAccountIds?.length ?? 0) > 0) count += 1

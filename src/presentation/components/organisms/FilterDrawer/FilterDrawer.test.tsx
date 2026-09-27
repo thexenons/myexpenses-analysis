@@ -44,6 +44,26 @@ function resetAppStore() {
 describe("FilterDrawer", () => {
   beforeEach(resetAppStore)
 
+  it("shows the requested perspective order and resets manual Yo to Flujo real", async () => {
+    const user = userEvent.setup()
+    appStore.setState({ filterDrawerOpen: true })
+    render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
+
+    const perspectives = within(screen.getByRole("group", { name: "Ámbito de las estadísticas" }))
+    expect(perspectives.getAllByRole("radio").map((radio) => radio.getAttribute("value"))).toEqual([
+      "realCashFlow", "all", "debtsOnly",
+    ])
+    expect(perspectives.getByRole("radio", { name: "Flujo real" })).toBeChecked()
+    expect(screen.getByRole("button", { name: "Restablecer" })).toBeDisabled()
+
+    await user.click(perspectives.getByRole("radio", { name: "Yo" }))
+    expect(appStore.getState().filters.scope).toBe("all")
+    expect(screen.getByRole("button", { name: "Restablecer" })).toBeEnabled()
+    await user.click(screen.getByRole("button", { name: "Restablecer" }))
+    expect(appStore.getState().filters.scope).toBe("realCashFlow")
+    expect(screen.getByRole("button", { name: "Restablecer" })).toBeDisabled()
+  })
+
   it("can select and remove uncategorized postings without selecting every category", async () => {
     const user = userEvent.setup()
     const initial = normalizeDataset({
@@ -118,7 +138,7 @@ describe("FilterDrawer", () => {
     await user.click(screen.getByRole("button", { name: "Restablecer" }))
 
     expect(appStore.getState().filters.search).toBe("")
-    expect(appStore.getState().filters.scope).toBe("all")
+    expect(appStore.getState().filters.scope).toBe("realCashFlow")
     expect(appStore.getState().granularity).toBe("auto")
   })
 
@@ -248,7 +268,7 @@ describe("FilterDrawer", () => {
     expect(appStore.getState().filters).toMatchObject({ scope: "debtsOnly", originAccountIds: ["cash"], destinationAccountIds: ["debt"], dateBasis: "value", categoryMatch: "either", categoryDepth: "exact" })
     expect(screen.getByRole("checkbox", { name: "Persona, EUR, Deuda" })).toBeDisabled()
     await user.click(screen.getByRole("button", { name: "Restablecer" }))
-    expect(appStore.getState().filters).toEqual(createDefaultFilterState())
+    expect(appStore.getState().filters).toEqual({ ...createDefaultFilterState(), scope: "realCashFlow" })
   })
 
   it("does not turn the last selected status into all statuses", () => {

@@ -1,4 +1,5 @@
 import { accountMatchesScope } from "../../../../domain/analytics/filters.ts"
+import { DEFAULT_APP_SCOPE } from "../../../../application/store/app-store/app-store.helpers.ts"
 import { formatCategoryPath } from "../../../utils/format.ts"
 import type {
   AnalyticsScope,
@@ -85,7 +86,7 @@ export function hasActiveDrawerFilters(
   granularity: TimeGranularitySetting,
 ): boolean {
   return (
-    filters.scope !== "all" ||
+    filters.scope !== DEFAULT_APP_SCOPE ||
     filters.dateRange.from !== null ||
     filters.dateRange.to !== null ||
     filters.accountIds.length > 0 ||

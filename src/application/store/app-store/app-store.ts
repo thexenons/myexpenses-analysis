@@ -11,6 +11,7 @@ import { unlockAnalytics } from "../../use-cases/unlock-analytics.ts";
 import {
   APP_STORE_STORAGE_NAME,
   APP_STORE_STORAGE_VERSION,
+  DEFAULT_APP_SCOPE,
   VAULT_TRANSPORT_ERROR_MESSAGE,
   VAULT_UNLOCK_ERROR_MESSAGE,
   defaultAppStoreEnvironment,
@@ -37,7 +38,7 @@ export function createAppStore(
     persist(
       (set) => {
         const actions: AppStoreActions = {
-          clearFilters: () => set({ filters: createDefaultFilterState() }),
+          clearFilters: () => set({ filters: { ...createDefaultFilterState(), scope: DEFAULT_APP_SCOPE } }),
           closeFilterDrawer: () => set({ filterDrawerOpen: false }),
           lock: () => {
             activeController?.abort();
@@ -142,7 +143,7 @@ export function createAppStore(
           analytics: null,
           error: null,
           filterDrawerOpen: false,
-          filters: createDefaultFilterState(),
+          filters: { ...createDefaultFilterState(), scope: DEFAULT_APP_SCOPE },
           granularity: "auto",
           loadPhase: "locked",
           unlockBlockedReason: blockedReason,

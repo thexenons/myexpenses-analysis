@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it } from "vitest"
 
@@ -13,6 +13,26 @@ function resetAppStore() {
 
 describe("GlobalFilters", () => {
   beforeEach(resetAppStore)
+
+  it("orders perspectives, defaults to cash flow, and removes a manual Yo selection", async () => {
+    const user = userEvent.setup()
+    render(<AppStoreProvider store={appStore}><GlobalFilters /></AppStoreProvider>)
+
+    const perspectives = within(screen.getByRole("group", { name: "Ámbito de las estadísticas" }))
+    expect(perspectives.getAllByRole("radio").map((radio) => radio.getAttribute("value"))).toEqual([
+      "realCashFlow", "all", "debtsOnly",
+    ])
+    expect(perspectives.getByRole("radio", { name: "Flujo real" })).toBeChecked()
+    expect(perspectives.getByRole("radio", { name: "Yo" })).not.toBeChecked()
+    expect(screen.getByRole("button", { name: "Abrir todos los filtros" })).toBeVisible()
+
+    await user.click(perspectives.getByRole("radio", { name: "Yo" }))
+    expect(appStore.getState().filters.scope).toBe("all")
+    expect(screen.getByRole("button", { name: "Abrir todos los filtros, 1 activo" })).toBeVisible()
+    await user.click(screen.getByRole("button", { name: "Quitar filtro Yo" }))
+    expect(appStore.getState().filters.scope).toBe("realCashFlow")
+    expect(screen.getByRole("button", { name: "Abrir todos los filtros" })).toBeVisible()
+  })
 
   it("updates global search, scope and granularity from accessible controls", async () => {
     const user = userEvent.setup()

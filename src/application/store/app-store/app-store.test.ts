@@ -242,6 +242,9 @@ describe("AppStore", () => {
       load: vi.fn<DatasetRepository["load"]>(),
     };
     const store = createSecureStore(repository);
+    expect(store.getState().filters.scope).toBe("realCashFlow");
+    store.getState().actions.patchFilters({ scope: "all" });
+    expect(store.getState().filters.scope).toBe("all");
 
     store.getState().actions.patchFilters({ search: "mercado" });
     store.getState().actions.setAccountIds(["one", "two"]);
@@ -260,6 +263,7 @@ describe("AppStore", () => {
     expect(store.getState().filterDrawerOpen).toBe(true);
 
     store.getState().actions.clearFilters();
+    expect(store.getState().filters.scope).toBe("realCashFlow");
     expect(store.getState().filters.search).toBe("");
     expect(store.getState().filters).toMatchObject({
       periodMode: "all",
@@ -272,6 +276,7 @@ describe("AppStore", () => {
       load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetFixture()),
     };
     const store = createSecureStore(repository);
+    store.getState().actions.patchFilters({ scope: "all" });
     store.getState().actions.setAccountIds(["account", "debt", "missing"]);
 
     await store.getState().actions.unlock("correcta");
@@ -310,7 +315,7 @@ describe("AppStore", () => {
     await store.persist.rehydrate();
 
     expect(store.getState().filters).toMatchObject({
-      scope: "all",
+      scope: "realCashFlow",
       dateRange: { from: null, to: null },
       accountIds: [],
       statuses: [],

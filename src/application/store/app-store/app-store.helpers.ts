@@ -3,6 +3,7 @@ import {
 } from "../../../domain/analytics/filters.ts";
 import type {
   AnalyticsDataset,
+  AnalyticsScope,
   FilterState,
   TimeGranularitySetting,
 } from "../../../domain/analytics/types.ts";
@@ -11,6 +12,7 @@ import type { AppStoreEnvironment } from "./app-store.types.ts";
 
 export const APP_STORE_STORAGE_NAME = "myexpenses-analysis:ui:v1";
 export const APP_STORE_STORAGE_VERSION = 5;
+export const DEFAULT_APP_SCOPE: AnalyticsScope = "realCashFlow";
 export const VAULT_UNLOCK_ERROR_MESSAGE =
   "No se pudo abrir la bóveda. Comprueba la frase e inténtalo de nuevo.";
 export const VAULT_TRANSPORT_ERROR_MESSAGE =

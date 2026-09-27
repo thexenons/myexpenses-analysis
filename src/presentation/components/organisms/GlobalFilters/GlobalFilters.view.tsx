@@ -12,8 +12,8 @@ import styles from "./GlobalFilters.module.css"
 import type { GlobalFiltersViewProps } from "./GlobalFilters.types"
 
 const SCOPE_OPTIONS: readonly SegmentedControlOption<AnalyticsScope>[] = [
-  { value: "all", label: "Todo" },
   { value: "realCashFlow", label: "Flujo real", shortLabel: "Real" },
+  { value: "all", label: "Yo" },
   { value: "debtsOnly", label: "Deudas" },
 ]
 

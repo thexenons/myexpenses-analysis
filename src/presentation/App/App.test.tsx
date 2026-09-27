@@ -2,7 +2,7 @@ import {
   createMemoryHistory,
   RouterProvider,
 } from "@tanstack/react-router";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -126,6 +126,28 @@ describe("App integration", () => {
     expect(appStore.getState().analytics).toBeNull();
     expect(fetchMock).toHaveBeenCalledOnce();
   }, 60_000);
+
+  it("keeps an explicit Yo perspective while navigating without a scope URL parameter", async () => {
+    installAppFetchMock();
+    const user = userEvent.setup();
+    const { router } = renderAppAt();
+    await waitForRouterReady(router, "/resumen");
+    await unlockApp(user);
+    await screen.findByRole("heading", { name: "Resumen general" });
+
+    const perspectives = within(screen.getByRole("group", { name: "Ámbito de las estadísticas" }));
+    expect(perspectives.getByRole("radio", { name: "Flujo real" })).toBeChecked();
+    await user.click(perspectives.getByRole("radio", { name: "Yo" }));
+    expect(appStore.getState().filters.scope).toBe("all");
+
+    await user.click(screen.getByRole("link", { name: "Transacciones" }));
+    await waitForRouterReady(router, "/transacciones");
+    expect(perspectives.getByRole("radio", { name: "Yo" })).toBeChecked();
+    expect(router.state.location.searchStr).not.toContain("scope");
+    await user.click(screen.getByRole("link", { name: "Resumen" }));
+    await waitForRouterReady(router, "/resumen");
+    expect(appStore.getState().filters.scope).toBe("all");
+  });
 
   it("applies a global search to statistics and transaction data", async () => {
     installAppFetchMock();

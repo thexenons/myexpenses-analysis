@@ -19,8 +19,8 @@ import styles from "./FilterDrawer.module.css"
 import type { FilterDrawerViewProps } from "./FilterDrawer.types"
 
 const SCOPE_OPTIONS: readonly SegmentedControlOption<AnalyticsScope>[] = [
-  { value: "all", label: "Todas" },
   { value: "realCashFlow", label: "Flujo real", shortLabel: "Real" },
+  { value: "all", label: "Yo" },
   { value: "debtsOnly", label: "Solo deudas", shortLabel: "Deudas" },
 ]
 

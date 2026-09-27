@@ -1,4 +1,5 @@
 import { useAppStore } from "../../../../providers/AppStoreProvider/index.ts"
+import { DEFAULT_APP_SCOPE } from "../../../../../application/store/app-store/app-store.helpers.ts"
 import { formatCategoryPath } from "../../../../utils/format.ts"
 import { countGlobalFilters } from "../GlobalFilters.helpers"
 import type { GlobalFiltersViewProps } from "../GlobalFilters.types"
@@ -20,7 +21,7 @@ export function useGlobalFilters(): GlobalFiltersViewProps {
   for (const path of filters.categoryPrefixes) {
     activeSelections.push({ id: `category:${JSON.stringify(path)}`, label: formatCategoryPath(path), onRemove: () => patchFilters({ categoryPrefixes: filters.categoryPrefixes.filter((candidate) => candidate !== path) }) })
   }
-  if (filters.scope !== "all") activeSelections.push({ id: "scope", label: filters.scope === "realCashFlow" ? "Flujo real" : "Solo deudas", onRemove: () => patchFilters({ scope: "all" }) })
+  if (filters.scope !== DEFAULT_APP_SCOPE) activeSelections.push({ id: "scope", label: filters.scope === "all" ? "Yo" : "Solo deudas", onRemove: () => patchFilters({ scope: DEFAULT_APP_SCOPE }) })
   if (filters.dateRange.from !== null || filters.dateRange.to !== null) activeSelections.push({ id: "dates", label: `${filters.dateRange.from ?? "Inicio"} → ${filters.dateRange.to ?? "Fin"}`, onRemove: () => patchFilters({ dateRange: { from: null, to: null }, periodMode: "all" }) })
   if (filters.dateBasis === "value") activeSelections.push({ id: "dateBasis", label: "Fecha valor", onRemove: () => patchFilters({ dateBasis: "operation" }) })
   if (filters.categoryMatch === "either") activeSelections.push({ id: "categoryMatch", label: "Categoría de ambas partes", onRemove: () => patchFilters({ categoryMatch: "posting" }) })
