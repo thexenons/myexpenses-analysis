@@ -47,6 +47,7 @@ export function createAppStore(
               analytics: null,
               error: null,
               filterDrawerOpen: false,
+              filters: { ...createDefaultFilterState(), scope: DEFAULT_APP_SCOPE },
               loadPhase: "locked",
             });
           },

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BackupDatasetV1 } from "../../../domain/analytics/backup-dataset.types.ts";
+import { createDefaultFilterState } from "../../../domain/analytics/filters.ts";
 import {
   DatasetTransportError,
   type DatasetRepository,
@@ -338,6 +339,7 @@ describe("AppStore", () => {
     const store = createSecureStore({
       load: vi.fn<DatasetRepository["load"]>(),
     });
+    const urlBefore = window.location.href;
 
     store.getState().actions.patchFilters({
       accountIds: ["private-account"],
@@ -345,15 +347,29 @@ describe("AppStore", () => {
       dateRange: { from: "2026-01-01", to: "2026-01-31" },
       search: "diagnóstico privado",
       tags: ["confidencial"],
+      payeeKeys: ["legacy:private-payee"],
+      paymentMethodKeys: ["legacy:private-method"],
+      commentSearch: "private-comment",
+      referenceSearch: "private-reference",
     });
     store.getState().actions.setGranularity("week");
 
     const persisted = window.localStorage.getItem(APP_STORE_STORAGE_NAME) ?? "";
     expect(persisted).toContain('"granularity":"week"');
     expect(persisted).not.toMatch(
-      /private-account|Salud|Tratamiento|2026-01|diagnóstico|confidencial/u,
+      /private-account|Salud|Tratamiento|2026-01|diagnóstico|confidencial|private-payee|private-method|private-comment|private-reference/u,
     );
     expect(persisted).not.toContain("filters");
+    expect(window.location.href).toBe(urlBefore);
+  });
+
+  it("clears in-memory financial criteria on lock while keeping granularity", () => {
+    const store = createSecureStore({ load: vi.fn<DatasetRepository["load"]>() });
+    store.getState().actions.patchFilters({ search: "private", payeeKeys: ["legacy:private"], minAmountEurMinor: 0 });
+    store.getState().actions.setGranularity("week");
+    store.getState().actions.lock();
+    expect(store.getState().filters).toEqual({ ...createDefaultFilterState(), scope: "realCashFlow" });
+    expect(store.getState().granularity).toBe("week");
   });
 
   it("lock aborts work and removes analytics and errors", async () => {

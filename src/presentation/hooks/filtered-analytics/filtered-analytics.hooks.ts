@@ -10,6 +10,8 @@ export function useFilteredAnalytics() {
   const filters = useAppStore((state) => state.filters);
   const granularitySetting = useAppStore((state) => state.granularity);
   const deferredSearch = useDeferredValue(filters.search);
+  const deferredCommentSearch = useDeferredValue(filters.commentSearch);
+  const deferredReferenceSearch = useDeferredValue(filters.referenceSearch);
   const deferredFilters = useMemo(
     () => ({
       accountIds: filters.accountIds,
@@ -26,9 +28,19 @@ export function useFilteredAnalytics() {
       search: deferredSearch,
       statuses: filters.statuses,
       tags: filters.tags,
+      payeeKeys: filters.payeeKeys,
+      paymentMethodKeys: filters.paymentMethodKeys,
+      categoryTypes: filters.categoryTypes,
+      currencies: filters.currencies,
+      minAmountEurMinor: filters.minAmountEurMinor,
+      maxAmountEurMinor: filters.maxAmountEurMinor,
+      commentSearch: deferredCommentSearch,
+      referenceSearch: deferredReferenceSearch,
     }),
     [
       deferredSearch,
+      deferredCommentSearch,
+      deferredReferenceSearch,
       filters.accountIds,
       filters.originAccountIds,
       filters.destinationAccountIds,
@@ -42,6 +54,12 @@ export function useFilteredAnalytics() {
       filters.scope,
       filters.statuses,
       filters.tags,
+      filters.payeeKeys,
+      filters.paymentMethodKeys,
+      filters.categoryTypes,
+      filters.currencies,
+      filters.minAmountEurMinor,
+      filters.maxAmountEurMinor,
     ],
   );
   const filtered = useMemo(
@@ -63,6 +81,6 @@ export function useFilteredAnalytics() {
     filters,
     granularity,
     granularitySetting,
-    searchPending: filters.search !== deferredSearch,
+    searchPending: filters.search !== deferredSearch || filters.commentSearch !== deferredCommentSearch || filters.referenceSearch !== deferredReferenceSearch,
   };
 }

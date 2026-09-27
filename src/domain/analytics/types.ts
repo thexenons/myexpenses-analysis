@@ -262,6 +262,15 @@ export interface FilterState {
   readonly tags: readonly string[];
   readonly search: string;
   readonly linked: LinkedFilter;
+  readonly payeeKeys?: readonly string[];
+  readonly paymentMethodKeys?: readonly string[];
+  readonly categoryTypes?: readonly CategoryType[];
+  readonly currencies?: readonly CurrencyCode[];
+  /** Inclusive absolute magnitude in base EUR cents. */
+  readonly minAmountEurMinor?: number | null;
+  readonly maxAmountEurMinor?: number | null;
+  readonly commentSearch?: string;
+  readonly referenceSearch?: string;
 }
 
 export interface FilteredAnalyticsDataset {

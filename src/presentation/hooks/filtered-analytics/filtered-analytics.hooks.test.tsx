@@ -94,6 +94,22 @@ describe("useFilteredAnalytics", () => {
     expect(applyFiltersSpy.mock.calls[0]?.[1].search).toBe("mercado");
   });
 
+  it("projects every new facet into the deferred analytics calculation", async () => {
+    const store = createAppStore({ load: vi.fn<DatasetRepository["load"]>() }, window.localStorage);
+    store.setState({ analytics: EMPTY_ANALYTICS, loadPhase: "ready" });
+    render(<AppStoreProvider store={store}><FilteredAnalyticsProbe /></AppStoreProvider>);
+    applyFiltersSpy.mockClear();
+    const facets = {
+      payeeKeys: ['["source",1]'], paymentMethodKeys: ['["missing"]'],
+      categoryTypes: ["NEUTRAL" as const], currencies: ["GBP" as const],
+      minAmountEurMinor: 0, maxAmountEurMinor: 500,
+      commentSearch: "café", referenceSearch: "ref",
+    };
+    act(() => store.getState().actions.patchFilters(facets));
+    await waitFor(() => expect(applyFiltersSpy).toHaveBeenCalled());
+    expect(applyFiltersSpy.mock.lastCall?.[1]).toMatchObject(facets);
+  });
+
   it("resolves automatic granularity before page models consume it", () => {
     const store = createAppStore(
       { load: vi.fn<DatasetRepository["load"]>() },

@@ -1,8 +1,14 @@
 import { assertIsoDate, normalizeSearchText } from "./validation.ts";
 import { resolvePostingAccounts } from "./transfer-relations.ts";
+import {
+  isPostingIdentityKey,
+  payeeIdentityKey,
+  paymentMethodIdentityKey,
+} from "./identity-keys.ts";
 import type {
   AnalyticsScope,
   AnalyticsDataset,
+  CategoryType,
   DatePeriodMode,
   FilteredAnalyticsDataset,
   FilterState,
@@ -18,6 +24,9 @@ const VALID_STATUSES = new Set<TransactionStatus>([
   "CLEARED",
   "RECONCILED",
   "VOID",
+]);
+const VALID_CATEGORY_TYPES = new Set<CategoryType>([
+  "EXPENSE", "INCOME", "TRANSFER", "NEUTRAL",
 ]);
 
 const VALID_SCOPES = new Set<AnalyticsScope>([
@@ -57,7 +66,27 @@ export function createDefaultFilterState(): FilterState {
     tags: [],
     search: "",
     linked: "all",
+    payeeKeys: [],
+    paymentMethodKeys: [],
+    categoryTypes: [],
+    currencies: [],
+    minAmountEurMinor: null,
+    maxAmountEurMinor: null,
+    commentSearch: "",
+    referenceSearch: "",
   };
+}
+
+export type AmountRangeError = "invalidMinimum" | "invalidMaximum" | "reversed";
+
+/** UI and domain share the same inclusive absolute-EUR-cent boundary rule. */
+export function validateAmountRange(min: unknown, max: unknown): AmountRangeError | null {
+  const validBound = (value: unknown) => value === undefined || value === null ||
+    (Number.isSafeInteger(value) && (value as number) >= 0);
+  if (!validBound(min)) return "invalidMinimum";
+  if (!validBound(max)) return "invalidMaximum";
+  if (typeof min === "number" && typeof max === "number" && min > max) return "reversed";
+  return null;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -96,6 +125,46 @@ function restoreStringList(value: unknown): readonly string[] {
   return Array.isArray(value)
     ? [...new Set(value.filter(isNonEmptyString))]
     : [];
+}
+
+function restoreIdentityList(value: unknown): readonly string[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || !value.every(isPostingIdentityKey)) {
+    throw new Error("Invalid posting identity selection");
+  }
+  return [...new Set(value)];
+}
+
+function restoreCategoryTypes(value: unknown): readonly CategoryType[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || !value.every((candidate) => VALID_CATEGORY_TYPES.has(candidate))) {
+    throw new Error("Invalid category type selection");
+  }
+  return [...new Set(value as CategoryType[])];
+}
+
+function restoreCurrencies(value: unknown): readonly Uppercase<string>[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || !value.every((candidate) =>
+    typeof candidate === "string" && candidate.length > 0 && candidate === candidate.toUpperCase()
+  )) {
+    throw new Error("Invalid currency selection");
+  }
+  return [...new Set(value as Uppercase<string>[])];
+}
+
+function restoreAmount(value: unknown, context: string): number | null {
+  if (value === undefined || value === null) return null;
+  if (validateAmountRange(value, null) !== null) {
+    throw new Error(`${context}: invalid amount in EUR cents`);
+  }
+  return value as number;
+}
+
+function restoreText(value: unknown, context: string): string {
+  if (value === undefined) return "";
+  if (typeof value !== "string") throw new Error(`${context}: invalid search text`);
+  return value.trim();
 }
 
 function restoreCategoryPath(value: unknown): readonly string[] | null {
@@ -150,6 +219,10 @@ export function restoreFilterState(value: unknown): FilterState {
 
   const categoryPrefixes = restoreCategoryPrefixes(value.categoryPrefixes);
   const legacyCategoryPrefix = restoreCategoryPath(value.categoryPrefix);
+  const minAmountEurMinor = restoreAmount(value.minAmountEurMinor, "Minimum");
+  const maxAmountEurMinor = restoreAmount(value.maxAmountEurMinor, "Maximum");
+  const amountError = validateAmountRange(minAmountEurMinor, maxAmountEurMinor);
+  if (amountError !== null) throw new Error(`Invalid amount range: ${amountError}`);
   return {
     scope: isAnalyticsScope(value.scope) ? value.scope : "all",
     periodMode: isDatePeriodMode(value.periodMode)
@@ -174,6 +247,14 @@ export function restoreFilterState(value: unknown): FilterState {
     tags: restoreStringList(value.tags),
     search: typeof value.search === "string" ? value.search.trim() : "",
     linked: isLinkedFilter(value.linked) ? value.linked : "all",
+    payeeKeys: restoreIdentityList(value.payeeKeys),
+    paymentMethodKeys: restoreIdentityList(value.paymentMethodKeys),
+    categoryTypes: restoreCategoryTypes(value.categoryTypes),
+    currencies: restoreCurrencies(value.currencies),
+    minAmountEurMinor,
+    maxAmountEurMinor,
+    commentSearch: restoreText(value.commentSearch, "Comment"),
+    referenceSearch: restoreText(value.referenceSearch, "Reference"),
   };
 }
 
@@ -250,6 +331,32 @@ function snapshotFilters(filters: FilterState): FilterState {
     throw new Error("Unknown category depth");
   }
   validateStringList(filters.tags, "tags");
+  validateStringList(filters.payeeKeys ?? [], "payeeKeys");
+  validateStringList(filters.paymentMethodKeys ?? [], "paymentMethodKeys");
+  for (const key of [...(filters.payeeKeys ?? []), ...(filters.paymentMethodKeys ?? [])]) {
+    if (!isPostingIdentityKey(key)) {
+      throw new Error(`Invalid posting identity key ${JSON.stringify(key)}`);
+    }
+  }
+  for (const categoryType of filters.categoryTypes ?? []) {
+    if (!VALID_CATEGORY_TYPES.has(categoryType)) {
+      throw new Error(`Unknown category type ${JSON.stringify(categoryType)}`);
+    }
+  }
+  validateStringList(filters.currencies ?? [], "currencies");
+  for (const currency of filters.currencies ?? []) {
+    if (currency !== currency.toUpperCase()) {
+      throw new Error(`Invalid currency ${JSON.stringify(currency)}`);
+    }
+  }
+  const amountError = validateAmountRange(filters.minAmountEurMinor, filters.maxAmountEurMinor);
+  if (amountError !== null) throw new Error(`Invalid amount range: ${amountError}`);
+  if (filters.commentSearch !== undefined && typeof filters.commentSearch !== "string") {
+    throw new Error("Invalid comment search");
+  }
+  if (filters.referenceSearch !== undefined && typeof filters.referenceSearch !== "string") {
+    throw new Error("Invalid reference search");
+  }
   for (const status of filters.statuses) {
     if (!VALID_STATUSES.has(status)) {
       throw new Error(`Unknown transaction status ${JSON.stringify(status)}`);
@@ -271,6 +378,14 @@ function snapshotFilters(filters: FilterState): FilterState {
     tags: [...new Set(filters.tags)],
     search: filters.search.trim(),
     linked: filters.linked,
+    payeeKeys: [...new Set(filters.payeeKeys ?? [])],
+    paymentMethodKeys: [...new Set(filters.paymentMethodKeys ?? [])],
+    categoryTypes: [...new Set(filters.categoryTypes ?? [])],
+    currencies: [...new Set(filters.currencies ?? [])],
+    minAmountEurMinor: filters.minAmountEurMinor ?? null,
+    maxAmountEurMinor: filters.maxAmountEurMinor ?? null,
+    commentSearch: (filters.commentSearch ?? "").trim(),
+    referenceSearch: (filters.referenceSearch ?? "").trim(),
   };
 }
 
@@ -344,6 +459,17 @@ interface MatcherState {
   readonly searchTokens: readonly string[];
   readonly statuses: ReadonlySet<TransactionStatus>;
   readonly tags: ReadonlySet<string>;
+  readonly payeeKeys: ReadonlySet<string>;
+  readonly paymentMethodKeys: ReadonlySet<string>;
+  readonly categoryTypes: ReadonlySet<CategoryType>;
+  readonly currencies: ReadonlySet<string>;
+  readonly commentTokens: readonly string[];
+  readonly referenceTokens: readonly string[];
+}
+
+function searchTokens(value: string): readonly string[] {
+  const normalized = normalizeSearchText(value);
+  return normalized === "" ? [] : normalized.split(" ");
 }
 
 function createMatcherState(
@@ -358,6 +484,12 @@ function createMatcherState(
     searchTokens: search === "" ? [] : search.split(" "),
     statuses: new Set(filters.statuses),
     tags: new Set(filters.tags),
+    payeeKeys: new Set(filters.payeeKeys ?? []),
+    paymentMethodKeys: new Set(filters.paymentMethodKeys ?? []),
+    categoryTypes: new Set(filters.categoryTypes ?? []),
+    currencies: new Set(filters.currencies ?? []),
+    commentTokens: searchTokens(filters.commentSearch ?? ""),
+    referenceTokens: searchTokens(filters.referenceSearch ?? ""),
   };
 }
 
@@ -372,6 +504,21 @@ function matchesPostingWithoutDate(
   }
   if (matcher.statuses.size > 0 && !matcher.statuses.has(posting.status)) {
     return false;
+  }
+  if (matcher.payeeKeys.size > 0 && !matcher.payeeKeys.has(payeeIdentityKey(posting))) return false;
+  if (matcher.paymentMethodKeys.size > 0 && !matcher.paymentMethodKeys.has(paymentMethodIdentityKey(posting))) return false;
+  if (matcher.categoryTypes.size > 0 && !matcher.categoryTypes.has(posting.categoryType)) return false;
+  if (matcher.currencies.size > 0 && !matcher.currencies.has(posting.currency)) return false;
+  const magnitude = Math.abs(posting.amountEurMinor);
+  if (filters.minAmountEurMinor != null && magnitude < filters.minAmountEurMinor) return false;
+  if (filters.maxAmountEurMinor != null && magnitude > filters.maxAmountEurMinor) return false;
+  if (matcher.commentTokens.length > 0) {
+    const comment = normalizeSearchText([posting.comment ?? "", posting.parent?.comment ?? ""].join(" "));
+    if (!matcher.commentTokens.every((token) => comment.includes(token))) return false;
+  }
+  if (matcher.referenceTokens.length > 0) {
+    const reference = normalizeSearchText(posting.referenceNumber ?? "");
+    if (!matcher.referenceTokens.every((token) => reference.includes(token))) return false;
   }
   const relation = matcher.originIds.size > 0 || matcher.destinationIds.size > 0 || filters.categoryMatch === "either"
     ? resolvePostingAccounts(posting, dataset)
