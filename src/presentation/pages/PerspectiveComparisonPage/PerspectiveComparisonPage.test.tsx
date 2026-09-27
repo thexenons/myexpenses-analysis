@@ -76,7 +76,7 @@ describe("perspective comparison", () => {
       ...createDefaultFilterState(),
       dateRange: { from: "2027-01-01", to: "2027-01-31" },
     });
-    render(<PerspectiveComparisonPageView rows={rows} searchPending={false} />);
+    render(<PerspectiveComparisonPageView categories={[]} rows={rows} searchPending={false} />);
     expect(screen.getByRole("heading", { level: 1, name: "Comparativa de perspectivas" })).toBeVisible();
     expect(screen.getByText(/No hay movimientos en el periodo/)).toBeVisible();
     const table = screen.getByRole("table", { name: /Comparación de movimientos/ });
@@ -92,7 +92,7 @@ describe("perspective comparison", () => {
     const rows = createPerspectiveComparisonModel(dataset, {
       ...createDefaultFilterState(), scope: "all",
     });
-    render(<PerspectiveComparisonPageView rows={rows} searchPending={false} />);
+    render(<PerspectiveComparisonPageView categories={[]} rows={rows} searchPending={false} />);
     expect(screen.queryByText(/No hay movimientos en el periodo/)).not.toBeInTheDocument();
     const table = screen.getByRole("table", { name: /Comparación de movimientos/ });
     const netRow = within(table).getByRole("row", { name: /Movimiento neto/ });
