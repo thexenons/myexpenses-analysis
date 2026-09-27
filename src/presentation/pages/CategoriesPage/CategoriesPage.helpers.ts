@@ -2,6 +2,8 @@ import {
   aggregateCategoryBreakdown,
   aggregateTimeSeries,
 } from "../../../domain/analytics/aggregations.ts";
+import { aggregateCategoryPeriodAverages } from "../../../domain/analytics/category-period-average.ts";
+import { isoDateInTimeZone } from "../../../domain/analytics/date-periods.ts";
 import {
   applyFilters,
   categoryPathsEqual,
@@ -11,6 +13,7 @@ import type {
   CategoryBreakdownNode,
   FilteredAnalyticsDataset,
   FilterState,
+  IsoDate,
   NormalizedPosting,
   TimeGranularity,
 } from "../../../domain/analytics/types.ts";
@@ -82,14 +85,15 @@ export function createCategoriesPageModel(
   onViewCategory?: (id: string) => void,
   onViewTransactions?: () => void,
   onViewPeriod?: (label: string) => void,
+  today: IsoDate = isoDateInTimeZone(new Date(), analytics.backup?.preferences.timeZone ?? "Europe/Madrid"),
 ): CategoriesPageViewProps {
   const categories = aggregateCategoryBreakdown(filtered);
-  const visibleCategories = aggregateCategoryBreakdown(
-    applyFilters(analytics, {
-      ...filtered.filters,
-      categoryPrefixes: [],
-    }),
-  );
+  const visibleFiltered = applyFilters(analytics, {
+    ...filtered.filters,
+    categoryPrefixes: [],
+  });
+  const visibleCategories = aggregateCategoryBreakdown(visibleFiltered);
+  const categoryAverages = aggregateCategoryPeriodAverages(visibleFiltered, granularity, today);
   const flattenedCategories = flattenCategories(visibleCategories);
   const selectedCategories = flattenedCategories.filter((category) =>
     categoryPrefixes.some((path) => categoryPathsEqual(category.path, path)),
@@ -128,6 +132,9 @@ export function createCategoriesPageModel(
       color: categoryColor(category),
     })),
     categoryCount: flattenedCategories.length,
+    categoryAverageEurMinorById: categoryAverages.averageEurMinorByCategoryId,
+    completedPeriodCount: categoryAverages.completedPeriodCount,
+    averageUnit: granularity,
     categorySeries: comparisonCategories.map((category) => {
       // Partition the already filtered postings. Reapplying only this category
       // would broaden an exact-path or counterpart-category selection.

@@ -1,6 +1,6 @@
 import type { ChartBarDatum } from "../../components/organisms/HorizontalBarChart/index.ts";
 import type { ChartSeries } from "../../components/organisms/LineChart/index.ts";
-import type { CategoryBreakdownNode } from "../../../domain/analytics/types.ts";
+import type { CategoryBreakdownNode, TimeGranularity } from "../../../domain/analytics/types.ts";
 
 export type CategoryMetric = "netEurMinor" | "expensesEurMinor" | "incomesEurMinor" | "realCashFlowEurMinor" | "debtFlowEurMinor";
 export type CategoryLevel = "roots" | "direct";
@@ -15,8 +15,11 @@ export interface CategoriesPageViewProps {
   readonly activityEurMinor: number;
   readonly categoryBars: readonly ChartBarDatum[];
   readonly categoryCount: number;
+  readonly categoryAverageEurMinorById: ReadonlyMap<string, number>;
   readonly categorySeries: readonly ChartSeries[];
   readonly categoryTree: readonly CategoryBreakdownNode[];
+  readonly completedPeriodCount: number;
+  readonly averageUnit: TimeGranularity;
   readonly directPostingCount: number;
   readonly expenseEurMinor: number;
   readonly chartOptions?: CategoryChartOptions;

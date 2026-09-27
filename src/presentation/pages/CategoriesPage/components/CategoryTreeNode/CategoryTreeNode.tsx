@@ -13,8 +13,13 @@ import styles from "./CategoryTreeNode.module.css";
 import type { CategoryTreeNodeProps } from "./CategoryTreeNode.types.ts";
 import { useCategoryTreeNode } from "./hooks/CategoryTreeNode.hooks.ts";
 
+const UNIT_LABELS = { day: "día", week: "semana", month: "mes", year: "año" } as const;
+
 export function CategoryTreeNode({
   category,
+  averageEurMinorByCategoryId,
+  averageUnit,
+  completedPeriodCount,
   depth,
   onToggleCategory,
   selectedCategoryIds,
@@ -27,6 +32,9 @@ export function CategoryTreeNode({
     selected,
   } = useCategoryTreeNode({ category, depth, selectedCategoryIds });
   const pathLabel = formatCategoryPath(category.path);
+  const averageEurMinor = completedPeriodCount === 0
+    ? null
+    : averageEurMinorByCategoryId.get(category.id) ?? 0;
 
   return (
     <li className={styles.node}>
@@ -69,7 +77,12 @@ export function CategoryTreeNode({
         </span>
 
         <span className={styles.amount}>
-          {formatEuroMinor(category.summary.netEurMinor)}
+          <span>{formatEuroMinor(category.summary.netEurMinor)}</span>
+          <span className={styles.average}>
+            {averageEurMinor === null
+              ? "Sin períodos completos"
+              : `Promedio: ${formatEuroMinor(averageEurMinor)}/${UNIT_LABELS[averageUnit]}`}
+          </span>
         </span>
       </div>
 
@@ -78,6 +91,9 @@ export function CategoryTreeNode({
           {category.children.map((child) => (
             <CategoryTreeNode
               category={child}
+              averageEurMinorByCategoryId={averageEurMinorByCategoryId}
+              averageUnit={averageUnit}
+              completedPeriodCount={completedPeriodCount}
               depth={depth + 1}
               key={child.id}
               onToggleCategory={onToggleCategory}

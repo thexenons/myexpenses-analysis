@@ -40,10 +40,13 @@ describe("CategoriesPageView", () => {
     render(
       <CategoriesPageView
         activityEurMinor={-2_500}
+        averageUnit="month"
+        categoryAverageEurMinorById={new Map([[category.id, -2_500]])}
         categoryBars={[]}
         categoryCount={1}
         categorySeries={[]}
         categoryTree={[category]}
+        completedPeriodCount={1}
         directPostingCount={4}
         expenseEurMinor={2_500}
         onClearCategory={onClearCategory}
@@ -71,6 +74,73 @@ describe("CategoriesPageView", () => {
 });
 
 describe("createCategoriesPageModel", () => {
+  it("shows a completed-month average beside unchanged parent and child totals", () => {
+    const analytics = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+      categories: { Gastos: { categoryType: "EXPENSE", children: { Comida: { categoryType: "EXPENSE" } } } },
+      parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "annual", date: "2025-01-10", amount: -1200, category: ["Gastos", "Comida"], sourceTransactionUuid: "annual", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+      ] }],
+    });
+    const filters = { ...createDefaultFilterState(), dateRange: { from: "2025-01-01" as const, to: "2025-12-31" as const } };
+    const model = createCategoriesPageModel(analytics, applyFilters(analytics, filters), [], "month", vi.fn(), vi.fn(), undefined, undefined, undefined, undefined, undefined, "2026-09-27");
+
+    expect(model.completedPeriodCount).toBe(12);
+    expect(model.categoryTree[0]?.summary.netEurMinor).toBe(-120_000);
+    expect(model.categoryAverageEurMinorById.get('["Gastos","Comida"]')).toBe(-10_000);
+    render(<CategoriesPageView {...model} />);
+    expect(screen.getAllByText(/Promedio:.*100,00.*mes/)).toHaveLength(2);
+    expect(screen.getAllByText(/-1200,00/).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("shows no-complete-period state instead of zero while retaining the current-day total", () => {
+    const analytics = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+      categories: { Gastos: { categoryType: "EXPENSE" } },
+      parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "today", date: "2026-09-27", amount: -50, category: ["Gastos"], sourceTransactionUuid: "today", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+      ] }],
+    });
+    const filters = { ...createDefaultFilterState(), dateRange: { from: "2026-09-27" as const, to: "2026-09-27" as const } };
+    const model = createCategoriesPageModel(analytics, applyFilters(analytics, filters), [], "day", vi.fn(), vi.fn(), undefined, undefined, undefined, undefined, undefined, "2026-09-27");
+
+    expect(model.completedPeriodCount).toBe(0);
+    expect(model.categoryTree[0]?.summary.netEurMinor).toBe(-5_000);
+    render(<CategoriesPageView {...model} />);
+    expect(screen.getByText("Sin períodos completos")).toBeVisible();
+    expect(screen.getAllByText(/50,00/).length).toBeGreaterThan(0);
+  });
+
+  it("recalculates with date/granularity while preserving the tree's broader category scope", () => {
+    const analytics = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+      categories: { Gastos: { categoryType: "EXPENSE", children: { Comida: { categoryType: "EXPENSE" }, Casa: { categoryType: "EXPENSE" } } } },
+      parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "food", date: "2025-01-10", amount: -120, category: ["Gastos", "Comida"], sourceTransactionUuid: "food", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+        { uuid: "home", date: "2025-02-10", amount: -240, category: ["Gastos", "Casa"], sourceTransactionUuid: "home", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+      ] }],
+    });
+    const base = createDefaultFilterState();
+    const selection = [["Gastos", "Comida"]];
+    const modelFor = (from: "2025-01-01" | "2025-02-01", granularity: "month" | "year") => {
+      const filters = { ...base, categoryPrefixes: selection, dateRange: { from, to: "2025-12-31" as const } };
+      return createCategoriesPageModel(analytics, applyFilters(analytics, filters), selection, granularity, vi.fn(), vi.fn(), undefined, undefined, undefined, undefined, undefined, "2026-09-27");
+    };
+    const monthly = modelFor("2025-01-01", "month");
+    expect(monthly.categoryBars[0]?.value).toBe(-120);
+    expect(monthly.categoryTree[0]?.summary.netEurMinor).toBe(-36_000);
+    expect(monthly.categoryAverageEurMinorById.get('["Gastos","Comida"]')).toBe(-1_000);
+    expect(monthly.categoryAverageEurMinorById.get('["Gastos","Casa"]')).toBe(-2_000);
+
+    const later = modelFor("2025-02-01", "month");
+    expect(later.completedPeriodCount).toBe(11);
+    expect(later.categoryTree[0]?.summary.netEurMinor).toBe(-24_000);
+    expect(later.categoryAverageEurMinorById.get('["Gastos","Casa"]')).toBe(-24_000 / 11);
+    const yearly = modelFor("2025-01-01", "year");
+    expect(yearly.completedPeriodCount).toBe(1);
+    expect(yearly.categoryAverageEurMinorById.get('["Gastos","Comida"]')).toBe(-12_000);
+  });
+
   it("does not broaden a chart partition admitted through its counterpart category", () => {
     const initial = normalizeDataset({
       accounts: { version: 2, accounts: { cash: { label: "Cuenta", type: "DEFAULT" }, debt: { label: "Deuda", type: "DEBT" } } },

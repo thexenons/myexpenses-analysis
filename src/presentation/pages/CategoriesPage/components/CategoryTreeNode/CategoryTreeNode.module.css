@@ -107,8 +107,16 @@
 }
 
 .amount {
+  display: grid;
+  gap: 0.2rem;
+  text-align: right;
   color: var(--ink-soft);
   font-size: 0.68rem;
+}
+
+.average {
+  color: var(--muted);
+  font-size: 0.62rem;
 }
 
 .children {

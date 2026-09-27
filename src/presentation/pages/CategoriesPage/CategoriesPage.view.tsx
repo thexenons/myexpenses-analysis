@@ -23,8 +23,11 @@ export function CategoriesPageView({
   activityEurMinor,
   categoryBars,
   categoryCount,
+  categoryAverageEurMinorById,
   categorySeries,
   categoryTree,
+  completedPeriodCount,
+  averageUnit,
   directPostingCount,
   expenseEurMinor,
   chartOptions = DEFAULT_CATEGORY_CHART_OPTIONS,
@@ -139,7 +142,7 @@ export function CategoriesPageView({
       </AnalyticsPageGrid>
 
       <Panel
-        description="Despliega ramas y combina varias rutas en el filtro global. El árbol muestra importes netos; padres y descendientes no deben sumarse entre sí."
+        description="Despliega ramas y combina varias rutas en el filtro global. El árbol muestra el neto total y el promedio por período completo; padres y descendientes no deben sumarse entre sí."
         title="Explorador jerárquico"
       >
         {categoryTree.length === 0 ? (
@@ -153,6 +156,9 @@ export function CategoriesPageView({
           {categoryTree.map((category) => (
             <CategoryTreeNode
               category={category}
+              averageEurMinorByCategoryId={categoryAverageEurMinorById}
+              averageUnit={averageUnit}
+              completedPeriodCount={completedPeriodCount}
               depth={0}
               key={category.id}
               onToggleCategory={onToggleCategory}
