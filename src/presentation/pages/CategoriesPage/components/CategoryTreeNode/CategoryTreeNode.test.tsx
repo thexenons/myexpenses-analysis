@@ -60,8 +60,16 @@ describe("CategoryTreeNode", () => {
       name: "Quitar filtro: Gastos › Comida",
     });
     expect(childSelection).toHaveAttribute("aria-pressed", "true");
-    await user.click(childSelection);
+    const collapse = screen.getByRole("button", { name: "Contraer Gastos" });
+    const childrenId = collapse.getAttribute("aria-controls");
+    expect(document.getElementById(childrenId!)).toBeInTheDocument();
+    await user.click(collapse);
+    expect(onToggleCategory).not.toHaveBeenCalled();
+    expect(document.getElementById(childrenId!)).toHaveAttribute("hidden");
+    await user.click(screen.getByRole("button", { name: "Desplegar Gastos" }));
+    await user.click(screen.getByRole("button", { name: "Quitar filtro: Gastos › Comida" }));
     expect(onToggleCategory).toHaveBeenCalledWith(["Gastos", "Comida"]);
+    expect(screen.getByRole("button", { name: "Contraer Gastos" })).toHaveAttribute("aria-expanded", "true");
 
     await user.click(screen.getByRole("button", { name: "Contraer Gastos" }));
     expect(

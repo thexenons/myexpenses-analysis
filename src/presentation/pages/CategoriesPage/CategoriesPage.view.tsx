@@ -4,6 +4,7 @@ import { KpiCard } from "../../components/molecules/KpiCard/index.ts";
 import { EmptyState } from "../../components/molecules/EmptyState/index.ts";
 import { Panel } from "../../components/molecules/Panel/index.ts";
 import { HorizontalBarChart } from "../../components/organisms/HorizontalBarChart/index.ts";
+import { AccordionTree } from "../../components/organisms/AccordionTree/index.ts";
 import { LineChart } from "../../components/organisms/LineChart/index.ts";
 import { AnalyticsPage } from "../../components/templates/AnalyticsPage/index.ts";
 import { AnalyticsPageGrid } from "../../components/templates/AnalyticsPageGrid/index.ts";
@@ -153,7 +154,7 @@ export function CategoriesPageView({
             title="No hay categorías con actividad"
           />
         ) : (
-          <ul className={styles.categoryTree}>
+          <AccordionTree>
           {categoryTree.map((category) => (
             <CategoryTreeNode
               category={category}
@@ -167,7 +168,7 @@ export function CategoriesPageView({
               selectedCategoryIds={selectedCategoryIds}
             />
           ))}
-          </ul>
+          </AccordionTree>
         )}
       </Panel>
     </AnalyticsPage>

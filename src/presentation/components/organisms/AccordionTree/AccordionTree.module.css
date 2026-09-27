@@ -1,0 +1,76 @@
+.tree {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.item {
+  min-width: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  gap: 0.6rem;
+  align-items: center;
+  min-height: 3.25rem;
+  padding: 0.45rem 0.65rem;
+  background: var(--surface-bright);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-small);
+}
+
+.disclosure,
+.leafMark {
+  display: inline-grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+}
+
+.disclosure {
+  color: var(--ink-soft);
+  background: var(--paper-deep);
+  border: 1px solid var(--line-dark);
+  border-radius: 50%;
+}
+
+.disclosure svg {
+  transition: transform 150ms ease;
+}
+
+.disclosure[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}
+
+.leafMark::before {
+  width: 0.38rem;
+  height: 0.38rem;
+  background: var(--line-dark);
+  border-radius: 50%;
+  content: "";
+}
+
+.children {
+  gap: 0.45rem;
+  margin: 0.45rem 0 0 1rem;
+  padding-left: 0.8rem;
+  border-left: 2px solid var(--line-dark);
+}
+
+.children[hidden] {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .children {
+    margin-left: 0.55rem;
+    padding-left: 0.55rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disclosure svg {
+    transition: none;
+  }
+}
