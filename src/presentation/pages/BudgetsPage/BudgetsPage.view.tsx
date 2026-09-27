@@ -1,3 +1,6 @@
+import { useState } from "react";
+
+import { budgetContributionsForPath } from "../../../domain/analytics/budgets.ts";
 import { EmptyState } from "../../components/molecules/EmptyState/EmptyState.tsx";
 import { Icon } from "../../components/atoms/Icon/Icon.tsx";
 import { KpiCard } from "../../components/molecules/KpiCard/KpiCard.tsx";
@@ -11,6 +14,7 @@ import {
 } from "./BudgetsPage.helpers.ts";
 import type { BudgetsPageViewProps } from "./BudgetsPage.types.ts";
 import { BudgetAllocationTable } from "./components/BudgetAllocationTable/BudgetAllocationTable.tsx";
+import { BudgetConsumptionDialog } from "./components/BudgetConsumptionDialog/BudgetConsumptionDialog.tsx";
 import { BudgetControls } from "./components/BudgetControls/BudgetControls.tsx";
 import { BudgetUtilization } from "./components/BudgetUtilization/BudgetUtilization.tsx";
 import styles from "./BudgetsPage.module.css";
@@ -42,6 +46,11 @@ export function BudgetsPageView({
   selectedBudgetUuid,
   selectedPeriodKey,
 }: BudgetsPageViewProps) {
+  const [detail, setDetail] = useState<{
+    title: string;
+    path: readonly string[] | null;
+    trigger: HTMLButtonElement;
+  } | null>(null);
   const controls =
     budgetOptions.length === 0 ? null : (
       <BudgetControls
@@ -118,7 +127,19 @@ export function BudgetsPageView({
           value={toMajor(global.assignedMinor)}
         />
         <KpiCard
-          detail="Neto de los apuntes seleccionados · anulados excluidos"
+          detail={
+            <>
+              Neto de los apuntes seleccionados · anulados excluidos
+              <button
+                aria-label="Ver apuntes del gasto neto"
+                className={styles.inspectButton}
+                onClick={(event) => setDetail({ title: "Gasto neto", path: null, trigger: event.currentTarget })}
+                type="button"
+              >
+                Ver apuntes
+              </button>
+            </>
+          }
           formatValue={amountFormatter}
           icon={<Icon name="receipt" />}
           label="Gasto neto"
@@ -230,8 +251,20 @@ export function BudgetsPageView({
           currency={currency}
           isFilteredComparison={analysis.isFilteredComparison}
           fractionDigits={fractionDigits}
+          onInspectConsumption={(path, title, trigger) => setDetail({ title, path, trigger })}
         />
       </Panel>
+      {detail === null ? null : (
+        <BudgetConsumptionDialog
+          contributions={detail.path === null ? analysis.contributions : budgetContributionsForPath(analysis.contributions, detail.path)}
+          currency={currency}
+          dateBasis={analysis.dateBasis ?? "operation"}
+          fractionDigits={fractionDigits}
+          onDismiss={() => setDetail(null)}
+          title={detail.title}
+          trigger={detail.trigger}
+        />
+      )}
     </AnalyticsPage>
   );
 }

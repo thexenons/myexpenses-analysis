@@ -1,0 +1,124 @@
+.dialog {
+  width: min(48rem, calc(100vw - 1rem));
+  max-width: none;
+  max-height: min(90dvh, 52rem);
+  padding: 0;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+}
+
+.dialog::backdrop {
+  background: rgb(10 28 22 / 46%);
+  backdrop-filter: blur(3px);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+  padding: 1rem 1.2rem;
+  background: var(--surface-bright);
+  border-bottom: 1px solid var(--line);
+}
+
+.header h2 {
+  font-family: var(--display);
+  font-size: clamp(1.3rem, 4vw, 1.7rem);
+  line-height: 1.15;
+}
+
+.header p:last-child {
+  margin-top: 0.4rem;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.eyebrow {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.closeButton,
+.moreButton {
+  min-height: 2.75rem;
+  padding: 0.45rem 0.7rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.closeButton {
+  flex: none;
+}
+
+.body {
+  max-height: calc(90dvh - 7rem);
+  padding: 1rem 1.2rem;
+  overflow: auto;
+}
+
+.note,
+.rowMain span,
+.amounts span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+  padding: 0.75rem;
+  background: var(--surface-bright);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.rowMain,
+.amounts {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.amounts {
+  align-content: start;
+  flex: none;
+  font-family: var(--mono);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.identifier {
+  font-family: var(--mono);
+}
+
+@media (max-width: 36rem) {
+  .header,
+  .row {
+    flex-direction: column;
+  }
+
+  .amounts {
+    text-align: left;
+  }
+}

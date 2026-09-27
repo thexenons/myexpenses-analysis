@@ -5,4 +5,5 @@ export interface BudgetAllocationTableProps {
   readonly currency: string;
   readonly fractionDigits: number;
   readonly isFilteredComparison?: boolean;
+  readonly onInspectConsumption?: (path: readonly string[], label: string, trigger: HTMLButtonElement) => void;
 }

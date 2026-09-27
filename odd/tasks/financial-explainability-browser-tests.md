@@ -1,0 +1,77 @@
+# Financial explainability and real-browser validation
+
+## Objective and authorization
+Implement the four approved improvements: exact budget consumption details, honest data/application freshness, category-average calculation disclosure, and synthetic real-browser coverage. Preserve financial calculations and existing global-filter behavior. The user authorized implementation and previously requested completed work committed, pushed to main, and a clean worktree. No production access, private-data inspection, or deployment is authorized.
+
+## Design constraints
+- Budget consumption details use the exact effective budget/global scope, including advanced budget AST, date basis, currency, refunds, and category descendants. Category names remain non-filtering outside Categories. A read-only detail dialog avoids an inaccurate transaction-URL approximation.
+- Freshness separates transaction coverage, filename-indicated backup date (timezone unknown), actual import event, and public app revision. Missing evidence stays unavailable. Operational entrypoints inject import metadata; the pure importer remains deterministic for equal inputs/options. Legacy datasets remain compatible.
+- Average disclosure derives its window/count/exclusions from the existing calendar candidates. Preserve complete units, inactive units, historical fallback, non-date filters, and backup calendar preferences.
+- Browser tests use only synthetic encrypted data in an isolated temporary build/server, loopback binding, and bounded official browser/dependency downloads. Never reuse a private dev server. No physical-device claim.
+- Preserve existing visual language and neutral Spanish UI copy; code and technical documentation remain English.
+- Never read/copy actual data/, public/, backups, .env, vaults, credentials, or private logs. Run broad Node/deployment checks only in a source-only safe snapshot with external HOME/TMPDIR and sanitized environment.
+
+## Workflow and delivery
+- Base: main at 4f28c572ccb3ecdc81f2ff61ed5d46d56a7ee3a8.
+- Branch: feat/financial-explainability-browser-tests.
+- Route: delegated direct; each task touches multiple non-trivial files and requires preparatory reading. One writer at a time.
+- Strict TDD: enabled by AGENTS.md; observed RED -> GREEN -> REFACTOR. Vitest for src tests; Node/tsx for scripts and tests/domain.
+- Delivery strategy: ask-on-risk, with previously selected feature-branch-chain ("Acumulados"); accumulate coherent local work units before main delivery. No PR creation requested.
+- Forecast: approximately 1,200-2,000 authored changed lines across four cohesive units, excluding generated lockfile changes. Around 400 lines per unit is advisory, not a reason to omit tests or compress code. Record actual counts and split only at coherent boundaries.
+- RDD: on (global). First reviewed boundary is the base above. Assess each committed work unit; follow native due transitions and fresh candidate consent. No old grant is reusable.
+- Engram mirror: pending; writes currently fail unknown_session despite omitted session_id. Local document is recovery authority until the mirror becomes available.
+
+## Tasks
+
+- [x] T1: Explain exact budget consumption.
+  - Route: delegated; domain + page + reusable dialog integration/tests.
+  - Expose exact scoped postings and signed budget-currency contributions without duplicating arrays at every tree node.
+  - Open accessible read-only details from overall/category consumed amounts; preserve filters and category accordion behavior.
+  - Verify exact IDs, summed contributions, descendants/direct parent postings, advanced AST, refunds, neutral/status/date basis/currency conditions, empty results, and dialog keyboard/focus behavior.
+  - Checks: focused Vitest budgets/page/allocation tests; UI typecheck; lint; synthetic runtime UI coverage later in T4.
+  - Evidence: implementation complete; commit and real-browser proof pending parent/T4. One analysis-level contribution entry per scoped posting uses the same signed budget spend conversion as totals. On-demand category-prefix detail retains the selected global and persisted budget predicates. The native dialog shows exact IDs, budget-currency contributions, source amounts where currencies differ, count, signed total, a 25-row initial page, and restores trigger focus. Category labels and accordion disclosure remain separate.
+  - TDD RED: `node node_modules/vitest/vitest.mjs run src/domain/analytics/budgets.test.ts -t 'exposes exact signed posting contributions'` failed because `analysis.contributions` was undefined; the page integration test initially failed because the detail trigger was absent. GREEN: both focused tests passed after implementation.
+  - Independent structural spot-check caught `component-structure.test.ts:176`: 22 architecture tests passed, 1 failed because the new component lacked its required local `index.ts`. Added the named-export entrypoint; `node node_modules/tsx/dist/cli.mjs --test 'tests/architecture/**/*.test.ts'` then passed 23/23.
+  - Closure checks after the fix: `node node_modules/vitest/vitest.mjs run src/domain/analytics/budgets.test.ts src/presentation/pages/BudgetsPage/BudgetsPage.test.tsx src/presentation/pages/BudgetsPage/components/BudgetAllocationTable/BudgetAllocationTable.test.tsx src/presentation/pages/BudgetsPage/components/BudgetConsumptionDialog/BudgetConsumptionDialog.test.tsx` — 4 files, 25 tests passed; `node node_modules/typescript/bin/tsc -p tsconfig.app.json --noEmit` — passed; `node node_modules/oxlint/bin/oxlint --jsx-a11y-plugin --vitest-plugin --deny-warnings` — passed; `git diff --check` — passed. Initial type/lint failures in new tests were fixed before closure.
+  - Runtime harness: N/A for this unit in the actual workspace; isolated Chromium interaction/overflow proof is T4. Existing Vitest/jsdom covers dialog open/close, Enter/Escape, focus return, exact selection, empty result, and pagination. No physical-device or browser-engine proof yet.
+  - Rollback boundary: remove `BudgetConsumptionDialog/` and T1-only changes in `src/domain/analytics/budgets.ts`, `src/domain/analytics/budgets.test.ts`, `src/presentation/pages/BudgetsPage/BudgetsPage.view.tsx`, `BudgetsPage.module.css`, `BudgetsPage.test.tsx`, and `components/BudgetAllocationTable/`; original budget math and global filters remain unchanged.
+  - Approximately 606 authored lines before task-document evidence; cohesive behavior/tests/styles intentionally retained above the advisory 400-line task heuristic. Commit identity: pending parent.
+
+- [ ] T2: Distinguish data and app freshness.
+  - Route: delegated; import/worker metadata, strict parser/types, build revision, Sidebar, operator documentation/tests.
+  - Carry optional validated filename-indicated backup date and explicit import event time through deterministic import/normalization.
+  - Preserve original recognized backup date across source.zip staging; do not substitute pCloud mtime.
+  - Embed a validated public revision via explicit build/runtime configuration and narrow child-env forwarding; unknown revision stays unavailable.
+  - Show separate coverage/source/import/revision labels and legacy unknown states.
+  - Checks: import/backup-file/sync/build Node tests in safe snapshot; parser/Sidebar Vitest; both TS configs/lint; synthetic deployment.
+  - Evidence/commit: pending.
+
+- [ ] T3: Disclose the category-average calculation.
+  - Route: delegated; existing calendar analysis metadata and one on-demand page disclosure/tests.
+  - Show included completed window, divisor including zero-activity units, excluded partial candidates and historical fallback reason without changing averages.
+  - Handle no-history/custom calendar/value-date cases and avoid an unbounded rendered daily list.
+  - Checks: Node category-period-average tests; Categories UI Vitest; both TS configs/lint.
+  - Evidence/commit: pending.
+
+- [ ] T4: Add and run isolated real-browser regressions.
+  - Route: delegated; exact pinned Playwright Test, generated lockfile, synthetic encrypted fixture/build/server/config/specs/docs.
+  - Scoped dependency and Chromium headless-shell download only; no OS/global installation. Inspect available package-manager entrypoint before use; avoid surprise Corepack downloads.
+  - Exercise actual unlock/navigation, visible mobile time controls and drawer search, accordions, exact budget dialog, freshness, average disclosure, keyboard/accessibility smoke and page overflow at narrow/mobile and desktop widths.
+  - Reject unexpected outbound requests; do not reuse existing server or expose private sources.
+  - Checks: observed browser RED/GREEN; final full UI/Node/architecture/TS/lint/synthetic deployment on safe snapshot; real Chromium desktop/mobile-emulation runs. State physical-device/other-engine gaps.
+  - Evidence/commit: pending.
+
+## Verification commands
+Use installed direct Node entrypoints, not package-manager wrappers, except the deliberately scoped pinned dependency/lock operation for T4.
+
+- node node_modules/vitest/vitest.mjs run <focused-src-tests>
+- node node_modules/tsx/dist/cli.mjs --test tests/domain/category-period-average.test.ts
+- node node_modules/tsx/dist/cli.mjs --test "scripts/**/*.test.ts" "tests/domain/**/*.test.ts" "tests/architecture/**/*.test.ts" (safe snapshot only)
+- node node_modules/tsx/dist/cli.mjs --test tests/deployment/runtime-pipeline.test.ts (safe snapshot only)
+- node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit
+- node node_modules/typescript/bin/tsc -p tsconfig.app.json --noEmit
+- node node_modules/oxlint/bin/oxlint --jsx-a11y-plugin --vitest-plugin --deny-warnings
+- Browser commands: finalize after pinned dependency/bootstrap inspection.
+
+## Progress and next step
+Read-only financial, provenance, and browser feasibility maps completed. T1 implementation and focused checks are complete; parent owns its work-unit commit and review. Next: commit T1, then T2. Record final authored counts, review outcome, and delivery below.

@@ -7,6 +7,7 @@ import type {
 } from "./backup-dataset.types.ts";
 import {
   analyzeBudgetPeriod,
+  budgetContributionsForPath,
   resolveBudgetAllocation,
   resolveBudgetPeriods,
 } from "./budgets.ts";
@@ -329,6 +330,32 @@ describe("budget periods", () => {
 });
 
 describe("budget analysis", () => {
+  it("exposes exact signed posting contributions without duplicating category subtrees", () => {
+    const analytics = analyticsFixture();
+    const result = analyzeBudgetPeriod(
+      analytics,
+      applyFilters(analytics, createDefaultFilterState()),
+      analytics.backup!.budgets[0]!,
+      "MONTH:2026:7",
+    );
+    if (result.status !== "ready") throw new Error(result.reason);
+
+    expect(result.analysis.contributions.map(({ posting: row, amountMinor }) => [row.id, amountMinor])).toEqual([
+      ["expense", 4_000],
+      ["refund", -500],
+      ["root-expense", 1_000],
+      ["unallocated", 2_000],
+    ]);
+    expect(result.analysis.contributions.reduce((sum, entry) => sum + entry.amountMinor, 0))
+      .toBe(result.analysis.global.consumedMinor);
+    const root = result.analysis.allocations[0]!;
+    const rootEntries = budgetContributionsForPath(result.analysis.contributions, root.path);
+    expect(rootEntries.map(({ posting: row }) => row.id)).toEqual(["expense", "refund", "root-expense"]);
+    expect(rootEntries.reduce((sum, entry) => sum + entry.amountMinor, 0)).toBe(root.consumedMinor);
+    const childEntries = budgetContributionsForPath(result.analysis.contributions, root.children[0]!.path);
+    expect(childEntries.map(({ posting: row }) => row.id)).toEqual(["expense", "refund"]);
+    expect(childEntries.reduce((sum, entry) => sum + entry.amountMinor, 0)).toBe(root.children[0]!.consumedMinor);
+  });
   it("rolls child base amounts and carryovers up exactly once", () => {
     const analytics = analyticsFixture();
     const childOnly = budgetFixture({
@@ -400,6 +427,7 @@ describe("budget analysis", () => {
     expect(result.analysis.global.assignedMinor).toBe(11_000);
     expect(result.analysis.consumptionDateRange).toEqual({ from: "2026-08-01", to: "2026-08-02" });
     expect(result.analysis.dateBasis).toBe("value");
+    expect(result.analysis.contributions.map(({ posting: row }) => row.id)).toEqual(["outside"]);
     expect(result.analysis.isFilteredComparison).toBe(true);
   });
 
@@ -412,6 +440,7 @@ describe("budget analysis", () => {
     expect(result.analysis.global.assignedMinor).toBe(11_000);
     expect(result.analysis.consumptionDateRange).toBeNull();
     expect(result.analysis.isFilteredComparison).toBe(true);
+    expect(result.analysis.contributions).toEqual([]);
   });
 
   it("applies fallback, rollovers, refunds and avoids parent-child double counting", () => {
@@ -472,6 +501,7 @@ describe("budget analysis", () => {
     if (categoryResult.status !== "ready") throw new Error(categoryResult.reason);
     expect(categoryResult.analysis.global.consumedMinor).toBe(3_500);
     expect(categoryResult.analysis.filteredPostingCount).toBe(2);
+    expect(categoryResult.analysis.contributions.map(({ posting: row }) => row.id)).toEqual(["expense", "refund"]);
 
     const voidFiltered = applyFilters(analytics, {
       ...createDefaultFilterState(),
@@ -485,6 +515,7 @@ describe("budget analysis", () => {
     if (voidResult.status !== "ready") throw new Error(voidResult.reason);
     expect(voidResult.analysis.global.consumedMinor).toBe(0);
     expect(voidResult.analysis.filteredPostingCount).toBe(0);
+    expect(voidResult.analysis.contributions).toEqual([]);
   });
 
   it("applies the budget's persisted account AND category filter on top of global filters", () => {
@@ -517,6 +548,63 @@ describe("budget analysis", () => {
       accountCount: 1,
       categoryCount: 2,
     });
+    expect(result.analysis.contributions.map(({ posting: row }) => row.id)).toEqual([
+      "expense", "refund", "unallocated",
+    ]);
+  });
+
+  it("keeps nested AND/OR/NOT budget predicates in the visible contribution set", () => {
+    const analytics = analyticsFixture();
+    const budget = budgetFixture({
+      filter: {
+        type: "and",
+        criteria: [
+          { type: "account", accountUuids: ["account"] },
+          {
+            type: "or",
+            criteria: [
+              { type: "category", categoryUuids: ["child"] },
+              { type: "not", criterion: { type: "category", categoryUuids: ["other"] } },
+            ],
+          },
+        ],
+      },
+    });
+    const result = analyzeBudgetPeriod(analytics, applyFilters(analytics, createDefaultFilterState()), budget);
+    if (result.status !== "ready") throw new Error(result.reason);
+    expect(result.analysis.contributions.map(({ posting: row }) => row.id)).toEqual([
+      "expense", "refund", "root-expense",
+    ]);
+    expect(result.analysis.contributions.reduce((sum, entry) => sum + entry.amountMinor, 0))
+      .toBe(result.analysis.global.consumedMinor);
+  });
+
+  it("uses account-native minor units for a non-home-currency budget", () => {
+    const base = analyticsFixture();
+    const analytics: AnalyticsDataset = {
+      ...base,
+      postings: [
+        ...base.postings.map((row) => Object.assign({}, row, { currency: "GBP" as const, amountNativeMinor: row.amountEurMinor * 2 })),
+        { ...posting("euro", "2026-08-10", -8_000, ["Otros"]), accountId: "euro-account" },
+      ],
+      backup: {
+        ...base.backup!,
+        accounts: base.backup!.accounts.map((account) => Object.assign({}, account, { currency: "GBP" as const })),
+        currencies: [
+          ...base.backup!.currencies,
+          { sourceId: 2, code: "GBP", fractionDigits: 2, label: "Pound", symbol: "£", commodityType: "FIAT" },
+        ],
+      },
+    };
+    const budget = budgetFixture({ currency: "GBP", accountUuid: "account" });
+    const result = analyzeBudgetPeriod(analytics, applyFilters(analytics, createDefaultFilterState()), budget);
+    if (result.status !== "ready") throw new Error(result.reason);
+    expect(result.analysis.currency).toBe("GBP");
+    expect(result.analysis.contributions.map(({ posting: row, amountMinor }) => [row.id, amountMinor])).toEqual([
+      ["expense", 8_000], ["refund", -1_000], ["root-expense", 2_000], ["unallocated", 4_000],
+    ]);
+    expect(result.analysis.contributions.reduce((sum, entry) => sum + entry.amountMinor, 0))
+      .toBe(result.analysis.global.consumedMinor);
   });
 
   it("includes positive neutral amounts as refunds only when aggregateNeutral is enabled", () => {
@@ -561,6 +649,10 @@ describe("budget analysis", () => {
     if (withNeutral.status !== "ready") throw new Error(withNeutral.reason);
     expect(withoutNeutral.analysis.global.consumedMinor).toBe(6_500);
     expect(withNeutral.analysis.global.consumedMinor).toBe(6_000);
+    expect(withoutNeutral.analysis.contributions.some(({ posting: row }) => row.id === "neutral-refund")).toBe(false);
+    expect(withNeutral.analysis.contributions.at(-1)).toMatchObject({
+      posting: { id: "neutral-refund" }, amountMinor: -500,
+    });
   });
 
   it("uses the latest prior non-one-time allocation as fallback", () => {

@@ -71,6 +71,12 @@ export interface BudgetAllocationNode extends BudgetTotals {
   readonly children: readonly BudgetAllocationNode[];
 }
 
+export interface BudgetContribution {
+  readonly posting: NormalizedPosting;
+  /** Signed contribution in the budget currency's minor units; refunds are negative. */
+  readonly amountMinor: number;
+}
+
 export interface BudgetAnalysis {
   readonly dateBasis?: "operation" | "value";
   /** Intersection of the global query and the budget period; null means no overlap. */
@@ -82,6 +88,8 @@ export interface BudgetAnalysis {
   readonly currency: string;
   readonly fractionDigits: number;
   readonly global: BudgetTotals;
+  /** One entry per effective posting; category details derive from this single collection. */
+  readonly contributions: readonly BudgetContribution[];
   readonly allocations: readonly BudgetAllocationNode[];
   readonly categoryAssignedMinor: number;
   readonly categorizedConsumedMinor: number;
@@ -547,6 +555,13 @@ function pathsStartWith(
   );
 }
 
+export function budgetContributionsForPath(
+  contributions: readonly BudgetContribution[],
+  path: readonly string[],
+): readonly BudgetContribution[] {
+  return contributions.filter(({ posting }) => pathsStartWith(posting.categoryPath, path));
+}
+
 function scopedExpensePostings(
   filtered: FilteredAnalyticsDataset,
   period: BudgetPeriod,
@@ -826,6 +841,10 @@ export function analyzeBudgetPeriod(
     budget,
     categoryByUuid,
   );
+  const contributions = postings.map((posting) => ({
+    posting,
+    amountMinor: postingSpend(posting, scope),
+  }));
   const allocationNodes = [...roots.values()]
     .map((node) => finalizeAllocationNode(node, postings, scope, 0))
     .sort((left, right) => left.name.localeCompare(right.name, "es"));
@@ -842,7 +861,7 @@ export function analyzeBudgetPeriod(
     "Global next rollovers",
   );
   const globalConsumedMinor = sumMinor(
-    postings.map((posting) => postingSpend(posting, scope)),
+    contributions.map(({ amountMinor }) => amountMinor),
     "Global budget consumption",
   );
   const global = totals(
@@ -882,6 +901,7 @@ export function analyzeBudgetPeriod(
       currency: scope.currency,
       fractionDigits: scope.fractionDigits,
       global,
+      contributions,
       allocations: allocationNodes,
       categoryAssignedMinor,
       categorizedConsumedMinor,

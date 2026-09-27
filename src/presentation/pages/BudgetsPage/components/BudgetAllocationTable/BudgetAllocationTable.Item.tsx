@@ -11,12 +11,14 @@ export function BudgetAllocationItem({
   currency,
   fractionDigits,
   isFilteredComparison,
+  onInspectConsumption,
   depth,
 }: {
   readonly allocation: BudgetAllocationNode;
   readonly currency: string;
   readonly fractionDigits: number;
   readonly isFilteredComparison: boolean;
+  readonly onInspectConsumption?: (path: readonly string[], label: string, trigger: HTMLButtonElement) => void;
   readonly depth: number;
 }) {
   const pathLabel = allocation.path.join(" › ");
@@ -57,7 +59,18 @@ export function BudgetAllocationItem({
             </div>
             <div className={styles.metric}>
               <dt>Consumido</dt>
-              <dd>{formatBudgetMinor(allocation.consumedMinor, currency, fractionDigits)}</dd>
+              <dd>
+                {onInspectConsumption === undefined ? formatBudgetMinor(allocation.consumedMinor, currency, fractionDigits) : (
+                  <button
+                    aria-label={`Ver apuntes consumidos de ${pathLabel}`}
+                    className={styles.inspectButton}
+                    onClick={(event) => onInspectConsumption(allocation.path, pathLabel, event.currentTarget)}
+                    type="button"
+                  >
+                    {formatBudgetMinor(allocation.consumedMinor, currency, fractionDigits)}
+                  </button>
+                )}
+              </dd>
             </div>
             <div className={styles.metric}>
               <dt>{availableLabel}</dt>
@@ -99,6 +112,7 @@ export function BudgetAllocationItem({
           depth={depth + 1}
           fractionDigits={fractionDigits}
           isFilteredComparison={isFilteredComparison}
+          onInspectConsumption={onInspectConsumption}
           key={child.id}
         />
       ))}

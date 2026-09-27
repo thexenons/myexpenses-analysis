@@ -8,6 +8,7 @@ export function BudgetAllocationTable({
   currency,
   fractionDigits,
   isFilteredComparison = false,
+  onInspectConsumption,
 }: BudgetAllocationTableProps) {
   if (allocations.length === 0) {
     return <p className={styles.empty}>Este periodo no tiene asignaciones por categoría.</p>;
@@ -22,6 +23,7 @@ export function BudgetAllocationTable({
           depth={0}
           fractionDigits={fractionDigits}
           isFilteredComparison={isFilteredComparison}
+          onInspectConsumption={onInspectConsumption}
           key={allocation.id}
         />
       ))}

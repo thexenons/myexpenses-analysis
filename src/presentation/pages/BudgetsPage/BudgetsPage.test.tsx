@@ -7,6 +7,7 @@ import type {
   BudgetAnalysis,
 } from "../../../domain/analytics/budgets.ts";
 import type { BackupBudgetV1 } from "../../../domain/analytics/backup-dataset.types.ts";
+import type { NormalizedPosting } from "../../../domain/analytics/types.ts";
 import { BudgetsPageView } from "./BudgetsPage.view.tsx";
 
 const budget: BackupBudgetV1 = {
@@ -101,6 +102,7 @@ const analysis: BudgetAnalysis = {
     utilization: 6_500 / 11_000,
     health: "on-track",
   },
+  contributions: [],
   allocations: [allocation],
   categoryAssignedMinor: 9_000,
   categorizedConsumedMinor: 4_500,
@@ -116,6 +118,79 @@ const analysis: BudgetAnalysis = {
 };
 
 describe("BudgetsPageView", () => {
+  it("opens exact global and category details without changing filters or the accordion", async () => {
+    Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.open = true;
+        this.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") this.dispatchEvent(new Event("cancel", { bubbles: true, cancelable: true }));
+        }, { once: true });
+      },
+    });
+    Object.defineProperty(HTMLDialogElement.prototype, "close", {
+      configurable: true,
+      value(this: HTMLDialogElement) { this.open = false; },
+    });
+    const user = userEvent.setup();
+    const makePosting = (id: string, categoryPath: string[]): NormalizedPosting => ({
+      id, transactionId: id, sourceTransactionId: id,
+      accountId: "account", accountLabel: "Cuenta", accountType: "DEFAULT",
+      currency: "EUR", fractionDigits: 2, date: "2026-08-03",
+      amountNativeMinor: -4_000, amountEurMinor: -4_000,
+      exchangeRateToEur: 1, exchangeRateSource: "identity",
+      categoryPath, categoryType: "EXPENSE", bucket: "expense",
+      status: "RECONCILED", isVoid: false, linked: false, tags: [],
+      splitIndex: null, splitCount: null, payee: id,
+    });
+    const onBudgetChange = vi.fn<(uuid: string) => void>();
+    const onPeriodChange = vi.fn<(key: string) => void>();
+    render(
+      <BudgetsPageView
+        analysis={{
+          ...analysis,
+          contributions: [
+            { posting: makePosting("child-expense", ["Gastos", "Comida"]), amountMinor: 4_000 },
+            { posting: makePosting("child-refund", ["Gastos", "Comida"]), amountMinor: -500 },
+            { posting: makePosting("other", ["Otros"]), amountMinor: 3_000 },
+          ],
+        }}
+        budgetOptions={[]}
+        emptyDescription={null}
+        emptyTitle={null}
+        onBudgetChange={onBudgetChange}
+        onPeriodChange={onPeriodChange}
+        periodOptions={[]}
+        searchPending={false}
+        selectedBudgetUuid="budget"
+        selectedPeriodKey="MONTH:2026:7"
+      />,
+    );
+
+    const globalTrigger = screen.getByRole("button", { name: "Ver apuntes del gasto neto" });
+    globalTrigger.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("dialog", { name: "Gasto neto · apuntes" })).toBeVisible();
+    expect(screen.getByText("child-expense")).toBeVisible();
+    expect(screen.getByText("child-refund")).toBeVisible();
+    expect(screen.getByText("other")).toBeVisible();
+    expect(screen.getByText(/3 apuntes/)).toHaveTextContent("65,00");
+    await user.click(screen.getByRole("button", { name: "Cerrar detalle" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(globalTrigger).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "Ver apuntes consumidos de Gastos › Comida" }));
+    expect(screen.getByRole("dialog", { name: "Gastos › Comida · apuntes" })).toBeVisible();
+    expect(screen.getByText("child-expense")).toBeVisible();
+    expect(screen.getByText("child-refund")).toBeVisible();
+    expect(screen.queryByText("other")).not.toBeInTheDocument();
+    expect(screen.getByText(/2 apuntes/)).toHaveTextContent("35,00");
+    expect(screen.getByText("Gastos › Comida")).toBeVisible();
+    expect(onBudgetChange).not.toHaveBeenCalled();
+    expect(onPeriodChange).not.toHaveBeenCalled();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
   it("distinguishes a filtered comparison from the full budget availability", () => {
     render(
       <BudgetsPageView
