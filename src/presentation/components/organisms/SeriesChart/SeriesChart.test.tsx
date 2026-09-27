@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
@@ -73,5 +73,25 @@ describe("SeriesChart", () => {
 
     await user.click(screen.getByText("Ver datos exactos"));
     expect(screen.getByRole("row", { name: /P199 199/ })).toBeVisible();
+  });
+
+  it("keeps a pointer tooltip open while moving from SVG to its scrollable overlay", () => {
+    render(<SeriesChart
+      series={[{ id: "cash", label: "Flujo", data: [{ label: "Enero", value: 15 }] }]}
+      title="Evolución del flujo"
+      variant="line"
+    />);
+    const chart = screen.getByRole("img", { name: "Evolución del flujo" });
+    const marker = chart.querySelector("circle");
+    expect(marker).not.toBeNull();
+    fireEvent.pointerEnter(marker!);
+    const tooltip = screen.getByRole("tooltip");
+    fireEvent.pointerLeave(chart);
+    fireEvent.pointerEnter(tooltip);
+    expect(tooltip).toBeInTheDocument();
+    expect(getComputedStyle(tooltip).pointerEvents).toBe("auto");
+    expect(getComputedStyle(tooltip).overflow).toBe("auto");
+    fireEvent.pointerLeave(tooltip);
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 });

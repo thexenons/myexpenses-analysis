@@ -9,7 +9,7 @@
 .value dd { min-width: 0; margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .detail { grid-column: 1 / -1; font-size: 0.7rem; }
 .swatch { display: inline-block; width: 0.65rem; height: 0.65rem; margin-right: 0.45rem; border-radius: 50%; }
-.tooltip { position: fixed; z-index: 50; width: min(19rem, calc(100vw - 1rem)); max-height: 15rem; padding: 0.8rem; overflow: auto; color: var(--ink, #16231e); font-size: 0.75rem; background: var(--surface-bright, #fffdf8); border: 1px solid var(--line-dark, #9ca59f); border-radius: 0.65rem; box-shadow: var(--shadow-small, 0 4px 16px #0002); pointer-events: none; }
+.tooltip { position: fixed; z-index: 50; width: min(19rem, calc(100vw - 1rem)); max-height: 15rem; padding: 0.8rem; overflow: auto; color: var(--ink, #16231e); font-size: 0.75rem; background: var(--surface-bright, #fffdf8); border: 1px solid var(--line-dark, #9ca59f); border-radius: 0.65rem; box-shadow: var(--shadow-small, 0 4px 16px #0002); pointer-events: auto; }
 .summary:focus-visible, .label select:focus-visible { outline: 2px solid var(--accent-ink, #22330e); outline-offset: 2px; }
 
 @media (max-width: 42rem) {

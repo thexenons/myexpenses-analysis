@@ -1,5 +1,5 @@
 import { createRef } from "react";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { ChartInspector } from "./ChartInspector.tsx";
@@ -23,5 +23,20 @@ describe("ChartInspector", () => {
     expect(within(screen.getByRole("tooltip")).getByText(/-10,00/)).toBeVisible();
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
+
+  it("dismisses a tooltip after leaving the chart without entering the overlay", async () => {
+    const ref = createRef<ChartInspectorHandle>();
+    render(<ChartInspector
+      getValues={() => [{ id: "cash", label: "Flujo real", value: 10 }]}
+      items={[{ id: "jan", label: "Enero" }]}
+      ref={ref}
+      title="Evolución"
+    />);
+
+    act(() => ref.current?.inspect("jan", 20, 20));
+    expect(screen.getByRole("tooltip")).toBeInTheDocument();
+    act(() => ref.current?.scheduleDismiss());
+    await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
   });
 });

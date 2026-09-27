@@ -100,4 +100,34 @@ describe("TransactionsPageView", () => {
     expect(screen.getByText(/-12,50/, { selector: "strong" })).toBeVisible();
     expect(screen.queryByText(/0,00/)).not.toBeInTheDocument();
   });
+
+  it("keeps one polite result status through searching, completion and zero results", () => {
+    const props = {
+      descending: true,
+      onDownload: vi.fn<() => void>(),
+      onPageChange: vi.fn<(page: number) => void>(),
+      onSort: vi.fn<(key: "amount" | "date") => void>(),
+      page: 1,
+      pageCount: 1,
+      postings: [posting],
+      resultCount: 1,
+      searchPending: true,
+      sortKey: "date" as const,
+    };
+    const { rerender } = render(<TransactionsPageView {...props} />);
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveTextContent(/actualizando búsqueda/iu);
+
+    rerender(<TransactionsPageView {...props} searchPending={false} resultCount={3} />);
+    expect(screen.getByRole("status")).toBe(status);
+    expect(status).toHaveTextContent(/3 resultados/u);
+    expect(status).not.toHaveTextContent(/actualizando/iu);
+
+    rerender(<TransactionsPageView {...props} searchPending={false} resultCount={0} postings={[]} />);
+    expect(screen.getByRole("status")).toBe(status);
+    expect(status).toHaveTextContent(/no hay resultados/iu);
+    expect(screen.getByRole("table")).not.toHaveAttribute("aria-live");
+    expect(screen.getByRole("region", { name: "Movimientos filtrados" })).not.toHaveAttribute("aria-live");
+  });
 });

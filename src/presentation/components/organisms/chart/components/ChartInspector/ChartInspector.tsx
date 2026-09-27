@@ -5,7 +5,7 @@ import { useChartInspector } from "./hooks/ChartInspector.hooks.ts";
 import styles from "./ChartInspector.module.css";
 
 export function ChartInspector({ title, items, getValues, formatLabel = identityLabel, formatValue, ref }: ChartInspectorProps) {
-  const { position, selectedId, setSelectedId } = useChartInspector(ref);
+  const { cancelScheduledDismiss, dismiss, position, selectedId, setSelectedId } = useChartInspector(ref);
   const selected = items.find((item) => item.id === selectedId) ?? items[0];
   if (selected === undefined) return null;
   const label = formatLabel(selected.label);
@@ -34,6 +34,8 @@ export function ChartInspector({ title, items, getValues, formatLabel = identity
     </details>
     {position === null ? null : <div
       className={styles.tooltip}
+      onPointerEnter={cancelScheduledDismiss}
+      onPointerLeave={dismiss}
       role="tooltip"
       style={{ left: Math.max(8, Math.min(position.x + 14, window.innerWidth - 310)), top: Math.max(8, Math.min(position.y + 14, window.innerHeight - 250)) }}
     >{content}</div>}

@@ -33,10 +33,7 @@ export function SegmentedControl<Value extends string>({
           return (
             <label className={styles.option} htmlFor={optionId} key={option.value}>
               <input
-                aria-label={
-                  option.accessibleLabel ??
-                  (typeof option.label === "string" ? option.label : undefined)
-                }
+                aria-label={option.accessibleLabel}
                 checked={value === option.value}
                 className={styles.input}
                 disabled={option.disabled}
@@ -49,7 +46,7 @@ export function SegmentedControl<Value extends string>({
               <span className={styles.label}>
                 <span className={styles.longLabel}>{option.label}</span>
                 {option.shortLabel ? (
-                  <span aria-hidden="true" className={styles.shortLabel}>
+                  <span className={styles.shortLabel}>
                     {option.shortLabel}
                   </span>
                 ) : null}

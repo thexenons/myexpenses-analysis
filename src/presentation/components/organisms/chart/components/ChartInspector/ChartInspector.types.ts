@@ -12,6 +12,7 @@ export interface ChartInspectorValue {
 export interface ChartInspectorHandle {
   inspect(id: string, x: number, y: number): void;
   dismiss(): void;
+  scheduleDismiss(): void;
 }
 
 export interface ChartInspectorProps {

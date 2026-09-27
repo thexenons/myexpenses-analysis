@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -37,5 +37,22 @@ describe("HorizontalBarChart", () => {
       screen.getByRole("columnheader", { name: "Categoría" }),
     ).toBeVisible();
     expect(screen.getByRole("row", { name: /Alimentación -250/ })).toBeVisible();
+  });
+
+  it("allows a pointer to move from a bar into its tooltip before dismissal", () => {
+    render(<HorizontalBarChart
+      data={[{ id: "food", label: "Alimentación", value: -250 }]}
+      title="Ranking interactivo"
+    />);
+    const chart = screen.getByRole("img", { name: "Ranking interactivo" });
+    const bar = chart.querySelector("g[class*='barGroup']");
+    expect(bar).not.toBeNull();
+    fireEvent.pointerEnter(bar!);
+    const tooltip = screen.getByRole("tooltip");
+    fireEvent.pointerLeave(chart);
+    fireEvent.pointerEnter(tooltip);
+    expect(tooltip).toBeInTheDocument();
+    fireEvent.pointerLeave(tooltip);
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 });

@@ -116,7 +116,7 @@ export function HorizontalBarChart({
         aria-labelledby={titleId}
         className={styles.svg}
         preserveAspectRatio="xMidYMid meet"
-        onPointerLeave={() => inspectorRef.current?.dismiss()}
+        onPointerLeave={() => inspectorRef.current?.scheduleDismiss()}
         role="img"
         viewBox={`0 0 ${chartWidth} ${chartHeight}`}
       >

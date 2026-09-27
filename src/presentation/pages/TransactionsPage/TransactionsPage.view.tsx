@@ -30,6 +30,13 @@ export function TransactionsPageView({
       description="Libro mayor completo, incluidas las partes de splits y las operaciones anuladas cuando el filtro de estado las solicita."
       title="Transacciones"
     >
+      <output aria-atomic="true" aria-live="polite" className={styles.resultStatus}>
+        {searchPending
+          ? `Actualizando búsqueda. ${countFormatter.format(resultCount)} resultados actuales.`
+          : resultCount === 0
+            ? "No hay resultados."
+            : `${countFormatter.format(resultCount)} resultados.`}
+      </output>
       {summary === undefined ? null : (
         <Panel description="Importes de todos los resultados, sin anulados. Las transferencias pueden compensarse entre cuentas; el flujo real sólo suma las cuentas reales seleccionadas." title="Totales del corte">
           <dl className={styles.totals}>

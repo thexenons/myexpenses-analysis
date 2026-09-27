@@ -86,4 +86,29 @@ describe("Sidebar", () => {
     expect(appStore.getState().loadPhase).toBe("locked")
     expect(appStore.getState().analytics).toBeNull()
   })
+
+  it("uses the visible navigation label at desktop and mobile widths", async () => {
+    const history = createMemoryHistory({ initialEntries: ["/resumen"] })
+    const router = createAppRouter({ history })
+    render(
+      <AppStoreProvider store={appStore}>
+        <RouterProvider router={router} />
+      </AppStoreProvider>,
+    )
+
+    const navigation = await screen.findByRole("navigation", { name: "Secciones principales" })
+    for (const [desktopName, mobileName] of [
+      ["Presupuestos", "Planes"],
+      ["Transacciones", "Movimientos"],
+    ]) {
+      const link = within(navigation).getByRole("link", { name: desktopName })
+      const desktopLabel = link.querySelector<HTMLElement>("[class*='desktopLabel']")
+      const mobileLabel = link.querySelector<HTMLElement>("[class*='mobileLabel']")
+      expect(desktopLabel).not.toBeNull()
+      expect(mobileLabel).not.toBeNull()
+      desktopLabel!.style.display = "none"
+      mobileLabel!.style.display = "block"
+      expect(link).toHaveAccessibleName(mobileName)
+    }
+  })
 })

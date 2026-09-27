@@ -90,7 +90,6 @@ export function SidebarView({
               <li key={item.to}>
                 <Link
                   activeOptions={{ exact: true, includeSearch: false }}
-                  aria-label={item.label}
                   className={styles.navigationButton}
                   to={item.to}
                 >
@@ -103,7 +102,7 @@ export function SidebarView({
                     size={18}
                   />
                   <span className={styles.desktopLabel}>{item.label}</span>
-                  <span aria-hidden="true" className={styles.mobileLabel}>
+                  <span className={styles.mobileLabel}>
                     {item.mobileLabel}
                   </span>
                 </Link>
