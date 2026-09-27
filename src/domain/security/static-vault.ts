@@ -23,8 +23,6 @@ export const STATIC_VAULT_MAX_ENVELOPE_BYTES = 45 * 1024 * 1024;
 const GZIP_MINIMUM_BYTES = 18;
 const BASE64_ALPHABET =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-const BASE64_PATTERN =
-  /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 const HEADER_KEYS = [
   "format",
   "version",
@@ -151,7 +149,10 @@ function decodeBase64(
   maximumBytes: number,
   context: string,
 ): OwnedBytes {
-  if (typeof value !== "string" || !BASE64_PATTERN.test(value)) {
+  if (typeof value !== "string") {
+    return invalidVault(`${context} must be canonical base64`);
+  }
+  if (value.length === 0 || value.length % 4 !== 0) {
     return invalidVault(`${context} must be canonical base64`);
   }
   const maximumCharacters = Math.ceil(maximumBytes / 3) * 4;
@@ -159,6 +160,18 @@ function decodeBase64(
     return limitExceeded(`${context} exceeds its size limit`);
   }
   const padding = value.endsWith("==") ? 2 : value.endsWith("=") ? 1 : 0;
+  const dataLength = value.length - padding;
+  for (let index = 0; index < dataLength; index++) {
+    const code = value.charCodeAt(index);
+    if (
+      !((code >= 65 && code <= 90) ||
+        (code >= 97 && code <= 122) ||
+        (code >= 48 && code <= 57) ||
+        code === 43 || code === 47)
+    ) {
+      return invalidVault(`${context} must be canonical base64`);
+    }
+  }
   const byteLength = (value.length / 4) * 3 - padding;
   if (!Number.isSafeInteger(byteLength) || byteLength > maximumBytes) {
     return limitExceeded(`${context} exceeds its decoded size limit`);

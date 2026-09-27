@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import {
+  appendFile,
   mkdtemp,
   open,
   rm,
   symlink,
   writeFile,
 } from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -66,6 +68,38 @@ test("Vite validates and caches only a bounded regular vault file", async () => 
       /vault is invalid/iu,
     );
   } finally {
+    await rm(directory, { force: true, recursive: true });
+  }
+});
+
+test("Vite never reads beyond a regular vault's validated size", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "vite-vault-growth-test-"));
+  const vaultPath = join(directory, "vault.json");
+  const probe = await open(vaultPath, "w+", 0o600);
+  try {
+    await probe.writeFile(structuralVaultFixture());
+    const prototype = Object.getPrototypeOf(probe) as {
+      read: (this: FileHandle, buffer: Buffer, offset: number, length: number, position: number) => Promise<{ bytesRead: number; buffer: Buffer }>;
+      readFile: (this: FileHandle) => Promise<Buffer>;
+    };
+    const originalRead = prototype.read;
+    let grew = false;
+    const unboundedRead = context.mock.method(prototype, "readFile", async () => {
+      throw new Error("unbounded readFile was used");
+    });
+    context.mock.method(prototype, "read", async function (this: FileHandle, buffer: Buffer, offset: number, length: number, position: number) {
+      if (!grew) {
+        grew = true;
+        await appendFile(vaultPath, "growth");
+      }
+      return originalRead.call(this, buffer, offset, length, position);
+    });
+
+    await assert.rejects(readValidatedVaultFile(vaultPath), /vault is invalid/iu);
+    assert.equal(grew, true);
+    assert.equal(unboundedRead.mock.callCount(), 0);
+  } finally {
+    await probe.close();
     await rm(directory, { force: true, recursive: true });
   }
 });

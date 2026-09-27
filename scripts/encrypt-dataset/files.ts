@@ -8,6 +8,7 @@ import {
 } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 
+import { readBoundedFileHandle } from "../bounded-read.ts";
 import { DatasetEncryptionError } from "./errors.ts";
 
 export interface ReadRegularFileOptions {
@@ -86,12 +87,28 @@ export async function readLimitedRegularFile(
                 `${context} changed while it was being opened`,
             );
         }
-        const source = await fileHandle.readFile();
-        if (source.byteLength > maximumBytes) {
+        let source: Buffer;
+        try {
+            source = await readBoundedFileHandle(fileHandle, fileStat.size);
+        } catch (error) {
+            throw new DatasetEncryptionError(
+                "INVALID_INPUT",
+                `${context} changed while it was being read`,
+                { cause: error },
+            );
+        }
+        const completedStat = await fileHandle.stat();
+        if (
+            completedStat.size !== fileStat.size ||
+            completedStat.mtimeMs !== fileStat.mtimeMs ||
+            completedStat.ctimeMs !== fileStat.ctimeMs
+        ) {
             source.fill(0);
             throw new DatasetEncryptionError(
-                "DATASET_LIMIT_EXCEEDED",
-                `${context} exceeds its size limit`,
+                completedStat.size > maximumBytes ? "DATASET_LIMIT_EXCEEDED" : "INVALID_INPUT",
+                completedStat.size > maximumBytes
+                    ? `${context} exceeds its size limit`
+                    : `${context} changed while it was being read`,
             );
         }
         return source;

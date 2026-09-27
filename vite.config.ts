@@ -8,6 +8,7 @@ import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import type { Plugin } from "vite";
 
+import { readBoundedFileHandle } from "./scripts/bounded-read.ts";
 import { parseStaticVaultEnvelopeJson, STATIC_VAULT_MAX_ENVELOPE_BYTES } from "./src/domain/security/static-vault.ts";
 
 const DATA_FILES = ["app-dataset.vault.json"] as const;
@@ -94,9 +95,15 @@ export async function readValidatedVaultFile(
     ) {
       throw new Error("Encrypted dataset vault changed while opening");
     }
-    const source = await fileHandle.readFile();
-    if (source.byteLength > STATIC_VAULT_MAX_ENVELOPE_BYTES) {
-      throw new Error("Encrypted dataset vault exceeds its size limit");
+    const source = await readBoundedFileHandle(fileHandle, fileStat.size);
+    const completedStat = await fileHandle.stat();
+    if (
+      completedStat.size !== fileStat.size ||
+      completedStat.mtimeMs !== fileStat.mtimeMs ||
+      completedStat.ctimeMs !== fileStat.ctimeMs
+    ) {
+      source.fill(0);
+      throw new Error("Encrypted dataset vault changed while reading");
     }
     const json = new TextDecoder("utf-8", { fatal: true }).decode(source);
     parseStaticVaultEnvelopeJson(json);

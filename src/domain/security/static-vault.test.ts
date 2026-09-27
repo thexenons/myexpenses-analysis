@@ -8,6 +8,7 @@ import {
   serializeStaticVaultEnvelope,
   serializeStaticVaultHeader,
   STATIC_VAULT_MAX_COMPRESSED_BYTES,
+  STATIC_VAULT_MAX_CIPHERTEXT_BYTES,
   STATIC_VAULT_MAX_ENVELOPE_BYTES,
   StaticVaultUnlockError,
   StaticVaultValidationError,
@@ -176,6 +177,55 @@ describe("static dataset vault", () => {
         " ".repeat(STATIC_VAULT_MAX_ENVELOPE_BYTES + 1),
       ),
     ).toThrow(/envelope exceeds its size limit/iu);
+  });
+
+  it("validates large canonical ciphertext without regexp stack overflow", () => {
+    const ciphertextBytes = 12 * 1024 * 1024;
+    const ciphertext = "A".repeat((ciphertextBytes / 3) * 4);
+    const envelope = {
+      format: "myexpenses-static-vault",
+      version: 1,
+      compression: "gzip",
+      compressedBytes: ciphertextBytes - 16,
+      cipher: { algorithm: "AES-256-GCM", iv: "AAAAAAAAAAAAAAAA", keyBits: 256, tagBits: 128 },
+      kdf: { algorithm: "PBKDF2-HMAC-SHA-256", iterations: 600_000, salt: "AAAAAAAAAAAAAAAAAAAAAA==" },
+      ciphertext,
+    };
+
+    expect(() => parseStaticVaultEnvelope(envelope)).not.toThrow();
+    let oversizedError: unknown;
+    try {
+      parseStaticVaultEnvelope({
+        ...envelope,
+        ciphertext: "!".padEnd(Math.ceil(STATIC_VAULT_MAX_CIPHERTEXT_BYTES / 3) * 4 + 4, "A"),
+      });
+    } catch (error) {
+      oversizedError = error;
+    }
+    expect(oversizedError).toMatchObject({ code: "VAULT_LIMIT_EXCEEDED" });
+    expect(() => parseStaticVaultEnvelope({
+      ...envelope,
+      ciphertext: "AA=A" + ciphertext.slice(4),
+    })).toThrow(/canonical base64/u);
+    expect(() => parseStaticVaultEnvelope({
+      ...envelope,
+      ciphertext: "AA==" + ciphertext.slice(4),
+    })).toThrow(/canonical base64/u);
+  });
+
+  it("accepts the exact maximum canonical ciphertext size", () => {
+    const ciphertextBytes = STATIC_VAULT_MAX_CIPHERTEXT_BYTES;
+    const envelope = {
+      format: "myexpenses-static-vault",
+      version: 1,
+      compression: "gzip",
+      compressedBytes: STATIC_VAULT_MAX_COMPRESSED_BYTES,
+      cipher: { algorithm: "AES-256-GCM", iv: "AAAAAAAAAAAAAAAA", keyBits: 256, tagBits: 128 },
+      kdf: { algorithm: "PBKDF2-HMAC-SHA-256", iterations: 600_000, salt: "AAAAAAAAAAAAAAAAAAAAAA==" },
+      ciphertext: "A".repeat((ciphertextBytes / 3) * 4),
+    };
+
+    expect(() => parseStaticVaultEnvelope(envelope)).not.toThrow();
   });
 
   it("enforces passphrase strength in UTF-8 bytes", async () => {
