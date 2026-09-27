@@ -79,14 +79,14 @@ async function linkInstalledPackages(snapshot: string): Promise<void> {
 
 async function main(): Promise<void> {
   if (isWithin(ROOT, tmpdir())) throw new Error("Temporary directory must be outside the repository");
-  const temporary = await mkdtemp(join(tmpdir(), "myexpenses-browser-source-"));
-  const snapshot = join(temporary, "source");
   const browserPath = process.env.PLAYWRIGHT_BROWSERS_PATH ?? join(homedir(), ".cache", "ms-playwright");
   if (!isAbsolute(browserPath) || isWithin(ROOT, browserPath)) throw new Error("Browser cache must be outside the repository");
   const runtimeLib = process.env.MYEXPENSES_BROWSER_RUNTIME_LIB_DIR;
   if (runtimeLib !== undefined && (!isAbsolute(runtimeLib) || isWithin(ROOT, runtimeLib))) {
     throw new Error("Browser runtime library directory must be outside the repository");
   }
+  const temporary = await mkdtemp(join(tmpdir(), "myexpenses-browser-source-"));
+  const snapshot = join(temporary, "source");
   try {
     await mkdir(snapshot);
     await mkdir(join(temporary, "home"));
