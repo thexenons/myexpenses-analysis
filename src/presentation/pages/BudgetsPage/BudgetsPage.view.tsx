@@ -92,7 +92,6 @@ export function BudgetsPageView({
   const amountFormatter = budgetAmountFormatter(currency, fractionDigits);
   const toMajor = (amountMinor: number) =>
     budgetMinorToMajor(amountMinor, fractionDigits);
-  const utilization = global.utilization ?? 0;
 
   return (
     <AnalyticsPage
@@ -155,7 +154,8 @@ export function BudgetsPageView({
           value={toMajor(global.availableMinor)}
         />
         <KpiCard
-          detail={global.utilization === null ? "Sin límite global" : analysis.period.label}
+          detail={analysis.period.label}
+          emptyValue="Sin límite global"
           formatValue={percentageFormatter}
           icon={<Icon name="calendar" />}
           label="Utilización"
@@ -166,7 +166,7 @@ export function BudgetsPageView({
                 ? "warning"
                 : "info"
           }
-          value={utilization}
+          value={global.utilization}
         />
       </AnalyticsPageGrid>
 

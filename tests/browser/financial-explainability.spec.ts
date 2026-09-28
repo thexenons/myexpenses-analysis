@@ -369,16 +369,119 @@ test("budget details retain exact movement IDs and native close returns focus", 
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await expect(overallTrigger).toBeFocused();
-  await page.getByRole("button", { name: "Ver apuntes consumidos de Expense", exact: true }).click();
+  await page.getByRole("button", { name: /Ver apuntes consumidos de Expense:/ }).click();
   const categoryDialog = page.getByRole("dialog", { name: "Expense · apuntes" });
   await expect(categoryDialog.getByText(/10000000-0000-4000-8000-000000000015/)).toBeVisible();
   await expect(categoryDialog.getByText(/4 apuntes · -0,95/)).toBeVisible();
   await categoryDialog.getByRole("button", { name: "Cerrar detalle" }).click();
-  await page.getByRole("button", { name: "Ver apuntes consumidos de Expense › Food" }).click();
+  await page.getByRole("button", { name: /Ver apuntes consumidos de Expense › Food:/ }).click();
   const foodDialog = page.getByRole("dialog", { name: "Expense › Food · apuntes" });
   await expect(foodDialog.getByText(/1 apunte · 0,25/)).toBeVisible();
   await expect(foodDialog.getByText(/10000000-0000-4000-8000-000000000015/)).toBeVisible();
   await foodDialog.getByRole("button", { name: "Cerrar detalle" }).click();
   await expect(page.getByRole("button", { name: "Filtrar: Expense" })).toHaveCount(0);
   await expectNoDocumentOverflow(page);
+});
+
+test("keeps debt selection next to balance and preserves budget action names", async ({ page }) => {
+  await page.getByRole("link", { name: "Deudas" }).click();
+  const selection = page.getByRole("region", { name: "Seleccionar cuentas de deuda" });
+  await expect(selection).toBeVisible();
+  const balance = page.getByText("Saldo conjunto en deudas");
+  const trend = page.getByRole("heading", { name: "Evolución de la selección" });
+  const inOrder = await selection.evaluate((element, references) => {
+    const before = document.querySelector(references.balance)!;
+    const after = document.querySelector(references.trend)!;
+    return Boolean(before.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+      Boolean(element.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING);
+  }, { balance: "[class*='debtSummaryLabel']", trend: "[class*='chartPanel'] h2" });
+  expect(inOrder).toBe(true);
+  await expect(selection.getByText("Deuda", { exact: true })).toHaveCount(0);
+  await expect(balance).toBeVisible();
+  await expect(trend).toBeVisible();
+  await expectNoDocumentOverflow(page);
+  await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
+  const debtViolations = await page.evaluate(async () => {
+    const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
+    return (await axe.run(document.body, { runOnly: { type: "rule", values: ["button-name", "color-contrast", "aria-hidden-focus"] } })).violations.map(({ id }) => id);
+  });
+  expect(debtViolations).toEqual([]);
+  await page.screenshot({ path: `/tmp/myexpenses-u3-visual/debts-after-${page.viewportSize()!.width}.png`, fullPage: true });
+  const accountCard = selection.locator("article").first();
+  await accountCard.scrollIntoViewIfNeeded();
+  await expect(accountCard.getByRole("button", { name: "Incluir" })).toBeVisible();
+  await expect.poll(() => accountCard.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThan(240);
+  await accountCard.screenshot({ path: `/tmp/myexpenses-u3-visual/debts-account-${page.viewportSize()!.width}.png` });
+
+  await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
+  await page.getByRole("group", { name: "Marco del presupuesto" }).getByLabel("Periodo").selectOption("MONTH:2026:7");
+  const action = page.getByRole("button", { name: /Ver apuntes consumidos de Expense:/ });
+  await expect(action).toBeVisible();
+  expect(await action.getAttribute("aria-label")).toContain((await action.textContent())!.trim());
+  await expect(page.getByText("Asignado global")).toBeVisible();
+  await expect(page.getByText("Arrastre recibido")).toBeVisible();
+  await expectNoDocumentOverflow(page);
+  await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
+  const violations = await page.evaluate(async () => {
+    const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
+    return (await axe.run(document.body, { runOnly: { type: "rule", values: ["button-name", "color-contrast", "aria-hidden-focus"] } })).violations.map(({ id }) => id);
+  });
+  expect(violations).toEqual([]);
+  await Promise.all(([
+    ["Utilización del corte de Expense", /-95\s*%/],
+    ["Utilización del corte de Expense › Food", /125\s*%/],
+  ] as const).map(async ([label, amount]) => {
+    const meter = page.getByRole("meter", { name: label, exact: true });
+    await expect(meter).toHaveAttribute("aria-valuetext", amount);
+    const layout = await meter.evaluate((element) => {
+      const heading = element.previousElementSibling!;
+      const text = heading.firstElementChild as HTMLElement;
+      const value = heading.lastElementChild as HTMLElement;
+      return {
+        labelFits: text.scrollWidth <= text.clientWidth + 1,
+        valueHeight: value.getBoundingClientRect().height,
+        singleLineHeight: Number.parseFloat(getComputedStyle(value).fontSize) * 1.6,
+      };
+    });
+    expect(layout.labelFits, `${label} label must wrap inside its cell`).toBe(true);
+    expect(layout.valueHeight, `${label} percentage must stay on one line`).toBeLessThanOrEqual(layout.singleLineHeight);
+  }));
+  await page.screenshot({ path: `/tmp/myexpenses-u3-visual/budgets-after-${page.viewportSize()!.width}.png`, fullPage: true });
+});
+
+test("keeps the no-limit budget honest and moves focus into the final 27-item batch", async ({ page }) => {
+  await page.route("**/data/app-dataset.vault.json", async (route) => {
+    const variant = await route.fetch({ url: `${BASE}/data/u3-budget.vault.json` });
+    await route.fulfill({ response: variant });
+  });
+  await page.reload();
+  await page.getByLabel("Frase de desbloqueo").fill(PASSPHRASE);
+  await page.getByRole("button", { name: "Abrir bóveda" }).click();
+  await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
+  await page.getByRole("group", { name: "Marco del presupuesto" }).getByLabel("Periodo").selectOption("MONTH:2026:7");
+  const utilization = page.getByRole("article", { name: "Utilización" });
+  await expect(utilization).toContainText("Sin límite global");
+  await expect(utilization).not.toContainText("0 %");
+  const trigger = page.getByRole("button", { name: "Ver apuntes del gasto neto" });
+  await trigger.click();
+  const dialog = page.getByRole("dialog", { name: "Gasto neto · apuntes" });
+  await expect(dialog.getByText(/27 apuntes/)).toBeVisible();
+  await expect(dialog.locator("ol > li")).toHaveCount(25);
+  const more = dialog.getByRole("button", { name: /Mostrar más/ });
+  await more.focus();
+  await page.keyboard.press("Enter");
+  await expect(dialog.locator("ol > li")).toHaveCount(27);
+  await expect(more).toHaveCount(0);
+  await expect(dialog.locator("ol > li").nth(25)).toBeFocused();
+  await expectNoDocumentOverflow(page);
+  await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
+  const violations = await page.evaluate(async () => {
+    const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
+    return (await axe.run(document.querySelector("dialog")!, { runOnly: { type: "rule", values: ["aria-dialog-name", "button-name", "aria-hidden-focus"] } })).violations.map(({ id }) => id);
+  });
+  expect(violations).toEqual([]);
+  await page.screenshot({ path: `/tmp/myexpenses-u3-visual/budget-no-limit-dialog-${page.viewportSize()!.width}.png` });
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(trigger).toBeFocused();
 });

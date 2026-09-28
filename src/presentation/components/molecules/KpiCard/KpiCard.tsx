@@ -10,6 +10,7 @@ export function KpiCard({
   "aria-labelledby": ariaLabelledBy,
   className,
   detail,
+  emptyValue,
   formatValue,
   icon,
   label,
@@ -40,11 +41,15 @@ export function KpiCard({
         ) : null}
       </div>
 
-      <FormattedNumber
-        className={styles.value}
-        formatter={formatValue}
-        value={value}
-      />
+      {value === null ? (
+        <span className={styles.value}>{emptyValue ?? "—"}</span>
+      ) : (
+        <FormattedNumber
+          className={styles.value}
+          formatter={formatValue}
+          value={value}
+        />
+      )}
 
       {detail || trend ? (
         <div className={styles.footer}>

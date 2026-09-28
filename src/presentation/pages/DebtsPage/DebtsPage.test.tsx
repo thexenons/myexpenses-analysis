@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -44,7 +44,7 @@ const debt: DebtBreakdownItem = {
 };
 
 describe("DebtsPageView", () => {
-  it.each([false, true])("shows debt and cash balances despite the source exclusion flag (legacy includedInAll=%s)", (includedInAll) => {
+  it.each([false, true])("shows debt and cash balances despite the source exclusion flag (legacy includedInAll=%s)", async (includedInAll) => {
     const source: BackupDatasetV1 = {
       version: 1,
       source: { format: "myexpenses-backup", schemaVersion: 190, backupSha256: "a".repeat(64), databaseSha256: "b".repeat(64) },
@@ -91,7 +91,8 @@ describe("DebtsPageView", () => {
     expect(screen.getByRole("article", { name: "Movimiento neto" })).toHaveTextContent(/20,00\s*€/);
 
     rerender(<OverviewPageView {...createOverviewPageModel(filtered, "month", false)} />);
-    expect(screen.getByRole("article", { name: "Saldo en deudas" })).toHaveTextContent(/120,00\s*€/);
+    await userEvent.setup().click(screen.getByText("Saldos, deuda y conciliación"));
+    expect(screen.getByText("Saldo en deudas").nextElementSibling).toHaveTextContent(/120,00\s*€/);
     expect(screen.getByText("Saldo al cierre del periodo").nextElementSibling).toHaveTextContent(/150,00\s*€/);
   });
 
@@ -139,6 +140,13 @@ describe("DebtsPageView", () => {
     expect(screen.getByText("Recibido de deudas")).toBeVisible();
     expect(screen.getByText("Evolución de la selección")).toBeVisible();
     expect(screen.getByText("Seleccionar cuentas de deuda")).toBeVisible();
+    const selection = screen.getByText("Seleccionar cuentas de deuda").closest("section");
+    const balance = screen.getByText("Saldo conjunto en deudas");
+    const trend = screen.getByText("Evolución de la selección");
+    expect(selection).not.toBeNull();
+    expect(balance.compareDocumentPosition(selection!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(selection!.compareDocumentPosition(trend)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(within(selection!).queryByText("Deuda", { exact: true })).not.toBeInTheDocument();
 
     const accountButton = screen.getByRole("button", {
       name: "Excluir Persona",

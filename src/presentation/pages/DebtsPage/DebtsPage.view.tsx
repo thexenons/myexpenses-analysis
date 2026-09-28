@@ -62,6 +62,87 @@ export function DebtsPageView({
         </Badge>
       </div>
 
+      <Panel
+        actions={
+          <Button
+            disabled={debts.length === 0}
+            onClick={() => onViewTransactions()}
+            variant="secondary"
+          >
+            Ver movimientos de la selección
+          </Button>
+        }
+        description="Incluye o excluye cuentas manteniendo al menos una seleccionada. Abre sus movimientos para consultar el detalle con los filtros actuales."
+        title="Seleccionar cuentas de deuda"
+      >
+        {availableDebts.length === 0 ? (
+          <EmptyState
+            description="El ámbito y los filtros actuales no contienen cuentas marcadas como deuda."
+            icon={<Icon name="debt" />}
+            title="No hay deudas en este ámbito"
+          />
+        ) : (
+          <div className={styles.accountGrid}>
+            {availableDebts.map((debt) => {
+              const selected = selectedAccountIds.has(debt.account.id);
+              return (
+                <article
+                  className={styles.accountCard}
+                  data-selected={selected}
+                  key={debt.account.id}
+                >
+                  <div className={styles.accountHeader}>
+                    <div>
+                      <h3 className={styles.accountName}>{debt.account.label}</h3>
+                      <p className={styles.accountMeta}>
+                        {countFormatter.format(debt.postingCount)} apuntes
+                      </p>
+                    </div>
+                  </div>
+                  <strong className={styles.accountBalance}>
+                    {formatEuroMinor(debt.periodClosingBalanceEurMinor)}
+                  </strong>
+                  <div className={styles.accountFooter}>
+                    <span className={styles.accountMeta}>
+                      Movimiento filtrado {formatEuroMinor(debt.netEurMinor)}
+                    </span>
+                    <span className={styles.accountMeta}>
+                      Apertura {formatEuroMinor(debt.periodOpeningBalanceEurMinor)}
+                    </span>
+                  </div>
+                  <dl className={styles.accountMetrics}>
+                    <dt>Enviado</dt>
+                    <dd>{formatEuroMinor(debt.advancesEurMinor)}</dd>
+                    <dt>Recibido</dt>
+                    <dd>{formatEuroMinor(debt.recoveriesEurMinor)}</dd>
+                    <dt>Gasto neto atribuido</dt>
+                    <dd>{formatEuroMinor(debt.grossDebtExpensesEurMinor - debt.debtExpenseRefundsEurMinor)}</dd>
+                  </dl>
+                  <Button
+                    aria-label={`${selected ? "Excluir" : "Incluir"} ${debt.account.label}`}
+                    aria-pressed={selected}
+                    disabled={selected && selectedAccountIds.size === 1}
+                    onClick={() => onToggleAccount(debt.account.id)}
+                    size="compact"
+                    variant={selected ? "primary" : "secondary"}
+                  >
+                    {selected ? "Excluir" : "Incluir"}
+                  </Button>
+                  <Button
+                    aria-label={`Ver movimientos de ${debt.account.label}`}
+                    onClick={() => onViewTransactions(debt.account.id)}
+                    size="compact"
+                    variant="secondary"
+                  >
+                    Ver movimientos
+                  </Button>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </Panel>
+
       <AnalyticsPageGrid variant="kpis">
         <KpiCard
           detail="Transferencias desde cuentas propias hacia estas cuentas"
@@ -135,88 +216,6 @@ export function DebtsPageView({
           />
         </Panel>
       </AnalyticsPageGrid>
-
-      <Panel
-        actions={
-          <Button
-            disabled={debts.length === 0}
-            onClick={() => onViewTransactions()}
-            variant="secondary"
-          >
-            Ver movimientos de la selección
-          </Button>
-        }
-        description="Incluye o excluye cuentas manteniendo al menos una seleccionada. Abre sus movimientos para consultar el detalle con los filtros actuales."
-        title="Seleccionar cuentas de deuda"
-      >
-        {availableDebts.length === 0 ? (
-          <EmptyState
-            description="El ámbito y los filtros actuales no contienen cuentas marcadas como deuda."
-            icon={<Icon name="debt" />}
-            title="No hay deudas en este ámbito"
-          />
-        ) : (
-          <div className={styles.accountGrid}>
-            {availableDebts.map((debt) => {
-              const selected = selectedAccountIds.has(debt.account.id);
-              return (
-                <article
-                  className={styles.accountCard}
-                  data-selected={selected}
-                  key={debt.account.id}
-                >
-                  <div className={styles.accountHeader}>
-                    <div>
-                      <h3 className={styles.accountName}>{debt.account.label}</h3>
-                      <p className={styles.accountMeta}>
-                        {countFormatter.format(debt.postingCount)} apuntes
-                      </p>
-                    </div>
-                    <Badge tone="debt">Deuda</Badge>
-                  </div>
-                  <strong className={styles.accountBalance}>
-                    {formatEuroMinor(debt.periodClosingBalanceEurMinor)}
-                  </strong>
-                  <div className={styles.accountFooter}>
-                    <span className={styles.accountMeta}>
-                      Movimiento filtrado {formatEuroMinor(debt.netEurMinor)}
-                    </span>
-                    <span className={styles.accountMeta}>
-                      Apertura {formatEuroMinor(debt.periodOpeningBalanceEurMinor)}
-                    </span>
-                  </div>
-                  <dl className={styles.accountMetrics}>
-                    <dt>Enviado</dt>
-                    <dd>{formatEuroMinor(debt.advancesEurMinor)}</dd>
-                    <dt>Recibido</dt>
-                    <dd>{formatEuroMinor(debt.recoveriesEurMinor)}</dd>
-                    <dt>Gasto neto atribuido</dt>
-                    <dd>{formatEuroMinor(debt.grossDebtExpensesEurMinor - debt.debtExpenseRefundsEurMinor)}</dd>
-                  </dl>
-                  <Button
-                    aria-label={`${selected ? "Excluir" : "Incluir"} ${debt.account.label}`}
-                    aria-pressed={selected}
-                    disabled={selected && selectedAccountIds.size === 1}
-                    onClick={() => onToggleAccount(debt.account.id)}
-                    size="compact"
-                    variant={selected ? "primary" : "secondary"}
-                  >
-                    {selected ? "Excluir" : "Incluir"}
-                  </Button>
-                  <Button
-                    aria-label={`Ver movimientos de ${debt.account.label}`}
-                    onClick={() => onViewTransactions(debt.account.id)}
-                    size="compact"
-                    variant="secondary"
-                  >
-                    Ver movimientos
-                  </Button>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </Panel>
     </AnalyticsPage>
   );
 }

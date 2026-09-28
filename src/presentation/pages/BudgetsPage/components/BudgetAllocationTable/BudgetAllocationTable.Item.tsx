@@ -62,7 +62,7 @@ export function BudgetAllocationItem({
               <dd>
                 {onInspectConsumption === undefined ? formatBudgetMinor(allocation.consumedMinor, currency, fractionDigits) : (
                   <button
-                    aria-label={`Ver apuntes consumidos de ${pathLabel}`}
+                    aria-label={`Ver apuntes consumidos de ${pathLabel}: ${formatBudgetMinor(allocation.consumedMinor, currency, fractionDigits)}`}
                     className={styles.inspectButton}
                     onClick={(event) => onInspectConsumption(allocation.path, pathLabel, event.currentTarget)}
                     type="button"

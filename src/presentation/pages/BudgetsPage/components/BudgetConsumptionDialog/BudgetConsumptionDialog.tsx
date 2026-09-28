@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import type { BudgetContribution } from "../../../../../domain/analytics/budgets.ts";
 import { formatDate } from "../../../../utils/format.ts";
@@ -29,8 +29,16 @@ export function BudgetConsumptionDialog({
   const headingId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const newlyRevealedRef = useRef<HTMLLIElement>(null);
+  const [newItemsStart, setNewItemsStart] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const totalMinor = contributions.reduce((sum, entry) => sum + entry.amountMinor, 0);
+
+  useLayoutEffect(() => {
+    if (newItemsStart !== null && visibleCount >= contributions.length) {
+      newlyRevealedRef.current?.focus();
+    }
+  }, [visibleCount, contributions.length, newItemsStart]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -75,8 +83,13 @@ export function BudgetConsumptionDialog({
           <p>No hay apuntes para este consumo.</p>
         ) : (
           <ol className={styles.list}>
-            {contributions.slice(0, visibleCount).map(({ posting, amountMinor }) => (
-              <li className={styles.row} key={posting.id}>
+            {contributions.slice(0, visibleCount).map(({ posting, amountMinor }, index) => (
+              <li
+                className={styles.row}
+                key={posting.id}
+                ref={index === newItemsStart ? newlyRevealedRef : undefined}
+                tabIndex={index === newItemsStart ? -1 : undefined}
+              >
                 <div className={styles.rowMain}>
                   <strong>{posting.payee || posting.comment || "Apunte sin concepto"}</strong>
                   <span>{formatDate(dateBasis === "value" ? posting.valueDate ?? posting.date : posting.date)} · {posting.accountLabel}</span>
@@ -94,7 +107,14 @@ export function BudgetConsumptionDialog({
           </ol>
         )}
         {visibleCount < contributions.length ? (
-          <button className={styles.moreButton} onClick={() => setVisibleCount((count) => count + PAGE_SIZE)} type="button">
+          <button
+            className={styles.moreButton}
+            onClick={() => {
+              setNewItemsStart(visibleCount);
+              setVisibleCount((count) => count + PAGE_SIZE);
+            }}
+            type="button"
+          >
             Mostrar más · {Math.min(visibleCount, contributions.length)} de {contributions.length}
           </button>
         ) : null}

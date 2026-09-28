@@ -51,6 +51,17 @@ const root: BudgetAllocationNode = {
 };
 
 describe("BudgetAllocationTable", () => {
+  it("includes the visible consumed amount in the category action name", () => {
+    render(
+      <BudgetAllocationTable
+        allocations={[{ ...root, children: [] }]}
+        currency="EUR"
+        fractionDigits={2}
+        onInspectConsumption={() => {}}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /Ver apuntes consumidos de Gastos.*45,00/ })).toBeVisible();
+  });
   it("discloses nested allocations without making category names filter controls", async () => {
     const user = userEvent.setup();
     const { container } = render(

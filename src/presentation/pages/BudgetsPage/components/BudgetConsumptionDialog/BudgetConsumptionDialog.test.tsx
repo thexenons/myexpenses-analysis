@@ -135,6 +135,8 @@ describe("BudgetConsumptionDialog", () => {
     await user.click(screen.getByRole("button", { name: /Mostrar más/ }));
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(27);
     expect(screen.queryByRole("button", { name: /Mostrar más/ })).not.toBeInTheDocument();
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).not.toBe(dialog);
     unmount();
     expect(trigger).toHaveFocus();
     trigger.remove();

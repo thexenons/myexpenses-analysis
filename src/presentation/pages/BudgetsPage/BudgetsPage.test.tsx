@@ -118,6 +118,26 @@ const analysis: BudgetAnalysis = {
 };
 
 describe("BudgetsPageView", () => {
+  it("shows the absence of a global limit instead of a calculated zero percent", () => {
+    render(
+      <BudgetsPageView
+        analysis={{ ...analysis, global: { ...analysis.global, assignedMinor: 0, utilization: null, health: "unallocated" } }}
+        budgetOptions={[]}
+        emptyDescription={null}
+        emptyTitle={null}
+        onBudgetChange={vi.fn<(value: string) => void>()}
+        onPeriodChange={vi.fn<(value: string) => void>()}
+        periodOptions={[]}
+        searchPending={false}
+        selectedBudgetUuid="budget"
+        selectedPeriodKey="MONTH:2026:7"
+      />,
+    );
+    const utilization = screen.getByRole("article", { name: "Utilización" });
+    expect(utilization).toHaveTextContent("Sin límite global");
+    expect(utilization).not.toHaveTextContent("0 %");
+    expect(utilization.querySelector("data")).toBeNull();
+  });
   it("opens exact global and category details without changing filters or the accordion", async () => {
     Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
       configurable: true,
@@ -179,7 +199,7 @@ describe("BudgetsPageView", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(globalTrigger).toHaveFocus();
 
-    await user.click(screen.getByRole("button", { name: "Ver apuntes consumidos de Gastos › Comida" }));
+    await user.click(screen.getByRole("button", { name: /Ver apuntes consumidos de Gastos › Comida: 35,00/ }));
     expect(screen.getByRole("dialog", { name: "Gastos › Comida · apuntes" })).toBeVisible();
     expect(screen.getByText("child-expense")).toBeVisible();
     expect(screen.getByText("child-refund")).toBeVisible();

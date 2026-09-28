@@ -13,11 +13,12 @@ export interface KpiTrend {
 export interface KpiCardProps
   extends Omit<HTMLAttributes<HTMLElement>, "children"> {
   detail?: ReactNode
+  emptyValue?: string
   formatValue?: Intl.NumberFormat | ValueFormatter
   icon?: ReactNode
   label: ReactNode
   tone?: Tone
   trend?: KpiTrend
-  value: number
+  value: number | null
   ref?: Ref<HTMLElement>
 }

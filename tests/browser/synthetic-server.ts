@@ -45,6 +45,9 @@ async function main(): Promise<void> {
   const vaultPath = join(temporary, "app-dataset.vault.json");
   const legacyDatasetPath = join(temporary, "legacy-dataset.json");
   const legacyVaultPath = join(temporary, "legacy.vault.json");
+  const noLimitArchivePath = join(temporary, "u3-budget-backup.zip");
+  const noLimitDatasetPath = join(temporary, "u3-budget-dataset.json");
+  const noLimitVaultPath = join(temporary, "u3-budget.vault.json");
   const distPath = join(temporary, "dist");
   let server: ReturnType<typeof createServer> | undefined;
   let closing = false;
@@ -57,7 +60,7 @@ async function main(): Promise<void> {
   process.once("SIGTERM", () => { void cleanup().finally(() => { process.exitCode = 0; }); });
   process.once("SIGINT", () => { void cleanup().finally(() => { process.exitCode = 0; }); });
   try {
-    const database = await createImportDatabaseFixture({ extraSql: [
+    const baseExtraSql = [
       "INSERT INTO categories (_id, uuid, label, parent_id, type) VALUES (14, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa5', 'Food', 10, 1)",
       "INSERT INTO payee (_id, name, short_name, iban, bic, parent_id) VALUES (3, 'Child payee', NULL, NULL, NULL, NULL)",
       "INSERT INTO paymentmethods (_id, label, is_numbered, type, icon) VALUES (4, 'Neutral method', 0, -1, NULL)",
@@ -69,7 +72,8 @@ async function main(): Promise<void> {
       "UPDATE transactions SET payee_id = 3, method_id = 4 WHERE _id = 17",
       "INSERT INTO budget_allocations (budget_id, cat_id, year, second, budget, rollOverPrevious, rollOverNext, oneTime) VALUES (1, 10, 2026, 7, 100, 0, 0, 0)",
       "INSERT INTO budget_allocations (budget_id, cat_id, year, second, budget, rollOverPrevious, rollOverNext, oneTime) VALUES (1, 14, 2026, 7, 20, 0, 0, 0)",
-    ] });
+    ];
+    const database = await createImportDatabaseFixture({ extraSql: baseExtraSql });
     await writeFile(archivePath, await createBackupZipFixture({ database }), { mode: 0o600 });
     await importBackup({
       inputPath: archivePath,
@@ -91,6 +95,28 @@ async function main(): Promise<void> {
     const built = await runBuildStaticCli(["--vault", vaultPath, "--out-dir", distPath], { prompt: async () => PASSPHRASE });
     if (built !== 0) throw new Error("Synthetic browser build failed");
     await copyFile(legacyVaultPath, join(distPath, "data", "legacy.vault.json"));
+    const noLimitDatabase = await createImportDatabaseFixture({ extraSql: [
+      ...baseExtraSql,
+      "DELETE FROM budget_allocations WHERE budget_id = 1 AND cat_id = 0",
+      ...Array.from({ length: 23 }, (_, index) => {
+        const id = index + 20;
+        const uuid = `10000000-0000-4000-8000-${String(id).padStart(12, "0")}`;
+        return `INSERT INTO transactions (_id, uuid, comment, date, value_date, amount, cat_id, account_id, parent_id, status, cr_status) VALUES (${id}, '${uuid}', 'Additional synthetic expense ${id}', 1787425493, 1787425493, -1, 10, 1, NULL, 0, 'RECONCILED')`;
+      }),
+    ] });
+    await writeFile(noLimitArchivePath, await createBackupZipFixture({ database: noLimitDatabase }), { mode: 0o600 });
+    await importBackup({
+      inputPath: noLimitArchivePath,
+      outputPath: noLimitDatasetPath,
+      timeZone: "Europe/Madrid",
+      backupFilenameTimestamp: "20260822210453",
+      importedAt: "2026-08-23T10:00:00.000Z",
+    });
+    await encryptDataset({ inputPath: noLimitDatasetPath, outputPath: noLimitVaultPath, passphrase: PASSPHRASE });
+    await copyFile(noLimitVaultPath, join(distPath, "data", "u3-budget.vault.json"));
+    await rm(noLimitArchivePath);
+    await rm(noLimitDatasetPath);
+    await rm(noLimitVaultPath);
     await rm(vaultPath);
     await rm(legacyVaultPath);
     const distReal = await realpath(distPath);
@@ -100,11 +126,11 @@ async function main(): Promise<void> {
         if (/(?:\.\.|%2e)/iu.test(request.url ?? "")) { response.writeHead(400).end(); return; }
         const pathname = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
         if (!pathname.startsWith("/assets/") &&
-            pathname !== "/data/app-dataset.vault.json" && pathname !== "/data/legacy.vault.json" &&
+            pathname !== "/data/app-dataset.vault.json" && pathname !== "/data/legacy.vault.json" && pathname !== "/data/u3-budget.vault.json" &&
             pathname !== "/index.html" && !APP_ROUTES.has(pathname)) {
           response.writeHead(404).end(); return;
         }
-        const file = pathname.startsWith("/assets/") || pathname === "/data/app-dataset.vault.json" || pathname === "/data/legacy.vault.json"
+        const file = pathname.startsWith("/assets/") || pathname === "/data/app-dataset.vault.json" || pathname === "/data/legacy.vault.json" || pathname === "/data/u3-budget.vault.json"
           ? join(distReal, decodeURIComponent(pathname))
           : join(distReal, "index.html");
         const fileReal = await realpath(file);
