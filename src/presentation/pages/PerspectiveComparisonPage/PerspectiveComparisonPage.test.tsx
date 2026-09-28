@@ -102,6 +102,26 @@ describe("perspective comparison", () => {
     expect(screen.getByText(/no es gasto atribuido ni saldo/)).toBeVisible();
   });
 
+  it("leads with Yo and explains the related signed perspectives next to their values", () => {
+    const rows = createPerspectiveComparisonModel(dataset, createDefaultFilterState());
+    render(<PerspectiveComparisonPageView categories={[]} rows={rows} searchPending={false} />);
+    const summary = screen.getByRole("region", { name: "Resumen de perspectivas" });
+    const articles = within(summary).getAllByRole("article");
+    expect(articles.map((article) => within(article).getByRole("heading").textContent)).toEqual([
+      "Yo", "Flujo real", "Deudas",
+    ]);
+    expect(articles.map((article) => article.querySelector("data")?.textContent)).toEqual([
+      "5,00 €", "3,00 €", "2,00 €",
+    ]);
+    expect(within(articles[0]!).getByText(/reúne los movimientos de Flujo real y Deudas/)).toBeVisible();
+    expect(within(articles[2]!).getByText(/no es gasto atribuido ni saldo/)).toBeVisible();
+    expect(articles.map((article) => within(article).getByText(/movimientos?$/).textContent)).toEqual([
+      "Movimiento neto · 6 movimientos",
+      "Movimiento neto · 4 movimientos",
+      "Movimiento neto · 2 movimientos",
+    ]);
+  });
+
   it("gives the narrow comparison table a named keyboard-scroll region", () => {
     const rows = createPerspectiveComparisonModel(dataset, createDefaultFilterState());
     render(<PerspectiveComparisonPageView categories={[]} rows={rows} searchPending={false} />);

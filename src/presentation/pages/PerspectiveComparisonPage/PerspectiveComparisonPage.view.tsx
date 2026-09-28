@@ -34,6 +34,8 @@ const CATEGORY_METRICS: readonly { value: CategoryMetric; label: string }[] = [
   { value: "transfersEurMinor", label: "Transferencias" },
 ];
 
+const SUMMARY_SCOPES = ["all", "realCashFlow", "debtsOnly"] as const;
+
 export function PerspectiveComparisonPageView({
   rows,
   categories,
@@ -48,9 +50,9 @@ export function PerspectiveComparisonPageView({
       notice={searchPending ? "Actualizando búsqueda…" : undefined}
       title="Comparativa de perspectivas"
     >
-      <div className={styles.summary}>
-        {rows.map((row) => (
-          <article className={styles.summaryItem} key={row.scope}>
+      <section aria-label="Resumen de perspectivas" className={styles.summary}>
+        {SUMMARY_SCOPES.flatMap((scope) => rows.filter((row) => row.scope === scope)).map((row) => (
+          <article className={`${styles.summaryItem} ${row.scope === "all" ? styles.summaryLead : ""}`} key={row.scope}>
             <h2 className={styles.summaryLabel}>{SCOPE_LABELS[row.scope]}</h2>
             <data className={styles.summaryValue} value={row.netEurMinor / 100}>
               {formatEuroMinor(row.netEurMinor)}
@@ -58,9 +60,19 @@ export function PerspectiveComparisonPageView({
             <p className={styles.summaryDetail}>
               Movimiento neto · {row.postingCount} {row.postingCount === 1 ? "movimiento" : "movimientos"}
             </p>
+            {row.scope === "all" ? (
+              <p className={styles.summaryExplanation}>
+                Yo reúne los movimientos de Flujo real y Deudas bajo los filtros aplicados.
+              </p>
+            ) : null}
+            {row.scope === "debtsOnly" ? (
+              <p className={styles.summaryExplanation}>
+                El movimiento neto en Deudas no es gasto atribuido ni saldo; muestra solo entradas y salidas de las cuentas de deuda seleccionadas.
+              </p>
+            ) : null}
           </article>
         ))}
-      </div>
+      </section>
 
       <Panel
         description="Importes con signo: los abonos reducen el gasto y las transferencias conservan su dirección."
@@ -120,9 +132,6 @@ export function PerspectiveComparisonPageView({
           </AccordionTree>
         )}
       </Panel>
-      <p className={styles.explanation}>
-        Yo reúne los movimientos de Flujo real y Deudas. El movimiento neto en Deudas no es gasto atribuido ni saldo; muestra solo entradas y salidas de las cuentas de deuda seleccionadas.
-      </p>
     </AnalyticsPage>
   );
 }

@@ -108,7 +108,7 @@ test("unlocks a synthetic vault and exposes separate provenance labels", async (
   await expectNoDocumentOverflow(page);
 });
 
-test("makes provenance reachable on mobile and comparison scrolling keyboard accessible", async ({ page }) => {
+test("makes provenance reachable on mobile and comparison scrolling keyboard accessible", async ({ page }, testInfo) => {
   const snapshot = page.getByLabel("Navegación y estado de la aplicación");
   const summary = snapshot.locator("summary").filter({ hasText: /Instantánea local|Datos/ });
   await expect(summary).toBeVisible();
@@ -140,6 +140,21 @@ test("makes provenance reachable on mobile and comparison scrolling keyboard acc
     });
     expect(violations).toEqual([]);
   }
+  const categories = page.getByRole("region", { name: "Categorías por perspectiva" });
+  await categories.scrollIntoViewIfNeeded();
+  await expect(categories.getByRole("list", { name: "Categorías comparadas" })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("comparison.png"), fullPage: true });
+  const comparisonSummary = page.getByRole("region", { name: "Resumen de perspectivas" });
+  const perspectives = comparisonSummary.getByRole("article");
+  await expect(perspectives).toHaveCount(3);
+  expect(await perspectives.getByRole("heading").allTextContents()).toEqual(["Yo", "Flujo real", "Deudas"]);
+  await expect(perspectives.nth(0).locator("data")).toHaveAttribute("value", "4.52");
+  await expect(perspectives.nth(1).locator("data")).toHaveAttribute("value", "4.02");
+  await expect(perspectives.nth(2).locator("data")).toHaveAttribute("value", "0.5");
+  await expect(comparisonSummary.getByText(/reúne los movimientos de Flujo real y Deudas/)).toBeVisible();
+  await expect(comparisonSummary.getByText(/no es gasto atribuido ni saldo/)).toBeVisible();
+  await expect(categories.getByRole("button", { name: "Contraer Expense" })).toBeVisible();
+  await expect(categories.getByText("Expense › Food", { exact: true })).toBeVisible();
   await expectNoDocumentOverflow(page);
 });
 
