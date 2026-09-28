@@ -85,36 +85,6 @@ export function AccountsPageView({
         />
       </AnalyticsPageGrid>
 
-      <Panel className={styles.chartPanel}>
-        <div className={chartStyles.controls}>
-          <label className={chartStyles.control}>
-            Métrica de cuentas
-            <select value={metric} onChange={(event) => onMetricChange?.(event.target.value as AccountMetric)}>
-              {Object.entries(ACCOUNT_METRIC_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-          </label>
-        </div>
-        <HorizontalBarChart
-          data={accountBars}
-          description={`${ACCOUNT_METRIC_LABELS[metric]}. Orden por importe absoluto; se conserva el signo.`}
-          formatValue={euroFormatter}
-          labelHeader="Cuenta"
-          onSelectDatum={metric === "periodClosingBalanceEurMinor" ? undefined : onViewTransactions}
-          title={metric === "periodClosingBalanceEurMinor" ? "Mapa de saldos" : "Comparación de cuentas"}
-        />
-      </Panel>
-
-      <Panel className={styles.chartPanel}>
-        <LineChart
-          description={`${ACCOUNT_METRIC_LABELS[metric]}. Muestra u oculta cuentas en la leyenda; ajusta las fechas y la agrupación en los filtros globales.`}
-          formatLabel={formatPeriodLabel}
-          formatValue={euroFormatter}
-          onSelectPeriod={metric === "periodClosingBalanceEurMinor" ? undefined : onViewPeriod}
-          series={accountSeries}
-          title="Evolución comparada de cuentas"
-        />
-      </Panel>
-
       <Panel
         description="Selecciona una cuenta para convertirla en filtro global"
         title="Inventario de cuentas"
@@ -144,12 +114,15 @@ export function AccountsPageView({
                   {ACCOUNT_SCOPE_LABELS[item.account.type]}
                 </Badge>
               </div>
-              <strong className={styles.accountBalance}>
-                {formatEuroMinor(item.periodClosingBalanceEurMinor)}
-              </strong>
+              <div className={styles.accountBalanceGroup}>
+                <span className={styles.accountMeta}>Saldo real al cierre</span>
+                <strong className={styles.accountBalance}>
+                  {formatEuroMinor(item.periodClosingBalanceEurMinor)}
+                </strong>
+              </div>
               <div className={styles.accountFooter}>
                 <span className={styles.accountMeta}>
-                  Flujo {formatEuroMinor(item.netEurMinor)}
+                  Flujo filtrado {formatEuroMinor(item.netEurMinor)}
                 </span>
                 <span className={styles.accountMeta}>
                   {countFormatter.format(item.postingCount)} apuntes
@@ -184,6 +157,36 @@ export function AccountsPageView({
           ))}
           </div>
         )}
+      </Panel>
+
+      <Panel className={styles.chartPanel}>
+        <div className={chartStyles.controls}>
+          <label className={chartStyles.control}>
+            Métrica de cuentas
+            <select value={metric} onChange={(event) => onMetricChange?.(event.target.value as AccountMetric)}>
+              {Object.entries(ACCOUNT_METRIC_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
+        </div>
+        <HorizontalBarChart
+          data={accountBars}
+          description={`${ACCOUNT_METRIC_LABELS[metric]}. Orden por importe absoluto; se conserva el signo.`}
+          formatValue={euroFormatter}
+          labelHeader="Cuenta"
+          onSelectDatum={metric === "periodClosingBalanceEurMinor" ? undefined : onViewTransactions}
+          title={metric === "periodClosingBalanceEurMinor" ? "Mapa de saldos" : "Comparación de cuentas"}
+        />
+      </Panel>
+
+      <Panel className={styles.chartPanel}>
+        <LineChart
+          description={`${ACCOUNT_METRIC_LABELS[metric]}. Muestra u oculta cuentas en la leyenda; ajusta las fechas y la agrupación en los filtros globales.`}
+          formatLabel={formatPeriodLabel}
+          formatValue={euroFormatter}
+          onSelectPeriod={metric === "periodClosingBalanceEurMinor" ? undefined : onViewPeriod}
+          series={accountSeries}
+          title="Evolución comparada de cuentas"
+        />
       </Panel>
     </AnalyticsPage>
   );

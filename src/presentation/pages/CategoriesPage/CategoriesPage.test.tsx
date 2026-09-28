@@ -88,6 +88,9 @@ describe("CategoriesPageView", () => {
     const selectedButton = screen.getByRole("button", {
       name: "Quitar filtro: Gastos",
     });
+    const tree = screen.getByRole("region", { name: "Explorador jerárquico" });
+    const comparison = screen.getByRole("region", { name: "Consultar categorías" });
+    expect(tree.compareDocumentPosition(comparison) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(selectedButton).toHaveAttribute("aria-pressed", "true");
     await user.click(selectedButton);
     expect(onToggleCategory).toHaveBeenCalledWith(["Gastos"]);

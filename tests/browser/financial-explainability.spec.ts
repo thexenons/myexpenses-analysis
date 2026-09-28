@@ -349,6 +349,79 @@ test("opens the shared average disclosure by keyboard and keeps accordion action
   await expectNoDocumentOverflow(page);
 });
 
+test("puts category paths and account balances before charts without losing keyboard context", async ({ page }, testInfo) => {
+  await page.getByRole("link", { name: "Categorías" }).click();
+  const tree = page.getByRole("region", { name: "Explorador jerárquico" });
+  const comparison = page.getByRole("region", { name: "Consultar categorías" });
+  await tree.scrollIntoViewIfNeeded();
+  expect(await tree.evaluate((element, next) => Boolean(element.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING), await comparison.elementHandle())).toBe(true);
+  const rootSelection = tree.getByRole("button", { name: "Filtrar: Expense", exact: true });
+  const rootRow = rootSelection.locator("xpath=..");
+  const counts = rootRow.getByText(/\d+ dir\. \/ \d+ total/);
+  await expect(counts).toBeVisible();
+  await expect(rootRow.getByText(/Promedio.*períodos? completos?/)).toBeVisible();
+  const countsLayout = await counts.evaluate((element) => ({ scroll: element.scrollWidth, width: element.clientWidth }));
+  expect(countsLayout.scroll, JSON.stringify(countsLayout)).toBeLessThanOrEqual(countsLayout.width + 1);
+  await rootSelection.focus();
+  await page.keyboard.press("Space");
+  await expect(tree.getByRole("button", { name: "Quitar filtro: Expense", exact: true })).toHaveAttribute("aria-pressed", "true");
+  const collapse = tree.getByRole("button", { name: "Contraer Expense" });
+  await collapse.focus();
+  await page.keyboard.press("Enter");
+  await expect(tree.getByRole("button", { name: "Desplegar Expense" })).toBeVisible();
+  await expect(tree.getByRole("button", { name: "Quitar filtro: Expense", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Ver todas las categorías" }).click();
+  await tree.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath("categories.png"), fullPage: true });
+  await expectNoDocumentOverflow(page);
+  await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
+  const categoryViolations = await page.evaluate(async () => {
+    const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
+    return (await axe.run(document.body, { runOnly: { type: "rule", values: ["button-name", "color-contrast", "scrollable-region-focusable", "aria-valid-attr-value"] } })).violations.map(({ id }) => id);
+  });
+  expect(categoryViolations).toEqual([]);
+
+  await page.getByRole("link", { name: "Cuentas" }).click();
+  const inventory = page.getByRole("region", { name: "Inventario de cuentas" });
+  await inventory.scrollIntoViewIfNeeded();
+  await expect(inventory.getByRole("article").first()).toBeVisible();
+  expect(await inventory.evaluate((element) => {
+    const chart = [...document.querySelectorAll("h2, h3")].find((heading) => heading.textContent === "Mapa de saldos");
+    return chart !== undefined && Boolean(element.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING);
+  })).toBe(true);
+  const account = inventory.getByRole("article").first();
+  await expect(account.getByText("Saldo real al cierre", { exact: true })).toBeVisible();
+  await expect(account.getByText(/Flujo filtrado/)).toBeVisible();
+  const balance = account.locator("strong").first();
+  const balanceLayout = await balance.evaluate((element) => ({
+    height: element.getBoundingClientRect().height,
+    lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight),
+    scrollWidth: element.scrollWidth,
+    clientWidth: element.clientWidth,
+  }));
+  expect(balanceLayout.height, JSON.stringify(balanceLayout)).toBeLessThanOrEqual(balanceLayout.lineHeight * 1.25);
+  expect(balanceLayout.scrollWidth, JSON.stringify(balanceLayout)).toBeLessThanOrEqual(balanceLayout.clientWidth + 1);
+  await page.screenshot({ path: testInfo.outputPath("accounts.png"), fullPage: true });
+  const details = account.locator("summary");
+  await details.focus();
+  await page.keyboard.press("Enter");
+  await expect(details.locator("..")).toHaveAttribute("open", "");
+  await expect(account.getByText("Saldo histórico EUR")).toBeVisible();
+  if (page.viewportSize()!.width > 760) {
+    const cardHeights = await Promise.all([
+      account.evaluate((element) => element.getBoundingClientRect().height),
+      inventory.getByRole("article").nth(1).evaluate((element) => element.getBoundingClientRect().height),
+    ]);
+    expect(cardHeights[1], JSON.stringify(cardHeights)).toBeLessThan(cardHeights[0]!);
+  }
+  await expectNoDocumentOverflow(page);
+  const violations = await page.evaluate(async () => {
+    const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
+    return (await axe.run(document.body, { runOnly: { type: "rule", values: ["button-name", "color-contrast", "scrollable-region-focusable", "aria-valid-attr-value"] } })).violations.map(({ id }) => id);
+  });
+  expect(violations).toEqual([]);
+});
+
 test("budget details retain exact movement IDs and native close returns focus", async ({ page }) => {
   await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
   await expect(page.getByRole("heading", { name: "Presupuestos" })).toBeVisible();

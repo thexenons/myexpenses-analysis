@@ -134,7 +134,11 @@ describe("AccountsPageView", () => {
     });
     const card = screen.getByRole("article", { name: "Cuenta Cuenta diaria" });
     const disclosure = card.querySelector("details");
+    const inventory = screen.getByRole("region", { name: "Inventario de cuentas" });
+    const chart = screen.getByText("Mapa de saldos");
 
+    expect(inventory.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(card).toHaveTextContent(/Saldo real al cierre.*250,00.*Flujo filtrado.*50,00/s);
     expect(card).toContainElement(filterButton);
     expect(filterButton).not.toContainElement(disclosure);
     await user.click(filterButton);

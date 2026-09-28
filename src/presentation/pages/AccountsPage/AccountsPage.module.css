@@ -6,6 +6,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.8rem;
+  align-items: start;
 }
 
 .accountCard {
@@ -43,7 +44,7 @@
 
 .accountMeta {
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
 }
 
 .accountBalance {
@@ -53,6 +54,12 @@
   letter-spacing: -0.035em;
 }
 
+.accountBalanceGroup {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
 .accountFooter {
   display: flex;
   gap: 0.45rem;
@@ -60,6 +67,7 @@
   justify-content: space-between;
   padding-top: 0.55rem;
   border-top: 1px solid var(--line);
+  flex-wrap: wrap;
 }
 
 @media (max-width: 1180px) {

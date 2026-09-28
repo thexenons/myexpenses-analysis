@@ -35,7 +35,7 @@
 .path {
   overflow: hidden;
   color: var(--muted);
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -53,7 +53,7 @@
 .counts,
 .amount {
   font-family: var(--mono);
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -67,32 +67,31 @@
   gap: 0.2rem;
   text-align: right;
   color: var(--ink-soft);
-  font-size: 0.68rem;
+  font-size: 0.82rem;
 }
 
 .average {
   color: var(--muted);
-  font-size: 0.62rem;
+  font-size: 0.72rem;
 }
 
 @media (max-width: 760px) {
   .row {
-    grid-template-columns: 2.25rem minmax(7rem, 1fr) auto;
+    grid-template-columns: 2.25rem minmax(0, 1fr);
   }
 
   .details {
-    align-items: end;
-    flex-direction: column;
+    grid-column: 2;
+    flex-wrap: wrap;
   }
 
   .amount {
-    grid-column: 2 / -1;
+    grid-column: 2;
+    text-align: left;
   }
-}
 
-@media (max-width: 30rem) {
-  .details .counts {
-    display: none;
+  .average {
+    white-space: normal;
   }
 }
 
