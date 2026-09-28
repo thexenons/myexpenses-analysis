@@ -47,7 +47,10 @@ async function main(): Promise<void> {
   const legacyVaultPath = join(temporary, "legacy.vault.json");
   const noLimitArchivePath = join(temporary, "u3-budget-backup.zip");
   const noLimitDatasetPath = join(temporary, "u3-budget-dataset.json");
-  const noLimitVaultPath = join(temporary, "u3-budget.vault.json");
+    const noLimitVaultPath = join(temporary, "u3-budget.vault.json");
+    const transactionArchivePath = join(temporary, "u6-transactions-backup.zip");
+    const transactionDatasetPath = join(temporary, "u6-transactions-dataset.json");
+    const transactionVaultPath = join(temporary, "u6-transactions.vault.json");
   const distPath = join(temporary, "dist");
   let server: ReturnType<typeof createServer> | undefined;
   let closing = false;
@@ -114,6 +117,24 @@ async function main(): Promise<void> {
     });
     await encryptDataset({ inputPath: noLimitDatasetPath, outputPath: noLimitVaultPath, passphrase: PASSPHRASE });
     await copyFile(noLimitVaultPath, join(distPath, "data", "u3-budget.vault.json"));
+    const transactionDatabase = await createImportDatabaseFixture({ extraSql: [
+      ...baseExtraSql,
+      "INSERT INTO payee (_id, name, short_name, iban, bic, parent_id) VALUES (5, 'Synthetic payee with an identifying suffix that extends beyond the compact row 123456789', NULL, NULL, NULL, NULL)",
+      "UPDATE transactions SET payee_id = 5, comment = 'Synthetic food comment with complete context that extends beyond the compact row 987654321', cr_status = 'UNRECONCILED' WHERE _id = 15",
+    ] });
+    await writeFile(transactionArchivePath, await createBackupZipFixture({ database: transactionDatabase }), { mode: 0o600 });
+    await importBackup({
+      inputPath: transactionArchivePath,
+      outputPath: transactionDatasetPath,
+      timeZone: "Europe/Madrid",
+      backupFilenameTimestamp: "20260822210453",
+      importedAt: "2026-08-23T10:00:00.000Z",
+    });
+    await encryptDataset({ inputPath: transactionDatasetPath, outputPath: transactionVaultPath, passphrase: PASSPHRASE });
+    await copyFile(transactionVaultPath, join(distPath, "data", "u6-transactions.vault.json"));
+    await rm(transactionArchivePath);
+    await rm(transactionDatasetPath);
+    await rm(transactionVaultPath);
     await rm(noLimitArchivePath);
     await rm(noLimitDatasetPath);
     await rm(noLimitVaultPath);
@@ -126,11 +147,11 @@ async function main(): Promise<void> {
         if (/(?:\.\.|%2e)/iu.test(request.url ?? "")) { response.writeHead(400).end(); return; }
         const pathname = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
         if (!pathname.startsWith("/assets/") &&
-            pathname !== "/data/app-dataset.vault.json" && pathname !== "/data/legacy.vault.json" && pathname !== "/data/u3-budget.vault.json" &&
+            pathname !== "/data/app-dataset.vault.json" && pathname !== "/data/legacy.vault.json" && pathname !== "/data/u3-budget.vault.json" && pathname !== "/data/u6-transactions.vault.json" &&
             pathname !== "/index.html" && !APP_ROUTES.has(pathname)) {
           response.writeHead(404).end(); return;
         }
-        const file = pathname.startsWith("/assets/") || pathname === "/data/app-dataset.vault.json" || pathname === "/data/legacy.vault.json" || pathname === "/data/u3-budget.vault.json"
+        const file = pathname.startsWith("/assets/") || pathname === "/data/app-dataset.vault.json" || pathname === "/data/legacy.vault.json" || pathname === "/data/u3-budget.vault.json" || pathname === "/data/u6-transactions.vault.json"
           ? join(distReal, decodeURIComponent(pathname))
           : join(distReal, "index.html");
         const fileReal = await realpath(file);

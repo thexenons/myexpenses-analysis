@@ -6,10 +6,34 @@ import { TRANSACTION_POSTING_FIXTURE } from "../../TransactionsPage.test.helpers
 import { TransactionDetails } from "./TransactionDetails.tsx";
 
 describe("TransactionDetails", () => {
+  it("reveals full current posting text separately from split parent text by keyboard", async () => {
+    const user = userEvent.setup();
+    const payee = "Current posting payee with a deliberately long identifying suffix 123456789";
+    const comment = "Current posting comment with complete details that cannot fit a compact row 987654321";
+    render(<TransactionDetails posting={{
+      ...TRANSACTION_POSTING_FIXTURE,
+      payee,
+      comment,
+      parent: { amount: -12.5, date: "2026-08-20", payee: "Parent payee", comment: "Parent comment" },
+      splitCount: 2,
+      splitIndex: 0,
+    }} />);
+
+    const summary = screen.getByText("Ver concepto completo y trazabilidad");
+    summary.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByText("Payee del apunte").nextElementSibling).toHaveTextContent(payee);
+    expect(screen.getByText("Comentario del apunte").nextElementSibling).toHaveTextContent(comment);
+    expect(screen.getByText("Payee del padre").nextElementSibling).toHaveTextContent("Parent payee");
+    expect(screen.getByText("Comentario del padre").nextElementSibling).toHaveTextContent("Parent comment");
+    await user.keyboard(" ");
+    expect(summary.closest("details")).not.toHaveAttribute("open");
+  });
+
   it("shows a missing conversion rate without inventing a zero or identity rate", async () => {
     const user = userEvent.setup();
     render(<TransactionDetails posting={{ ...TRANSACTION_POSTING_FIXTURE, currency: "JPY", exchangeRateToEur: null, exchangeRateSource: "unavailable", amountEurMinor: 0, amountNativeMinor: 0, categoryPath: [] }} />);
-    await user.click(screen.getByText("Ver trazabilidad"));
+    await user.click(screen.getByText("Ver concepto completo y trazabilidad"));
     expect(screen.getByText("Tasa aplicada").nextElementSibling).toHaveTextContent("No disponible");
     expect(screen.getByText("Fuente de la tasa").nextElementSibling).toHaveTextContent("Importe cero sin tasa (unavailable)");
     expect(screen.getByText("Sin categoría")).toBeVisible();
@@ -56,7 +80,7 @@ describe("TransactionDetails", () => {
     const disclosure = container.querySelector("details");
 
     expect(disclosure).not.toHaveAttribute("open");
-    await user.click(screen.getByText("Ver trazabilidad"));
+    await user.click(screen.getByText("Ver concepto completo y trazabilidad"));
     expect(disclosure).toHaveAttribute("open");
     expect(screen.getByText("leaf-uuid")).toBeVisible();
     expect(screen.getByText("parent-uuid")).toBeVisible();

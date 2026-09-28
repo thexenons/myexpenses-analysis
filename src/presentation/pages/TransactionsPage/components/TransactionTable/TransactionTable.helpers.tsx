@@ -15,6 +15,7 @@ export function createTransactionTableColumns(
   onSort: (key: TransactionSortKey) => void,
   dataset?: AnalyticsDataset,
   dateBasis: "operation" | "value" = "operation",
+  uniformStatus?: NormalizedPosting["status"],
 ): readonly DataTableColumn<NormalizedPosting>[] {
   return [
     {
@@ -47,22 +48,6 @@ export function createTransactionTableColumns(
       cell: (posting) => <TransactionAccount posting={posting} />,
     },
     {
-      key: "origin",
-      header: "Cuenta de origen",
-      cell: (posting) => dataset === undefined ? "—" : resolvePostingAccounts(posting, dataset).originAccount?.label ?? "Externa o sin vincular",
-    },
-    {
-      key: "destination",
-      header: "Cuenta de destino",
-      cell: (posting) => dataset === undefined ? "—" : resolvePostingAccounts(posting, dataset).destinationAccount?.label ?? "Externa o sin vincular",
-    },
-    {
-      key: "status",
-      header: "Estado",
-      cell: (posting) => <TransactionStatus posting={posting} />,
-      align: "center",
-    },
-    {
       key: "amount",
       header: "Importe",
       cell: (posting) => <TransactionAmount posting={posting} />,
@@ -75,6 +60,22 @@ export function createTransactionTableColumns(
             : "ascending"
           : "none",
     },
+    {
+      key: "origin",
+      header: "Cuenta de origen",
+      cell: (posting) => dataset === undefined ? "—" : resolvePostingAccounts(posting, dataset).originAccount?.label ?? "Externa o sin vincular",
+    },
+    {
+      key: "destination",
+      header: "Cuenta de destino",
+      cell: (posting) => dataset === undefined ? "—" : resolvePostingAccounts(posting, dataset).destinationAccount?.label ?? "Externa o sin vincular",
+    },
+    ...(uniformStatus === undefined ? [{
+      key: "status",
+      header: "Estado",
+      cell: (posting: NormalizedPosting) => <TransactionStatus posting={posting} />,
+      align: "center" as const,
+    }] : []),
   ];
 }
 

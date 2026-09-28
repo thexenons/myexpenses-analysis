@@ -1,0 +1,4 @@
+.root :global(tbody > tr > td),
+.root :global(tbody > tr > th[scope="row"]) {
+  vertical-align: top;
+}

@@ -52,12 +52,57 @@ describe("TransactionsPageView", () => {
       />,
     );
 
-    expect(screen.getByText("Restaurante")).toBeVisible();
+    expect(screen.getAllByText("Restaurante")[0]).toBeVisible();
     expect(screen.getByText("Conciliado")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Fecha" }));
     expect(onSort).toHaveBeenCalledWith("date");
     await user.click(screen.getByRole("button", { name: /Exportar CSV/ }));
     expect(onDownload).toHaveBeenCalledOnce();
+  });
+
+  it("states a shared non-VOID status once without hiding sort, export, or source detail", async () => {
+    const user = userEvent.setup();
+    const onDownload = vi.fn<() => void>();
+    const onSort = vi.fn<(key: "amount" | "date") => void>();
+    render(<TransactionsPageView
+      descending
+      onDownload={onDownload}
+      onPageChange={vi.fn<(page: number) => void>()}
+      onSort={onSort}
+      page={1}
+      pageCount={1}
+      postings={[posting]}
+      resultCount={1}
+      searchPending={false}
+      sortKey="date"
+      uniformStatus="RECONCILED"
+    />);
+    expect(screen.getByText(/Estado de todos los resultados/)).toBeVisible();
+    expect(screen.queryByRole("columnheader", { name: "Estado" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Importe" }));
+    expect(onSort).toHaveBeenCalledWith("amount");
+    await user.click(screen.getByRole("button", { name: /Exportar CSV/ }));
+    expect(onDownload).toHaveBeenCalledOnce();
+    await user.click(screen.getByText("Ver concepto completo y trazabilidad"));
+    expect(screen.getByText("Estado MyExpenses").nextElementSibling).toHaveTextContent("RECONCILED");
+  });
+
+  it("keeps row status when this page is uniform but the full result is mixed", () => {
+    render(<TransactionsPageView
+      descending
+      onDownload={vi.fn<() => void>()}
+      onPageChange={vi.fn<(page: number) => void>()}
+      onSort={vi.fn<(key: "amount" | "date") => void>()}
+      page={1}
+      pageCount={2}
+      postings={[posting]}
+      resultCount={2}
+      searchPending={false}
+      sortKey="date"
+    />);
+    expect(screen.getByRole("columnheader", { name: "Estado" })).toBeVisible();
+    expect(screen.getByText("Conciliado")).toBeVisible();
+    expect(screen.queryByText(/Estado de todos los resultados/)).not.toBeInTheDocument();
   });
 
   it("provides an actionable empty state", () => {

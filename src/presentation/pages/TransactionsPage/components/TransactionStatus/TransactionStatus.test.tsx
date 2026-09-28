@@ -30,6 +30,6 @@ describe("TransactionStatus", () => {
         posting={{ ...TRANSACTION_POSTING_FIXTURE, status: "UNRECONCILED" }}
       />,
     );
-    expect(screen.getByText("Pendiente")).toBeVisible();
+    expect(screen.getByText("Sin conciliar")).toBeVisible();
   });
 });

@@ -20,8 +20,16 @@ import type { TransactionDetailsProps } from "./TransactionDetails.types.ts";
 export function TransactionDetails({ posting }: TransactionDetailsProps) {
   return (
     <details className={styles.root}>
-      <summary className={styles.summary}>Ver trazabilidad</summary>
+      <summary className={styles.summary}>Ver concepto completo y trazabilidad</summary>
       <dl className={styles.content}>
+        <div className={`${styles.item} ${styles.wide}`}>
+          <dt className={styles.term}>Payee del apunte</dt>
+          <dd className={styles.description}>{posting.payee ?? "Sin payee"}</dd>
+        </div>
+        <div className={`${styles.item} ${styles.wide}`}>
+          <dt className={styles.term}>Comentario del apunte</dt>
+          <dd className={styles.description}>{posting.comment ?? "Sin comentario"}</dd>
+        </div>
         <div className={`${styles.item} ${styles.wide}`}>
           <dt className={styles.term}>UUID hoja</dt>
           <dd className={`${styles.description} ${styles.code}`}>

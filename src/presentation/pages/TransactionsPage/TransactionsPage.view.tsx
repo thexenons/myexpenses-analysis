@@ -5,6 +5,7 @@ import { Panel } from "../../components/molecules/Panel/index.ts";
 import { AnalyticsPage } from "../../components/templates/AnalyticsPage/index.ts";
 import { countFormatter, formatEuroMinor } from "../../utils/format.ts";
 import { TransactionTable } from "./components/TransactionTable/index.ts";
+import { TransactionStatus } from "./components/TransactionStatus/index.ts";
 import type { TransactionsPageViewProps } from "./TransactionsPage.types.ts";
 import styles from "./TransactionsPage.module.css";
 
@@ -24,6 +25,7 @@ export function TransactionsPageView({
   searchPending,
   sortKey,
   summary,
+  uniformStatus,
 }: TransactionsPageViewProps) {
   return (
     <AnalyticsPage
@@ -72,6 +74,11 @@ export function TransactionsPageView({
         description={`${countFormatter.format(resultCount)} resultados${searchPending ? " · actualizando búsqueda" : ""}`}
         title="Movimientos filtrados"
       >
+        {uniformStatus === undefined ? null : (
+          <p className={styles.commonStatus}>
+            Estado de todos los resultados: <TransactionStatus posting={{ status: uniformStatus }} />
+          </p>
+        )}
         <TransactionTable
           dataset={dataset}
           dateBasis={dateBasis}
@@ -79,6 +86,7 @@ export function TransactionsPageView({
           onSort={onSort}
           postings={postings}
           sortKey={sortKey}
+          uniformStatus={uniformStatus}
         />
         <Pagination
           label="Páginas de movimientos"

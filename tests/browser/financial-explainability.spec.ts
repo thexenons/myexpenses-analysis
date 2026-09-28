@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
 const BASE = "http://127.0.0.1:41789";
@@ -314,6 +315,101 @@ test("keeps every primary route inside the document viewport", async ({ page }) 
     await expect(page.locator("main h1")).toBeVisible();
     // oxlint-disable-next-line no-await-in-loop -- each route is a separate overflow assertion.
     await expectNoDocumentOverflow(page);
+  }
+});
+
+test("reveals complete transaction text and source status by keyboard at every viewport", async ({ page }, testInfo) => {
+  const visualDirectory = "/tmp/myexpenses-u6-visual";
+  await mkdir(visualDirectory, { recursive: true });
+  await page.route("**/data/app-dataset.vault.json", async (route) => {
+    const variant = await route.fetch({ url: `${BASE}/data/u6-transactions.vault.json` });
+    await route.fulfill({ response: variant });
+  });
+  await page.reload();
+  await page.getByLabel("Frase de desbloqueo").fill(PASSPHRASE);
+  await page.getByRole("button", { name: "Abrir bóveda" }).click();
+  await page.getByRole("link", { name: /^(Transacciones|Movimientos)$/ }).click();
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  await toolbar.getByRole("button", { name: /Abrir todos los filtros/ }).click();
+  const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });
+  await drawer.getByRole("searchbox", { name: "Buscar en movimientos" }).fill("Synthetic food");
+  await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+
+  const table = page.getByRole("table", { name: "Transacciones que coinciden con los filtros globales" });
+  const row = table.getByRole("row", { name: /Synthetic payee with an identifying suffix/ });
+  await expect(row).toBeVisible();
+  expect(await table.getByRole("columnheader").allTextContents()).toEqual([
+    "Fecha", "Concepto", "Categoría", "Cuenta", "Importe", "Cuenta de origen", "Cuenta de destino",
+  ]);
+  await expect(page.getByText(/Estado de todos los resultados:/)).toContainText("Sin conciliar");
+  const summary = row.getByText("Ver concepto completo y trazabilidad");
+  await summary.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: join(visualDirectory, `transaction-row-closed-${testInfo.project.name}.png`) });
+  await summary.focus();
+  await page.keyboard.press("Enter");
+  await expect(summary.locator("..")).toHaveAttribute("open", "");
+  const fullPayee = "Synthetic payee with an identifying suffix that extends beyond the compact row 123456789";
+  const fullComment = "Synthetic food comment with complete context that extends beyond the compact row 987654321";
+  await expect(row.getByText("Payee del apunte").locator("..")).toContainText(fullPayee);
+  await expect(row.getByText("Comentario del apunte").locator("..")).toContainText(fullComment);
+  await expect(row.getByText("Estado MyExpenses").locator("..")).toContainText("Sin conciliar (UNRECONCILED)");
+  const textLayout = await row.getByText("Comentario del apunte").locator("..").locator("dd").evaluate((element) => ({
+    visible: element.getBoundingClientRect().height > 0,
+    scroll: element.scrollWidth,
+    width: element.clientWidth,
+  }));
+  expect(textLayout.visible).toBe(true);
+  expect(textLayout.scroll, JSON.stringify(textLayout)).toBeLessThanOrEqual(textLayout.width + 1);
+  await page.screenshot({ path: join(visualDirectory, `transaction-row-open-${testInfo.project.name}.png`) });
+  await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
+  const violations = await page.evaluate(async () => {
+    const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
+    return (await axe.run(document.body, { runOnly: { type: "rule", values: ["button-name", "color-contrast", "scrollable-region-focusable", "aria-valid-attr-value"] } })).violations.map(({ id }) => id);
+  });
+  expect(violations).toEqual([]);
+  await page.keyboard.press("Space");
+  await expect(summary.locator("..")).not.toHaveAttribute("open");
+  const scroller = page.getByRole("region", { name: "Transacciones que coinciden con los filtros globales" });
+  await scroller.focus();
+  await expect(scroller).toBeFocused();
+  if (page.viewportSize()!.width < 500) {
+    const before = await scroller.evaluate((element) => element.scrollLeft);
+    await page.keyboard.press("ArrowRight");
+    await expect.poll(() => scroller.evaluate((element) => element.scrollLeft)).toBeGreaterThan(before);
+  }
+  await expectNoDocumentOverflow(page);
+
+  await toolbar.getByRole("button", { name: /Abrir todos los filtros/ }).click();
+  await drawer.getByRole("searchbox", { name: "Buscar en movimientos" }).fill("");
+  await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expect.poll(() => table.locator("tbody tr").count()).toBeGreaterThan(1);
+  await expect(table.getByRole("columnheader", { name: "Estado" })).toBeVisible();
+  await summary.focus();
+  await page.keyboard.press("Enter");
+  await expect(summary.locator("..")).toHaveAttribute("open", "");
+  const factTops = await row.evaluate((element) => {
+    const cells = Array.from(element.querySelectorAll(":scope > td"));
+    const textTop = (index: number) => {
+      const cell = cells[index];
+      if (cell === undefined) throw new Error(`Missing transaction cell ${index}`);
+      const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+      let node = walker.nextNode();
+      while (node !== null && !node.textContent?.trim()) node = walker.nextNode();
+      if (node === null) throw new Error("Expected a visible transaction fact");
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      return range.getBoundingClientRect().top;
+    };
+    return {
+      date: textTop(0),
+      concept: textTop(1),
+      category: textTop(2),
+      account: textTop(3),
+      amount: textTop(4),
+    };
+  });
+  for (const fact of ["date", "category", "account", "amount"] as const) {
+    expect(Math.abs(factTops[fact] - factTops.concept), `${fact} should align with concept when details expand: ${JSON.stringify(factTops)}`).toBeLessThanOrEqual(20);
   }
 });
 

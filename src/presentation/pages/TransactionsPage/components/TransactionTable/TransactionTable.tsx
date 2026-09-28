@@ -8,6 +8,7 @@ import {
   transactionTableRowKey,
 } from "./TransactionTable.helpers.tsx";
 import type { TransactionTableProps } from "./TransactionTable.types.ts";
+import styles from "./TransactionTable.module.css";
 
 const EMPTY_TRANSACTIONS: ReactNode = (
   <EmptyState
@@ -24,11 +25,13 @@ export function TransactionTable({
   onSort,
   postings,
   sortKey,
+  uniformStatus,
 }: TransactionTableProps) {
   return (
     <DataTable
       caption="Transacciones que coinciden con los filtros globales"
-      columns={createTransactionTableColumns(descending, sortKey, onSort, dataset, dateBasis)}
+      className={styles.root}
+      columns={createTransactionTableColumns(descending, sortKey, onSort, dataset, dateBasis, uniformStatus)}
       empty={EMPTY_TRANSACTIONS}
       rowKey={transactionTableRowKey}
       rows={postings}

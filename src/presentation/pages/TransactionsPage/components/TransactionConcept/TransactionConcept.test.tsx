@@ -8,7 +8,7 @@ describe("TransactionConcept", () => {
   it("presents the payee, note and tags as the transaction concept", () => {
     render(<TransactionConcept posting={TRANSACTION_POSTING_FIXTURE} />);
 
-    expect(screen.getByText("Restaurante")).toBeVisible();
+    expect(screen.getAllByText("Restaurante")[0]).toBeVisible();
     expect(screen.getByText("Menú del día · Trabajo")).toBeVisible();
   });
 });

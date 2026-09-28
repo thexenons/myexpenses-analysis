@@ -6,4 +6,5 @@
   .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem; }
   .pageSize { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.72rem; }
   .pageSize select { min-height: 2.25rem; padding: 0.35rem 0.55rem; border: 1px solid var(--line-dark); border-radius: var(--radius-xs); color: var(--ink); background: var(--surface-bright); font: inherit; }
+  .commonStatus { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0 0 0.7rem; color: var(--ink-soft); font-size: 0.72rem; }
 }

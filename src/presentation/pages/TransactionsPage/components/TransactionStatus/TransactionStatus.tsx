@@ -11,5 +11,5 @@ export function TransactionStatus({ posting }: TransactionStatusProps) {
   if (posting.status === "VOID") {
     return <Badge tone="negative">Anulado</Badge>;
   }
-  return <Badge tone="warning">Pendiente</Badge>;
+  return <Badge tone="warning">Sin conciliar</Badge>;
 }
