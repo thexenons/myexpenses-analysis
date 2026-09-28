@@ -2,11 +2,9 @@ import { Badge } from "../../../../components/atoms/Badge/Badge.tsx";
 import { Panel } from "../../../../components/molecules/Panel/Panel.tsx";
 import { ChartDataTable } from "../../../../components/organisms/ChartDataTable/ChartDataTable.tsx";
 import { HorizontalBarChart } from "../../../../components/organisms/HorizontalBarChart/HorizontalBarChart.tsx";
-import { identityOptionLabel } from "../../../../components/organisms/FilterDrawer/FilterDrawer.helpers.ts";
 import {
   countFormatter,
   formatDate,
-  formatEuroMinor,
 } from "../../../../utils/format.ts";
 import styles from "./InsightsQuality.module.css";
 import type { InsightsQualityProps } from "./InsightsQuality.types.ts";
@@ -18,16 +16,8 @@ const percentageFormatter = new Intl.NumberFormat("es-ES", {
 
 export function InsightsQuality({
   lagBars,
-  onViewMethod,
-  paymentMethods,
-  searchPending = false,
   valueDates,
 }: InsightsQualityProps) {
-  const methodLabelCounts = new Map<string, number>();
-  for (const method of paymentMethods.methods) {
-    const label = method.name.trim().toLocaleLowerCase("es");
-    methodLabelCounts.set(label, (methodLabelCounts.get(label) ?? 0) + 1);
-  }
   const distinctRange =
     valueDates.distinctValueDateFrom === null ||
     valueDates.distinctValueDateTo === null
@@ -35,10 +25,7 @@ export function InsightsQuality({
       : `${formatDate(valueDates.distinctValueDateFrom)} – ${formatDate(valueDates.distinctValueDateTo)}`;
 
   return (
-    <div
-      className={styles.qualityGrid}
-      data-single={paymentMethods.usedPostingCount === 0}
-    >
+    <div className={styles.qualityGrid}>
       <Panel
         actions={
           <Badge tone="accent">
@@ -95,48 +82,6 @@ export function InsightsQuality({
         />
       </Panel>
 
-      {paymentMethods.usedPostingCount > 0 ? (
-        <Panel
-          actions={
-            <Badge tone="neutral">
-              {paymentMethods.usedMethodCount} de{" "}
-              {paymentMethods.definedMethodCount} usados
-            </Badge>
-          }
-          className={styles.deferredPanel}
-          description="Se muestra de forma compacta porque este campo apenas aparece en los apuntes del corte."
-          title="Métodos de pago"
-        >
-          <div className={styles.methodHero}>
-            <strong>{countFormatter.format(paymentMethods.usedPostingCount)}</strong>
-            <span>
-              de {countFormatter.format(paymentMethods.activePostingCount)} apuntes
-              activos
-            </span>
-          </div>
-          <ul className={styles.methodList}>
-            {paymentMethods.methods.map((method) => (
-              <li key={method.identityKey}>
-                <span>
-                  <strong>{identityOptionLabel(method.identityKey, method.name, "method", (methodLabelCounts.get(method.name.trim().toLocaleLowerCase("es")) ?? 0) > 1)}</strong>
-                  <small>{countFormatter.format(method.postingCount)} {method.postingCount === 1 ? "movimiento computado" : "movimientos computados"}</small>
-                </span>
-                <strong>{formatEuroMinor(method.netEurMinor)}</strong>
-                {onViewMethod === undefined ? null : (
-                  <button
-                    className={styles.methodDrilldown}
-                    disabled={searchPending}
-                    onClick={() => onViewMethod(method.identityKey)}
-                    type="button"
-                  >
-                    Ver {countFormatter.format(method.postingCount)} {method.postingCount === 1 ? "movimiento computado" : "movimientos computados"} de {identityOptionLabel(method.identityKey, method.name, "method", (methodLabelCounts.get(method.name.trim().toLocaleLowerCase("es")) ?? 0) > 1)}
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      ) : null}
     </div>
   );
 }

@@ -16,6 +16,9 @@ describe("InsightsPageView", () => {
       "polite",
     );
     expect(screen.getByText("Contrapartes con más actividad")).toBeVisible();
+    const headings = screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
+    expect(headings.indexOf("Métodos de pago")).toBeGreaterThan(headings.indexOf("Contrapartes con más actividad"));
+    expect(headings.indexOf("Métodos de pago")).toBeLessThan(headings.indexOf("Operación frente a fecha valor"));
     expect(screen.getByText("Procedencia y calidad")).toBeVisible();
     expect(screen.getByText("v189")).toBeVisible();
   });

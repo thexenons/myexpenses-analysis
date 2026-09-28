@@ -5,6 +5,7 @@ import { AnalyticsPageGrid } from "../../components/templates/AnalyticsPageGrid/
 import { countFormatter } from "../../utils/format.ts";
 import { InsightsAccounts } from "./components/InsightsAccounts/InsightsAccounts.tsx";
 import { InsightsPayees } from "./components/InsightsPayees/InsightsPayees.tsx";
+import { InsightsMethods } from "./components/InsightsMethods/InsightsMethods.tsx";
 import { InsightsQuality } from "./components/InsightsQuality/InsightsQuality.tsx";
 import { InsightsTiming } from "./components/InsightsTiming/InsightsTiming.tsx";
 import styles from "./InsightsPage.module.css";
@@ -69,6 +70,7 @@ export function InsightsPageView({
       </AnalyticsPageGrid>
 
       <InsightsPayees payees={insights.payees} onViewPayee={onViewPayee} searchPending={searchPending} />
+      <InsightsMethods methods={insights.paymentMethods} onViewMethod={onViewMethod} searchPending={searchPending} />
       <InsightsTiming
         hourSeries={hourSeries}
         timing={insights.timing}
@@ -76,9 +78,6 @@ export function InsightsPageView({
       />
       <InsightsQuality
         lagBars={lagBars}
-        paymentMethods={insights.paymentMethods}
-        onViewMethod={onViewMethod}
-        searchPending={searchPending}
         valueDates={insights.valueDates}
       />
       <InsightsAccounts accountBars={accountBars} insights={insights} />

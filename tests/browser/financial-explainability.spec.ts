@@ -300,6 +300,49 @@ test("drills from exact Patterns identities without dropping other facets", asyn
   await expect(toolbar.getByRole("button", { name: /Quitar filtro Método:/ })).toHaveCount(0);
 });
 
+test("keeps Patterns rankings primary and their actions readable at every width", async ({ page }, testInfo) => {
+  await page.getByRole("link", { name: "Patrones" }).click();
+  const payees = page.getByRole("region", { name: "Contrapartes con más actividad" });
+  const methods = page.getByRole("region", { name: "Métodos de pago" });
+  const dates = page.getByRole("region", { name: "Operación frente a fecha valor" });
+  await expect(payees).toBeVisible();
+  await expect(methods).toBeVisible();
+  await expect(dates).toBeVisible();
+  const headings = await page.locator("main h2").allTextContents();
+  expect(headings.indexOf("Métodos de pago")).toBeGreaterThan(headings.indexOf("Contrapartes con más actividad"));
+  expect(headings.indexOf("Métodos de pago")).toBeLessThan(headings.indexOf("Operación frente a fecha valor"));
+  await expect(methods).toContainText("Ranking por número de movimientos computados");
+  await expect(methods).toContainText("Neto con signo");
+  await expect(methods).not.toContainText("apenas aparece");
+  await expect(page.getByRole("region", { name: "Procedencia y calidad" })).toBeVisible();
+  const rowBounds = await methods.getByRole("listitem").evaluateAll((rows) => rows.map((row) => {
+    const outer = row.getBoundingClientRect();
+    return [...row.querySelectorAll("strong, button")].map((child) => {
+      const inner = child.getBoundingClientRect();
+      return inner.left >= outer.left - 1 && inner.right <= outer.right + 1;
+    });
+  }));
+  expect(rowBounds.flat().every(Boolean)).toBe(true);
+  await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
+  const violations = await page.evaluate(async () => {
+    const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
+    return (await axe.run(document.body, { runOnly: { type: "rule", values: ["button-name", "color-contrast", "scrollable-region-focusable"] } })).violations.map(({ id }) => id);
+  });
+  expect(violations).toEqual([]);
+  await expectNoDocumentOverflow(page);
+  await payees.getByRole("heading", { name: "Contrapartes con más actividad" }).scrollIntoViewIfNeeded();
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.screenshot({ path: testInfo.outputPath("patterns-payees.png") });
+  await methods.getByRole("heading", { name: "Métodos de pago" }).scrollIntoViewIfNeeded();
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.screenshot({ path: testInfo.outputPath("patterns-methods.png") });
+  const action = methods.getByRole("button", { name: /Ver 1 movimiento computado de Neutral method \(ID 4\)/ });
+  await action.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "Transacciones" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Filtros globales" }).getByRole("button", { name: /Quitar filtro Método:/ })).toBeVisible();
+});
+
 test("keeps every primary route inside the document viewport", async ({ page }) => {
   const routes = [
     "/flujo-de-caja", "/comparativa", "/deudas", "/presupuestos",
