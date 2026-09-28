@@ -1,32 +1,13 @@
-/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- Named overflow regions must receive focus for keyboard panning. */
-import { useId, type ReactNode } from "react"
+import { useId } from "react"
 
 import styles from "./DataTable.module.css"
 import { cx } from "../../../utils/component.helpers.ts"
+import { TableScrollRegion } from "../TableScrollRegion"
 import {
   dataTableAlignment,
   dataTableEmptyColumnSpan,
 } from "./DataTable.helpers"
 import type { DataTableProps } from "./DataTable.types"
-
-/** Shared scroll semantics; each table retains its own structure and controls. */
-export function TableScrollRegion({
-  children,
-  className,
-  label,
-  labelledBy,
-}: {
-  readonly children: ReactNode
-  readonly className?: string
-  readonly label?: string
-  readonly labelledBy?: string
-}) {
-  return (
-    <section aria-label={label} aria-labelledby={labelledBy} className={cx(styles.scroller, className)} tabIndex={0}>
-      {children}
-    </section>
-  )
-}
 
 export function DataTable<Row>({
   caption,

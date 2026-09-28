@@ -2,7 +2,7 @@ import { useMemo } from "react";
 
 import { formatNumber } from "../../../utils/component.helpers.ts";
 import { Button } from "../../atoms/Button/index.ts";
-import { TableScrollRegion } from "../DataTable/DataTable.tsx";
+import { TableScrollRegion } from "../TableScrollRegion";
 import { downloadChartCsv } from "./ChartDataTable.helpers.ts";
 import styles from "./ChartDataTable.module.css";
 import type { ChartDataTableProps } from "./ChartDataTable.types.ts";

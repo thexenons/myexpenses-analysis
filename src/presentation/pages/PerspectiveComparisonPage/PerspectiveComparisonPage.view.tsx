@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { Panel } from "../../components/molecules/Panel/index.ts";
 import { AccordionTree } from "../../components/organisms/AccordionTree/index.ts";
-import { TableScrollRegion } from "../../components/organisms/DataTable/DataTable.tsx";
+import { TableScrollRegion } from "../../components/organisms/TableScrollRegion";
 import { AnalyticsPage } from "../../components/templates/AnalyticsPage/index.ts";
 import { formatEuroMinor } from "../../utils/format.ts";
 import type {

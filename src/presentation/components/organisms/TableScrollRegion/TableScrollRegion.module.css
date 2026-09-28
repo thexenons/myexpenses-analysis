@@ -1,0 +1,10 @@
+.scroller {
+  width: 100%;
+  overflow: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.scroller:focus-visible {
+  outline: 3px solid var(--accent-ink, #22330e);
+  outline-offset: -3px;
+}
