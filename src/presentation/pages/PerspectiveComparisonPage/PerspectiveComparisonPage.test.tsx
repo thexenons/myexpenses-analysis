@@ -101,4 +101,12 @@ describe("perspective comparison", () => {
     ]);
     expect(screen.getByText(/no es gasto atribuido ni saldo/)).toBeVisible();
   });
+
+  it("gives the narrow comparison table a named keyboard-scroll region", () => {
+    const rows = createPerspectiveComparisonModel(dataset, createDefaultFilterState());
+    render(<PerspectiveComparisonPageView categories={[]} rows={rows} searchPending={false} />);
+    const region = screen.getByRole("region", { name: "Comparación de movimientos por perspectiva" });
+    expect(region).toHaveAttribute("tabindex", "0");
+    expect(within(region).getByRole("table", { name: "Comparación de movimientos por perspectiva" })).toBeVisible();
+  });
 });

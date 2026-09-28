@@ -1,8 +1,8 @@
-/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- The named overflow region must receive focus so keyboard users can pan the exact-data table. */
 import { useMemo } from "react";
 
 import { formatNumber } from "../../../utils/component.helpers.ts";
 import { Button } from "../../atoms/Button/index.ts";
+import { TableScrollRegion } from "../DataTable/DataTable.tsx";
 import { downloadChartCsv } from "./ChartDataTable.helpers.ts";
 import styles from "./ChartDataTable.module.css";
 import type { ChartDataTableProps } from "./ChartDataTable.types.ts";
@@ -45,11 +45,7 @@ export function ChartDataTable({
         >
           Descargar CSV
         </Button>
-        <section
-          aria-label={`Tabla: ${caption}`}
-          className={styles.scroller}
-          tabIndex={0}
-        >
+        <TableScrollRegion className={styles.scroller} label={`Tabla: ${caption}`}>
           <table className={styles.table}>
             <caption className={styles.caption}>{caption}</caption>
             <thead>
@@ -88,7 +84,7 @@ export function ChartDataTable({
               ))}
             </tbody>
           </table>
-        </section>
+        </TableScrollRegion>
         </>
       ) : null}
     </details>

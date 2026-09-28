@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { SidebarView } from "./Sidebar.view.tsx";
@@ -17,7 +18,7 @@ const shared = {
 };
 
 describe("Sidebar freshness", () => {
-  it("separates transaction coverage, unzoned filename date, import instant and public revision", () => {
+  it("separates transaction coverage, unzoned filename date, import instant and public revision", async () => {
     render(<SidebarView
       {...shared}
       source={{
@@ -30,6 +31,7 @@ describe("Sidebar freshness", () => {
       }}
       appRevision={"c".repeat(40)}
     />);
+    await userEvent.setup().click(screen.getByText("Datos"));
     expect(screen.getByText("Cobertura de movimientos")).toBeVisible();
     expect(screen.getByText("01/01/2024").closest("p")).toHaveTextContent("01/01/2024—30/09/2024");
     expect(screen.getByText(/Fecha del nombre.*no confirma la captura/)).toBeVisible();

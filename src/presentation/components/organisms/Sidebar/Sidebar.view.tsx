@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router"
+import { useEffect, useRef, useState } from "react"
 
 import { Icon, type IconName } from "../../atoms/Icon"
 import { compactSidebarDate, formatBackupFilenameTimestamp, formatImportedAt } from "./Sidebar.helpers"
@@ -67,6 +68,17 @@ export function SidebarView({
   onLock,
   source,
 }: SidebarViewProps) {
+  const [snapshotOpen, setSnapshotOpen] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia?.("(width > 56rem)").matches === true,
+  )
+  const snapshotSummary = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const media = window.matchMedia("(width > 56rem)")
+    const update = () => setSnapshotOpen(media.matches)
+    update()
+    media.addEventListener("change", update)
+    return () => media.removeEventListener("change", update)
+  }, [])
   const currentPageLabel =
     NAVIGATION_ITEMS.find((item) => item.to === currentPath)?.label ??
     "Página no encontrada"
@@ -120,39 +132,59 @@ export function SidebarView({
         Sección actual: {currentPageLabel}
       </p>
 
-      <div className={styles.snapshot}>
-        <p className={styles.snapshotHeading}>Instantánea local</p>
-        <dl className={styles.snapshotGrid}>
-          <div>
-            <dt>Cuentas</dt>
-            <dd>{accountCount || "—"}</dd>
-          </div>
-          <div>
-            <dt>Divisa base</dt>
-            <dd>EUR</dd>
-          </div>
-        </dl>
-        <p className={styles.coverageLabel}>Cobertura de movimientos</p>
-        <p className={styles.dateRange}>
-          <span>{compactSidebarDate(minDate)}</span>
-          <span aria-hidden="true">—</span>
-          <span>{compactSidebarDate(maxDate)}</span>
-        </p>
-        <dl className={styles.freshnessList}>
-          <div>
-            <dt>Fecha del nombre (no confirma la captura)</dt>
-            <dd>{formatBackupFilenameTimestamp(source?.backupFilenameTimestamp)}</dd>
-          </div>
-          <div>
-            <dt>Importado</dt>
-            <dd>{formatImportedAt(source?.importedAt)}</dd>
-          </div>
-          <div>
-            <dt>Revisión de la aplicación</dt>
-            <dd>{appRevision ?? "No disponible"}</dd>
-          </div>
-        </dl>
-      </div>
+      <details
+        className={styles.snapshot}
+        onToggle={(event) => setSnapshotOpen(event.currentTarget.open)}
+        open={snapshotOpen}
+      >
+        <summary
+          aria-label="Datos de la instantánea local"
+          className={styles.snapshotHeading}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && snapshotOpen) {
+              event.preventDefault()
+              setSnapshotOpen(false)
+              snapshotSummary.current?.focus()
+            }
+          }}
+          ref={snapshotSummary}
+        >
+          <span className={styles.desktopSnapshotLabel}>Instantánea local</span>
+          <span className={styles.mobileSnapshotLabel}>Datos</span>
+        </summary>
+        <div className={styles.snapshotContent}>
+          <dl className={styles.snapshotGrid}>
+            <div>
+              <dt>Cuentas</dt>
+              <dd>{accountCount || "—"}</dd>
+            </div>
+            <div>
+              <dt>Divisa base</dt>
+              <dd>EUR</dd>
+            </div>
+          </dl>
+          <p className={styles.coverageLabel}>Cobertura de movimientos</p>
+          <p className={styles.dateRange}>
+            <span>{compactSidebarDate(minDate)}</span>
+            <span aria-hidden="true">—</span>
+            <span>{compactSidebarDate(maxDate)}</span>
+          </p>
+          <dl className={styles.freshnessList}>
+            <div>
+              <dt>Fecha del nombre (no confirma la captura)</dt>
+              <dd>{formatBackupFilenameTimestamp(source?.backupFilenameTimestamp)}</dd>
+            </div>
+            <div>
+              <dt>Importado</dt>
+              <dd>{formatImportedAt(source?.importedAt)}</dd>
+            </div>
+            <div>
+              <dt>Revisión de la aplicación</dt>
+              <dd>{appRevision ?? "No disponible"}</dd>
+            </div>
+          </dl>
+        </div>
+      </details>
       <button
         aria-describedby="automatic-lock-note"
         aria-label="Bloquear bóveda"

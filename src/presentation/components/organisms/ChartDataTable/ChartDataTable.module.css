@@ -10,7 +10,7 @@
   min-height: 2.75rem;
   color: var(--ink-soft, #3c4a44);
   cursor: pointer;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 760;
 }
 
@@ -37,7 +37,7 @@
   border-spacing: 0;
   border-collapse: separate;
   background: var(--surface-bright, #fffdf8);
-  font-size: 0.7rem;
+  font-size: 0.8rem;
 }
 
 .caption {

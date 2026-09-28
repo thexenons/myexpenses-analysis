@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { Panel } from "../../components/molecules/Panel/index.ts";
 import { AccordionTree } from "../../components/organisms/AccordionTree/index.ts";
+import { TableScrollRegion } from "../../components/organisms/DataTable/DataTable.tsx";
 import { AnalyticsPage } from "../../components/templates/AnalyticsPage/index.ts";
 import { formatEuroMinor } from "../../utils/format.ts";
 import type {
@@ -70,7 +71,7 @@ export function PerspectiveComparisonPageView({
             No hay movimientos en el periodo con los filtros aplicados.
           </p>
         ) : null}
-        <div className={styles.tableScroll}>
+        <TableScrollRegion className={styles.tableScroll} label="Comparación de movimientos por perspectiva">
           <table className={styles.table}>
             <caption>Comparación de movimientos por perspectiva</caption>
             <thead>
@@ -92,7 +93,7 @@ export function PerspectiveComparisonPageView({
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScrollRegion>
       </Panel>
       <Panel
         description="Despliega todas las rutas con actividad. Cada importe incluye los apuntes directos de esa categoría y sus descendientes; no sumes padres e hijos entre sí. Este árbol no modifica los filtros."

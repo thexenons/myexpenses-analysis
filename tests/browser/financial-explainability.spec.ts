@@ -57,6 +57,41 @@ test("unlocks a synthetic vault and exposes separate provenance labels", async (
   await expectNoDocumentOverflow(page);
 });
 
+test("makes provenance reachable on mobile and comparison scrolling keyboard accessible", async ({ page }) => {
+  const snapshot = page.getByLabel("Navegación y estado de la aplicación");
+  const summary = snapshot.locator("summary").filter({ hasText: /Instantánea local|Datos/ });
+  await expect(summary).toBeVisible();
+  if (page.viewportSize()!.width <= 896) {
+    await expect(snapshot.getByText("Cobertura de movimientos")).toBeHidden();
+    await summary.click();
+    await expect(snapshot.getByText("Cobertura de movimientos")).toBeVisible();
+    await expect(snapshot.getByText("Fecha del nombre (no confirma la captura)")).toBeVisible();
+    await expect(snapshot.getByText("Revisión de la aplicación")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(snapshot.getByText("Cobertura de movimientos")).toBeHidden();
+    await expect(summary).toBeFocused();
+  } else {
+    await expect(snapshot.getByText("Cobertura de movimientos")).toBeVisible();
+  }
+  await page.getByRole("link", { name: "Comparativa" }).click();
+  const region = page.getByRole("region", { name: "Comparación de movimientos por perspectiva" });
+  await expect(region).toBeVisible();
+  await region.focus();
+  await expect(region).toBeFocused();
+  if (page.viewportSize()!.width <= 390) {
+    const before = await region.evaluate((element) => element.scrollLeft);
+    await page.keyboard.press("ArrowRight");
+    await expect.poll(() => region.evaluate((element) => element.scrollLeft)).toBeGreaterThan(before);
+    await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
+    const violations = await page.evaluate(async () => {
+      const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
+      return (await axe.run(document.body, { runOnly: { type: "rule", values: ["scrollable-region-focusable"] } })).violations.map(({ id }) => id);
+    });
+    expect(violations).toEqual([]);
+  }
+  await expectNoDocumentOverflow(page);
+});
+
 test("shows unavailable source and import provenance for a legacy encrypted dataset", async ({ page }) => {
   await page.route("**/data/app-dataset.vault.json", async (route) => {
     const legacy = await route.fetch({ url: `${BASE}/data/legacy.vault.json` });
