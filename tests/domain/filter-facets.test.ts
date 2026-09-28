@@ -36,7 +36,7 @@ const normalized = normalizeDataset({
 const dataset: AnalyticsDataset = {
   ...normalized,
   postings: normalized.postings.map((posting) => {
-    if (posting.transactionId === "one") return Object.assign({}, posting, { payee: "Same", payeeSourceId: 1, paymentMethod: "Card", paymentMethodSourceId: 10, referenceNumber: "REF-1", splitIndex: 0, splitCount: 2, parent: { date: posting.date, amount: -5, comment: "Parent only" } });
+    if (posting.transactionId === "one") return Object.assign({}, posting, { payee: "Same", payeeSourceId: 1, paymentMethod: "Card", paymentMethodSourceId: 10, referenceNumber: "REF-1", splitIndex: 0, splitCount: 2, parent: { date: posting.date, amount: -5, comment: "Parent only" }, valueDate: "2026-01-02" as const, tags: ["synthetic"], linked: true });
     if (posting.transactionId === "two") return Object.assign({}, posting, { payee: "Same", payeeSourceId: 2, paymentMethod: "Card", paymentMethodSourceId: 11, currency: "GBP" as const, amountNativeMinor: 800, amountEurMinor: 0 });
     if (posting.transactionId === "three") return Object.assign({}, posting, { payee: "Same", paymentMethod: "Card", amountNativeMinor: 900, amountEurMinor: 500, referenceNumber: "REF-3" });
     return Object.assign({}, posting, { splitIndex: 1, splitCount: 2, parent: { date: posting.date, amount: -2, payee: "Parent only", paymentMethod: "Parent only", comment: "Parent comment" }, amountEurMinor: -200 });
@@ -65,6 +65,25 @@ test("new dimensions compose with old filters, classify neutral, and use base EU
   assert.deepEqual(selected({ minAmountEurMinor: 500, maxAmountEurMinor: 500, categoryTypes: ["EXPENSE", "TRANSFER"], statuses: ["CLEARED"] }), ["one", "three"]);
   assert.deepEqual(selected({ minAmountEurMinor: 501 }), []);
   assert.deepEqual(selected({ currencies: ["GBP"], categoryTypes: ["INCOME"], maxAmountEurMinor: 0, statuses: ["CLEARED"] }), ["two"]);
+});
+
+test("mixed old and new dimensions retain one exact posting without relaxing other criteria", () => {
+  const original = {
+    ...createDefaultFilterState(),
+    accountIds: ["cash"], originAccountIds: ["cash"],
+    dateBasis: "value" as const, periodMode: "custom" as const,
+    dateRange: { from: "2026-01-02" as const, to: "2026-01-02" as const },
+    categoryPrefixes: [["Food"]], categoryDepth: "exact" as const, categoryMatch: "either" as const,
+    statuses: ["CLEARED" as const], tags: ["synthetic"], linked: "linked" as const,
+    search: "one", commentSearch: "parent café", referenceSearch: "ref 1",
+    paymentMethodKeys: [paymentMethodIdentityKey(dataset.postings[0]!)],
+    categoryTypes: ["EXPENSE" as const], currencies: ["EUR" as const],
+    minAmountEurMinor: 500, maxAmountEurMinor: 500,
+  };
+  assert.deepEqual(applyFilters(dataset, original).postings.map((posting) => posting.transactionId), ["one"]);
+  const drilled = { ...original, payeeKeys: [payeeIdentityKey(dataset.postings[0]!)] };
+  assert.deepEqual(applyFilters(dataset, drilled).postings.map((posting) => posting.transactionId), ["one"]);
+  assert.deepEqual(applyFilters(dataset, { ...drilled, paymentMethodKeys: [paymentMethodIdentityKey(dataset.postings[1]!)] }).postings, []);
 });
 
 test("comment includes split parent, reference is posting only, and tokens normalize independently", () => {

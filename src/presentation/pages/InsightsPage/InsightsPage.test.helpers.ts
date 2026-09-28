@@ -20,7 +20,7 @@ export const INSIGHTS_FIXTURE: BackupInsights = {
   paymentMethods: {
     activePostingCount: 10,
     definedMethodCount: 2,
-    methods: [{ name: "Domiciliación", netEurMinor: -808, postingCount: 1 }],
+    methods: [{ identityKey: '["legacy","Domiciliación"]', name: "Domiciliación", netEurMinor: -808, postingCount: 1 }],
     usedMethodCount: 1,
     usedPostingCount: 1,
   },
@@ -33,6 +33,7 @@ export const INSIGHTS_FIXTURE: BackupInsights = {
       {
         expenseEurMinor: -1_000,
         incomeEurMinor: 0,
+        identityKey: '["source",1]',
         name: "Tienda",
         netEurMinor: -1_000,
         postingCount: 2,
@@ -43,6 +44,7 @@ export const INSIGHTS_FIXTURE: BackupInsights = {
       {
         expenseEurMinor: 0,
         incomeEurMinor: 5_000,
+        identityKey: '["source",2]',
         name: "Empresa",
         netEurMinor: 5_000,
         postingCount: 1,
@@ -53,6 +55,7 @@ export const INSIGHTS_FIXTURE: BackupInsights = {
       {
         expenseEurMinor: 0,
         incomeEurMinor: 5_000,
+        identityKey: '["source",2]',
         name: "Empresa",
         netEurMinor: 5_000,
         postingCount: 1,
@@ -115,6 +118,8 @@ export const INSIGHTS_FIXTURE: BackupInsights = {
 };
 
 export const INSIGHTS_PAGE_PROPS: InsightsPageViewProps = {
+  onViewMethod: () => {},
+  onViewPayee: () => {},
   accountBars: INSIGHTS_FIXTURE.accounts.nativeTypes.map((item) => ({
     id: item.nativeType,
     label: item.nativeType,

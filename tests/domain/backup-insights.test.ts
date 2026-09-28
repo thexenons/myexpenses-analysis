@@ -191,6 +191,7 @@ test("excludes VOID from payee money but retains it in timing and provenance", (
       {
         expenseEurMinor: -100,
         incomeEurMinor: 50,
+        identityKey: '["legacy","Tienda"]',
         name: "Tienda",
         netEurMinor: -50,
         postingCount: 2,
@@ -201,6 +202,7 @@ test("excludes VOID from payee money but retains it in timing and provenance", (
       {
         expenseEurMinor: -100,
         incomeEurMinor: 50,
+        identityKey: '["legacy","Tienda"]',
         name: "Tienda",
         netEurMinor: -50,
         postingCount: 2,
@@ -211,6 +213,7 @@ test("excludes VOID from payee money but retains it in timing and provenance", (
       {
         expenseEurMinor: -100,
         incomeEurMinor: 50,
+        identityKey: '["legacy","Tienda"]',
         name: "Tienda",
         netEurMinor: -50,
         postingCount: 2,
@@ -285,6 +288,34 @@ test("retains every ranked payee when presentation requests all and still valida
   assert.equal(aggregateBackupInsights(filtered, { topPayeeLimit: 26 })?.payees.topExpenses.length, 26);
   assert.equal(aggregateBackupInsights(filtered, { topPayeeLimit: null })?.payees.topExpenses.length, 30);
   assert.throws(() => aggregateBackupInsights(filtered, { topPayeeLimit: 0 }));
+});
+
+test("keeps same-label source and legacy identities separate in Patterns", () => {
+  const source = fixtureDataset();
+  const dataset = { ...source, postings: [
+    posting("source-one", "2024-01-01", -100, { payee: "Same", payeeSourceId: 1, paymentMethod: "Card", paymentMethodSourceId: 1 }),
+    posting("source-two", "2024-01-01", -200, { payee: "Same", payeeSourceId: 2, paymentMethod: "Card", paymentMethodSourceId: 2 }),
+    posting("legacy", "2024-01-01", -300, { payee: "Same", paymentMethod: "Card" }),
+    posting("neutral", "2024-01-01", 50, { categoryType: "NEUTRAL", payee: "Same", payeeSourceId: 1, paymentMethod: "Card", paymentMethodSourceId: 1 }),
+    posting("zero", "2024-01-01", 0, { categoryType: "NEUTRAL", status: "CLEARED", payee: "Same", payeeSourceId: 1, paymentMethod: "Card", paymentMethodSourceId: 1 }),
+    posting("void", "2024-01-01", -1000, { isVoid: true, status: "VOID", payee: "Same", payeeSourceId: 1, paymentMethod: "Card", paymentMethodSourceId: 1 }),
+  ] };
+  const insights = aggregateBackupInsights(applyFilters(dataset, createDefaultFilterState()), { topPayeeLimit: null });
+  assert.ok(insights);
+  assert.deepEqual(insights.payees.topNet.map((item) => [item.identityKey, item.postingCount]), [
+    ['["legacy","Same"]', 1], ['["source",2]', 1], ['["source",1]', 3],
+  ]);
+  assert.deepEqual(insights.paymentMethods.methods.map((item) => [item.identityKey, item.postingCount]), [
+    ['["source",1]', 3], ['["source",2]', 1], ['["legacy","Card"]', 1],
+  ]);
+  for (const payee of insights.payees.topNet) {
+    const selected = applyFilters(dataset, { ...createDefaultFilterState(), statuses: ["UNRECONCILED", "CLEARED", "RECONCILED"], payeeKeys: [payee.identityKey] });
+    assert.equal(selected.postings.length, payee.postingCount, payee.identityKey);
+  }
+  for (const method of insights.paymentMethods.methods) {
+    const selected = applyFilters(dataset, { ...createDefaultFilterState(), statuses: ["UNRECONCILED", "CLEARED", "RECONCILED"], paymentMethodKeys: [method.identityKey] });
+    assert.equal(selected.postings.length, method.postingCount, method.identityKey);
+  }
 });
 
 test("uses exactly the postings and accounts selected by global filters", () => {

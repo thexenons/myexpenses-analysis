@@ -80,11 +80,29 @@
 
 .methodList li {
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   align-items: center;
   justify-content: space-between;
   padding-block: 0.62rem;
   border-bottom: 1px solid var(--line);
+}
+
+.methodDrilldown {
+  padding: 0.35rem 0.5rem;
+  color: var(--ink);
+  background: var(--surface-bright);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.7rem;
+  text-align: left;
+}
+
+.methodDrilldown:disabled {
+  cursor: wait;
+  opacity: 0.55;
 }
 
 .methodList li > span {

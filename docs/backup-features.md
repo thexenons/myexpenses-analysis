@@ -73,6 +73,13 @@ vista:
 Son estadísticas descriptivas: la interfaz no atribuye causas ni presenta los
 patrones horarios como predicciones.
 
+Cada fila de contraparte o método de pago con actividad ofrece un acceso a sus
+movimientos computados. El número del acceso incluye todos los apuntes no
+anulados de esa identidad, aunque el importe del ranking corresponda sólo a
+gasto o ingreso. Las identidades con el mismo nombre se distinguen por ID
+cuando procede. El acceso conserva los demás filtros activos, restringe los
+estados actuales a los no anulados y abre `/transacciones` en la primera página.
+
 ### Más detalle en cuentas y transacciones
 
 La vista de cuentas incorpora tipo nativo, descripción, visibilidad, inclusión

@@ -196,6 +196,58 @@ test("combines additional filter controls, exposes chips and rejects invalid EUR
   await expect(toolbar.getByRole("button", { name: "Quitar filtro Moneda: EUR" })).toHaveCount(0);
 });
 
+test("drills from exact Patterns identities without dropping other facets", async ({ page }) => {
+  await page.getByRole("link", { name: "Patrones" }).click();
+  await expect(page.getByRole("button", { name: /movimientos computados de Child payee \(ID 1\)/ }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /movimiento computado de Child payee \(ID 3\)/ }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /movimientos computados de Neutral method \(ID 1\)/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /movimiento computado de Neutral method \(ID 4\)/ })).toBeVisible();
+  await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
+  const actionViolations = await page.evaluate(async () => {
+    const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
+    return (await axe.run(document.body, { runOnly: { type: "rule", values: ["button-name", "color-contrast"] } })).violations.map(({ id }) => id);
+  });
+  expect(actionViolations).toEqual([]);
+  if (page.viewportSize()!.width === 1280) await page.screenshot({ path: "/tmp/myexpenses-t3-patterns-synthetic.png" });
+  if (page.viewportSize()!.width === 390) {
+    await page.getByRole("button", { name: /Ver 3 movimientos computados de Child payee \(ID 1\)/ }).first().scrollIntoViewIfNeeded();
+    await page.screenshot({ path: "/tmp/myexpenses-t3-patterns-synthetic-mobile.png" });
+  }
+  await expectNoDocumentOverflow(page);
+
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  await toolbar.getByRole("button", { name: /Abrir todos los filtros/ }).click();
+  const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });
+  await drawer.getByText("Criterios adicionales").click();
+  await drawer.getByRole("group", { name: "Moneda del movimiento" }).getByRole("checkbox", { name: "EUR" }).check();
+  await drawer.getByRole("searchbox", { name: "Buscar en comentarios" }).fill("Synthetic food");
+  await drawer.getByRole("textbox", { name: "Importe absoluto mínimo (EUR)" }).fill("0,25");
+  await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+
+  const payeeAction = page.getByRole("button", { name: "Ver 1 movimiento computado de Child payee" }).first();
+  await expect(payeeAction).toBeEnabled();
+  await payeeAction.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "Transacciones" })).toBeVisible();
+  await expect(page.locator("main output")).toContainText("1 resultados.");
+  await expect(toolbar.getByRole("button", { name: /Quitar filtro Moneda: EUR/ })).toBeVisible();
+  await expect(toolbar.getByRole("button", { name: /Quitar filtro Beneficiario:/ })).toBeVisible();
+  expect(page.url()).not.toContain("Synthetic food");
+  expect(await page.evaluate(() => Object.values(localStorage).join(" "))).not.toContain("Synthetic food");
+  await expectNoDocumentOverflow(page);
+
+  await page.getByRole("link", { name: "Patrones" }).click();
+  await page.getByRole("button", { name: "Ver 1 movimiento computado de Neutral method" }).click();
+  await expect(page.locator("main output")).toContainText("1 resultados.");
+  await expect(toolbar.getByRole("button", { name: /Quitar filtro Beneficiario:/ })).toBeVisible();
+  await expect(toolbar.getByRole("button", { name: /Quitar filtro Método:/ })).toBeVisible();
+  await expectNoDocumentOverflow(page);
+  await toolbar.getByRole("button", { name: /Abrir todos los filtros/ }).click();
+  await page.getByRole("dialog", { name: "Filtros del análisis" }).getByRole("button", { name: "Restablecer" }).click();
+  await expect(toolbar.getByRole("button", { name: /Quitar filtro Beneficiario:/ })).toHaveCount(0);
+  await expect(toolbar.getByRole("button", { name: /Quitar filtro Método:/ })).toHaveCount(0);
+});
+
 test("keeps every primary route inside the document viewport", async ({ page }) => {
   const routes = [
     "/flujo-de-caja", "/comparativa", "/deudas", "/presupuestos",

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Badge } from "../../../../components/atoms/Badge/Badge.tsx";
 import { Panel } from "../../../../components/molecules/Panel/Panel.tsx";
 import { ChartDataTable } from "../../../../components/organisms/ChartDataTable/ChartDataTable.tsx";
+import { identityOptionLabel } from "../../../../components/organisms/FilterDrawer/FilterDrawer.helpers.ts";
 import { countFormatter, euroFormatter, formatEuroMinor } from "../../../../utils/format.ts";
 import styles from "./InsightsPayees.module.css";
 import type { InsightsPayeesProps } from "./InsightsPayees.types.ts";
@@ -12,7 +13,7 @@ const percentageFormatter = new Intl.NumberFormat("es-ES", {
   style: "percent",
 });
 
-export function InsightsPayees({ payees }: InsightsPayeesProps) {
+export function InsightsPayees({ onViewPayee, payees, searchPending = false }: InsightsPayeesProps) {
   const [limit, setLimit] = useState("5");
   const groups = [
     {
@@ -39,8 +40,14 @@ export function InsightsPayees({ payees }: InsightsPayeesProps) {
       tone: "net",
     },
   ] as const;
-  const allPayees = new Map(
-    groups.flatMap((group) => group.rows.map((item) => [item.sourceId === null ? `name:${item.name}` : `id:${item.sourceId}`, item] as const)),
+  const allPayees = new Map(groups.flatMap((group) => group.rows.map((item) => [item.identityKey, item] as const)));
+  const labelCounts = new Map<string, number>();
+  for (const item of allPayees.values()) {
+    const label = item.name.trim().toLocaleLowerCase("es");
+    labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1);
+  }
+  const displayLabel = (item: (typeof payees.topExpenses)[number]) => identityOptionLabel(
+    item.identityKey, item.name, "payee", (labelCounts.get(item.name.trim().toLocaleLowerCase("es")) ?? 0) > 1,
   );
 
   return (
@@ -89,19 +96,29 @@ export function InsightsPayees({ payees }: InsightsPayeesProps) {
             ) : (
               <ol className={styles.rankList}>
                 {(limit === "all" ? group.rows : group.rows.slice(0, Number(limit))).map((item, index) => (
-                  <li className={styles.rankItem} key={item.sourceId === null ? `name:${item.name}` : `id:${item.sourceId}`}>
+                  <li className={styles.rankItem} key={item.identityKey}>
                     <span className={styles.rankIndex} aria-hidden="true">
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <span className={styles.rankIdentity}>
-                      <strong>{item.name}</strong>
+                      <strong title={displayLabel(item)}>{displayLabel(item)}</strong>
                       <small>
-                        {countFormatter.format(item.postingCount)} apuntes
+                        {countFormatter.format(item.postingCount)} {item.postingCount === 1 ? "movimiento computado" : "movimientos computados"}
                       </small>
                     </span>
                     <strong className={styles.rankAmount}>
                       {formatEuroMinor(group.amount(item))}
                     </strong>
+                    {onViewPayee === undefined ? null : (
+                      <button
+                        className={styles.drilldown}
+                        disabled={searchPending}
+                        onClick={() => onViewPayee(item.identityKey)}
+                        type="button"
+                      >
+                        Ver {countFormatter.format(item.postingCount)} {item.postingCount === 1 ? "movimiento computado" : "movimientos computados"} de {displayLabel(item)}
+                      </button>
+                    )}
                   </li>
                 ))}
               </ol>
@@ -118,7 +135,7 @@ export function InsightsPayees({ payees }: InsightsPayeesProps) {
         ]}
         formatValue={euroFormatter}
         labelHeader="Contraparte"
-        rows={() => [...allPayees].map(([id, item]) => ({ id, label: item.name, values: [-item.expenseEurMinor / 100 || 0, item.incomeEurMinor / 100, item.netEurMinor / 100] }))}
+        rows={() => [...allPayees].map(([id, item]) => ({ id, label: displayLabel(item), values: [-item.expenseEurMinor / 100 || 0, item.incomeEurMinor / 100, item.netEurMinor / 100] }))}
       />
     </Panel>
   );

@@ -9,6 +9,8 @@ export interface InsightsPageViewProps {
   readonly hourSeries: readonly ChartSeries[];
   readonly insights: BackupInsights;
   readonly lagBars: readonly ChartBarDatum[];
+  readonly onViewMethod: (identityKey: string) => void;
+  readonly onViewPayee: (identityKey: string) => void;
   readonly searchPending: boolean;
   readonly weekdayBars: readonly ChartBarDatum[];
 }

@@ -18,9 +18,19 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:41789",
     browserName: "chromium",
     timezoneId: "Europe/Madrid",
-    ...(runtimeLibraryDirectory === undefined ? {} : {
-      launchOptions: { env: { ...process.env, LD_LIBRARY_PATH: runtimeLibraryDirectory } },
-    }),
+    serviceWorkers: "block",
+    proxy: { server: "http://127.0.0.1:9", bypass: "127.0.0.1,localhost" },
+    launchOptions: {
+      args: [
+        "--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE localhost, EXCLUDE 127.0.0.1",
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-sync",
+      ],
+      ...(runtimeLibraryDirectory === undefined ? {} : {
+        env: { ...process.env, LD_LIBRARY_PATH: runtimeLibraryDirectory },
+      }),
+    },
     trace: "retain-on-failure",
   },
   projects: [

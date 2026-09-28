@@ -59,9 +59,14 @@ async function main(): Promise<void> {
   try {
     const database = await createImportDatabaseFixture({ extraSql: [
       "INSERT INTO categories (_id, uuid, label, parent_id, type) VALUES (14, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa5', 'Food', 10, 1)",
+      "INSERT INTO payee (_id, name, short_name, iban, bic, parent_id) VALUES (3, 'Child payee', NULL, NULL, NULL, NULL)",
+      "INSERT INTO paymentmethods (_id, label, is_numbered, type, icon) VALUES (4, 'Neutral method', 0, -1, NULL)",
+      "UPDATE transactions SET payee_id = 1, method_id = 1 WHERE _id = 1",
       "INSERT INTO transactions (_id, uuid, comment, date, value_date, amount, cat_id, account_id, parent_id, status, cr_status) VALUES (15, '10000000-0000-4000-8000-000000000015', 'Synthetic food', 1787425493, 1787425493, -25, 14, 1, NULL, 0, 'RECONCILED')",
       "INSERT INTO transactions (_id, uuid, comment, date, value_date, amount, cat_id, account_id, parent_id, status, cr_status) VALUES (16, '10000000-0000-4000-8000-000000000016', 'July coverage', 1782900000, 1782900000, -10, 10, 1, NULL, 0, 'RECONCILED')",
       "INSERT INTO transactions (_id, uuid, comment, date, value_date, amount, cat_id, account_id, parent_id, status, cr_status) VALUES (17, '10000000-0000-4000-8000-000000000017', 'Synthetic refund', 1787425493, 1787425493, 20, 10, 1, NULL, 0, 'RECONCILED')",
+      "UPDATE transactions SET payee_id = 1, method_id = 1 WHERE _id = 15",
+      "UPDATE transactions SET payee_id = 3, method_id = 4 WHERE _id = 17",
       "INSERT INTO budget_allocations (budget_id, cat_id, year, second, budget, rollOverPrevious, rollOverNext, oneTime) VALUES (1, 10, 2026, 7, 100, 0, 0, 0)",
       "INSERT INTO budget_allocations (budget_id, cat_id, year, second, budget, rollOverPrevious, rollOverNext, oneTime) VALUES (1, 14, 2026, 7, 20, 0, 0, 0)",
     ] });

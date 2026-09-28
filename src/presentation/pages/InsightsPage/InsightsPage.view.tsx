@@ -20,6 +20,8 @@ export function InsightsPageView({
   hourSeries,
   insights,
   lagBars,
+  onViewMethod,
+  onViewPayee,
   searchPending,
   weekdayBars,
 }: InsightsPageViewProps) {
@@ -66,7 +68,7 @@ export function InsightsPageView({
         />
       </AnalyticsPageGrid>
 
-      <InsightsPayees payees={insights.payees} />
+      <InsightsPayees payees={insights.payees} onViewPayee={onViewPayee} searchPending={searchPending} />
       <InsightsTiming
         hourSeries={hourSeries}
         timing={insights.timing}
@@ -75,6 +77,8 @@ export function InsightsPageView({
       <InsightsQuality
         lagBars={lagBars}
         paymentMethods={insights.paymentMethods}
+        onViewMethod={onViewMethod}
+        searchPending={searchPending}
         valueDates={insights.valueDates}
       />
       <InsightsAccounts accountBars={accountBars} insights={insights} />

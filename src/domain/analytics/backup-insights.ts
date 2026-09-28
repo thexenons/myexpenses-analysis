@@ -1,5 +1,6 @@
 import type { BackupNativeAccountType } from "./backup-dataset.types.ts";
 import { postingDate } from "./filters.ts";
+import { payeeIdentityKey, paymentMethodIdentityKey } from "./identity-keys.ts";
 import type {
   FilteredAnalyticsDataset,
   IsoDate,
@@ -37,6 +38,7 @@ export interface InsightAmountBucket {
 export interface PayeeInsight extends InsightAmountBucket {
   readonly expenseEurMinor: number;
   readonly incomeEurMinor: number;
+  readonly identityKey: string;
   readonly name: string;
   readonly sourceId: number | null;
 }
@@ -90,6 +92,7 @@ export interface ValueDateInsights {
 }
 
 export interface PaymentMethodInsight extends InsightAmountBucket {
+  readonly identityKey: string;
   readonly name: string;
 }
 
@@ -159,6 +162,7 @@ interface MutableAmountBucket {
 interface MutablePayeeInsight extends MutableAmountBucket {
   expenseEurMinor: number;
   incomeEurMinor: number;
+  identityKey: string;
   name: string;
   sourceId: number | null;
 }
@@ -353,7 +357,7 @@ export function aggregateBackupInsights(
   }
   const topPayeeLimit = assertTopPayeeLimit(options.topPayeeLimit);
   const payeeMap = new Map<string, MutablePayeeInsight>();
-  const methodMap = new Map<string, MutableAmountBucket>();
+  const methodMap = new Map<string, MutableAmountBucket & { name: string }>();
   const hourBuckets: MutableAmountBucket[] = Array.from({ length: 24 }, () => ({
     netEurMinor: 0,
     postingCount: 0,
@@ -424,13 +428,11 @@ export function aggregateBackupInsights(
     activePostingCount += 1;
     if (posting.payee !== undefined) {
       payeePostingCount += 1;
-      const payeeKey =
-        posting.payeeSourceId === undefined
-          ? `label:${posting.payee}`
-          : `id:${posting.payeeSourceId}`;
+      const payeeKey = payeeIdentityKey(posting);
       const current = payeeMap.get(payeeKey) ?? {
         expenseEurMinor: 0,
         incomeEurMinor: 0,
+        identityKey: payeeKey,
         name: posting.payee,
         netEurMinor: 0,
         postingCount: 0,
@@ -441,12 +443,14 @@ export function aggregateBackupInsights(
     }
     if (posting.paymentMethod !== undefined) {
       usedMethodPostingCount += 1;
-      const current = methodMap.get(posting.paymentMethod) ?? {
+      const methodKey = paymentMethodIdentityKey(posting);
+      const current = methodMap.get(methodKey) ?? {
+        name: posting.paymentMethod,
         netEurMinor: 0,
         postingCount: 0,
       };
       addPostingAmount(current, posting, `Method ${posting.paymentMethod}`);
-      methodMap.set(posting.paymentMethod, current);
+      methodMap.set(methodKey, current);
     }
   }
 
@@ -459,8 +463,9 @@ export function aggregateBackupInsights(
       activePostingCount,
       definedMethodCount: backup.paymentMethods.length,
       methods: [...methodMap.entries()]
-        .map(([name, bucket]) => ({
-          name,
+        .map(([identityKey, bucket]) => ({
+          identityKey,
+          name: bucket.name,
           netEurMinor: bucket.netEurMinor,
           postingCount: bucket.postingCount,
         }))

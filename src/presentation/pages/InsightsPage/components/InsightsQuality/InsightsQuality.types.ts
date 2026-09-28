@@ -7,5 +7,7 @@ import type { ChartBarDatum } from "../../../../components/organisms/HorizontalB
 export interface InsightsQualityProps {
   readonly lagBars: readonly ChartBarDatum[];
   readonly paymentMethods: PaymentMethodInsights;
+  readonly onViewMethod?: (identityKey: string) => void;
+  readonly searchPending?: boolean;
   readonly valueDates: ValueDateInsights;
 }

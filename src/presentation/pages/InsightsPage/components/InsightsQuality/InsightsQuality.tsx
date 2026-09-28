@@ -2,6 +2,7 @@ import { Badge } from "../../../../components/atoms/Badge/Badge.tsx";
 import { Panel } from "../../../../components/molecules/Panel/Panel.tsx";
 import { ChartDataTable } from "../../../../components/organisms/ChartDataTable/ChartDataTable.tsx";
 import { HorizontalBarChart } from "../../../../components/organisms/HorizontalBarChart/HorizontalBarChart.tsx";
+import { identityOptionLabel } from "../../../../components/organisms/FilterDrawer/FilterDrawer.helpers.ts";
 import {
   countFormatter,
   formatDate,
@@ -17,9 +18,16 @@ const percentageFormatter = new Intl.NumberFormat("es-ES", {
 
 export function InsightsQuality({
   lagBars,
+  onViewMethod,
   paymentMethods,
+  searchPending = false,
   valueDates,
 }: InsightsQualityProps) {
+  const methodLabelCounts = new Map<string, number>();
+  for (const method of paymentMethods.methods) {
+    const label = method.name.trim().toLocaleLowerCase("es");
+    methodLabelCounts.set(label, (methodLabelCounts.get(label) ?? 0) + 1);
+  }
   const distinctRange =
     valueDates.distinctValueDateFrom === null ||
     valueDates.distinctValueDateTo === null
@@ -108,12 +116,22 @@ export function InsightsQuality({
           </div>
           <ul className={styles.methodList}>
             {paymentMethods.methods.map((method) => (
-              <li key={method.name}>
+              <li key={method.identityKey}>
                 <span>
-                  <strong>{method.name}</strong>
-                  <small>{countFormatter.format(method.postingCount)} usos</small>
+                  <strong>{identityOptionLabel(method.identityKey, method.name, "method", (methodLabelCounts.get(method.name.trim().toLocaleLowerCase("es")) ?? 0) > 1)}</strong>
+                  <small>{countFormatter.format(method.postingCount)} {method.postingCount === 1 ? "movimiento computado" : "movimientos computados"}</small>
                 </span>
                 <strong>{formatEuroMinor(method.netEurMinor)}</strong>
+                {onViewMethod === undefined ? null : (
+                  <button
+                    className={styles.methodDrilldown}
+                    disabled={searchPending}
+                    onClick={() => onViewMethod(method.identityKey)}
+                    type="button"
+                  >
+                    Ver {countFormatter.format(method.postingCount)} {method.postingCount === 1 ? "movimiento computado" : "movimientos computados"} de {identityOptionLabel(method.identityKey, method.name, "method", (methodLabelCounts.get(method.name.trim().toLocaleLowerCase("es")) ?? 0) > 1)}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
