@@ -2,76 +2,53 @@
   min-width: 0;
 }
 
-.statsStrip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
-  overflow: hidden;
+.exception {
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--debt-ink);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  background: var(--surface-bright);
+  font-size: 0.82rem;
+}
+
+.details {
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
+  background: var(--surface);
 }
 
-.stat {
-  min-width: 0;
-  padding: 0.8rem 0.9rem;
-  background: var(--surface-bright);
-  border-right: 1px solid var(--line);
+.details > summary {
+  min-height: 2.75rem;
+  padding: 0.85rem 1rem;
+  color: var(--ink);
+  font-weight: 700;
+  cursor: pointer;
 }
 
-.stat:last-child {
-  border-right: 0;
+.details > summary:focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
 }
 
-.statLabel {
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 600;
+.detailsBody {
+  padding: 1rem;
+  border-top: 1px solid var(--line);
 }
 
-.statValue {
-  display: block;
-  margin-top: 0.15rem;
-  font-family: var(--mono);
-  font-size: 0.95rem;
-  overflow-wrap: anywhere;
-}
-
-.statContext {
-  display: block;
-  margin-top: 0.16rem;
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-
-.compositionList {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.compositionRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.8rem;
-  align-items: center;
-  padding-bottom: 0.7rem;
-  border-bottom: 1px solid var(--line);
-}
-
-.compositionRow:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-.compositionLabel {
-  flex: 1 1 10rem;
-  min-width: 0;
+.context {
+  margin-bottom: 0.9rem;
   color: var(--muted);
   font-size: 0.82rem;
 }
 
-.compositionValue {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  font-family: var(--mono);
-  font-size: 0.85rem;
-  font-weight: 700;
+@container (width < 40rem) {
+  .primaryKpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .primaryKpis > :first-child {
+    grid-column: 1 / -1;
+  }
 }

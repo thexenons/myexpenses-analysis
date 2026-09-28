@@ -56,6 +56,42 @@ test.afterEach(async ({ page }) => {
   expect(outboundByPage.get(page)).toEqual([]);
 });
 
+test("keeps summary and cash-flow detail reachable without obscuring primary figures", async ({ page }) => {
+  const summary = page.getByText("Saldos, deuda y conciliación", { exact: true });
+  await expect(page.getByText("Flujo del periodo", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pulso financiero" })).toBeVisible();
+  await expect(summary).toBeVisible();
+  await expect(summary.locator("xpath=..")).not.toHaveAttribute("open");
+  await summary.focus();
+  await page.keyboard.press("Enter");
+  await expect(summary.locator("xpath=..")).toHaveAttribute("open", "");
+  await expect(page.getByText("Saldo en deudas", { exact: true })).toBeVisible();
+  await expect(page.getByText("Anulados visibles", { exact: true })).toBeVisible();
+  await page.keyboard.press("Space");
+  await expect(summary.locator("xpath=..")).not.toHaveAttribute("open");
+  await page.getByText("Composición y categorías", { exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Categorías dominantes" })).toBeVisible();
+  await expectNoDocumentOverflow(page);
+
+  await page.locator('a[href="/flujo-de-caja"]').click();
+  await expect(page.getByRole("article", { name: "Flujo real" })).toBeVisible();
+  await expect(page.getByText("Resultado consolidado", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Flujo neto por periodo" })).toBeVisible();
+  const composition = page.getByText("Composición del flujo", { exact: true });
+  await composition.focus();
+  await page.keyboard.press("Enter");
+  await expect(composition.locator("xpath=..")).toHaveAttribute("open", "");
+  await expect(page.getByRole("heading", { name: "Presión por categoría" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Transferencias" })).toBeVisible();
+  await expectNoDocumentOverflow(page);
+  await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
+  const violations = await page.evaluate(async () => {
+    const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
+    return (await axe.run(document.body, { runOnly: { type: "rule", values: ["button-name", "color-contrast", "aria-hidden-focus"] } })).violations.map(({ id }) => id);
+  });
+  expect(violations).toEqual([]);
+});
+
 test("unlocks a synthetic vault and exposes separate provenance labels", async ({ page }) => {
   const snapshot = page.getByLabel("Navegación y estado de la aplicación");
   if (page.viewportSize()!.width > 896) {

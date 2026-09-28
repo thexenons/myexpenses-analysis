@@ -1,4 +1,5 @@
 import { Icon } from "../../components/atoms/Icon/index.ts";
+import { FinancialFactList } from "../../components/molecules/FinancialFactList/index.ts";
 import { KpiCard } from "../../components/molecules/KpiCard/index.ts";
 import { Panel } from "../../components/molecules/Panel/index.ts";
 import { DivergingBarChart } from "../../components/organisms/DivergingBarChart/index.ts";
@@ -28,7 +29,7 @@ export function CashFlowPageView({
       description="El flujo real y las entradas/salidas excluyen las cuentas de deuda e incluyen el dinero transferido hacia ellas. Ingresos, gastos y resultado consolidado corresponden al ámbito seleccionado."
       title="Flujo de caja"
     >
-      <AnalyticsPageGrid variant="kpis">
+      <AnalyticsPageGrid className={styles.primaryKpis} variant="three">
         <KpiCard
           detail="Sin espejos de deuda"
           formatValue={euroFormatter}
@@ -53,15 +54,16 @@ export function CashFlowPageView({
           tone="negative"
           value={euroFromMinor(composition.grossExpensesEurMinor)}
         />
-        <KpiCard
-          detail="Ingresos netos menos gastos netos; no equivale al efectivo disponible"
-          formatValue={euroFormatter}
-          icon={<Icon name="transfer" />}
-          label="Resultado consolidado"
-          tone={savingsEurMinor >= 0 ? "positive" : "warning"}
-          value={euroFromMinor(savingsEurMinor)}
-        />
       </AnalyticsPageGrid>
+
+      <div className={styles.consolidatedResult}>
+        <FinancialFactList items={[{
+          id: "consolidated-result",
+          label: "Resultado consolidado",
+          value: formatEuroMinor(savingsEurMinor),
+        }]} />
+        <p>Ingresos netos menos gastos netos; no equivale al efectivo disponible.</p>
+      </div>
 
       <AnalyticsPageGrid variant="two">
         <Panel className={styles.chartPanel}>
@@ -88,43 +90,31 @@ export function CashFlowPageView({
         </Panel>
       </AnalyticsPageGrid>
 
-      <AnalyticsPageGrid variant="main-aside">
-        <Panel>
-          <HorizontalBarChart
-            title="Presión por categoría"
-            description="Gasto neto por raíz en el ámbito elegido. Un importe negativo es un abono, no un gasto adicional."
-            formatValue={euroFormatter}
-            data={expenseCategories.map((category) => ({ id: category.id, label: category.name, value: euroFromMinor(-category.summary.expensesEurMinor), color: category.summary.expensesEurMinor > 0 ? "#286a4c" : "#a33f36" }))}
-          />
-          <p>Asignación de gasto en deudas: {formatEuroMinor(composition.debtExpenseAdjustmentsEurMinor ?? 0)}. No es una devolución.</p>
-          {(composition.debtIncomeAdjustmentsEurMinor ?? 0) !== 0 ? <p>Asignación de ingreso en deudas: {formatEuroMinor(composition.debtIncomeAdjustmentsEurMinor ?? 0)}. No es una reversión de ingreso.</p> : null}
-        </Panel>
-        <Panel
-          description="Entradas y salidas internas"
-          title="Transferencias"
-        >
-          <div className={styles.compositionList}>
-            <div className={styles.compositionRow}>
-              <span className={styles.compositionLabel}>Entradas</span>
-              <strong className={styles.compositionValue}>
-                {formatEuroMinor(composition.transferInflowsEurMinor)}
-              </strong>
-            </div>
-            <div className={styles.compositionRow}>
-              <span className={styles.compositionLabel}>Salidas</span>
-              <strong className={styles.compositionValue}>
-                {formatEuroMinor(composition.transferOutflowsEurMinor)}
-              </strong>
-            </div>
-            <div className={styles.compositionRow}>
-              <span className={styles.compositionLabel}>Neto</span>
-              <strong className={styles.compositionValue}>
-                {formatEuroMinor(composition.netTransfersEurMinor)}
-              </strong>
-            </div>
-          </div>
-        </Panel>
-      </AnalyticsPageGrid>
+      <details className={styles.details}>
+        <summary>Composición del flujo</summary>
+        <AnalyticsPageGrid className={styles.detailsBody} variant="main-aside">
+          <Panel>
+            <HorizontalBarChart
+              title="Presión por categoría"
+              description="Gasto neto por raíz en el ámbito elegido. Un importe negativo es un abono, no un gasto adicional."
+              formatValue={euroFormatter}
+              data={expenseCategories.map((category) => ({ id: category.id, label: category.name, value: euroFromMinor(-category.summary.expensesEurMinor), color: category.summary.expensesEurMinor > 0 ? "#286a4c" : "#a33f36" }))}
+            />
+            <p>Asignación de gasto en deudas: {formatEuroMinor(composition.debtExpenseAdjustmentsEurMinor ?? 0)}. No es una devolución.</p>
+            {(composition.debtIncomeAdjustmentsEurMinor ?? 0) !== 0 ? <p>Asignación de ingreso en deudas: {formatEuroMinor(composition.debtIncomeAdjustmentsEurMinor ?? 0)}. No es una reversión de ingreso.</p> : null}
+          </Panel>
+          <Panel
+            description="Entradas y salidas internas"
+            title="Transferencias"
+          >
+            <FinancialFactList items={[
+              { id: "Entradas", label: "Entradas", value: formatEuroMinor(composition.transferInflowsEurMinor) },
+              { id: "Salidas", label: "Salidas", value: formatEuroMinor(composition.transferOutflowsEurMinor) },
+              { id: "Neto", label: "Neto", value: formatEuroMinor(composition.netTransfersEurMinor) },
+            ]} />
+          </Panel>
+        </AnalyticsPageGrid>
+      </details>
     </AnalyticsPage>
   );
 }

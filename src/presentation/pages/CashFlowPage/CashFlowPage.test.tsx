@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { applyFilters, createDefaultFilterState } from "../../../domain/analytics/filters.ts";
@@ -30,6 +31,35 @@ const kpis: KpiSummary = {
 };
 
 describe("CashFlowPageView", () => {
+  it("distinguishes signed real flow from the consolidated result in the primary reading", () => {
+    render(
+      <CashFlowPageView
+        composition={{
+          expenseRefundsEurMinor: 250,
+          grossExpensesEurMinor: 4_000,
+          grossIncomeEurMinor: 8_000,
+          incomeReversalsEurMinor: 0,
+          netExpensesEurMinor: -3_750,
+          netIncomeEurMinor: 8_000,
+          netTransfersEurMinor: 0,
+          transferInflowsEurMinor: 0,
+          transferOutflowsEurMinor: 0,
+        }}
+        expenseCategories={[]}
+        kpis={{ ...kpis, realCashFlowEurMinor: -200 }}
+        lineSeries={[]}
+        periodBars={[]}
+        savingsEurMinor={4_250}
+      />,
+    );
+    const real = screen.getByText("Flujo real").closest("article");
+    expect(real).not.toBeNull();
+    expect(within(real!).getByText(/-2,00\s€/)).toBeVisible();
+    expect(screen.getByText("Resultado consolidado").parentElement).toHaveTextContent(/42,50\s€/);
+    expect(screen.getByRole("heading", { name: "Flujo neto por periodo" })).toBeVisible();
+    expect(screen.getByText("Presión por categoría").closest("details")).not.toHaveAttribute("open");
+  });
+
   it("shows cash-flow KPIs and both period comparisons", () => {
     render(
       <CashFlowPageView
@@ -55,7 +85,7 @@ describe("CashFlowPageView", () => {
     expect(screen.getByText("Flujo real")).toBeVisible();
     expect(screen.getByText("Flujo neto por periodo")).toBeVisible();
     expect(screen.getByText("Tensión entre entradas y salidas")).toBeVisible();
-    expect(screen.getByText("Presión por categoría")).toBeVisible();
+    expect(screen.getByText("Presión por categoría")).toBeInTheDocument();
   });
 
   it("includes negative neutral roots in expense pressure", () => {
@@ -110,7 +140,7 @@ describe("CashFlowPageView", () => {
     ]);
   });
 
-  it("plots real receipts and payments including transfers, never an absolute-value expense refund", () => {
+  it("plots real receipts and payments including transfers, never an absolute-value expense refund", async () => {
     const filtered = applyFilters(normalizeDataset({
       accounts: { version: 2, accounts: { cash: { label: "Cuenta", type: "DEFAULT" } } },
       categories: { Gastos: { categoryType: "EXPENSE" }, Transferencia: { categoryType: "TRANSFER" } },
@@ -124,6 +154,7 @@ describe("CashFlowPageView", () => {
     expect(model.kpis.realCashFlowEurMinor).toBe(-200);
     render(<CashFlowPageView {...model} />);
     expect(screen.getByRole("button", { name: /Salidas reales/ })).toBeVisible();
+    await userEvent.setup().click(screen.getByText("Composición del flujo"));
     expect(screen.getByText("Un importe negativo es un abono, no un gasto adicional.", { exact: false, selector: "p" })).toBeVisible();
   });
 });

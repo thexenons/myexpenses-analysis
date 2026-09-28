@@ -1,5 +1,6 @@
 import { Badge } from "../../components/atoms/Badge/index.ts";
 import { Icon } from "../../components/atoms/Icon/index.ts";
+import { FinancialFactList } from "../../components/molecules/FinancialFactList/index.ts";
 import { KpiCard } from "../../components/molecules/KpiCard/index.ts";
 import { Panel } from "../../components/molecules/Panel/index.ts";
 import { AreaChart } from "../../components/organisms/AreaChart/index.ts";
@@ -34,7 +35,7 @@ export function OverviewPageView({
       notice={searchPending ? "Actualizando resultados…" : undefined}
       title="Resumen general"
     >
-      <AnalyticsPageGrid variant="kpis">
+      <AnalyticsPageGrid className={styles.primaryKpis} variant="three">
         <KpiCard
           detail={`${countFormatter.format(kpis.postingCount)} apuntes`}
           formatValue={euroFormatter}
@@ -59,137 +60,76 @@ export function OverviewPageView({
           tone={kpis.expensesEurMinor > 0 ? "positive" : "negative"}
           value={euroFromMinor(-kpis.expensesEurMinor)}
         />
-        <KpiCard
-          detail={`${debtAccountCount} cuentas`}
+      </AnalyticsPageGrid>
+
+      {status.VOID.count > 0 ? (
+        <p className={styles.exception}>
+          <strong>{countFormatter.format(status.VOID.count)} {status.VOID.count === 1 ? "apunte anulado visible" : "apuntes anulados visibles"}</strong>
+          {" · No se incluyen en los importes."}
+        </p>
+      ) : null}
+
+      <Panel className={styles.chartPanel}>
+        <AreaChart
+          description="Ingresos, gastos firmados y movimiento neto del ámbito seleccionado."
+          formatLabel={formatPeriodLabel}
           formatValue={euroFormatter}
-          icon={<Icon name="debt" />}
-          label="Saldo en deudas"
-          tone="warning"
-          value={euroFromMinor(debtBalanceEurMinor)}
+          series={chartSeries}
+          title="Pulso financiero"
         />
-      </AnalyticsPageGrid>
+      </Panel>
 
-      <div className={styles.statsStrip}>
-        <div className={styles.stat}>
-          <span className={styles.statLabel}>Apertura del periodo</span>
-          <strong className={styles.statValue}>
-            {formatEuroMinor(kpis.periodOpeningBalanceEurMinor)}
-          </strong>
+      <details className={styles.details}>
+        <summary>Saldos, deuda y conciliación</summary>
+        <div className={styles.detailsBody}>
+          <p className={styles.context}>Los saldos incorporan el historial de las cuentas seleccionadas; el flujo refleja los movimientos filtrados.</p>
+          <FinancialFactList items={[
+            { id: "Apertura del periodo", label: "Apertura del periodo", value: formatEuroMinor(kpis.periodOpeningBalanceEurMinor) },
+            { id: "Saldo al cierre del periodo", label: "Saldo al cierre del periodo", value: formatEuroMinor(kpis.periodClosingBalanceEurMinor) },
+            { id: "Valoración actual por cuenta · corte final, ámbito y cuentas", label: "Valoración actual por cuenta · corte final, ámbito y cuentas", value: formatEuroMinor(valuationBalanceEurMinor) },
+            { id: "Saldo en deudas", label: "Saldo en deudas", value: <>{formatEuroMinor(debtBalanceEurMinor)} · {debtAccountCount} cuentas</> },
+            { id: "Flujo real", label: "Flujo real", value: formatEuroMinor(kpis.realCashFlowEurMinor) },
+            { id: "Flujo de deuda", label: "Flujo de deuda", value: formatEuroMinor(kpis.debtFlowEurMinor) },
+            { id: "Transferencias", label: "Transferencias", value: formatEuroMinor(kpis.transfersEurMinor) },
+            { id: "Reconciliados", label: "Reconciliados", value: countFormatter.format(status.RECONCILED.count) },
+            { id: "Sin reconciliar", label: "Sin reconciliar", value: <Badge tone="warning">{countFormatter.format(status.UNRECONCILED.count)}</Badge> },
+            { id: "Compensados", label: "Compensados", value: <Badge tone="info">{countFormatter.format(status.CLEARED.count)}</Badge> },
+            { id: "Anulados visibles", label: "Anulados visibles", value: <Badge tone="neutral">{countFormatter.format(status.VOID.count)}</Badge> },
+            { id: "Cuentas activas", label: "Cuentas activas", value: <Badge tone="cash">{countFormatter.format(accounts.length)}</Badge> },
+          ]} />
         </div>
-        <div className={styles.stat}>
-          <span className={styles.statLabel}>Saldo al cierre del periodo</span>
-          <strong className={styles.statValue}>
-            {formatEuroMinor(kpis.periodClosingBalanceEurMinor)}
-          </strong>
-        </div>
-        <div className={styles.stat}>
-          <span className={styles.statLabel}>Valoración actual por cuenta</span>
-          <strong className={styles.statValue}>
-            {formatEuroMinor(valuationBalanceEurMinor)}
-          </strong>
-          <span className={styles.statContext}>Corte final · ámbito y cuentas</span>
-        </div>
-        <div className={styles.stat}>
-          <span className={styles.statLabel}>Flujo real</span>
-          <strong className={styles.statValue}>
-            {formatEuroMinor(kpis.realCashFlowEurMinor)}
-          </strong>
-        </div>
-        <div className={styles.stat}>
-          <span className={styles.statLabel}>Transferencias</span>
-          <strong className={styles.statValue}>
-            {formatEuroMinor(kpis.transfersEurMinor)}
-          </strong>
-        </div>
-        <div className={styles.stat}>
-          <span className={styles.statLabel}>Reconciliados</span>
-          <strong className={styles.statValue}>
-            {countFormatter.format(status.RECONCILED.count)}
-          </strong>
-        </div>
-      </div>
+      </details>
 
-      <AnalyticsPageGrid variant="main-aside">
-        <Panel className={styles.chartPanel}>
-          <AreaChart
-            description="Ingresos, gastos firmados y movimiento neto del ámbito seleccionado."
-            formatLabel={formatPeriodLabel}
-            formatValue={euroFormatter}
-            series={chartSeries}
-            title="Pulso financiero"
-          />
-        </Panel>
-
-        <Panel>
-          <HorizontalBarChart
-            title="Categorías dominantes"
-            description="Actividad neta por raíz, sin sumar padres e hijos. Elige cuántas mostrar; la tabla y el CSV incluyen todas."
-            formatValue={euroFormatter}
-            labelHeader="Categoría"
-            data={topCategories.map(({ category }) => ({
-              id: category.id,
-              label: category.name,
-              value: euroFromMinor(category.summary.netEurMinor),
-              color: category.categoryType === "EXPENSE" ? "#a33f36" : category.categoryType === "INCOME" ? "#286a4c" : "#35698b",
-            }))}
-          />
-        </Panel>
-      </AnalyticsPageGrid>
-
-      <AnalyticsPageGrid variant="two">
-        <Panel
-          actions={<Icon name="receipt" size={18} />}
-          description="Gasto neto = bruto − devoluciones − asignación en deudas. Un neto negativo indica abono. Las asignaciones no son dinero devuelto."
-          title="Composición del gasto"
-        >
-          <div className={styles.compositionList}>
-            {expenseComposition.map(({ amountEurMinor, label }) => (
-              <div className={styles.compositionRow} key={label}>
-                <span className={styles.compositionLabel}>{label}</span>
-                <strong className={styles.compositionValue}>
-                  {formatEuroMinor(amountEurMinor)}
-                </strong>
-              </div>
-            ))}
-          </div>
-        </Panel>
-        <Panel
-          actions={<Icon name="transfer" size={18} />}
-          description="Qué está incluido en este corte"
-          title="Lectura rápida"
-        >
-          <div className={styles.compositionList}>
-            <div className={styles.compositionRow}>
-              <span className={styles.compositionLabel}>Cuentas activas</span>
-              <Badge tone="cash">{countFormatter.format(accounts.length)}</Badge>
-            </div>
-            <div className={styles.compositionRow}>
-              <span className={styles.compositionLabel}>Sin reconciliar</span>
-              <Badge tone="warning">
-                {countFormatter.format(status.UNRECONCILED.count)}
-              </Badge>
-            </div>
-            <div className={styles.compositionRow}>
-              <span className={styles.compositionLabel}>Compensados</span>
-              <Badge tone="info">
-                {countFormatter.format(status.CLEARED.count)}
-              </Badge>
-            </div>
-            <div className={styles.compositionRow}>
-              <span className={styles.compositionLabel}>Anulados visibles</span>
-              <Badge tone="neutral">
-                {countFormatter.format(status.VOID.count)}
-              </Badge>
-            </div>
-            <div className={styles.compositionRow}>
-              <span className={styles.compositionLabel}>Flujo de deuda</span>
-              <strong className={styles.compositionValue}>
-                {formatEuroMinor(kpis.debtFlowEurMinor)}
-              </strong>
-            </div>
-          </div>
-        </Panel>
-      </AnalyticsPageGrid>
+      <details className={styles.details}>
+        <summary>Composición y categorías</summary>
+        <AnalyticsPageGrid className={styles.detailsBody} variant="two">
+          <Panel>
+            <HorizontalBarChart
+              title="Categorías dominantes"
+              description="Actividad neta por raíz, sin sumar padres e hijos. Elige cuántas mostrar; la tabla y el CSV incluyen todas."
+              formatValue={euroFormatter}
+              labelHeader="Categoría"
+              data={topCategories.map(({ category }) => ({
+                id: category.id,
+                label: category.name,
+                value: euroFromMinor(category.summary.netEurMinor),
+                color: category.categoryType === "EXPENSE" ? "#a33f36" : category.categoryType === "INCOME" ? "#286a4c" : "#35698b",
+              }))}
+            />
+          </Panel>
+          <Panel
+            actions={<Icon name="receipt" size={18} />}
+            description="Gasto neto = bruto − devoluciones − asignación en deudas. Un neto negativo indica abono. Las asignaciones no son dinero devuelto."
+            title="Composición del gasto"
+          >
+            <FinancialFactList items={expenseComposition.map(({ amountEurMinor, label }) => ({
+              id: label,
+              label,
+              value: formatEuroMinor(amountEurMinor),
+            }))} />
+          </Panel>
+        </AnalyticsPageGrid>
+      </details>
     </AnalyticsPage>
   );
 }

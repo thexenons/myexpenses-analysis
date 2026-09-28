@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import type { KpiSummary } from "../../../domain/analytics/types.ts";
@@ -27,6 +28,42 @@ const kpis: KpiSummary = {
 };
 
 describe("OverviewPageView", () => {
+  it("keeps the signed period result and a nonzero annulment visible before secondary details open", async () => {
+    const user = userEvent.setup();
+    render(
+      <OverviewPageView
+        accounts={[]}
+        chartSeries={[]}
+        debtAccountCount={1}
+        debtBalanceEurMinor={2_500}
+        expenseComposition={[{ amountEurMinor: 5_000, label: "Gasto bruto" }]}
+        kpis={{ ...kpis, netEurMinor: -5_300, realCashFlowEurMinor: -7_800 }}
+        searchPending={false}
+        status={{
+          CLEARED: { amountEurMinor: 0, count: 0 },
+          RECONCILED: { amountEurMinor: 0, count: 1 },
+          UNRECONCILED: { amountEurMinor: 0, count: 1 },
+          VOID: { amountEurMinor: 0, count: 1 },
+        }}
+        topCategories={[]}
+        valuationBalanceEurMinor={25_299}
+      />,
+    );
+
+    const flow = screen.getByText("Flujo del periodo").closest("article");
+    expect(flow).not.toBeNull();
+    expect(within(flow!).getByText(/-53,00\s€/)).toBeVisible();
+    expect(screen.getByText(/1 apunte anulado visible/)).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Pulso financiero" })).toBeVisible();
+    const details = screen.getByText("Saldos, deuda y conciliación");
+    expect(details.closest("details")).not.toHaveAttribute("open");
+    await user.click(details);
+    expect(details.closest("details")).toHaveAttribute("open");
+    expect(screen.getByText("Saldo en deudas")).toBeVisible();
+    expect(screen.getByText("Apertura del periodo")).toBeVisible();
+    expect(screen.getByText("Anulados visibles")).toBeVisible();
+  });
+
   it("renders the financial pulse and announces deferred filter updates", () => {
     render(
       <OverviewPageView
@@ -52,7 +89,7 @@ describe("OverviewPageView", () => {
 
     expect(screen.getByText("Flujo del periodo")).toBeVisible();
     expect(screen.getByText("Pulso financiero")).toBeVisible();
-    expect(screen.getByText("Compensados")).toBeVisible();
+    expect(screen.getByText("Compensados")).toBeInTheDocument();
     expect(screen.getByText("Actualizando resultados…")).toHaveAttribute(
       "aria-live",
       "polite",
