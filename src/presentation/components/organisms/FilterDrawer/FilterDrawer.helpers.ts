@@ -7,8 +7,63 @@ import type {
   FilterState,
   TimeGranularitySetting,
 } from "../../../../domain/analytics/types"
+import { payeeIdentityKey, paymentMethodIdentityKey } from "../../../../domain/analytics/identity-keys.ts"
 
 const SPANISH_COLLATOR = new Intl.Collator("es", { sensitivity: "base" })
+
+export interface IdentityOption { key: string; label: string }
+
+export function identityOptionLabel(key: string, label: string | undefined, kind: "payee" | "method", disambiguate = false): string {
+  const parsed: unknown = JSON.parse(key)
+  if (!Array.isArray(parsed)) return label ?? "No disponible"
+  if (parsed[0] === "missing") return kind === "payee" ? "Sin beneficiario" : "Sin método de pago"
+  if (parsed[0] === "source") {
+    const name = label?.trim()
+    return name ? (disambiguate ? `${name} (ID ${parsed[1]})` : name) : `Sin nombre (ID ${parsed[1]})`
+  }
+  const name = (label || String(parsed[1])).trim() || "Sin nombre"
+  return disambiguate ? `${name} (sin ID)` : name
+}
+
+export function collectIdentityOptions(dataset: AnalyticsDataset | null, kind: "payee" | "method"): readonly IdentityOption[] {
+  if (dataset === null) return []
+  const options = new Map<string, string | undefined>()
+  for (const posting of dataset.postings) {
+    const key = kind === "payee" ? payeeIdentityKey(posting) : paymentMethodIdentityKey(posting)
+    const label = kind === "payee" ? posting.payee : posting.paymentMethod
+    options.set(key, label)
+  }
+  const frequencies = new Map<string, number>()
+  for (const label of options.values()) {
+    const name = label?.trim().toLocaleLowerCase("es")
+    if (name) frequencies.set(name, (frequencies.get(name) ?? 0) + 1)
+  }
+  return [...options].map(([key, label]) => ({
+    key,
+    label: identityOptionLabel(key, label, kind, (frequencies.get(label?.trim().toLocaleLowerCase("es") ?? "") ?? 0) > 1),
+  })).toSorted((a, b) => SPANISH_COLLATOR.compare(a.label, b.label))
+}
+
+export function includeSelectedIdentityOptions(options: readonly IdentityOption[], selected: readonly string[], kind: "payee" | "method"): readonly IdentityOption[] {
+  const known = new Set(options.map((option) => option.key))
+  return [...options, ...selected.filter((key) => !known.has(key)).map((key) => ({ key, label: `${identityOptionLabel(key, undefined, kind)} · no disponible en esta exportación` }))]
+}
+
+/** Parse an absolute EUR amount without floating-point cent rounding. */
+export function parseAbsoluteEurMinor(value: string): number | null | undefined {
+  const input = value.trim()
+  if (input === "") return null
+  if (!/^\d+(?:[.,]\d{1,2})?$/.test(input)) return undefined
+  const [euros, fractional = ""] = input.replace(",", ".").split(".")
+  const cents = Number(euros) * 100 + Number(fractional.padEnd(2, "0"))
+  return Number.isSafeInteger(cents) ? cents : undefined
+}
+
+export function formatAbsoluteEurMinor(value: number | null | undefined): string {
+  if (value === null || value === undefined) return ""
+  const cents = BigInt(value)
+  return `${cents / 100n},${String(cents % 100n).padStart(2, "0")}`
+}
 
 export function sortFilterDrawerAccounts(
   dataset: AnalyticsDataset | null,
@@ -100,6 +155,14 @@ export function hasActiveDrawerFilters(
     filters.tags.length > 0 ||
     filters.search.trim().length > 0 ||
     filters.linked !== "all" ||
+    (filters.payeeKeys?.length ?? 0) > 0 ||
+    (filters.paymentMethodKeys?.length ?? 0) > 0 ||
+    (filters.categoryTypes?.length ?? 0) > 0 ||
+    (filters.currencies?.length ?? 0) > 0 ||
+    filters.minAmountEurMinor != null ||
+    filters.maxAmountEurMinor != null ||
+    (filters.commentSearch?.trim().length ?? 0) > 0 ||
+    (filters.referenceSearch?.trim().length ?? 0) > 0 ||
     granularity !== "auto"
   )
 }

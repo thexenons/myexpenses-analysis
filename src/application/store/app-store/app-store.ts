@@ -38,18 +38,19 @@ export function createAppStore(
     persist(
       (set) => {
         const actions: AppStoreActions = {
-          clearFilters: () => set({ filters: { ...createDefaultFilterState(), scope: DEFAULT_APP_SCOPE } }),
+          clearFilters: () => set((state) => ({ filters: { ...createDefaultFilterState(), scope: DEFAULT_APP_SCOPE }, filterResetRevision: state.filterResetRevision + 1 })),
           closeFilterDrawer: () => set({ filterDrawerOpen: false }),
           lock: () => {
             activeController?.abort();
             activeController = null;
-            set({
+            set((state) => ({
               analytics: null,
               error: null,
               filterDrawerOpen: false,
               filters: { ...createDefaultFilterState(), scope: DEFAULT_APP_SCOPE },
+              filterResetRevision: state.filterResetRevision + 1,
               loadPhase: "locked",
-            });
+            }));
           },
           openFilterDrawer: () => set({ filterDrawerOpen: true }),
           patchFilters: (patch) =>
@@ -144,6 +145,7 @@ export function createAppStore(
           analytics: null,
           error: null,
           filterDrawerOpen: false,
+          filterResetRevision: 0,
           filters: { ...createDefaultFilterState(), scope: DEFAULT_APP_SCOPE },
           granularity: "auto",
           loadPhase: "locked",

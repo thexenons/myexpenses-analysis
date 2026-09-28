@@ -40,6 +40,8 @@ export interface AppStoreState {
   analytics: AnalyticsDataset | null;
   error: string | null;
   filterDrawerOpen: boolean;
+  /** In-memory signal for explicit filter resets; never persisted. */
+  filterResetRevision: number;
   filters: FilterState;
   granularity: TimeGranularitySetting;
   loadPhase: LoadPhase;

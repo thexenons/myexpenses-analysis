@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { join } from "node:path";
 
 const BASE = "http://127.0.0.1:41789";
@@ -11,6 +11,21 @@ async function expectNoDocumentOverflow(page: Page): Promise<void> {
     document: document.documentElement.scrollWidth,
   }));
   expect(dimensions.document, `document width at ${dimensions.viewport}px`).toBeLessThanOrEqual(dimensions.viewport + 1);
+}
+
+async function readAmountBoundary(input: Locator) {
+  return input.evaluate((element) => {
+    const candidates: Element[] = element.parentElement ? [element, element.parentElement] : [element];
+    const borders = candidates.map((candidate) => {
+      const computed = getComputedStyle(candidate);
+      return { width: computed.borderTopWidth, style: computed.borderTopStyle, color: computed.borderTopColor };
+    });
+    return { focused: document.activeElement === element, borders };
+  });
+}
+
+function hasUnfocusedAmountBoundary(boundary: Awaited<ReturnType<typeof readAmountBoundary>>): boolean {
+  return !boundary.focused && boundary.borders.some((border) => Number.parseFloat(border.width) >= 1 && border.style === "solid" && border.color !== "rgba(0, 0, 0, 0)");
 }
 
 test.beforeEach(async ({ context, page }) => {
@@ -128,6 +143,57 @@ test("keeps mobile time controls outside the filter drawer and search inside it"
   await expect(drawer.getByRole("group", { name: "Ámbito de las estadísticas" }).getByRole("radio", { name: "Yo" })).toBeChecked();
   await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
   await expectNoDocumentOverflow(page);
+});
+
+test("combines additional filter controls, exposes chips and rejects invalid EUR ranges", async ({ page }) => {
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  const opener = toolbar.getByRole("button", { name: /Abrir todos los filtros/ });
+  await opener.click();
+  const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });
+  await drawer.getByText("Criterios adicionales").click();
+  const min = drawer.getByRole("textbox", { name: "Importe absoluto mínimo (EUR)" });
+  const max = drawer.getByRole("textbox", { name: "Importe absoluto máximo (EUR)" });
+  const emptyMinBoundary = await readAmountBoundary(min);
+  const emptyMaxBoundary = await readAmountBoundary(max);
+  await expect(drawer.getByRole("group", { name: "Beneficiarios" }).getByRole("checkbox", { name: "Sin beneficiario" })).toBeVisible();
+  await drawer.getByRole("group", { name: "Métodos de pago" }).getByRole("checkbox", { name: "Sin método de pago" }).check();
+  await drawer.getByRole("checkbox", { name: "Gasto" }).check();
+  await drawer.getByRole("checkbox", { name: "EUR", exact: true }).check();
+  await drawer.getByRole("searchbox", { name: "Buscar en comentarios" }).fill("Synthetic food");
+  await drawer.getByRole("searchbox", { name: "Buscar en referencias" }).fill("ABC");
+  await min.fill("0");
+  await max.fill("25,00");
+  await max.evaluate((element) => element.blur());
+  const populatedMaxBoundary = await readAmountBoundary(max);
+  const amountBoundaries = { emptyMinBoundary, emptyMaxBoundary, populatedMaxBoundary };
+  expect(Object.values(amountBoundaries).every(hasUnfocusedAmountBoundary), JSON.stringify(amountBoundaries)).toBe(true);
+  await expect(drawer.getByText(/Rango no aplicado/)).toHaveCount(0);
+  await min.fill("30");
+  await expect(drawer.getByText(/Rango no aplicado/)).toBeVisible();
+  await expect(min).toHaveAttribute("aria-invalid", "true");
+  await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
+  const violations = await page.evaluate(async () => {
+    const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
+    return (await axe.run(document.querySelector("dialog")!, { runOnly: { type: "rule", values: ["label", "aria-valid-attr-value", "color-contrast"] } })).violations.map(({ id }) => id);
+  });
+  expect(violations).toEqual([]);
+  await min.fill("20");
+  await expect(drawer.getByText(/Rango no aplicado/)).toHaveCount(0);
+  if (page.viewportSize()!.width === 1280) await page.screenshot({ path: "/tmp/myexpenses-t2-filter-drawer-synthetic.png" });
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toBeVisible();
+  await expect(opener).toBeFocused();
+  await expect(toolbar.getByRole("button", { name: "Quitar filtro Moneda: EUR" })).toBeVisible();
+  await expect(toolbar.getByRole("button", { name: /Quitar filtro Importe absoluto ≥ 20,00 EUR/ })).toBeVisible();
+  expect(page.url()).not.toContain("Synthetic food");
+  expect(await page.evaluate(() => Object.values(localStorage).join(" "))).not.toContain("Synthetic food");
+  expect(await page.evaluate(() => Object.values(localStorage).join(" "))).not.toContain("ABC");
+  await expectNoDocumentOverflow(page);
+  await opener.click();
+  await drawer.getByRole("button", { name: "Restablecer" }).click();
+  await expect(min).toHaveValue("");
+  await expect(max).toHaveValue("");
+  await expect(toolbar.getByRole("button", { name: "Quitar filtro Moneda: EUR" })).toHaveCount(0);
 });
 
 test("keeps every primary route inside the document viewport", async ({ page }) => {

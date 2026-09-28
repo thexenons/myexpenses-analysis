@@ -2,16 +2,21 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react"
 
-import type { TransactionStatus } from "../../../../../domain/analytics/types"
+import type { CategoryType, CurrencyCode, TransactionStatus } from "../../../../../domain/analytics/types"
 import { toggleCategoryPath } from "../../../../../domain/analytics/filters.ts"
 import { useAppStore } from "../../../../providers/AppStoreProvider/index.ts"
 import {
   collectFilterDrawerRootCategories,
   collectFilterDrawerCategoryPaths,
   collectFilterDrawerTags,
+  collectIdentityOptions,
+  formatAbsoluteEurMinor,
+  includeSelectedIdentityOptions,
   hasActiveDrawerFilters,
+  parseAbsoluteEurMinor,
   sortFilterDrawerAccounts,
   toggleFilterDrawerOptionalValue,
   toggleFilterDrawerUniversalValue,
@@ -30,6 +35,7 @@ export function useFilterDrawer(): FilterDrawerViewProps {
   const clearFilters = useAppStore((state) => state.actions.clearFilters)
   const onClose = useAppStore((state) => state.actions.closeFilterDrawer)
   const filters = useAppStore((state) => state.filters)
+  const filterResetRevision = useAppStore((state) => state.filterResetRevision)
   const granularity = useAppStore((state) => state.granularity)
   const open = useAppStore((state) => state.filterDrawerOpen)
   const patchFilters = useAppStore((state) => state.actions.patchFilters)
@@ -43,6 +49,11 @@ export function useFilterDrawer(): FilterDrawerViewProps {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
+  const [amountMinInput, setAmountMinInput] = useState(() => formatAbsoluteEurMinor(filters.minAmountEurMinor))
+  const [amountMaxInput, setAmountMaxInput] = useState(() => formatAbsoluteEurMinor(filters.maxAmountEurMinor))
+  const [amountError, setAmountError] = useState<string | null>(null)
+  const appliedAmountRef = useRef([filters.minAmountEurMinor ?? null, filters.maxAmountEurMinor ?? null] as const)
+  const lastResetRevisionRef = useRef(filterResetRevision)
 
   const accounts = useMemo(
     () => sortFilterDrawerAccounts(analytics, filters.scope),
@@ -62,6 +73,39 @@ export function useFilterDrawer(): FilterDrawerViewProps {
     () => collectFilterDrawerTags(analytics),
     [analytics],
   )
+  const payeeOptions = useMemo(() => includeSelectedIdentityOptions(collectIdentityOptions(analytics, "payee"), filters.payeeKeys ?? [], "payee"), [analytics, filters.payeeKeys])
+  const methodOptions = useMemo(() => includeSelectedIdentityOptions(collectIdentityOptions(analytics, "method"), filters.paymentMethodKeys ?? [], "method"), [analytics, filters.paymentMethodKeys])
+  const availableCurrencies = useMemo(() => [...new Set([...(analytics?.postings.map((posting) => posting.currency) ?? []), ...(filters.currencies ?? [])])].toSorted(), [analytics, filters.currencies])
+
+  useEffect(() => {
+    const min = filters.minAmountEurMinor ?? null
+    const max = filters.maxAmountEurMinor ?? null
+    const explicitlyReset = filterResetRevision !== lastResetRevisionRef.current
+    lastResetRevisionRef.current = filterResetRevision
+    if (min === appliedAmountRef.current[0] && max === appliedAmountRef.current[1] && !explicitlyReset) return
+    appliedAmountRef.current = [min, max]
+    setAmountMinInput(formatAbsoluteEurMinor(min))
+    setAmountMaxInput(formatAbsoluteEurMinor(max))
+    setAmountError(null)
+  }, [filterResetRevision, filters.minAmountEurMinor, filters.maxAmountEurMinor])
+
+  const onAmountInput = (bound: "min" | "max", value: string) => {
+    if (bound === "min") setAmountMinInput(value)
+    else setAmountMaxInput(value)
+    const min = parseAbsoluteEurMinor(bound === "min" ? value : amountMinInput)
+    const max = parseAbsoluteEurMinor(bound === "max" ? value : amountMaxInput)
+    if (min === undefined || max === undefined) {
+      setAmountError("Rango no aplicado: introduce importes positivos con hasta dos decimales.")
+      return
+    }
+    if (min !== null && max !== null && min > max) {
+      setAmountError("Rango no aplicado: el mínimo no puede superar el máximo.")
+      return
+    }
+    setAmountError(null)
+    appliedAmountRef.current = [min, max]
+    patchFilters({ minAmountEurMinor: min, maxAmountEurMinor: max })
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -90,10 +134,16 @@ export function useFilterDrawer(): FilterDrawerViewProps {
     allAccountsSelected: filters.accountIds.length === 0,
     allStatusesSelected: filters.statuses.length === 0,
     availableTags,
+    payeeOptions,
+    methodOptions,
+    availableCurrencies,
+    amountMinInput,
+    amountMaxInput,
+    amountError,
     closeButtonRef,
     dialogRef,
     filters,
-    hasActiveFilters: hasActiveDrawerFilters(filters, granularity),
+    hasActiveFilters: hasActiveDrawerFilters(filters, granularity) || amountError !== null,
     onAccountToggle: (accountId) =>
       setAccountIds(
         toggleFilterDrawerUniversalValue(filters.accountIds, accountId, accountIds),
@@ -119,6 +169,13 @@ export function useFilterDrawer(): FilterDrawerViewProps {
       ),
     onTagToggle: (tag) =>
       setTags(toggleFilterDrawerOptionalValue(filters.tags, tag)),
+    onPayeeToggle: (key) => patchFilters({ payeeKeys: toggleFilterDrawerOptionalValue(filters.payeeKeys ?? [], key) }),
+    onMethodToggle: (key) => patchFilters({ paymentMethodKeys: toggleFilterDrawerOptionalValue(filters.paymentMethodKeys ?? [], key) }),
+    onCategoryTypeToggle: (value: CategoryType) => patchFilters({ categoryTypes: toggleFilterDrawerOptionalValue(filters.categoryTypes ?? [], value) as CategoryType[] }),
+    onCurrencyToggle: (value: CurrencyCode) => patchFilters({ currencies: toggleFilterDrawerOptionalValue(filters.currencies ?? [], value) as CurrencyCode[] }),
+    onAmountInput,
+    onCommentSearchChange: (commentSearch) => patchFilters({ commentSearch }),
+    onReferenceSearchChange: (referenceSearch) => patchFilters({ referenceSearch }),
     rootCategories,
   }
 }

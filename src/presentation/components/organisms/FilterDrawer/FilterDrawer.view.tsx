@@ -1,8 +1,10 @@
 import type {
   AnalyticsScope,
+  CategoryType,
   LinkedFilter,
   TransactionStatus,
 } from "../../../../domain/analytics/types"
+import { useState } from "react"
 import { categoryPathsEqual } from "../../../../domain/analytics/filters.ts"
 import { formatCategoryPath } from "../../../utils/format.ts"
 import { Button } from "../../atoms/Button"
@@ -40,6 +42,13 @@ const STATUS_OPTIONS: readonly {
   { value: "VOID", label: "Anuladas" },
 ]
 
+const CATEGORY_TYPE_OPTIONS: readonly { value: CategoryType; label: string }[] = [
+  { value: "EXPENSE", label: "Gasto" },
+  { value: "INCOME", label: "Ingreso" },
+  { value: "TRANSFER", label: "Transferencia" },
+  { value: "NEUTRAL", label: "Neutral" },
+]
+
 export function FilterDrawerView({
   accounts,
   endpointAccounts,
@@ -47,6 +56,12 @@ export function FilterDrawerView({
   allAccountsSelected,
   allStatusesSelected,
   availableTags,
+  payeeOptions,
+  methodOptions,
+  availableCurrencies,
+  amountMinInput,
+  amountMaxInput,
+  amountError,
   closeButtonRef,
   dialogRef,
   filters,
@@ -65,8 +80,17 @@ export function FilterDrawerView({
   onSearchChange,
   onStatusToggle,
   onTagToggle,
+  onPayeeToggle,
+  onMethodToggle,
+  onCategoryTypeToggle,
+  onCurrencyToggle,
+  onAmountInput,
+  onCommentSearchChange,
+  onReferenceSearchChange,
   rootCategories,
 }: FilterDrawerViewProps) {
+  const [payeeQuery, setPayeeQuery] = useState("")
+  const [methodQuery, setMethodQuery] = useState("")
   return (
     <dialog
       aria-labelledby="filter-drawer-title"
@@ -339,6 +363,63 @@ export function FilterDrawerView({
               <p className={styles.empty}>Esta exportación no contiene etiquetas.</p>
             )}
           </section>
+          <details className={styles.additionalCriteria}>
+            <summary>Criterios adicionales</summary>
+            <p>Los criterios se combinan entre sí. Dentro de cada lista, basta con coincidir con una selección.</p>
+            <div className={styles.additionalBody}>
+              {([
+                { title: "Beneficiarios", options: payeeOptions, selected: filters.payeeKeys ?? [], query: payeeQuery, setQuery: setPayeeQuery, toggle: onPayeeToggle },
+                { title: "Métodos de pago", options: methodOptions, selected: filters.paymentMethodKeys ?? [], query: methodQuery, setQuery: setMethodQuery, toggle: onMethodToggle },
+              ] as const).map(({ title, options, selected, query, setQuery, toggle }) => (
+                <fieldset className={styles.choiceGroup} key={title}>
+                  <legend>{title}</legend>
+                  <p>{selected.length === 0 ? "Sin limitar" : `${selected.length} seleccionados`}</p>
+                  <SearchField label={`Buscar ${title.toLowerCase()}`} onValueChange={setQuery} value={query} />
+                  <div className={styles.choiceList}>
+                    {options.filter((option) => option.label.toLocaleLowerCase("es").includes(query.toLocaleLowerCase("es")) || selected.includes(option.key)).map((option) => (
+                      <label className={styles.choice} key={option.key}>
+                        <input checked={selected.includes(option.key)} onChange={() => toggle(option.key)} type="checkbox" />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ))}
+              <fieldset className={styles.choiceGroup}>
+                <legend>Tipo de movimiento</legend>
+                <div className={styles.compactChoices}>
+                  {CATEGORY_TYPE_OPTIONS.map(({ value, label }) => <label className={styles.choice} key={value}>
+                    <input checked={(filters.categoryTypes ?? []).includes(value)} onChange={() => onCategoryTypeToggle(value)} type="checkbox" />
+                    <span>{label}</span>
+                  </label>)}
+                </div>
+              </fieldset>
+              <fieldset className={styles.choiceGroup}>
+                <legend>Moneda del movimiento</legend>
+                <div className={styles.compactChoices}>
+                  {availableCurrencies.map((currency) => <label className={styles.choice} key={currency}>
+                    <input checked={(filters.currencies ?? []).includes(currency)} onChange={() => onCurrencyToggle(currency)} type="checkbox" />
+                    <span>{currency}</span>
+                  </label>)}
+                </div>
+              </fieldset>
+              <fieldset className={styles.choiceGroup}>
+                <legend>Importe absoluto en EUR</legend>
+                <p>Magnitud sin signo, incluidos los límites. Admite coma o punto y hasta dos decimales.</p>
+                <div className={styles.amountFields}>
+                  <label>Importe absoluto mínimo (EUR)
+                    <span className={styles.amountControl}><input aria-describedby={amountError !== null ? "amount-filter-error" : undefined} aria-invalid={amountError !== null} inputMode="decimal" onChange={(event) => onAmountInput("min", event.target.value)} type="text" value={amountMinInput} /></span>
+                  </label>
+                  <label>Importe absoluto máximo (EUR)
+                    <span className={styles.amountControl}><input aria-describedby={amountError !== null ? "amount-filter-error" : undefined} aria-invalid={amountError !== null} inputMode="decimal" onChange={(event) => onAmountInput("max", event.target.value)} type="text" value={amountMaxInput} /></span>
+                  </label>
+                </div>
+                {amountError !== null ? <p aria-live="polite" className={styles.amountError} id="amount-filter-error">{amountError} Se mantienen los límites anteriores hasta corregirlo.</p> : null}
+              </fieldset>
+              <SearchField label="Buscar en comentarios" onValueChange={onCommentSearchChange} value={filters.commentSearch ?? ""} />
+              <SearchField label="Buscar en referencias" onValueChange={onReferenceSearchChange} value={filters.referenceSearch ?? ""} />
+            </div>
+          </details>
         </div>
 
         <footer className={styles.footer}>
@@ -349,7 +430,7 @@ export function FilterDrawerView({
           >
             Restablecer
           </Button>
-          <Button onClick={onClose} variant="primary">
+          <Button disabled={amountError !== null} onClick={onClose} variant="primary">
             Ver resultados
           </Button>
         </footer>

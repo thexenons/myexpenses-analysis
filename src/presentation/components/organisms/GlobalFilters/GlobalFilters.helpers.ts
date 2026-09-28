@@ -22,6 +22,13 @@ export function countGlobalFilters(
   if (filters.tags.length > 0) count += 1
   if (filters.search.trim().length > 0) count += 1
   if (filters.linked !== "all") count += 1
+  if ((filters.payeeKeys?.length ?? 0) > 0) count += 1
+  if ((filters.paymentMethodKeys?.length ?? 0) > 0) count += 1
+  if ((filters.categoryTypes?.length ?? 0) > 0) count += 1
+  if ((filters.currencies?.length ?? 0) > 0) count += 1
+  if (filters.minAmountEurMinor != null || filters.maxAmountEurMinor != null) count += 1
+  if (filters.commentSearch?.trim()) count += 1
+  if (filters.referenceSearch?.trim()) count += 1
   if (granularity !== "auto") count += 1
   return count
 }

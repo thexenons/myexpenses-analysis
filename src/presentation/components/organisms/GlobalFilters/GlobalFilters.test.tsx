@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { appStore } from "../../../../composition/app-store.ts"
+import { normalizeDataset } from "../../../../domain/analytics/normalize.ts"
 import { AppStoreProvider } from "../../../providers/AppStoreProvider/index.ts"
 import periodCss from "../PeriodSelector/PeriodSelector.module.css?raw"
 import { GlobalFilters } from "./GlobalFilters"
@@ -135,5 +136,39 @@ describe("GlobalFilters", () => {
     expect(appStore.getState().filters.dateBasis).toBe("operation")
     expect(appStore.getState().filters.destinationAccountIds).toEqual(["partner"])
     expect(screen.getByRole("button", { name: "Abrir todos los filtros, 4 activos" })).toBeVisible()
+  })
+
+  it("counts new dimensions and exposes concrete chips including the existing search and status", async () => {
+    const user = userEvent.setup()
+    appStore.getState().actions.patchFilters({
+      search: "viaje", statuses: ["CLEARED", "VOID"], payeeKeys: ['["source",10]'],
+      paymentMethodKeys: ['["missing"]'], categoryTypes: ["NEUTRAL"], currencies: ["EUR"],
+      minAmountEurMinor: 0, maxAmountEurMinor: 125, commentSearch: "nota", referenceSearch: "abc",
+    })
+    render(<AppStoreProvider store={appStore}><GlobalFilters /></AppStoreProvider>)
+    expect(screen.getByRole("button", { name: "Abrir todos los filtros, 9 activos" })).toBeVisible()
+    expect(screen.getByRole("button", { name: /Quitar filtro Estados: compensadas, anuladas/ })).toBeVisible()
+    await user.click(screen.getByRole("button", { name: "Quitar filtro Texto: viaje" }))
+    await user.click(screen.getByRole("button", { name: /Quitar filtro Importe absoluto ≥ 0,00 EUR/ }))
+    expect(appStore.getState().filters.search).toBe("")
+    expect(appStore.getState().filters.minAmountEurMinor).toBeNull()
+    expect(appStore.getState().filters.maxAmountEurMinor).toBe(125)
+    expect(screen.getByRole("button", { name: "Abrir todos los filtros, 8 activos" })).toBeVisible()
+  })
+
+  it("uses a human label on an unambiguous exact-identity chip", () => {
+    const analytics = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Caja", type: "DEFAULT" } } },
+      categories: { Gastos: { categoryType: "EXPENSE" } },
+      parsedData: [{ uuid: "cash", label: "Caja", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "one", date: "2026-01-01", amount: -2, category: ["Gastos"], sourceTransactionUuid: "one", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+      ] }],
+    })
+    Object.assign(analytics.postings[0]!, { payee: "Único", payeeSourceId: 42 })
+    appStore.setState({ analytics })
+    appStore.getState().actions.patchFilters({ payeeKeys: ['["source",42]'] })
+    render(<AppStoreProvider store={appStore}><GlobalFilters /></AppStoreProvider>)
+    expect(screen.getByRole("button", { name: "Quitar filtro Beneficiario: Único" })).toBeVisible()
+    expect(screen.queryByRole("button", { name: /Beneficiario: Único \(ID 42\)/ })).toBeNull()
   })
 })
