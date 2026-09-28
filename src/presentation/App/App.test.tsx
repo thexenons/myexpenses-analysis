@@ -186,9 +186,12 @@ describe("App integration", () => {
     expect(
       await screen.findByRole("heading", { level: 1, name: "Transacciones" }),
     ).toBeVisible();
-    expect(screen.getByText("Tienda")).toBeVisible();
+    const transactions = within(screen.getByRole("table", {
+      name: "Transacciones que coinciden con los filtros globales",
+    }));
+    expect(transactions.getByText("Tienda")).toBeVisible();
     expect(screen.getByText("1 resultados")).toBeVisible();
-    expect(screen.queryByText("Empresa")).not.toBeInTheDocument();
+    expect(transactions.queryByText("Empresa")).not.toBeInTheDocument();
   });
 
   it("uses the same error for a wrong phrase and allows a clean retry", async () => {
