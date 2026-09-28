@@ -10,7 +10,7 @@ Extend the existing global filters with the missing practical dimensions so user
 - Identity keys distinguish source IDs, legacy labels and missing values without collisions. Evaluate payee/method on the posting itself, consistent with current Insights grouping; do not add split-parent fallback or change normalization/financial attribution. Comment matching includes the posting and split-parent comment like existing search; reference matching is posting-only. Text uses existing case/diacritic/token conventions.
 - Patterns payee and payment-method drilldowns use the same identity keys as filtering. Keep source IDs distinct even when labels match. Preserve all other active filters when selecting a dimension and navigating to movements.
 - Derive available options from the full in-memory dataset, not only currently filtered results, so active selections remain clearable. Maintain chips, counts, reset/defaults, snapshots/restore, deferred calculations and keyboard/mobile accessibility.
-- No saved views, URL serialization of financial filters, nested boolean builder, new dependencies, private-data inspection or unrelated redesign. Local persistence remains granularity-only; locking clears financial selections.
+- No saved views, URL serialization of financial filters, nested boolean builder, new dependencies, private-data inspection or unrelated redesign **inside this filter work unit**. The separately authorized [UI usability feature](ui-usability-homogenization.md) coordinates shared presentation without changing these filter semantics. Local persistence remains granularity-only; locking clears financial selections.
 - Extend the existing Spanish UI with neutral professional copy; code, tests and this document use English.
 
 ## Workflow and delivery
@@ -52,7 +52,7 @@ Use the installed Node 24 binary and direct entrypoints, with safe snapshots whe
 - `git diff --check`
 
 ## Progress and next step
-T1 behavior and checks observed; work-unit commit and native assessment remain with the parent orchestrator. T2 and T3 remain pending. The user additionally authorized a comprehensive research-led UI audit and implementation; preserve this feature's scope and reconcile its forthcoming drawer/Patterns work with the shared UI improvements rather than implementing competing components.
+T1 behavior and checks observed; work-unit commit `0aafd28` received a medium-risk native reliability review after explicit consent. The immutable-patch review found no candidate-caused defect, and exact acknowledgement burned lineage `review-8be969dc763cc0c8` for target `sha256:2c1848355dde7bc286c10a58176b1eb04bc8a7225d827bca84254369e087b31e`. The reviewer ran no commands; functional proof is recorded below. T2 and T3 remain pending. Reconcile their drawer/Patterns work with the separately authorized [UI usability feature](ui-usability-homogenization.md) rather than implementing competing components.
 
 T1 RED: `tests/domain/filter-facets.test.ts` initially failed because the exact-identity module did not exist. A separate store regression failed because `lock()` retained in-memory `search`, payee selection and amount bound. GREEN/REFACTOR: the new isolated domain suite passes; `lock()` now resets all financial criteria to the default real-cash-flow scope, retaining only the independently persisted granularity preference. Existing account reconciliation is unchanged.
 
