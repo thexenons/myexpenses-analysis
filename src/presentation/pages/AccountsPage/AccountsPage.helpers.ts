@@ -13,7 +13,7 @@ import type {
 export const ACCOUNT_METRIC_LABELS = {
   periodClosingBalanceEurMinor: "Saldo real al cierre",
   netEurMinor: "Movimiento neto filtrado",
-  expensesEurMinor: "Gasto neto (con signo)",
+  expensesEurMinor: "Movimiento contable de gastos",
   incomesEurMinor: "Ingresos netos",
   realCashFlowEurMinor: "Flujo de caja real",
   debtFlowEurMinor: "Movimiento en deudas",

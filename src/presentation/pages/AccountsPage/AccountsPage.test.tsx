@@ -110,6 +110,9 @@ describe("AccountsPageView", () => {
     const expenses = createAccountsPageModel(filtered, vi.fn(), "expensesEurMinor");
     expect(expenses.accountBars[0]?.value).toBe(-10);
     expect(expenses.accountSeries?.[0]?.data[0]?.value).toBe(-10);
+    render(<AccountsPageView {...expenses} />);
+    expect(screen.getByRole("option", { name: "Movimiento contable de gastos" })).toHaveProperty("selected", true);
+    expect(screen.getByText("Movimiento contable de gastos. Orden por importe absoluto; se conserva el signo.", { selector: "p" })).toBeVisible();
   });
 
   it("turns an account card into a global account-filter action", async () => {

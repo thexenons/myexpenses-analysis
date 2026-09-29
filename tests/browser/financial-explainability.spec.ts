@@ -616,6 +616,34 @@ test("reconciles every comparison metric and category depth under date filters",
   // oxlint-enable no-await-in-loop
 });
 
+test("keeps signed expense selector labels readable without changing financial values", async ({ page }, testInfo) => {
+  // oxlint-disable no-await-in-loop -- The same signed metric must be clear on both routes.
+  for (const name of ["Categorías", "Cuentas"]) {
+    await page.getByRole("link", { name, exact: true }).click();
+    await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+    const metric = page.getByRole("combobox", { name: name === "Categorías" ? /^Métrica de categorías/ : /^Métrica de cuentas/ });
+    const amounts = await page.locator("main data").evaluateAll((elements) => elements.map((element) => element.getAttribute("value")));
+    await metric.selectOption("expensesEurMinor");
+    await expect(metric.locator("option:checked")).toHaveText("Movimiento contable de gastos");
+    expect(await page.locator("main data").evaluateAll((elements) => elements.map((element) => element.getAttribute("value")))).toEqual(amounts);
+    await metric.scrollIntoViewIfNeeded();
+    const layout = await metric.evaluate((element) => {
+      const select = element as HTMLSelectElement;
+      const style = getComputedStyle(select);
+      const context = document.createElement("canvas").getContext("2d")!;
+      context.font = style.font;
+      return {
+        textWidth: context.measureText(select.selectedOptions[0]!.textContent!).width,
+        availableWidth: select.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight) - 16,
+      };
+    });
+    expect(layout.textWidth, `${name} selected label must fit beside its native arrow`).toBeLessThanOrEqual(layout.availableWidth);
+    await expectNoDocumentOverflow(page);
+    await page.screenshot({ path: testInfo.outputPath(`signed-expense-${name}.png`), animations: "disabled" });
+  }
+  // oxlint-enable no-await-in-loop
+});
+
 test("shows unavailable source and import provenance for a legacy encrypted dataset", async ({ page }) => {
   await page.route("**/data/app-dataset.vault.json", async (route) => {
     const legacy = await route.fetch({ url: `${BASE}/data/legacy.vault.json` });

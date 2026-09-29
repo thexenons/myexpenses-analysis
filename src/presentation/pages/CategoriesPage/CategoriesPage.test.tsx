@@ -312,12 +312,16 @@ describe("createCategoriesPageModel", () => {
         { uuid: "refund", date: "2026-01-01", amount: 20, category: ["Gastos"], sourceTransactionUuid: "refund", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
       ] }],
     });
-    const model = createCategoriesPageModel(analytics, applyFilters(analytics, createDefaultFilterState()), [], "month", vi.fn(), vi.fn());
+    const model = createCategoriesPageModel(analytics, applyFilters(analytics, createDefaultFilterState()), [], "month", vi.fn(), vi.fn(), {
+      metric: "expensesEurMinor", level: "roots", seriesLimit: 4,
+    });
     expect(model.expenseEurMinor).toBe(-2_000);
     expect(model.categoryBars[0]?.value).toBe(20);
     expect(model.categoryBars[0]?.color).toBe("#a33f36");
     expect(model.categorySeries[0]?.color).toBe(model.categoryBars[0]?.color);
     render(<CategoriesPageView {...model} />);
+    expect(screen.getByRole("option", { name: "Movimiento contable de gastos" })).toHaveProperty("selected", true);
+    expect(screen.getByText("Movimiento contable de gastos. Orden por importe absoluto; se conserva el signo.", { selector: "p" })).toBeVisible();
     expect(screen.getByText(
       "Negativo: devoluciones o asignaciones en deudas; no implica efectivo recuperado.",
     )).toBeVisible();

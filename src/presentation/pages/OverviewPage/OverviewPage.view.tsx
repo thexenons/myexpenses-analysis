@@ -30,6 +30,9 @@ export function OverviewPageView({
   topCategories,
   valuationBalanceEurMinor,
 }: OverviewPageViewProps) {
+  const expenseAllocation = kpis.debtExpenseAdjustmentsEurMinor ?? 0;
+  const incomeAllocation = kpis.debtIncomeAdjustmentsEurMinor ?? 0;
+
   return (
     <AnalyticsPage
       description="Movimientos y gastos según los filtros. Apertura, cierre y saldo de deuda incluyen el historial completo de las cuentas seleccionadas hasta su fecha de corte; no se limitan por categorías, texto, estado, origen o destino."
@@ -46,7 +49,9 @@ export function OverviewPageView({
           value={euroFromMinor(kpis.netEurMinor)}
         />
         <KpiCard
-          detail={`${formatEuroMinor(kpis.grossIncomeEurMinor)} bruto`}
+          detail={incomeAllocation === 0
+            ? `${formatEuroMinor(kpis.grossIncomeEurMinor)} bruto`
+            : `${formatEuroMinor(kpis.grossIncomeEurMinor)} bruto. Asignación en deudas: ${formatEuroMinor(incomeAllocation)}; no es una reversión de ingreso.`}
           formatValue={euroFormatter}
           icon={<Icon name="bank" />}
           label="Ingresos netos"
@@ -54,7 +59,9 @@ export function OverviewPageView({
           value={euroFromMinor(kpis.incomesEurMinor)}
         />
         <KpiCard
-          detail={`${formatEuroMinor(kpis.expenseRefundsEurMinor)} devuelto`}
+          detail={expenseAllocation === 0
+            ? `${formatEuroMinor(kpis.expenseRefundsEurMinor)} devuelto`
+            : `${formatEuroMinor(kpis.expenseRefundsEurMinor)} devuelto. Asignación en deudas: ${formatEuroMinor(expenseAllocation)}; no es dinero devuelto.`}
           formatValue={euroFormatter}
           icon={<Icon name="receipt" />}
           label="Gastos netos"
@@ -72,7 +79,7 @@ export function OverviewPageView({
 
       <Panel className={styles.chartPanel}>
         <AreaChart
-          description="Ingresos, gastos firmados y movimiento neto del ámbito seleccionado."
+          description="Ingresos, movimiento contable de gastos y movimiento neto del ámbito seleccionado; se conserva el signo de los apuntes."
           formatLabel={formatPeriodLabel}
           formatValue={euroFormatter}
           series={chartSeries}

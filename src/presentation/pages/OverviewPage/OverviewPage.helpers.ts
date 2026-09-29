@@ -79,7 +79,7 @@ export function createOverviewPageModel(
       },
       {
         id: "expenses",
-        label: "Gastos",
+        label: "Movimiento contable de gastos",
         color: "#a33f36",
         data: series.map((point) => ({
           label: point.key,

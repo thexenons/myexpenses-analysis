@@ -51,7 +51,7 @@ permits commit and push to main once evidence and tests establish safety.
     empty/zero values and category/account/date restrictions; unchanged source
     amounts and other page metrics. Verify category and summary reconciliation.
   - Rollback: comparison presentation/model and its regression tests only.
-- [ ] T2 — Clarify signed expense presentation without recalculating it.
+- [x] T2 — Clarify signed expense presentation without recalculating it.
   - Delegated writer: `responsive_component_audit`; Overview, Categories and
     Accounts labels/explanations plus focused tests. No numeric changes.
   - Visible debt-allocation context next to Overview expense KPI; distinguish
@@ -99,11 +99,22 @@ permits commit and push to main once evidence and tests establish safety.
 - Final standard browser suite: 84 passed, three intentional device-specific
   skips, 4.2 minutes. Log `/tmp/debt-comparison-browser-final.log`.
   Synthetic comparison cards/category rows and selectors fit all three widths.
-  A clean allocation viewport capture is pending; a locator crop included the
-  fixed navigation overlay and is not accepted as full text-visibility proof.
-- Pending: T2 visual closure, work-unit commits and native assessments.
+  A locator crop included the fixed navigation overlay; a subsequent clean
+  viewport pass (3/3) proves complete allocation copy below the toolbar and above
+  mobile navigation. Parent inspected the narrow viewport, not just DOM visibility.
+  Evidence index: `/tmp/debt-comparison-visibility/evidence.md`. Servers stopped.
+- T1 commit `8073baa`: 317 authored lines including tracking and its browser
+  regression. Initial assessment required declaring T2's new untracked test;
+  native STATUS obtained its canonical inventory, then explicit exclusion from
+  this committed-only candidate resolved the assessment. Native result: medium,
+  `under_budget`, review not due. Boundary remains `5c390ca`.
+- T2 closes only its presentation strings/regressions and selector browser test;
+  the shared browser file was staged by behavior so each work unit is coherent.
+  All planned functional checks now pass; only the six documented optional/data
+  or device-specific checks were skipped. No further product changes are needed.
 
 ## Next step
 
-Commit verified T1, close T2's clean viewport evidence and commit its bounded
-presentation changes. Assess native review and deliver main once gates pass.
+Commit verified T2, assess the pending slice from `5c390ca` and follow native
+review before the explicitly requested main push. Then start the user's separate
+transaction visibility / compact budget-detail request; do not mix it here.

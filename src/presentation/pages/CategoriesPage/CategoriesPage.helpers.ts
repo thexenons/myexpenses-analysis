@@ -26,7 +26,7 @@ export const DEFAULT_CATEGORY_CHART_OPTIONS: CategoryChartOptions = {
 
 export const CATEGORY_METRIC_LABELS = {
   netEurMinor: "Importe neto",
-  expensesEurMinor: "Gasto neto (con signo)",
+  expensesEurMinor: "Movimiento contable de gastos",
   incomesEurMinor: "Ingresos netos",
   realCashFlowEurMinor: "Flujo de caja real",
   debtFlowEurMinor: "Movimiento en deudas",
