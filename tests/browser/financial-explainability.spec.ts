@@ -563,15 +563,57 @@ test("makes provenance reachable on mobile and comparison scrolling keyboard acc
   const comparisonSummary = page.getByRole("region", { name: "Resumen de perspectivas" });
   const perspectives = comparisonSummary.getByRole("article");
   await expect(perspectives).toHaveCount(3);
-  expect(await perspectives.getByRole("heading").allTextContents()).toEqual(["Yo", "Flujo real", "Deudas"]);
+  expect(await perspectives.getByRole("heading").allTextContents()).toEqual(["Yo", "Ajuste por deudas", "Flujo real"]);
   await expect(perspectives.nth(0).locator("data")).toHaveAttribute("value", "4.52");
-  await expect(perspectives.nth(1).locator("data")).toHaveAttribute("value", "4.02");
-  await expect(perspectives.nth(2).locator("data")).toHaveAttribute("value", "0.5");
-  await expect(comparisonSummary.getByText(/reúne los movimientos de Flujo real y Deudas/)).toBeVisible();
-  await expect(comparisonSummary.getByText(/no es gasto atribuido ni saldo/)).toBeVisible();
+  await expect(perspectives.nth(1).locator("data")).toHaveAttribute("value", "-0.5");
+  await expect(perspectives.nth(2).locator("data")).toHaveAttribute("value", "4.02");
+  await expect(comparisonSummary.getByText("Yo + Ajuste por deudas = Flujo real, con los mismos filtros.", { exact: true })).toBeVisible();
+  await expect(perspectives.nth(1).getByText(/no es un saldo ni necesariamente dinero gastado/)).toBeVisible();
   await expect(categories.getByRole("button", { name: "Contraer Expense" })).toBeVisible();
   await expect(categories.getByText("Expense › Food", { exact: true })).toBeVisible();
   await expectNoDocumentOverflow(page);
+});
+
+test("reconciles every comparison metric and category depth under date filters", async ({ page }) => {
+  await page.getByRole("link", { name: "Comparativa", exact: true }).click();
+  const table = page.getByRole("table", { name: "Comparación de movimientos por perspectiva" });
+  const categories = page.getByRole("region", { name: "Categorías por perspectiva" });
+  const metric = categories.getByRole("combobox", { name: /^Métrica de categorías/ });
+  const labels = ["Yo", "Ajuste por deudas", "Flujo real"];
+  const cents = (text: string) => Math.round(Number(text.replace(/[^\d,-]/g, "").replace(",", ".")) * 100);
+  const assertAdditive = (values: string[]) => {
+    expect(values).toHaveLength(3);
+    const amounts = values.map(cents);
+    expect(amounts[0]! + amounts[1]!).toBe(amounts[2]);
+  };
+  // oxlint-disable no-await-in-loop -- Each filter and metric changes the rendered comparison.
+  for (const month of [null, "2026-07"]) {
+    if (month !== null) {
+      const toolbar = page.getByRole("region", { name: "Filtros globales" });
+      await toolbar.getByRole("combobox", { name: "Tipo de periodo" }).selectOption("month");
+      await toolbar.getByLabel("Mes seleccionado").fill(month);
+    }
+    await expect(table.getByRole("columnheader")).toHaveText(["Concepto", ...labels]);
+    await expect.poll(async () => (await table.getByRole("row", { name: /^Movimiento neto / }).getByRole("cell").allTextContents()).map(cents))
+      .toEqual(month === null ? [452, -50, 402] : [-10, 0, -10]);
+    for (const concept of ["Movimiento neto", "Ingresos", "Gastos", "Transferencias"]) {
+      assertAdditive(await table.getByRole("row", { name: new RegExp(`^${concept} `) }).getByRole("cell").allTextContents());
+    }
+    for (const value of ["netEurMinor", "incomesEurMinor", "expensesEurMinor", "transfersEurMinor"]) {
+      await metric.selectOption(value);
+      const rows = await categories.locator("dl").evaluateAll((elements) => elements.map((element) => ({
+        labels: [...element.querySelectorAll("dt")].map((label) => label.textContent!.trim()),
+        values: [...element.querySelectorAll("dd")].map((amount) => amount.textContent!.trim()),
+      })));
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(row.labels).toEqual(labels);
+        assertAdditive(row.values);
+      }
+    }
+    await expectNoDocumentOverflow(page);
+  }
+  // oxlint-enable no-await-in-loop
 });
 
 test("shows unavailable source and import provenance for a legacy encrypted dataset", async ({ page }) => {

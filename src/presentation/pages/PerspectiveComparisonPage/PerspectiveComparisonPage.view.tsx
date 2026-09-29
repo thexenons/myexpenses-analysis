@@ -10,6 +10,7 @@ import type {
   PerspectiveCategoryRow,
   PerspectiveComparisonRow,
 } from "./PerspectiveComparisonPage.helpers.ts";
+import { COMPARISON_SCOPES } from "./PerspectiveComparisonPage.helpers.ts";
 import { ComparisonCategoryNode } from "./PerspectiveComparisonPage.CategoryNode.tsx";
 import { SCOPE_LABELS } from "./PerspectiveComparisonPage.labels.ts";
 import styles from "./PerspectiveComparisonPage.module.css";
@@ -34,40 +35,39 @@ const CATEGORY_METRICS: readonly { value: CategoryMetric; label: string }[] = [
   { value: "transfersEurMinor", label: "Transferencias" },
 ];
 
-const SUMMARY_SCOPES = ["all", "realCashFlow", "debtsOnly"] as const;
-
 export function PerspectiveComparisonPageView({
   rows,
   categories,
   searchPending,
 }: PerspectiveComparisonPageViewProps) {
   const isEmpty = rows.every((row) => row.postingCount === 0);
+  const orderedRows = COMPARISON_SCOPES.flatMap((scope) => rows.filter((row) => row.scope === scope));
   const [categoryMetric, setCategoryMetric] = useState<CategoryMetric>("netEurMinor");
 
   return (
     <AnalyticsPage
-      description="Tres lecturas del mismo periodo. Los demás filtros globales se aplican a cada perspectiva; el selector de ámbito no oculta ninguna columna."
+      description="Conciliación de movimientos del mismo periodo, no de saldos. Los demás filtros globales se aplican a cada columna; el selector de ámbito no oculta ninguna."
       notice={searchPending ? "Actualizando búsqueda…" : undefined}
       title="Comparativa de perspectivas"
     >
       <section aria-label="Resumen de perspectivas" className={styles.summary}>
-        {SUMMARY_SCOPES.flatMap((scope) => rows.filter((row) => row.scope === scope)).map((row) => (
+        {orderedRows.map((row) => (
           <article className={`${styles.summaryItem} ${row.scope === "all" ? styles.summaryLead : ""}`} key={row.scope}>
             <h2 className={styles.summaryLabel}>{SCOPE_LABELS[row.scope]}</h2>
             <data className={styles.summaryValue} value={row.netEurMinor / 100}>
               {formatEuroMinor(row.netEurMinor)}
             </data>
             <p className={styles.summaryDetail}>
-              Movimiento neto · {row.postingCount} {row.postingCount === 1 ? "movimiento" : "movimientos"}
+              {row.scope === "debtsOnly" ? "Ajuste contable" : "Movimiento neto"} · {row.postingCount} {row.postingCount === 1 ? "movimiento" : "movimientos"}
             </p>
             {row.scope === "all" ? (
               <p className={styles.summaryExplanation}>
-                Yo reúne los movimientos de Flujo real y Deudas bajo los filtros aplicados.
+                Yo + Ajuste por deudas = Flujo real, con los mismos filtros.
               </p>
             ) : null}
             {row.scope === "debtsOnly" ? (
               <p className={styles.summaryExplanation}>
-                El movimiento neto en Deudas no es gasto atribuido ni saldo; muestra solo entradas y salidas de las cuentas de deuda seleccionadas.
+                El ajuste es Flujo real menos Yo: no es un saldo ni necesariamente dinero gastado. Un ajuste positivo no implica un ingreso.
               </p>
             ) : null}
           </article>
@@ -75,7 +75,7 @@ export function PerspectiveComparisonPageView({
       </section>
 
       <Panel
-        description="Importes con signo: los abonos reducen el gasto y las transferencias conservan su dirección."
+        description="Cada fila cumple Yo + Ajuste por deudas = Flujo real. Se mantienen los tipos de ingreso, gasto y transferencia, sin reclasificar movimientos."
         title="Desglose del periodo"
       >
         {isEmpty ? (
@@ -89,7 +89,7 @@ export function PerspectiveComparisonPageView({
             <thead>
               <tr>
                 <th scope="col">Concepto</th>
-                {rows.map((row) => (
+                {orderedRows.map((row) => (
                   <th key={row.scope} scope="col">{SCOPE_LABELS[row.scope]}</th>
                 ))}
               </tr>
@@ -98,7 +98,7 @@ export function PerspectiveComparisonPageView({
               {METRICS.map(({ label, field }) => (
                 <tr className={field === "netEurMinor" ? styles.netRow : undefined} key={field}>
                   <th scope="row">{label}</th>
-                  {rows.map((row) => (
+                  {orderedRows.map((row) => (
                     <td key={row.scope}>{formatEuroMinor(row[field])}</td>
                   ))}
                 </tr>
@@ -108,7 +108,7 @@ export function PerspectiveComparisonPageView({
         </TableScrollRegion>
       </Panel>
       <Panel
-        description="Despliega todas las rutas con actividad. Cada importe incluye los apuntes directos de esa categoría y sus descendientes; no sumes padres e hijos entre sí. Este árbol no modifica los filtros."
+        description="Cada ruta cumple la misma conciliación. Sus importes incluyen los apuntes directos y sus descendientes; no sumes padres e hijos entre sí. Este árbol no modifica los filtros."
         title="Categorías por perspectiva"
       >
         <label className={styles.categoryControl}>

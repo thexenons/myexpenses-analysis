@@ -91,16 +91,16 @@ describe("perspective category comparison", () => {
     const deep = findCategory(categories, ["Gastos", "Comida", "Supermercado"]);
     expect(parent?.amounts.realCashFlow.expensesEurMinor).toBe(-1_300);
     expect(parent?.amounts.all.expensesEurMinor).toBe(-1_500);
-    expect(parent?.amounts.debtsOnly.expensesEurMinor).toBe(-200);
+    expect(parent?.amounts.debtsOnly.expensesEurMinor).toBe(200);
     expect(deep?.amounts.realCashFlow.expensesEurMinor).toBe(-300);
     expect(deep?.amounts.all.expensesEurMinor).toBe(-500);
-    expect(deep?.amounts.debtsOnly.expensesEurMinor).toBe(-200);
+    expect(deep?.amounts.debtsOnly.expensesEurMinor).toBe(200);
     expect(findCategory(categories, ["SoloDeuda"])?.amounts.realCashFlow.netEurMinor).toBe(0);
-    expect(findCategory(categories, ["SoloDeuda"])?.amounts.debtsOnly.netEurMinor).toBe(-700);
+    expect(findCategory(categories, ["SoloDeuda"])?.amounts.debtsOnly.netEurMinor).toBe(700);
     expect(findCategory(categories, ["Transferencia"])?.amounts).toMatchObject({
       realCashFlow: { transfersEurMinor: -300 },
       all: { transfersEurMinor: 0 },
-      debtsOnly: { transfersEurMinor: 300 },
+      debtsOnly: { transfersEurMinor: -300 },
     });
   });
 
@@ -149,7 +149,12 @@ describe("perspective category comparison", () => {
     const branch = screen.getByRole("button", { name: "Contraer Gastos › Comida" }).closest("li");
     const deep = within(branch!).getByText("Gastos › Comida › Supermercado", { selector: "span" }).closest("li");
     expect(deep).not.toBeNull();
-    expect(within(deep!).getByText(/Flujo real/)).toBeVisible();
+    expect(within(deep!).getAllByRole("term").map((term) => term.textContent)).toEqual([
+      "Yo", "Ajuste por deudas", "Flujo real",
+    ]);
+    expect(within(deep!).getAllByRole("definition").map((value) => value.textContent)).toEqual([
+      "-5,00 €", "2,00 €", "-3,00 €",
+    ]);
     expect(within(deep!).getByText(/-3,00/)).toBeVisible();
     await user.selectOptions(selector, "incomesEurMinor");
     expect(within(deep!).getAllByText(/0,00/)).toHaveLength(3);

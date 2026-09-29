@@ -1,10 +1,11 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { createDefaultFilterState } from "../../../domain/analytics/filters.ts";
+import { applyFilters, createDefaultFilterState } from "../../../domain/analytics/filters.ts";
+import { aggregateKpis } from "../../../domain/analytics/aggregations.ts";
 import { normalizeDataset } from "../../../domain/analytics/normalize.ts";
-import type { AppDataset } from "../../../domain/analytics/types.ts";
-import { createPerspectiveComparisonModel } from "./PerspectiveComparisonPage.helpers.ts";
+import type { AppDataset, NormalizedPosting } from "../../../domain/analytics/types.ts";
+import { createPerspectiveComparisonModel, createPerspectiveComparisonPageModel } from "./PerspectiveComparisonPage.helpers.ts";
 import { PerspectiveComparisonPageView } from "./PerspectiveComparisonPage.view.tsx";
 
 const source: AppDataset = {
@@ -35,17 +36,68 @@ const source: AppDataset = {
 describe("perspective comparison", () => {
   const dataset = normalizeDataset(source);
 
-  it("compares signed incomes, expenses, transfers, and net across all three scopes", () => {
+  it.each([
+    { name: "shared expense", entries: [["cash", -1000, "expense"], ["debt", 500, "expense"]], adjustment: -500 },
+    { name: "shared refund", entries: [["cash", 200, "expense"], ["debt", -200, "expense"]], adjustment: 200 },
+    { name: "direct card charge and refund", entries: [["debt", -1000, "expense"], ["debt", 100, "expense"]], adjustment: 900 },
+    { name: "income mirror", entries: [["cash", 1000, "income"], ["debt", -1000, "income"]], adjustment: 1000 },
+    { name: "direct debt income", entries: [["debt", 300, "income"]], adjustment: -300 },
+    { name: "repayment", entries: [["cash", 300, "transfer"], ["debt", -300, "transfer"]], adjustment: 300 },
+    { name: "debt to debt transfer", entries: [["debt", -200, "transfer"], ["card", 200, "transfer"]], adjustment: 0 },
+    { name: "different EUR equivalents", entries: [["cash", -480, "expense"], ["debt", 500, "expense"]], adjustment: -500 },
+    { name: "empty period", entries: [], adjustment: 0 },
+  ] as const)("reconciles $name without mutating ledger or ordinary metrics", ({ entries, adjustment }) => {
+    const fixture = {
+      ...dataset,
+      accounts: [...dataset.accounts, { ...dataset.accounts.find((account) => account.id === "debt")!, id: "card" }],
+      postings: entries.map(([accountId, amount, bucket], index): NormalizedPosting => Object.assign({}, dataset.postings[0]!, {
+        id: `entry-${index}`,
+        accountId,
+        accountType: accountId === "cash" ? "DEFAULT" as const : "DEBT" as const,
+        amountNativeMinor: amount,
+        amountEurMinor: amount,
+        bucket,
+        categoryType: bucket === "expense" ? "EXPENSE" as const : bucket === "income" ? "INCOME" as const : "TRANSFER" as const,
+        categoryPath: [bucket, "Detail"],
+      })),
+    };
+    const filters = createDefaultFilterState();
+    const before = structuredClone(fixture);
+    const scopes = ["all", "debtsOnly", "realCashFlow"] as const;
+    const rawMetrics = scopes.map((scope) =>
+      aggregateKpis(applyFilters(fixture, { ...filters, scope })),
+    );
+    const { rows, categories } = createPerspectiveComparisonPageModel(fixture, filters);
+    expect(rows.find((row) => row.scope === "debtsOnly")?.netEurMinor).toBe(adjustment);
+    const metrics = ["netEurMinor", "expensesEurMinor", "incomesEurMinor", "transfersEurMinor"] as const;
+    for (const metric of metrics) {
+      const yo = rows.find((row) => row.scope === "all")![metric];
+      const debt = rows.find((row) => row.scope === "debtsOnly")![metric];
+      const real = rows.find((row) => row.scope === "realCashFlow")![metric];
+      expect(yo + debt).toBe(real);
+      expect(Object.is(debt, -0)).toBe(false);
+      expect(categories.reduce((sum, category) => sum + category.amounts.debtsOnly[metric], 0)).toBe(debt);
+      for (const category of categories.flatMap((node) => [node].concat(node.children))) {
+        expect(category.amounts.all[metric] + category.amounts.debtsOnly[metric]).toBe(category.amounts.realCashFlow[metric]);
+      }
+    }
+    expect(fixture).toEqual(before);
+    expect(scopes.map((scope) =>
+      aggregateKpis(applyFilters(fixture, { ...filters, scope })),
+    )).toEqual(rawMetrics);
+  });
+
+  it("reconciles signed incomes, expenses, transfers, and net with a derived debt adjustment", () => {
     const rows = createPerspectiveComparisonModel(dataset, {
       ...createDefaultFilterState(), scope: "debtsOnly",
     });
-    expect(rows.map(({ scope }) => scope)).toEqual(["realCashFlow", "all", "debtsOnly"]);
+    expect(rows.map(({ scope }) => scope)).toEqual(["all", "debtsOnly", "realCashFlow"]);
     expect(rows.map(({ incomesEurMinor, expensesEurMinor, transfersEurMinor, netEurMinor }) =>
       [incomesEurMinor, expensesEurMinor, transfersEurMinor, netEurMinor],
     )).toEqual([
-      [1000, -400, -300, 300],
       [1000, -500, 0, 500],
-      [0, -100, 300, 200],
+      [0, 100, -300, -200],
+      [1000, -400, -300, 300],
     ]);
   });
 
@@ -58,7 +110,7 @@ describe("perspective comparison", () => {
       scope: "all",
     });
     expect(rows.map(({ netEurMinor, postingCount }) => [netEurMinor, postingCount])).toEqual([
-      [-300, 1], [-300, 1], [0, 0],
+      [-300, 1], [0, 0], [-300, 1],
     ]);
   });
 
@@ -67,7 +119,7 @@ describe("perspective comparison", () => {
       ...createDefaultFilterState(), scope: "debtsOnly", search: "tienda", statuses: ["CLEARED"],
     });
     expect(rows.map(({ expensesEurMinor, netEurMinor }) => [expensesEurMinor, netEurMinor])).toEqual([
-      [-600, -600], [-600, -600], [0, 0],
+      [-600, -600], [0, 0], [-600, -600],
     ]);
   });
 
@@ -81,7 +133,7 @@ describe("perspective comparison", () => {
     expect(screen.getByText(/No hay movimientos en el periodo/)).toBeVisible();
     const table = screen.getByRole("table", { name: /Comparación de movimientos/ });
     expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
-      "Concepto", "Flujo real", "Yo", "Deudas",
+      "Concepto", "Yo", "Ajuste por deudas", "Flujo real",
     ]);
     expect(within(table).getAllByRole("rowheader").map((cell) => cell.textContent)).toEqual([
       "Ingresos", "Gastos", "Transferencias", "Movimiento neto",
@@ -97,9 +149,9 @@ describe("perspective comparison", () => {
     const table = screen.getByRole("table", { name: /Comparación de movimientos/ });
     const netRow = within(table).getByRole("row", { name: /Movimiento neto/ });
     expect(within(netRow).getAllByRole("cell").map((cell) => cell.textContent)).toEqual([
-      "3,00 €", "5,00 €", "2,00 €",
+      "5,00 €", "-2,00 €", "3,00 €",
     ]);
-    expect(screen.getByText(/no es gasto atribuido ni saldo/)).toBeVisible();
+    expect(screen.getByText(/no es un saldo ni necesariamente dinero gastado/)).toBeVisible();
   });
 
   it("leads with Yo and explains the related signed perspectives next to their values", () => {
@@ -108,17 +160,17 @@ describe("perspective comparison", () => {
     const summary = screen.getByRole("region", { name: "Resumen de perspectivas" });
     const articles = within(summary).getAllByRole("article");
     expect(articles.map((article) => within(article).getByRole("heading").textContent)).toEqual([
-      "Yo", "Flujo real", "Deudas",
+      "Yo", "Ajuste por deudas", "Flujo real",
     ]);
     expect(articles.map((article) => article.querySelector("data")?.textContent)).toEqual([
-      "5,00 €", "3,00 €", "2,00 €",
+      "5,00 €", "-2,00 €", "3,00 €",
     ]);
-    expect(within(articles[0]!).getByText(/reúne los movimientos de Flujo real y Deudas/)).toBeVisible();
-    expect(within(articles[2]!).getByText(/no es gasto atribuido ni saldo/)).toBeVisible();
+    expect(within(articles[0]!).getByText(/Yo \+ Ajuste por deudas = Flujo real/)).toBeVisible();
+    expect(within(articles[1]!).getByText(/no es un saldo ni necesariamente dinero gastado/)).toBeVisible();
     expect(articles.map((article) => within(article).getByText(/movimientos?$/).textContent)).toEqual([
       "Movimiento neto · 6 movimientos",
+      "Ajuste contable · 2 movimientos",
       "Movimiento neto · 4 movimientos",
-      "Movimiento neto · 2 movimientos",
     ]);
   });
 

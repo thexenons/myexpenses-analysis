@@ -9,6 +9,7 @@ import type {
 } from "../../../domain/analytics/types.ts";
 
 export interface PerspectiveComparisonRow {
+  /** debtsOnly identifies a reconciliation adjustment, never a raw ledger total. */
   readonly scope: AnalyticsScope;
   readonly incomesEurMinor: number;
   readonly expensesEurMinor: number;
@@ -17,7 +18,7 @@ export interface PerspectiveComparisonRow {
   readonly postingCount: number;
 }
 
-const SCOPES: readonly AnalyticsScope[] = ["realCashFlow", "all", "debtsOnly"];
+export const COMPARISON_SCOPES = ["all", "debtsOnly", "realCashFlow"] as const;
 
 export type CategoryMetric =
   | "netEurMinor"
@@ -31,6 +32,7 @@ export interface PerspectiveCategoryRow {
   readonly id: string;
   readonly name: string;
   readonly path: readonly string[];
+  /** debtsOnly is Real minus Yo; the other entries retain their ledger amounts. */
   readonly amounts: Readonly<Record<AnalyticsScope, CategoryAmounts>>;
   readonly children: readonly PerspectiveCategoryRow[];
 }
@@ -49,6 +51,15 @@ const ZERO_AMOUNTS: CategoryAmounts = {
   expensesEurMinor: 0,
   transfersEurMinor: 0,
 };
+
+function debtReconciliationAdjustment(real: CategoryAmounts, yo: CategoryAmounts): CategoryAmounts {
+  return {
+    netEurMinor: real.netEurMinor - yo.netEurMinor || 0,
+    incomesEurMinor: real.incomesEurMinor - yo.incomesEurMinor || 0,
+    expensesEurMinor: real.expensesEurMinor - yo.expensesEurMinor || 0,
+    transfersEurMinor: real.transfersEurMinor - yo.transfersEurMinor || 0,
+  };
+}
 
 function mergeCategory(
   level: Map<string, MutableCategoryRow>,
@@ -78,7 +89,9 @@ function finishCategories(level: Map<string, MutableCategoryRow>): readonly Pers
       id,
       name,
       path,
-      amounts,
+      amounts: Object.assign({}, amounts, {
+        debtsOnly: debtReconciliationAdjustment(amounts.realCashFlow, amounts.all),
+      }),
       children: finishCategories(children),
     }));
 }
@@ -88,7 +101,7 @@ export function createPerspectiveComparisonPageModel(
   filters: FilterState,
 ): { readonly rows: readonly PerspectiveComparisonRow[]; readonly categories: readonly PerspectiveCategoryRow[] } {
   const categories = new Map<string, MutableCategoryRow>();
-  const rows = SCOPES.map((scope) => {
+  const rows = COMPARISON_SCOPES.map((scope) => {
     const filtered = applyFilters(source, { ...filters, scope });
     const kpis = aggregateKpis(filtered);
     for (const category of aggregateCategoryBreakdown(filtered)) {
@@ -103,7 +116,14 @@ export function createPerspectiveComparisonPageModel(
       postingCount: kpis.postingCount,
     };
   });
-  return { rows, categories: finishCategories(categories) };
+  const adjustment = debtReconciliationAdjustment(
+    rows.find((row) => row.scope === "realCashFlow")!,
+    rows.find((row) => row.scope === "all")!,
+  );
+  return {
+    rows: rows.map((row) => row.scope === "debtsOnly" ? Object.assign({}, row, adjustment) : row),
+    categories: finishCategories(categories),
+  };
 }
 
 export function createPerspectiveComparisonModel(
