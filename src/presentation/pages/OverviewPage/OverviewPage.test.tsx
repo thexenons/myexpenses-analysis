@@ -64,6 +64,11 @@ describe("OverviewPageView", () => {
     expect(screen.getByText("Anulados visibles")).toBeVisible();
     expect(screen.getByText("Sin conciliar")).toBeVisible();
     expect(screen.getByText("3 apuntes")).toBeVisible();
+    await user.click(screen.getByText("Composición y categorías"));
+    expect(screen.getByText(
+      "Un neto negativo puede deberse a devoluciones o a asignaciones en deudas. Las asignaciones no son dinero devuelto.",
+      { exact: false },
+    )).toBeVisible();
   });
 
   it("renders the financial pulse and announces deferred filter updates", () => {

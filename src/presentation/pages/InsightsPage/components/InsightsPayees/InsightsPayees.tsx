@@ -64,7 +64,7 @@ export function InsightsPayees({ onViewPayee, payees, searchPending = false }: I
         </label>
       }
       className={styles.deferredPanel}
-      description="Ranking por valor absoluto dentro del filtro actual. El gasto negativo indica una devolución neta; los ingresos y el neto conservan su signo. La tabla y el CSV incluyen todas las contrapartes con importes, aunque limites el ranking."
+      description="Ranking por valor absoluto dentro del filtro actual. El gasto negativo puede deberse a devoluciones o a asignaciones en deudas; los ingresos y el neto conservan su signo. La tabla y el CSV incluyen todas las contrapartes con importes, aunque limites el ranking."
       footer={
         <div className={styles.coverageFooter}>
           <Badge tone="accent">

@@ -96,7 +96,7 @@ export function CashFlowPageView({
           <Panel>
             <HorizontalBarChart
               title="Presión por categoría"
-              description="Gasto neto por raíz en el ámbito elegido. Un importe negativo es un abono, no un gasto adicional."
+              description="Gasto neto por raíz en el ámbito elegido. Un importe negativo puede deberse a devoluciones o a asignaciones en deudas, no a un gasto adicional."
               formatValue={euroFormatter}
               data={expenseCategories.map((category) => ({ id: category.id, label: category.name, value: euroFromMinor(-category.summary.expensesEurMinor), color: category.summary.expensesEurMinor > 0 ? "#286a4c" : "#a33f36" }))}
             />

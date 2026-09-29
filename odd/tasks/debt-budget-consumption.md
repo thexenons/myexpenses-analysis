@@ -4,8 +4,10 @@
 
 Fix negative budget consumption caused by verified shared-expense debt mirrors,
 then audit the nine screens' data across Real, Yo and Deudas for similar issues.
-The user authorized the budget fix and cross-screen audit. Other findings must
-not silently change business semantics. No new remote operation is assumed.
+The user authorized the budget fix, cross-screen audit and four follow-up copy
+corrections. Integration into main and pushing origin/main are now explicit.
+Use only the repository's established Git SSH transport to its configured origin;
+no deployment, unrelated remote access or financial-data transfer is authorized.
 Preserve dirty `.atl` registry files and `odd/tasks/pcloud-cli-env.md`; never use
 private `.env`, backups or live services. Use only synthetic records and fixtures.
 
@@ -32,8 +34,8 @@ private `.env`, backups or live services. Use only synthetic records and fixture
 
 - Base: `d9225fe4dddf2ce5ca3825d26f2e55c78f788261`.
   Branch: `fix/debt-budget-consumption`. Local Conventional work-unit commit is
-  authorized by ODD; main is the standing integration preference. Remote delivery
-  for this new feature remains a separate user decision.
+  authorized by ODD; main is the standing integration preference. The user now
+  explicitly requests the completed feature pushed to origin/main without PRs.
 - Route: delegated direct. Budget preparation and cross-screen mapping exceed
   four files; writer owns multiple non-trivial source/test files. Parent owns this
   document; the sibling audit remains read-only unless separately authorized.
@@ -42,10 +44,11 @@ private `.env`, backups or live services. Use only synthetic records and fixture
   Related runner: `pnpm exec tsx --test tests/domain/debt-flows.test.ts`.
 - RDD on (global); assess the committed candidate from the base above and follow
   native consent/transitions when due. Do not claim approval from tests alone.
-- Delivery strategy: `ask-on-risk`; forecast approximately 375 authored changed
-  lines including tests, contract documentation and this audit record. Measure
-  before commit; resolve an over-budget delivery before committing if necessary.
-  Verified work unit: 349 authored lines; evidence-only follow-up stays under 400.
+- Delivery strategy: `exception-ok`; user explicitly approved `size:exception`
+  after the forecast exceeded 400 lines, retaining direct main delivery without
+  PRs. Prior commits total 362 authored lines; four copy changes, existing-test
+  assertions and this record bring the updated forecast to approximately 460.
+  This delivery exception does not waive native RDD or functional checks.
 - Rollback: debt budget contribution resolution, matching domain/UI regressions
   and contract/audit documentation. Unrelated financial calculations are untouched.
 - Engram mirror `odd/debt-budget-consumption/tasks` pending: host registration is
@@ -67,6 +70,19 @@ private `.env`, backups or live services. Use only synthetic records and fixture
     suites, type-check, lint and diff check. Use the isolated synthetic Chromium
     harness for a budget mode regression if its fixture supports the scenario;
     do not confuse browser rendering checks with independent financial proof.
+
+- [ ] T2 — Explain negative expenses consistently without changing metrics.
+  - Delegated direct: four view files plus their existing rendering tests exceed
+    mapping/writer triggers. Reuse the bounded `negative_expense_copy` worker.
+  - Correct Overview, CashFlow, Categories and InsightsPayees explanations:
+    negative expenses can reflect refunds or debt allocations, not always cash
+    returned. Preserve all calculations, signs, filters and existing fixtures.
+  - TDD remains on: observe RED then GREEN with `pnpm exec vitest run` on the
+    four existing component tests; run full UI, type-check, lint and diff check.
+    Rendered component regressions cover this text-only boundary; no new browser
+    sweep is needed. Rollback: only the four strings and their test assertions.
+  - Commit on the feature branch, assess from the pending base above, follow
+    native review transitions, then integrate and push main as authorized.
 
 ## Evidence and audit results
 
@@ -111,11 +127,10 @@ private `.env`, backups or live services. Use only synthetic records and fixture
 - Limits: synthetic data only; no Firefox/WebKit or additional responsive sweep.
   The standard full browser/deployment suites were not rerun; the dedicated
   cross-mode audit, full Node/UI suites and budget regressions cover this change.
-- Four audit findings remain read-only proposals: OverviewPage.view.tsx:123,
+- Four audit findings corrected in T2: OverviewPage.view.tsx:123,
   CashFlowPage.view.tsx:99, CategoriesPage.view.tsx:96 and InsightsPayees.tsx:67
-  incorrectly describe every negative expense as a refund. A debt allocation
-  can yield -5 EUR with zero refunds. Clarify those labels without changing the
-  signed metrics; seek scope approval rather than silently changing other views.
+  previously described every negative expense as a refund. The explanations now
+  distinguish refunds from debt allocations without changing signed metrics.
 - Implementation/tests/contract diff: 225 authored lines in three files.
   Work-unit commit: `38fd456` (`fix(budgets): orient verified debt mirrors as
   consumption`), 349 lines including this record. Native assessment against the
@@ -124,8 +139,20 @@ private `.env`, backups or live services. Use only synthetic records and fixture
 - Local `main` was fast-forwarded to `38fd456` under the standing integration
   preference. No push or other remote operation performed. Existing registry
   edits and the earlier pCloud task update were preserved and excluded.
+- T2 RED: four copy assertions failed against the old wording, with 19 other
+  tests passing. GREEN: all 23 tests in the four existing component suites passed.
+  Runner: `pnpm exec vitest run src/presentation/pages/OverviewPage/OverviewPage.test.tsx
+  src/presentation/pages/CashFlowPage/CashFlowPage.test.tsx
+  src/presentation/pages/CategoriesPage/CategoriesPage.test.tsx
+  src/presentation/pages/InsightsPage/components/InsightsPayees/InsightsPayees.test.tsx`.
+- T2 parent verification: `pnpm test:ui` passed 321/321 across 81 files;
+  `pnpm test:node` passed 281 with 3 optional-private-data skips. Type-check,
+  lint and diff check passed. Logs: `/tmp/debt-copy-{red,green,ui,node,types,lint}.log`.
+  Eight source/test files contain 21 additions and 5 deletions; only four static
+  Spanish explanations and matching visible-text assertions changed. No financial
+  logic, fixtures, dependencies, styles or source data changed in T2.
 
 ## Next step
 
-Budget fix and cross-mode audit are complete. Ask whether to implement the four
-copy proposals; remote delivery remains pending. Engram mirror is unavailable.
+T2 implementation and functional checks passed; commit and native assessment are
+next, followed by integration and push. Engram mirror remains host-blocked.

@@ -317,6 +317,10 @@ describe("createCategoriesPageModel", () => {
     expect(model.categoryBars[0]?.value).toBe(20);
     expect(model.categoryBars[0]?.color).toBe("#a33f36");
     expect(model.categorySeries[0]?.color).toBe(model.categoryBars[0]?.color);
+    render(<CategoriesPageView {...model} />);
+    expect(screen.getByText(
+      "Negativo: devoluciones o asignaciones en deudas; no implica efectivo recuperado.",
+    )).toBeVisible();
   });
 
   it("keeps the comparison series inside the selected subcategory", () => {

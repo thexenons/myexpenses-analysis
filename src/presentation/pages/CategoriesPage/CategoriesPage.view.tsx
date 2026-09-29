@@ -93,7 +93,7 @@ export function CategoriesPageView({
           value={euroFromMinor(activityEurMinor)}
         />
         <KpiCard
-          detail="Negativo: abonos; no implica efectivo recuperado."
+          detail="Negativo: devoluciones o asignaciones en deudas; no implica efectivo recuperado."
           formatValue={euroFormatter}
           icon={<Icon name="receipt" />}
           label="Gasto neto de la selección"

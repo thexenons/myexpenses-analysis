@@ -12,6 +12,10 @@ describe("InsightsPayees", () => {
     render(<InsightsPayees payees={{ ...INSIGHTS_FIXTURE.payees, topExpenses: rows, topIncome: [], topNet: [] }} />);
     expect(screen.queryByText("Comercio 30")).not.toBeInTheDocument();
     expect(screen.getByText("Comercio 1").closest("li")).toHaveTextContent("-1,00");
+    expect(screen.getByText(
+      "El gasto negativo puede deberse a devoluciones o a asignaciones en deudas; los ingresos y el neto conservan su signo.",
+      { exact: false },
+    )).toBeVisible();
     await user.selectOptions(screen.getByLabelText("Contrapartes por ranking"), "all");
     expect(screen.getByText("Comercio 30")).toBeVisible();
     await user.selectOptions(screen.getByLabelText("Contrapartes por ranking"), "5");

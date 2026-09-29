@@ -120,7 +120,7 @@ export function OverviewPageView({
           </Panel>
           <Panel
             actions={<Icon name="receipt" size={18} />}
-            description="Gasto neto = bruto − devoluciones − asignación en deudas. Un neto negativo indica abono. Las asignaciones no son dinero devuelto."
+            description="Gasto neto = bruto − devoluciones − asignación en deudas. Un neto negativo puede deberse a devoluciones o a asignaciones en deudas. Las asignaciones no son dinero devuelto."
             title="Composición del gasto"
           >
             <FinancialFactList items={expenseComposition.map(({ amountEurMinor, label }) => ({

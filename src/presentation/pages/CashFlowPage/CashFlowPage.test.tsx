@@ -155,6 +155,9 @@ describe("CashFlowPageView", () => {
     render(<CashFlowPageView {...model} />);
     expect(screen.getByRole("button", { name: /Salidas reales/ })).toBeVisible();
     await userEvent.setup().click(screen.getByText("Composición del flujo"));
-    expect(screen.getByText("Un importe negativo es un abono, no un gasto adicional.", { exact: false, selector: "p" })).toBeVisible();
+    expect(screen.getByText(
+      "Un importe negativo puede deberse a devoluciones o a asignaciones en deudas, no a un gasto adicional.",
+      { exact: false, selector: "p" },
+    )).toBeVisible();
   });
 });
