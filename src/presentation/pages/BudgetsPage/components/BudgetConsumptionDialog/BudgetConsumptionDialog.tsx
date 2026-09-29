@@ -2,7 +2,8 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import type { BudgetContribution } from "../../../../../domain/analytics/budgets.ts";
-import type { TransactionStatus } from "../../../../../domain/analytics/types.ts";
+import { resolvePostingAccounts } from "../../../../../domain/analytics/transfer-relations.ts";
+import type { AnalyticsDataset, TransactionStatus } from "../../../../../domain/analytics/types.ts";
 import { formatDate } from "../../../../utils/format.ts";
 import { formatBudgetMinor } from "../../BudgetsPage.helpers.ts";
 import styles from "./BudgetConsumptionDialog.module.css";
@@ -19,6 +20,7 @@ interface BudgetConsumptionDialogProps {
   readonly title: string;
   readonly contributions: readonly BudgetContribution[];
   readonly currency: string;
+  readonly dataset: AnalyticsDataset;
   readonly fractionDigits: number;
   readonly dateBasis: "operation" | "value";
   readonly trigger: HTMLButtonElement;
@@ -29,6 +31,7 @@ export function BudgetConsumptionDialog({
   title,
   contributions,
   currency,
+  dataset,
   fractionDigits,
   dateBasis,
   trigger,
@@ -91,27 +94,56 @@ export function BudgetConsumptionDialog({
           <p>No hay apuntes para este consumo.</p>
         ) : (
           <ol className={styles.list}>
-            {contributions.slice(0, visibleCount).map(({ posting, amountMinor }, index) => (
+            {contributions.slice(0, visibleCount).map(({ posting, amountMinor }, index) => {
+              const showTransfer = posting.categoryType === "TRANSFER" || posting.linked || posting.transferPeerPostingId !== undefined;
+              const transfer = showTransfer ? resolvePostingAccounts(posting, dataset) : null;
+              return (
               <li
                 className={styles.row}
                 key={posting.id}
                 ref={index === newItemsStart ? newlyRevealedRef : undefined}
                 tabIndex={index === newItemsStart ? -1 : undefined}
               >
-                <div className={styles.rowMain}>
-                  <strong>{posting.payee || posting.comment || "Apunte sin concepto"}</strong>
-                  <span>{formatDate(dateBasis === "value" ? posting.valueDate ?? posting.date : posting.date)} · {posting.accountLabel}</span>
-                  <span>{posting.categoryPath.join(" › ") || "Sin categoría"} · {STATUS_LABELS[posting.status]}</span>
-                  <span className={styles.identifier}>ID: {posting.id}</span>
+                <div className={styles.rowHeading}>
+                  <strong className={styles.payee}>{posting.payee?.trim() || "Sin beneficiario"}</strong>
+                  <data className={styles.amount} value={amountMinor / 10 ** fractionDigits}>{formatBudgetMinor(amountMinor, currency, fractionDigits)}</data>
                 </div>
-                <div className={styles.amounts}>
-                  <strong>{formatBudgetMinor(amountMinor, currency, fractionDigits)}</strong>
-                  {posting.currency !== currency ? (
-                    <span>Original: {formatBudgetMinor(posting.amountNativeMinor, posting.currency, posting.fractionDigits)}</span>
-                  ) : null}
-                </div>
+                <dl className={styles.primaryFacts}>
+                  <div><dt>Fecha</dt><dd>{formatDate(dateBasis === "value" ? posting.valueDate ?? posting.date : posting.date)}</dd></div>
+                  <div><dt>Cuenta</dt><dd>{posting.accountLabel}</dd></div>
+                  <div><dt>Categoría</dt><dd>{posting.categoryPath.join(" › ") || "Sin categoría"}</dd></div>
+                  <div className={styles.wideFact}><dt>Comentario</dt><dd>{posting.comment?.trim() || "Sin comentario"}</dd></div>
+                  {transfer === null ? null : <>
+                    <div><dt>Origen</dt><dd>{transfer.originAccount?.label ?? "No verificada"}</dd></div>
+                    <div><dt>Destino</dt><dd>{transfer.destinationAccount?.label ?? "No verificada"}</dd></div>
+                  </>}
+                </dl>
+                <details className={styles.technicalDetails}>
+                  <summary>Datos técnicos</summary>
+                  <dl className={styles.technicalFacts}>
+                    <div><dt>Estado normalizado</dt><dd>{STATUS_LABELS[posting.status]} ({posting.status})</dd></div>
+                    <div><dt>Importe en cuenta</dt><dd>{formatBudgetMinor(posting.amountNativeMinor, posting.currency, posting.fractionDigits)}</dd></div>
+                    <div><dt>ID</dt><dd className={styles.identifier}>ID: {posting.id}</dd></div>
+                    {posting.sourceRowId === undefined ? null : <div><dt>Fila SQLite</dt><dd>{posting.sourceRowId}</dd></div>}
+                    {posting.referenceNumber ? <div><dt>Referencia</dt><dd>{posting.referenceNumber}</dd></div> : null}
+                    {posting.paymentMethod ? <div><dt>Método de pago</dt><dd>{posting.paymentMethod}</dd></div> : null}
+                    {posting.tags.length > 0 ? <div><dt>Etiquetas</dt><dd>{posting.tags.join(" · ")}</dd></div> : null}
+                    {posting.originalAmountMinor !== undefined && posting.originalCurrency !== undefined ? <div><dt>Importe importado</dt><dd>{formatBudgetMinor(posting.originalAmountMinor, posting.originalCurrency, posting.originalFractionDigits ?? 2)}</dd></div> : null}
+                    {posting.splitCount === null ? null : <div><dt>Parte de split</dt><dd>{(posting.splitIndex ?? 0) + 1} de {posting.splitCount}</dd></div>}
+                    {posting.splitParentSourceId === undefined ? null : <div><dt>ID del padre</dt><dd>{posting.splitParentSourceId}</dd></div>}
+                    {posting.sourceTransactionId === posting.transactionId ? null : <div><dt>UUID padre</dt><dd>{posting.sourceTransactionId}</dd></div>}
+                    {posting.parent === undefined ? null : <>
+                      <div><dt>Fecha del padre</dt><dd>{formatDate(posting.parent.date)}</dd></div>
+                      {posting.parent.payee ? <div><dt>Payee del padre</dt><dd>{posting.parent.payee}</dd></div> : null}
+                      {posting.parent.comment ? <div><dt>Comentario padre</dt><dd>{posting.parent.comment}</dd></div> : null}
+                      {posting.parent.paymentMethod ? <div><dt>Método del padre</dt><dd>{posting.parent.paymentMethod}</dd></div> : null}
+                      {(posting.parent.tags?.length ?? 0) > 0 ? <div><dt>Etiquetas del padre</dt><dd>{posting.parent.tags?.join(" · ")}</dd></div> : null}
+                    </>}
+                  </dl>
+                </details>
               </li>
-            ))}
+              );
+            })}
           </ol>
         )}
         {visibleCount < contributions.length ? (

@@ -37,6 +37,7 @@ function filterSummaryLabel(
 export function BudgetsPageView({
   analysis,
   budgetOptions,
+  dataset,
   emptyDescription,
   emptyTitle,
   onBudgetChange,
@@ -258,6 +259,7 @@ export function BudgetsPageView({
         <BudgetConsumptionDialog
           contributions={detail.path === null ? analysis.contributions : budgetContributionsForPath(analysis.contributions, detail.path)}
           currency={currency}
+          dataset={dataset}
           dateBasis={analysis.dateBasis ?? "operation"}
           fractionDigits={fractionDigits}
           onDismiss={() => setDetail(null)}

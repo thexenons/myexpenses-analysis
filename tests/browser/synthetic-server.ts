@@ -120,7 +120,10 @@ async function main(): Promise<void> {
     const transactionDatabase = await createImportDatabaseFixture({ extraSql: [
       ...baseExtraSql,
       "INSERT INTO payee (_id, name, short_name, iban, bic, parent_id) VALUES (5, 'Synthetic payee with an identifying suffix that extends beyond the compact row 123456789', NULL, NULL, NULL, NULL)",
+      "INSERT INTO payee (_id, name, short_name, iban, bic, parent_id) VALUES (6, 'Synthetic categorized transfer payee with a long identifying suffix 123456789', NULL, NULL, NULL, NULL)",
       "UPDATE transactions SET payee_id = 5, comment = 'Synthetic food comment with complete context that extends beyond the compact row 987654321', cr_status = 'UNRECONCILED' WHERE _id = 15",
+      "UPDATE transactions SET cat_id = 10, payee_id = 6, comment = 'Synthetic categorized transfer comment with exceptionally long context AndAnUnbrokenIdentifier12345678901234567890' WHERE _id = 4",
+      "UPDATE transactions SET cat_id = 10 WHERE _id = 5",
     ] });
     await writeFile(transactionArchivePath, await createBackupZipFixture({ database: transactionDatabase }), { mode: 0o600 });
     await importBackup({

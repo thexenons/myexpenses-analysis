@@ -1210,28 +1210,79 @@ test("budget details retain exact movement IDs and native close returns focus", 
   expect(dialogBounds!.x).toBeGreaterThanOrEqual(0);
   expect(dialogBounds!.x + dialogBounds!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
   await expect(dialog.getByText(/4 apuntes · -0,95/)).toBeVisible();
+  const technicalDetails = dialog.locator("ol > li details");
+  await expect(technicalDetails).toHaveCount(4);
+  for (const detail of await technicalDetails.all()) {
+    // oxlint-disable-next-line no-await-in-loop -- Inspect each native disclosure before opening it.
+    expect(await detail.getAttribute("open")).toBeNull();
+    // oxlint-disable-next-line no-await-in-loop -- Reveal one row at a time to check its native disclosure.
+    await detail.locator("summary").click();
+  }
   const actualIds = await dialog.getByText(/^ID: /).allTextContents();
   expect(actualIds.toSorted()).toEqual([1, 8, 15, 17].map((number) =>
     `ID: 11111111-1111-4111-8111-111111111111:10000000-0000-4000-8000-${String(number).padStart(12, "0")}`,
   ).toSorted());
-  const signedAmounts = await dialog.locator("ol > li > div:last-child > strong").allTextContents();
-  expect(signedAmounts.map((amount) => Number(amount.replace(/[^\d,-]/gu, "").replace(",", "."))))
-    .toEqual([1, -2, 0.25, -0.2]);
+  const signedAmounts = await dialog.locator("ol > li data[value]").evaluateAll((elements) =>
+    elements.map((element) => Number(element.getAttribute("value"))));
+  expect(signedAmounts).toEqual([1, -2, 0.25, -0.2]);
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await expect(overallTrigger).toBeFocused();
   await page.getByRole("button", { name: /Ver apuntes consumidos de Expense:/ }).click();
   const categoryDialog = page.getByRole("dialog", { name: "Expense · apuntes" });
+  await categoryDialog.getByText(/10000000-0000-4000-8000-000000000015/).locator("xpath=ancestor::li").locator("details summary").click();
   await expect(categoryDialog.getByText(/10000000-0000-4000-8000-000000000015/)).toBeVisible();
   await expect(categoryDialog.getByText(/4 apuntes · -0,95/)).toBeVisible();
   await categoryDialog.getByRole("button", { name: "Cerrar detalle" }).click();
   await page.getByRole("button", { name: /Ver apuntes consumidos de Expense › Food:/ }).click();
   const foodDialog = page.getByRole("dialog", { name: "Expense › Food · apuntes" });
   await expect(foodDialog.getByText(/1 apunte · 0,25/)).toBeVisible();
+  await foodDialog.locator("ol > li details summary").first().click();
   await expect(foodDialog.getByText(/10000000-0000-4000-8000-000000000015/)).toBeVisible();
   await foodDialog.getByRole("button", { name: "Cerrar detalle" }).click();
   await expect(page.getByRole("button", { name: "Filtrar: Expense" })).toHaveCount(0);
   await expectNoDocumentOverflow(page);
+});
+
+test("shows categorized transfer endpoints and long comments in the compact budget dialog", async ({ page }, testInfo) => {
+  await page.route("**/data/app-dataset.vault.json", async (route) => {
+    const variant = await route.fetch({ url: `${BASE}/data/u6-transactions.vault.json` });
+    await route.fulfill({ response: variant });
+  });
+  await page.reload();
+  await page.getByLabel("Frase de desbloqueo").fill(PASSPHRASE);
+  await page.getByRole("button", { name: "Abrir bóveda" }).click();
+  await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
+  await page.getByRole("group", { name: "Marco del presupuesto" }).getByLabel("Periodo").selectOption("MONTH:2026:7");
+  const trigger = page.getByRole("button", { name: "Ver apuntes del gasto neto" });
+  await trigger.click();
+  const dialog = page.getByRole("dialog", { name: "Gasto neto · apuntes" });
+  const row = dialog.locator("ol > li").filter({ hasText: "Synthetic categorized transfer comment" });
+  await expect(row).toHaveCount(1);
+  await expect(row.getByText(/Synthetic categorized transfer payee with a long identifying suffix/)).toBeVisible();
+  await expect(row.getByText(/Synthetic categorized transfer comment/)).toBeVisible();
+  await expect(row.getByText("Origen", { exact: true }).locator("xpath=following-sibling::dd")).toHaveText("Cash");
+  await expect(row.getByText("Destino", { exact: true }).locator("xpath=following-sibling::dd")).toHaveText("Debt");
+  await expect(row.locator("data[value]")).toHaveAttribute("value", "0.5");
+  const details = row.locator("details");
+  await expect(details).not.toHaveAttribute("open");
+  await row.evaluate((element) => element.scrollIntoView({ block: "start" }));
+  await expectNoDocumentOverflow(page);
+  expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  if (testInfo.project.name !== "mobile-390") {
+    await mkdir("/tmp/transaction-t2-visual", { recursive: true });
+    await dialog.screenshot({ path: `/tmp/transaction-t2-visual/budget-dialog-closed-${testInfo.project.name}.png`, animations: "disabled" });
+  }
+  await details.locator("summary").click();
+  const rowId = row.getByText(/ID: .*000000000004/);
+  await expect(rowId).toBeVisible();
+  if (testInfo.project.name !== "mobile-390") {
+    await rowId.scrollIntoViewIfNeeded();
+    await dialog.screenshot({ path: `/tmp/transaction-t2-visual/budget-dialog-expanded-${testInfo.project.name}.png`, animations: "disabled" });
+  }
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(trigger).toBeFocused();
 });
 
 test("keeps debt selection next to balance and preserves budget action names", async ({ page }) => {

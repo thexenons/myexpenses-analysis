@@ -25,6 +25,7 @@ export function createBudgetsPageModel(
   if (selectedBudget === undefined) {
     return {
       analysis: null,
+      dataset: analytics,
       budgetOptions,
       emptyTitle: "No hay presupuestos disponibles",
       emptyDescription:
@@ -47,6 +48,7 @@ export function createBudgetsPageModel(
   if (result.status === "unsupported") {
     return {
       analysis: null,
+      dataset: analytics,
       budgetOptions,
       emptyTitle: "Presupuesto no representable con seguridad",
       emptyDescription: result.reason,
@@ -61,6 +63,7 @@ export function createBudgetsPageModel(
 
   return {
     analysis: result.analysis,
+    dataset: analytics,
     budgetOptions,
     emptyTitle: null,
     emptyDescription: null,

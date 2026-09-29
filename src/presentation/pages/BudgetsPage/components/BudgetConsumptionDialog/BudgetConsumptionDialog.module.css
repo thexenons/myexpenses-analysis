@@ -1,5 +1,5 @@
 .dialog {
-  width: min(48rem, calc(100vw - 1rem));
+  width: min(46rem, calc(100vw - 1rem));
   max-width: none;
   max-height: min(90dvh, 52rem);
   padding: 0;
@@ -8,6 +8,12 @@
   border: 1px solid var(--line-dark);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
 }
 
 .dialog::backdrop {
@@ -17,6 +23,7 @@
 
 .header {
   display: flex;
+  flex: none;
   justify-content: space-between;
   gap: 1rem;
   align-items: start;
@@ -61,37 +68,36 @@
 }
 
 .body {
-  max-height: calc(90dvh - 7rem);
+  flex: 1;
+  min-height: 0;
   padding: 1rem 1.2rem;
   overflow: auto;
 }
 
-.body:focus-visible {
+.body:focus-visible,
+.technicalDetails summary:focus-visible {
   outline: 3px solid var(--accent-ink);
   outline-offset: -3px;
 }
 
-.note,
-.rowMain span,
-.amounts span {
+.note {
   color: var(--muted);
   font-size: 0.78rem;
 }
 
 .list {
   display: grid;
-  gap: 0.5rem;
-  margin: 1rem 0;
+  gap: 0.55rem;
+  margin: 0.9rem 0;
   padding: 0;
   list-style: none;
 }
 
 .row {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
+  display: grid;
+  gap: 0.65rem;
   min-width: 0;
-  padding: 0.75rem;
+  padding: 0.85rem;
   background: var(--surface-bright);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -102,20 +108,84 @@
   outline-offset: 2px;
 }
 
-.rowMain,
-.amounts {
-  display: grid;
-  gap: 0.2rem;
+.rowHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
   min-width: 0;
+}
+
+.payee {
+  min-width: 0;
+  font-size: 0.95rem;
+  line-height: 1.3;
   overflow-wrap: anywhere;
 }
 
-.amounts {
-  align-content: start;
+.amount {
   flex: none;
   font-family: var(--mono);
-  text-align: right;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.primaryFacts,
+.technicalFacts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem 0.8rem;
+  margin: 0;
+}
+
+.primaryFacts > div,
+.technicalFacts > div {
+  display: grid;
+  align-content: start;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.primaryFacts dt,
+.technicalFacts dt {
+  color: var(--muted);
+  font-size: 0.67rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+
+.primaryFacts dd,
+.technicalFacts dd {
+  min-width: 0;
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.wideFact {
+  grid-column: 1 / -1;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--line);
+}
+
+.technicalDetails {
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.technicalDetails summary {
+  width: fit-content;
+  color: var(--muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.technicalFacts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-top: 0.6rem;
 }
 
 .identifier {
@@ -124,11 +194,13 @@
 
 @media (max-width: 36rem) {
   .header,
-  .row {
+  .rowHeading {
     flex-direction: column;
+    align-items: start;
   }
 
-  .amounts {
-    text-align: left;
+  .primaryFacts,
+  .technicalFacts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

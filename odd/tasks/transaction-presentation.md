@@ -52,7 +52,7 @@ Debt comparison was delivered separately at `1f1c61d` before this feature.
   - Verify active states, stale VOID/CLEARED filters, counts, CSV, pagination, budgets,
     insights drilldown and immutable source. Keep collapsed source metadata.
   - Rollback boundary: presentation filters, transaction table/page and related copy/tests.
-- [ ] T2 — Compact budget contribution details and show transfer endpoints.
+- [x] T2 — Compact budget contribution details and show transfer endpoints.
   - Always-visible requested fields; secondary metadata closed and keyboard accessible.
   - Preserve normalized status inside detail, source amounts/currency and split context.
   - Verify categorized transfers, both directions, incomplete links, long/empty comments,
@@ -90,9 +90,24 @@ Debt comparison was delivered separately at `1f1c61d` before this feature.
   30 immutable patches and approved without findings; it did not execute tests.
   Exact acknowledgement succeeded and burned the authority. Reviewed boundary:
   `164e18844b44178d1b3e37444e979af25681ed8b`. T1 is ready for its authorized main push.
+- T1 pushed successfully to main at `6f28dc9f718c17b396aca8af905bb4bfb8e810df`;
+  local main and origin/main match. Evidence commit `6f28dc9` assessed passive
+  (16 lines); next reviewed boundary is `6f28dc9`. Running authored total: 495.
+- T2: original dataset passed to the existing endpoint resolver; requested main
+  fields remain visible and normalized status/provenance use closed native details.
+  The dialog has one scrollable body, keeping its header reachable on narrow screens.
+- T2 RED: three focused failures; GREEN: 13/13. Final UI 365/365; types, lint and
+  diff checks passed. Parent repeat: dialog 7/7. Focused browser 9/9; full browser
+  90 passed, three intentional device skips. A synthetic payee collision initially
+  broke three existing browser selectors; a distinct fixture payee resolved it.
+- Isolated Node: 281 passed, three optional private-reference skips. Independent
+  verification confirmed all 552 copied source files unchanged, including nine T2
+  modified files. Snapshot: `/tmp/transaction-t2-verify-fe2omapd/source`.
+  Logs: `/tmp/transaction-t2-*.log`. Parent inspected desktop and 320px closed/open
+  modal screenshots in `/tmp/transaction-t2-visual/`; long comments and endpoints
+  fit, metadata stays collapsed, and the header remains outside body scrolling.
 
 ## Next step
 
-Deliver T1 and this evidence to main, then implement T2 on the feature branch.
-After T2 delivery, begin the separately requested lock-screen simplification
-without altering cryptography.
+Commit and assess T2, then deliver it to main. Afterwards begin the separately
+requested lock-screen simplification without altering cryptography.

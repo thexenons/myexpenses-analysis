@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -7,8 +7,13 @@ import type {
   BudgetAnalysis,
 } from "../../../domain/analytics/budgets.ts";
 import type { BackupBudgetV1 } from "../../../domain/analytics/backup-dataset.types.ts";
-import type { NormalizedPosting } from "../../../domain/analytics/types.ts";
+import type { AnalyticsDataset, NormalizedPosting } from "../../../domain/analytics/types.ts";
 import { BudgetsPageView } from "./BudgetsPage.view.tsx";
+
+const EMPTY_DATASET: AnalyticsDataset = {
+  accounts: [], currency: "EUR", minDate: null, maxDate: null, postings: [],
+  source: { accounts: { version: 2, accounts: {} }, categories: {} },
+};
 
 const budget: BackupBudgetV1 = {
   uuid: "budget",
@@ -122,6 +127,7 @@ describe("BudgetsPageView", () => {
     render(
       <BudgetsPageView
         analysis={{ ...analysis, filteredPostingCount: 1, global: { ...analysis.global, assignedMinor: 0, utilization: null, health: "unallocated" } }}
+        dataset={EMPTY_DATASET}
         budgetOptions={[]}
         emptyDescription={null}
         emptyTitle={null}
@@ -176,6 +182,7 @@ describe("BudgetsPageView", () => {
             { posting: makePosting("other", ["Otros"]), amountMinor: 3_000 },
           ],
         }}
+        dataset={EMPTY_DATASET}
         budgetOptions={[]}
         emptyDescription={null}
         emptyTitle={null}
@@ -206,7 +213,7 @@ describe("BudgetsPageView", () => {
     expect(screen.getByText("child-refund")).toBeVisible();
     expect(screen.queryByText("other")).not.toBeInTheDocument();
     expect(screen.getByText(/2 apuntes/)).toHaveTextContent("35,00");
-    expect(screen.getByText("Gastos › Comida")).toBeVisible();
+    expect(within(screen.getByRole("dialog", { name: "Gastos › Comida · apuntes" })).getAllByText("Gastos › Comida")[0]).toBeVisible();
     expect(onBudgetChange).not.toHaveBeenCalled();
     expect(onPeriodChange).not.toHaveBeenCalled();
     await user.keyboard("{Escape}");
@@ -216,6 +223,7 @@ describe("BudgetsPageView", () => {
     render(
       <BudgetsPageView
         analysis={{ ...analysis, dateBasis: "value", consumptionDateRange: { from: "2026-08-10", to: "2026-08-12" }, isFilteredComparison: true }}
+        dataset={EMPTY_DATASET}
         budgetOptions={[{ value: "budget", label: "Presupuesto doméstico" }]}
         emptyDescription={null}
         emptyTitle={null}
@@ -241,6 +249,7 @@ describe("BudgetsPageView", () => {
           global: { ...analysis.global, assignedMinor: 10_000, consumedMinor: 1_000, availableMinor: 9_000, utilization: 0.1, health: "on-track" },
           allocations: [{ ...allocation, assignedMinor: 10_000, consumedMinor: 1_000, availableMinor: 9_000, utilization: 0.1, health: "on-track" }],
         }}
+        dataset={EMPTY_DATASET}
         budgetOptions={[]}
         emptyDescription={null}
         emptyTitle={null}
@@ -265,6 +274,7 @@ describe("BudgetsPageView", () => {
     render(
       <BudgetsPageView
         analysis={analysis}
+        dataset={EMPTY_DATASET}
         budgetOptions={[
           { value: "budget", label: "Presupuesto doméstico" },
           { value: "second", label: "Segundo presupuesto" },
@@ -307,6 +317,7 @@ describe("BudgetsPageView", () => {
     render(
       <BudgetsPageView
         analysis={null}
+        dataset={EMPTY_DATASET}
         budgetOptions={[{ value: "budget", label: "Presupuesto doméstico" }]}
         emptyDescription="No hay periodos configurados que puedan representarse sin inferencias."
         emptyTitle="Presupuesto no representable con seguridad"
