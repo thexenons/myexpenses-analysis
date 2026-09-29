@@ -32,3 +32,6 @@ data/.*.tmp
 *.sw?
 # Local Pi runtime state
 .atl/
+
+# Local runtime secrets (safe templates remain trackable).
+.env

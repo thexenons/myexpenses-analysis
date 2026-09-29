@@ -1,9 +1,14 @@
 # Runtime pCloud configuration
 
-The container worker will consume these **runtime-only** Coolify variables. This
-contract is separate from the existing `deploy:sync-pcloud --config <absolute-path>`
-JSON-file CLI, which remains supported. The periodic worker and Compose wiring
-are separate deployment tasks; this module alone does not start synchronization.
+The container worker and the one-shot `pnpm deploy:sync-pcloud` CLI share these
+runtime variables and validation. The CLI automatically reads `.env` from its
+working directory; exported variables take precedence, including empty values.
+The worker still receives its environment from Compose, not a `.env` loader.
+JSON `--config` is no longer supported. See the [CLI migration](pcloud-sync.md#migración-desde-json).
+Outside Docker, set `MYEXPENSES_REPOSITORY_ROOT` to the absolute checkout path
+(the shared default is `/app`). The CLI does not schedule cycles or send email;
+interval/timeout variables apply only to the worker. Notification configuration
+is validated by both, but used for delivery only by the worker.
 
 | Variable | Requirement |
 | --- | --- |

@@ -1,10 +1,11 @@
-import { isAbsolute } from "node:path";
 import { parseArgs } from "node:util";
 
+import { SyncConfigError } from "./config.ts";
 import {
-    loadSyncPCloudConfig,
-    SyncConfigError,
-} from "./config.ts";
+    loadSyncPCloudCliEnvironment,
+    type SyncPCloudCliEnvironmentOptions,
+} from "./cli-environment.ts";
+import { loadSyncPCloudRuntimeConfig } from "./runtime-config.ts";
 import { SyncLeaseError } from "./lease.ts";
 import {
     PCloudSyncError,
@@ -14,7 +15,6 @@ import {
 import { PCloudError } from "./pcloud.ts";
 
 export interface SyncPCloudCliOptions {
-    readonly configPath: string;
     readonly force: boolean;
 }
 
@@ -31,19 +31,11 @@ export function parseSyncPCloudArguments(
         allowPositionals: false,
         args: [...args],
         options: {
-            config: { type: "string" },
             force: { default: false, type: "boolean" },
         },
         strict: true,
     });
-    if (
-        values.config === undefined ||
-        values.config.length === 0 ||
-        !isAbsolute(values.config)
-    ) {
-        throw new SyncConfigError("--config must be an absolute path");
-    }
-    return { configPath: values.config, force: values.force };
+    return { force: values.force };
 }
 
 function publicError(error: unknown): string {
@@ -70,14 +62,18 @@ export async function runSyncPCloudCli(
         stdout: (message) => process.stdout.write(message),
     },
     signal?: AbortSignal,
+    environmentOptions: SyncPCloudCliEnvironmentOptions = {},
 ): Promise<number> {
     try {
         const options = parseSyncPCloudArguments(args);
-        const config = await loadSyncPCloudConfig(options.configPath);
+        const runtime = loadSyncPCloudRuntimeConfig(
+            await loadSyncPCloudCliEnvironment(environmentOptions),
+        );
         const result = await runPCloudSync(
-            config,
+            runtime.config,
             {
                 ...dependencies,
+                loadSecrets: async () => runtime.secrets,
                 logger: { info: (message) => io.stdout(`${message}\n`) },
             },
             { force: options.force, signal },

@@ -1,3 +1,4 @@
 # /etc/cron.d/myexpenses-sync-pcloud
+# pnpm --dir runs from the checkout and loads its private .env.
 # Adjust /usr/bin/pnpm if `command -v pnpm` reports another absolute path.
-*/15 * * * * myexpenses /usr/bin/flock -n /srv/myexpenses/.cron.lock /usr/bin/pnpm --dir /opt/myexpenses-analysis deploy:sync-pcloud -- --config /etc/myexpenses/sync-pcloud.json >>/var/log/myexpenses-sync.log 2>&1
+*/15 * * * * myexpenses /usr/bin/flock -n /srv/myexpenses/.cron.lock /usr/bin/pnpm --dir /opt/myexpenses-analysis deploy:sync-pcloud >>/var/log/myexpenses-sync.log 2>&1

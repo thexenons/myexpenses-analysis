@@ -1,7 +1,7 @@
 # Despliegue periódico desde pCloud
 
-Esta guía corresponde al despliegue en un host Linux con CLI, archivos de
-secretos y cron. Para Coolify con Docker Compose y secretos de entorno, sigue
+Esta guía corresponde al despliegue en un host Linux con CLI, `.env` privado
+y cron. Para Coolify con Docker Compose y secretos de entorno, sigue
 [la guía de Coolify](../docs/coolify-deployment.md) **en lugar de** estos pasos;
 no actives cron y worker sobre el mismo volumen.
 
@@ -35,18 +35,19 @@ no-store`. Sólo `/assets/` con el patrón hash de Vite recibe cache anual
 
 ```sh
 sudo install -d -o myexpenses -g myexpenses -m 0755 /srv/myexpenses
-sudo install -d -o root -g myexpenses -m 0750 /etc/myexpenses
-sudo install -o myexpenses -g myexpenses -m 0600 deploy/sync-pcloud.config.example.json /etc/myexpenses/sync-pcloud.json
-sudo install -o myexpenses -g myexpenses -m 0600 /secure/source/pcloud.token /etc/myexpenses/pcloud.token
-sudo install -o myexpenses -g myexpenses -m 0600 /secure/source/vault.passphrase /etc/myexpenses/vault.passphrase
 sudo install -o myexpenses -g myexpenses -m 0600 /dev/null /var/log/myexpenses-sync.log
-sudo install -o root -g root -m 0644 deploy/sync-pcloud.cron.example /etc/cron.d/myexpenses-sync-pcloud
 ```
 
-Use `folderId` como string decimal para no perder IDs de 64 bits. Si no está
-disponible, se admite un `path` absoluto de pCloud en su lugar. `apiHost` sólo
-puede ser `api.pcloud.com` o `eapi.pcloud.com`, según la región de la cuenta.
-`timeZone` es una zona IANA obligatoria que se entrega a `importBackup`.
+Antes de instalar el cron, crea un `.env` privado en la raíz del checkout,
+sólo si no existe, usando [sync-pcloud.env.example](sync-pcloud.env.example).
+Completa los secretos y aplica `chmod 600 .env`; no sobrescribas uno existente.
+Configura `MYEXPENSES_REPOSITORY_ROOT` con la ruta absoluta local y
+`MYEXPENSES_DEPLOY_ROOT` con `/srv/myexpenses`, fuera del checkout.
+El usuario `myexpenses` debe poder leer `.env` y escribir en el despliegue.
+
+Usa `PCLOUD_FOLDER_ID` decimal o `PCLOUD_FOLDER_PATH`, nunca ambos.
+`PCLOUD_API_HOST` admite `api.pcloud.com` o `eapi.pcloud.com`, según OAuth.
+`MYEXPENSES_TIME_ZONE` es IANA y por defecto vale `Europe/Madrid`.
 El token OAuth debe provisionarse antes del despliegue: pCloud exige una
 autorización interactiva inicial, pero ninguna ejecución periódica abre un
 navegador ni necesita el `client_secret`.
@@ -56,7 +57,16 @@ navegador ni necesita el `client_secret`.
 El comando del proyecto ya conecta `runSyncPCloudCli` con el pipeline completo:
 
 ```sh
-pnpm deploy:sync-pcloud -- --config /etc/myexpenses/sync-pcloud.json
+cd /opt/myexpenses-analysis
+pnpm deploy:sync-pcloud
+```
+
+El CLI carga `.env` desde ese directorio, sin sobrescribir variables exportadas.
+No admite `--config`; consulta la [migración](../docs/pcloud-sync.md#migración-desde-json).
+Tras verificar una ejecución manual, instala el cron:
+
+```sh
+sudo install -o root -g root -m 0644 deploy/sync-pcloud.cron.example /etc/cron.d/myexpenses-sync-pcloud
 ```
 
 Dentro de un workspace `0700` ejecuta:

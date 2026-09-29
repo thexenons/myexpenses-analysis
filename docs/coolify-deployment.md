@@ -5,8 +5,9 @@ con el procedimiento de servidor independiente, ficheros de credenciales y cron
 de [`deploy/README.md`](../deploy/README.md): son dos despliegues alternativos.
 Aquí el repositorio aporta `compose.yaml`, `Dockerfile` y la configuración de
 nginx; Coolify aporta las variables **de ejecución**. Nadie debe crear un JSON,
-un token ni una frase de paso dentro del contenedor. La CLI histórica con
-`--config` sigue existiendo, pero no participa en esta ruta.
+un token ni una frase de paso dentro del contenedor. El CLI puntual comparte
+las variables de entorno y carga `.env` localmente, pero no participa en esta
+ruta ni acepta `--config`.
 
 ## 1. Preparar origen y credenciales
 

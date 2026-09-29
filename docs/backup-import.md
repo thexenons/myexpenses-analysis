@@ -46,7 +46,7 @@ pnpm data:encrypt -- --passphrase-file /ruta/privada/vault.passphrase
 ```
 
 El pipeline pCloud no invoca el prompt: selecciona el backup remoto más reciente
-y lee siempre `vaultPassphraseFile` de su configuración.
+y recibe `MYEXPENSES_VAULT_PASSPHRASE` del entorno (en el CLI, también de `.env`).
 
 La relación entre la versión y el esquema está declarada en el código oficial:
 

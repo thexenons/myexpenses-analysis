@@ -2,7 +2,7 @@
 
 ## Alcance
 
-Esta guía corresponde al CLI con archivos de configuración y cron en un host
+Esta guía corresponde al CLI con variables de entorno y cron en un host
 Ubuntu. Para Coolify con Docker Compose y secretos de entorno, usa la
 [guía específica](coolify-deployment.md); son alternativas, no pasos que deban
 combinarse. `pnpm deploy:sync-pcloud` en este host, en cada
@@ -40,7 +40,7 @@ Pasos operativos:
    aprobación—;
 2. usa el code flow recomendado para aplicaciones con servidor;
 3. guarda el `access_token` y el `hostname` de la respuesta;
-4. escribe sólo el token en `/etc/myexpenses/pcloud.token` y aplica `0600`;
+4. guarda el token como `PCLOUD_TOKEN` en el `.env` privado del checkout;
 5. revoca el token desde pCloud si el servidor deja de ser confiable.
 
 La autorización OAuth inicial requiere la página de consentimiento de pCloud;
@@ -71,33 +71,49 @@ la API común US/EU; la descarga siempre calcula además SHA-256 local.
 
 ## Configuración
 
-Copia [sync-pcloud.config.example.json](../deploy/sync-pcloud.config.example.json)
-a `/etc/myexpenses/sync-pcloud.json` y ajusta:
+El CLI usa las mismas variables que el worker. Desde la raíz del checkout,
+crea `.env` a partir de [sync-pcloud.env.example](../deploy/sync-pcloud.env.example)
+**sólo si no existe**; no sobrescribas una configuración existente. Completa:
 
-- `apiHost`: hostname exacto obtenido en OAuth;
-- `folderId`: string decimal de la carpeta; como alternativa, `path` absoluto;
-- `tokenFile`: fichero `0600` con el Bearer;
-- `vaultPassphraseFile`: fichero `0600` con la frase de la web;
-- `deployRoot`: padre de `releases/`, `.work/`, estado y `current`. El padre y
-  `releases/` deben ser transitables por el servidor web (el ejemplo usa
-  `0755`); no son directorios privados. `.work/` es `0700` y el estado
-  `.sync-state.json` es `0600`, fuera del document root `current`;
-- `repositoryRoot`: checkout con dependencias instaladas;
-- `timeZone`: zona IANA que MyExpenses no incluye en el backup.
+- `PCLOUD_API_HOST`: hostname exacto obtenido en OAuth;
+- `PCLOUD_FOLDER_ID`: ID decimal, o `PCLOUD_FOLDER_PATH` como alternativa;
+- `PCLOUD_TOKEN` y `MYEXPENSES_VAULT_PASSPHRASE`: secretos de ejecución;
+- `MYEXPENSES_REPOSITORY_ROOT`: ruta absoluta de este checkout con dependencias
+  instaladas. Debe configurarse fuera de Docker: el valor predeterminado es `/app`;
+- `MYEXPENSES_DEPLOY_ROOT`: árbol de publicación, separado del checkout;
+- `MYEXPENSES_TIME_ZONE`: zona IANA; por defecto `Europe/Madrid`.
 
-Los árboles `deployRoot` y `repositoryRoot` deben estar separados. En **este
-CLI con configuración JSON**, ningún secreto se admite dentro del JSON,
-argumentos, entorno o logs: token y frase se leen desde archivos `0600`. El
-worker de Coolify usa, en cambio, secretos de entorno de ejecución.
+Aplica `chmod 600 .env` y ejecuta como propietario del directorio de despliegue.
+`.env` está ignorado por Git, pero sigue conteniendo secretos en disco. El CLI lo
+lee desde el directorio de trabajo, sin ejecutar shell ni expandir `$VARIABLE`.
+Usa comillas para conservar espacios y `#` dentro de los valores. Las variables
+ya exportadas tienen prioridad, incluso si están vacías. Un `.env` ausente se
+permite si el entorno aporta la configuración; otros errores de lectura abortan.
+Consulta el [contrato compartido](coolify-runtime-env.md) para la validación.
 
-Prueba manual:
+`MYEXPENSES_DEPLOY_ROOT` y `releases/` deben ser transitables por el servidor web
+(por ejemplo, `0755`). `.work/` es privado (`0700`); el estado es `0600` y queda
+fuera de `current`, el document root.
+
+Desde la raíz del checkout:
 
 ```sh
-pnpm deploy:sync-pcloud -- \
-  --config /etc/myexpenses/sync-pcloud.json
+pnpm deploy:sync-pcloud
+# Reconstruir aunque el backup no haya cambiado:
+pnpm deploy:sync-pcloud -- --force
 ```
 
-`--force` reconstruye el mismo backup, útil después de actualizar el código.
+Es una ejecución puntual: no inicia el worker, no programa ciclos ni envía
+correos. Las variables de notificación, si se proporcionan, pasan la validación
+compartida, pero no activan envíos en el CLI.
+
+### Migración desde JSON
+
+`--config` ya no se admite. Traslada `apiHost`, `folderId`/`path`, `deployRoot`,
+`repositoryRoot` y `timeZone` a sus variables anteriores. El contenido de los
+antiguos `tokenFile` y `vaultPassphraseFile` pasa a `PCLOUD_TOKEN` y
+`MYEXPENSES_VAULT_PASSPHRASE`; las rutas de esos archivos no son los secretos.
+Actualiza también el cron para quitar `--config` y ejecutar desde el checkout.
 
 ## Cron y publicación atómica
 
