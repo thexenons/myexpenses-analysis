@@ -106,8 +106,12 @@ Debt comparison was delivered separately at `1f1c61d` before this feature.
   Logs: `/tmp/transaction-t2-*.log`. Parent inspected desktop and 320px closed/open
   modal screenshots in `/tmp/transaction-t2-visual/`; long comments and endpoints
   fit, metadata stays collapsed, and the header remains outside body scrolling.
+- T2 commit `a3a7c70`: 399 authored lines; running feature total 894. Native
+  assessment: medium, `under_budget`, no review due yet. This is not an approval:
+  the reviewed boundary remains `6f28dc9`, carried into the next work-unit slice.
+  Authorized push succeeded; local main and origin/main match `a3a7c70`.
 
 ## Next step
 
-Commit and assess T2, then deliver it to main. Afterwards begin the separately
-requested lock-screen simplification without altering cryptography.
+Both tasks are delivered. Continue the separately requested lock-screen
+simplification; retain T2 in the pending native review slice from `6f28dc9`.

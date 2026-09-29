@@ -46,7 +46,7 @@ test.beforeEach(async ({ context, page }) => {
   });
   await page.clock.setFixedTime(new Date("2026-09-27T12:00:00.000Z"));
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Abrir el libro cifrado" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Bóveda bloqueada" })).toBeVisible();
   await page.getByLabel("Frase de desbloqueo").fill(PASSPHRASE);
   await page.getByRole("button", { name: "Abrir bóveda" }).click();
   await expect(page.getByRole("heading", { name: "Resumen general" })).toBeVisible();
@@ -221,33 +221,42 @@ test("keeps shared control geometry coherent without flattening semantic variant
   await expectNoDocumentOverflow(page);
 });
 
-// oxlint-disable no-await-in-loop -- Verify each responsive layout against the same expanded state.
-test("contains vault artwork without obstructing the unlock form", async ({ page }, testInfo) => {
+// oxlint-disable no-await-in-loop -- Verify each responsive layout against the same locked state.
+test("keeps the lock screen minimal and unlocks by keyboard after a generic failure", async ({ page }) => {
   await page.getByRole("button", { name: "Bloquear bóveda", exact: true }).click();
   const viewport = page.viewportSize()!;
   for (const width of viewport.width === 1280 ? [1280, 1024] : [viewport.width]) {
     await page.setViewportSize({ ...viewport, width });
-    const escaped = await page.locator('main > section > div[aria-hidden="true"]').evaluate((panel) => {
-      const style = getComputedStyle(panel);
-      const ornament = getComputedStyle(panel, "::before");
-      const shadows = ornament.boxShadow.replace(/rgba?\([^)]+\)/g, "").split(",")
-        .map((shadow) => shadow.match(/-?[\d.]+px/g)?.map(Number.parseFloat) ?? [0, 0, 0, 0]);
-      return shadows.some(([x = 0, y = 0, blur = 0, spread = 0]) => {
-        const right = Number.parseFloat(ornament.left) + Number.parseFloat(ornament.width) + x + blur + spread;
-        const bottom = Number.parseFloat(ornament.top) + Number.parseFloat(ornament.height) + y + blur + spread;
-        return (right > panel.clientWidth && style.overflowX === "visible") ||
-          (bottom > panel.clientHeight && style.overflowY === "visible");
-      });
-    });
-    expect.soft(escaped, `vault decoration must not paint over the form at ${width}px`).toBe(false);
-    await expect(page.getByLabel("Frase de desbloqueo")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Bóveda bloqueada" })).toBeVisible();
+    const input = page.getByLabel("Frase de desbloqueo");
+    await expect(input).toBeVisible();
+    await expect(input).toHaveAttribute("required");
+    expect(await page.getByRole("main").innerText()).not.toMatch(/desarrollo local|cifrado autenticado|no se persiste|archivo financiero|Web Crypto|HTTPS|copias públicas|introduce la frase/iu);
+    await expect(page.locator('main > section > div[aria-hidden="true"]')).toHaveCount(0);
     await expectNoDocumentOverflow(page);
-    await page.screenshot({ path: testInfo.outputPath(`${width}-contained-vault.png`), fullPage: true, animations: "disabled" });
+    if (width === 1280 || width === 320) {
+      await mkdir("/tmp/minimal-lock-screen-visual", { recursive: true });
+      await page.screenshot({ path: `/tmp/minimal-lock-screen-visual/locked-${width}.png`, fullPage: true, animations: "disabled" });
+    }
   }
-  await page.getByLabel("Frase de desbloqueo").fill(PASSPHRASE);
+  const input = page.getByLabel("Frase de desbloqueo");
+  await input.fill("incorrecta");
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Mostrar frase", exact: true })).toBeFocused();
-  await page.getByRole("button", { name: "Abrir bóveda", exact: true }).click();
+  await page.keyboard.press("Space");
+  await expect(input).toHaveAttribute("type", "text");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Abrir bóveda", exact: true })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("alert")).toHaveText("No se pudo abrir la bóveda.");
+  await expect(input).toHaveValue("");
+  await expect(page.getByRole("button", { name: "Reintentar" })).toBeVisible();
+  await expectNoDocumentOverflow(page);
+  if (viewport.width === 1280 || viewport.width === 320) {
+    await page.screenshot({ path: `/tmp/minimal-lock-screen-visual/error-${viewport.width}.png`, fullPage: true, animations: "disabled" });
+  }
+  await input.fill(PASSPHRASE);
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "Resumen general" })).toBeVisible();
 });
 

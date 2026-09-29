@@ -13,7 +13,6 @@ export function UnlockScreen({
   phase,
 }: UnlockScreenProps) {
   const errorId = useId();
-  const hintId = useId();
   const inputId = useId();
   const { inputRef, showPassphrase, submit, togglePassphrase } =
     useUnlockScreen(onUnlock, phase, allowEmptyPassphrase);
@@ -25,117 +24,58 @@ export function UnlockScreen({
       <title>Desbloquear bóveda · My Expenses</title>
       <main aria-busy={pending} className={styles.root}>
         <section aria-labelledby="unlock-title" className={styles.card}>
-          <div aria-hidden="true" className={styles.vaultPanel}>
-            <div className={styles.seal}>
-              <span className={styles.keyhole} />
-            </div>
-            <p className={styles.vaultIndex}>ME / 189</p>
-            <p className={styles.vaultCaption}>Archivo financiero sellado</p>
-          </div>
+          <h1 className={styles.title} id="unlock-title">Bóveda bloqueada</h1>
 
-          <div className={styles.content}>
-            <header className={styles.header}>
-              <span className={styles.eyebrow}>Bóveda estática · sólo navegador</span>
-              <h1 className={styles.title} id="unlock-title">
-                Abrir el libro cifrado
-              </h1>
-              <p className={styles.description}>
-                Introduce la frase que protege esta instantánea. La aplicación no
-                solicita ni procesa datos antes de este gesto.
-              </p>
-            </header>
+          {blocked ? (
+            <p className={styles.blocked} role="alert">{blockedReason}</p>
+          ) : null}
 
-            {blocked ? (
-              <div className={styles.blocked} role="alert">
-                <strong>Conexión no segura</strong>
-                <span>{blockedReason}</span>
-              </div>
-            ) : null}
-
-            {phase === "error" && error !== null ? (
-              <div>
-                <p className={styles.error} id={errorId} role="alert">
-                  {error}
-                </p>
-                {onReloadVault !== undefined && !blocked ? (
-                  <button className={styles.reload} onClick={onReloadVault} type="button">
-                    Volver a descargar la bóveda
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
-
-            <form className={styles.form} onSubmit={submit}>
-              <div className={styles.field}>
-                <label className={styles.label} htmlFor={inputId}>
-                  Frase de desbloqueo
-                </label>
-                <span className={styles.fieldHint} id={hintId}>
-                  {allowEmptyPassphrase
-                    ? "Desarrollo local: puedes dejarla vacía."
-                    : "No se guarda; el campo se vacía al iniciar cada intento."}
-                </span>
-                <span className={styles.inputFrame}>
-                  <input
-                    aria-describedby={`${hintId}${phase === "error" ? ` ${errorId}` : ""}`}
-                    aria-invalid={phase === "error"}
-                    autoComplete="current-password"
-                    className={styles.input}
-                    disabled={pending || blocked}
-                    id={inputId}
-                    name="passphrase"
-                    ref={inputRef}
-                    required={!allowEmptyPassphrase}
-                    spellCheck={false}
-                    type={showPassphrase ? "text" : "password"}
-                  />
-                  <button
-                    aria-label={
-                      showPassphrase ? "Ocultar frase" : "Mostrar frase"
-                    }
-                    aria-pressed={showPassphrase}
-                    className={styles.visibility}
-                    disabled={pending || blocked}
-                    onClick={togglePassphrase}
-                    type="button"
-                  >
-                    {showPassphrase ? "Ocultar" : "Mostrar"}
-                  </button>
-                </span>
-              </div>
-              <button
-                className={styles.submit}
-                disabled={pending || blocked}
-                type="submit"
-              >
-                <span aria-hidden="true" className={styles.submitMark} />
-                {pending ? "Desbloqueando…" : "Abrir bóveda"}
-              </button>
-              {pending ? (
-                <output className={styles.visuallyHidden}>
-                  Desbloqueando la bóveda
-                </output>
+          {phase === "error" && error !== null ? (
+            <div>
+              <p className={styles.error} id={errorId} role="alert">{error}</p>
+              {onReloadVault !== undefined && !blocked ? (
+                <button className={styles.reload} onClick={onReloadVault} type="button">
+                  Reintentar
+                </button>
               ) : null}
-            </form>
+            </div>
+          ) : null}
 
-            <aside
-              aria-label="Aviso de seguridad"
-              className={styles.warning}
-            >
-              <strong>Protección frente a copias públicas</strong>
-              <p>
-                Una persona que descargue el archivo puede intentar adivinar la
-                frase sin conectarse de nuevo. Usa una frase larga, única y
-                aleatoria; no reutilices una contraseña personal.
-              </p>
-            </aside>
-
-            <footer className={styles.footer}>
-              <span>Cifrado autenticado</span>
-              <span>La frase no se persiste</span>
-              <span>Bloqueo manual y tras 15 min sin actividad</span>
-            </footer>
-          </div>
+          <form className={styles.form} onSubmit={submit}>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor={inputId}>Frase de desbloqueo</label>
+              <span className={styles.inputFrame}>
+                <input
+                  aria-describedby={phase === "error" && error !== null ? errorId : undefined}
+                  aria-invalid={phase === "error" && error !== null}
+                  autoComplete="current-password"
+                  className={styles.input}
+                  disabled={pending || blocked}
+                  id={inputId}
+                  name="passphrase"
+                  ref={inputRef}
+                  required={!allowEmptyPassphrase}
+                  spellCheck={false}
+                  type={showPassphrase ? "text" : "password"}
+                />
+                <button
+                  aria-label={showPassphrase ? "Ocultar frase" : "Mostrar frase"}
+                  aria-pressed={showPassphrase}
+                  className={styles.visibility}
+                  disabled={pending || blocked}
+                  onClick={togglePassphrase}
+                  type="button"
+                >
+                  {showPassphrase ? "Ocultar" : "Mostrar"}
+                </button>
+              </span>
+            </div>
+            <button className={styles.submit} disabled={pending || blocked} type="submit">
+              <span aria-hidden="true" className={styles.submitMark} />
+              {pending ? "Desbloqueando…" : "Abrir bóveda"}
+            </button>
+            {pending ? <output className={styles.visuallyHidden}>Desbloqueando la bóveda</output> : null}
+          </form>
         </section>
       </main>
     </>

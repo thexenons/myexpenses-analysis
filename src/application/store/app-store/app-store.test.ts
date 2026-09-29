@@ -180,6 +180,7 @@ describe("AppStore", () => {
   });
 
   it("uses one indistinguishable error for a wrong phrase or corrupt vault", async () => {
+    expect(VAULT_UNLOCK_ERROR_MESSAGE).toBe("No se pudo abrir la bóveda.");
     const repository: DatasetRepository = {
       load: vi
         .fn<DatasetRepository["load"]>()
@@ -203,6 +204,7 @@ describe("AppStore", () => {
   });
 
   it("keeps transport failures actionable without exposing crypto diagnostics", async () => {
+    expect(VAULT_TRANSPORT_ERROR_MESSAGE).toBe("La bóveda no está disponible.");
     const repository: DatasetRepository = {
       load: vi
         .fn<DatasetRepository["load"]>()
@@ -441,6 +443,7 @@ describe("AppStore", () => {
   });
 
   it("blocks remote insecure contexts before repository access", async () => {
+    expect(INSECURE_CONTEXT_MESSAGE).toBe("No se puede abrir la bóveda en este contexto.");
     const repository: DatasetRepository = {
       load: vi.fn<DatasetRepository["load"]>(),
     };

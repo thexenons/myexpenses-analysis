@@ -14,11 +14,11 @@ export const APP_STORE_STORAGE_NAME = "myexpenses-analysis:ui:v1";
 export const APP_STORE_STORAGE_VERSION = 5;
 export const DEFAULT_APP_SCOPE: AnalyticsScope = "realCashFlow";
 export const VAULT_UNLOCK_ERROR_MESSAGE =
-  "No se pudo abrir la bóveda. Comprueba la frase e inténtalo de nuevo.";
+  "No se pudo abrir la bóveda.";
 export const VAULT_TRANSPORT_ERROR_MESSAGE =
-  "No se pudo descargar la bóveda cifrada. Comprueba la conexión y que el archivo esté publicado.";
+  "La bóveda no está disponible.";
 export const INSECURE_CONTEXT_MESSAGE =
-  "Esta bóveda necesita HTTPS para usar Web Crypto. Ábrela mediante HTTPS o desde localhost.";
+  "No se puede abrir la bóveda en este contexto.";
 
 const VALID_GRANULARITIES = new Set<TimeGranularitySetting>([
   "auto",

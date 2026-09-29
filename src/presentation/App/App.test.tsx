@@ -70,7 +70,7 @@ describe("App integration", () => {
     const { router } = renderAppAt();
 
     await waitForRouterReady(router, "/resumen");
-    expect(screen.getByRole("alert")).toHaveTextContent(/necesita HTTPS/);
+    expect(screen.getByRole("alert")).toHaveTextContent(INSECURE_CONTEXT_MESSAGE);
     expect(screen.getByRole("button", { name: "Abrir bóveda" })).toBeDisabled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -83,7 +83,7 @@ describe("App integration", () => {
     await waitForRouterReady(router, "/resumen");
     expect(fetchMock).not.toHaveBeenCalled();
     expect(
-      screen.getByRole("heading", { name: "Abrir el libro cifrado" }),
+      screen.getByRole("heading", { name: "Bóveda bloqueada" }),
     ).toBeVisible();
     await unlockApp(user);
     expect(
@@ -121,7 +121,7 @@ describe("App integration", () => {
 
     await user.click(screen.getByRole("button", { name: "Bloquear bóveda" }));
     expect(
-      await screen.findByRole("heading", { name: "Abrir el libro cifrado" }),
+      await screen.findByRole("heading", { name: "Bóveda bloqueada" }),
     ).toBeVisible();
     expect(screen.getByLabelText("Frase de desbloqueo")).toHaveFocus();
     expect(appStore.getState().analytics).toBeNull();
@@ -205,7 +205,7 @@ describe("App integration", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: "Abrir el libro cifrado",
+        name: "Bóveda bloqueada",
       }),
     ).toBeVisible();
     expect(await screen.findByRole("alert")).toHaveTextContent(

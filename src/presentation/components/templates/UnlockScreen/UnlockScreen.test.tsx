@@ -25,6 +25,9 @@ describe("UnlockScreen", () => {
     );
     const input = screen.getByLabelText("Frase de desbloqueo");
     expect(input).toHaveFocus();
+    expect(input).not.toHaveAccessibleDescription();
+    expect(screen.getByRole("heading", { name: "Bóveda bloqueada" })).toBeVisible();
+    expect(screen.queryByText(/bóveda estática|archivo financiero|cifrado autenticado|copias públicas|introduce la frase|no se persiste/iu)).not.toBeInTheDocument();
 
     await user.type(input, "frase secreta");
     await user.click(screen.getByRole("button", { name: "Abrir bóveda" }));
@@ -71,7 +74,8 @@ describe("UnlockScreen", () => {
 
     const input = screen.getByLabelText("Frase de desbloqueo");
     expect(input).not.toBeRequired();
-    expect(input).toHaveAccessibleDescription(/puedes dejarla vacía/iu);
+    expect(input).not.toHaveAccessibleDescription();
+    expect(screen.queryByText(/desarrollo local|puedes dejarla vacía/iu)).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Abrir bóveda" }));
     expect(onUnlock).toHaveBeenCalledWith("");
   });
@@ -80,7 +84,7 @@ describe("UnlockScreen", () => {
     const { rerender } = render(
       <UnlockScreen
         blockedReason={null}
-        error="No se pudo abrir la bóveda. Comprueba la frase e inténtalo de nuevo."
+        error="No se pudo abrir la bóveda."
         onUnlock={vi.fn<(passphrase: string) => Promise<void>>()}
         phase="error"
       />,
@@ -93,7 +97,7 @@ describe("UnlockScreen", () => {
       "true",
     );
     expect(screen.getByLabelText("Frase de desbloqueo")).toHaveAccessibleDescription(
-      expect.stringContaining("No se pudo abrir la bóveda"),
+      "No se pudo abrir la bóveda.",
     );
 
     rerender(
@@ -118,30 +122,32 @@ describe("UnlockScreen", () => {
     render(
       <UnlockScreen
         blockedReason={null}
-        error="No se pudo abrir la bóveda. Comprueba la frase e inténtalo de nuevo."
+        error="No se pudo abrir la bóveda."
         onReloadVault={onReloadVault}
         onUnlock={vi.fn<(passphrase: string) => Promise<void>>()}
         phase="error"
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Volver a descargar la bóveda" }));
+    await user.click(screen.getByRole("button", { name: "Reintentar" }));
     expect(onReloadVault).toHaveBeenCalledOnce();
   });
 
-  it("blocks submission in an insecure remote context with an HTTPS explanation", () => {
+  it("blocks submission in an insecure remote context without troubleshooting advice", () => {
     render(
       <UnlockScreen
-        blockedReason="Esta bóveda necesita HTTPS para usar Web Crypto."
+        blockedReason="No se puede abrir la bóveda en este contexto."
         error={null}
         onUnlock={vi.fn<(passphrase: string) => Promise<void>>()}
         phase="locked"
       />,
     );
 
-    expect(screen.getByRole("alert")).toHaveTextContent(/necesita HTTPS/);
+    expect(screen.getByRole("alert")).toHaveTextContent("No se puede abrir la bóveda en este contexto.");
+    expect(screen.getByRole("alert")).not.toHaveTextContent(/HTTPS|Web Crypto|localhost/iu);
     expect(screen.getByRole("button", { name: "Abrir bóveda" })).toBeDisabled();
     expect(screen.getByLabelText("Frase de desbloqueo")).toBeDisabled();
+    expect(screen.getByLabelText("Frase de desbloqueo")).not.toHaveAccessibleDescription();
   });
 
   it("has no detectable WCAG violations in locked and error states", async () => {
@@ -158,7 +164,7 @@ describe("UnlockScreen", () => {
     rerender(
       <UnlockScreen
         blockedReason={null}
-        error="No se pudo abrir la bóveda. Comprueba la frase e inténtalo de nuevo."
+        error="No se pudo abrir la bóveda."
         onUnlock={vi.fn<(passphrase: string) => Promise<void>>()}
         phase="error"
       />,

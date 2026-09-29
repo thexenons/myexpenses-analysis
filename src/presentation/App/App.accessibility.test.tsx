@@ -52,7 +52,7 @@ describe("App accessibility", () => {
     )
 
     expect(
-      await screen.findByRole("heading", { name: "Abrir el libro cifrado" }),
+      await screen.findByRole("heading", { name: "Bóveda bloqueada" }),
     ).toBeVisible()
     expect(await getAxeViolations(document)).toEqual([])
 
