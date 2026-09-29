@@ -71,7 +71,7 @@ private `.env`, backups or live services. Use only synthetic records and fixture
     harness for a budget mode regression if its fixture supports the scenario;
     do not confuse browser rendering checks with independent financial proof.
 
-- [ ] T2 — Explain negative expenses consistently without changing metrics.
+- [x] T2 — Explain negative expenses consistently without changing metrics.
   - Delegated direct: four view files plus their existing rendering tests exceed
     mapping/writer triggers. Reuse the bounded `negative_expense_copy` worker.
   - Correct Overview, CashFlow, Categories and InsightsPayees explanations:
@@ -81,8 +81,8 @@ private `.env`, backups or live services. Use only synthetic records and fixture
     four existing component tests; run full UI, type-check, lint and diff check.
     Rendered component regressions cover this text-only boundary; no new browser
     sweep is needed. Rollback: only the four strings and their test assertions.
-  - Commit on the feature branch, assess from the pending base above, follow
-    native review transitions, then integrate and push main as authorized.
+  - Commit on the feature branch, assess from the pending base above and follow
+    native review transitions. Main integration and remote delivery are explicit.
 
 ## Evidence and audit results
 
@@ -151,8 +151,22 @@ private `.env`, backups or live services. Use only synthetic records and fixture
   Eight source/test files contain 21 additions and 5 deletions; only four static
   Spanish explanations and matching visible-text assertions changed. No financial
   logic, fixtures, dependencies, styles or source data changed in T2.
+- T2 work-unit commit: `0da026f`, 81 authored lines including this record; running
+  authored total is 443. Native assessment of the pending slice found medium risk,
+  409 net changed lines, and `slice_budget_reached`. Exact returned STATUS and
+  START (`--consent=relay`) were executed. The user explicitly granted review
+  for lineage `review-7cef0cf154ee315f`, target
+  `sha256:75d69b63f4758522de3484be50200ff962166d021317786d12821f07b7f76371`.
+  The compiled Codex reliability reviewer inspected all 12 immutable patches,
+  returned no findings and approved the candidate. Exact native acknowledgement
+  succeeded; the reviewed boundary advances to `0da026f`. No independent test
+  execution was performed by that reviewer; functional proof is recorded above.
+  Local main was fast-forwarded to the reviewed commit. No source correction was
+  needed after review; this follow-up changes only the evidence record.
 
 ## Next step
 
-T2 implementation and functional checks passed; commit and native assessment are
-next, followed by integration and push. Engram mirror remains host-blocked.
+Implementation, verification and native review are complete. Delivery is the
+explicitly authorized push of main to origin, including this evidence-only
+follow-up after its native assessment. Verify local/remote main equality on
+delivery. Engram mirror remains host-blocked; unrelated dirty files stay excluded.
