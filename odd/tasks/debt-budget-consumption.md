@@ -45,6 +45,7 @@ private `.env`, backups or live services. Use only synthetic records and fixture
 - Delivery strategy: `ask-on-risk`; forecast approximately 375 authored changed
   lines including tests, contract documentation and this audit record. Measure
   before commit; resolve an over-budget delivery before committing if necessary.
+  Verified work unit: 349 authored lines; evidence-only follow-up stays under 400.
 - Rollback: debt budget contribution resolution, matching domain/UI regressions
   and contract/audit documentation. Unrelated financial calculations are untouched.
 - Engram mirror `odd/debt-budget-consumption/tasks` pending: host registration is
@@ -116,9 +117,15 @@ private `.env`, backups or live services. Use only synthetic records and fixture
   can yield -5 EUR with zero refunds. Clarify those labels without changing the
   signed metrics; seek scope approval rather than silently changing other views.
 - Implementation/tests/contract diff: 225 authored lines in three files.
-  Work-unit commit and native assessment pending; no remote operation performed.
+  Work-unit commit: `38fd456` (`fix(budgets): orient verified debt mirrors as
+  consumption`), 349 lines including this record. Native assessment against the
+  base above: medium (`executable_change`), not due (`under_budget`); no approval
+  receipt claimed. The same base applies to the evidence-only follow-up.
+- Local `main` was fast-forwarded to `38fd456` under the standing integration
+  preference. No push or other remote operation performed. Existing registry
+  edits and the earlier pCloud task update were preserved and excluded.
 
 ## Next step
 
-Commit and assess the verified budget fix, then report the four copy proposals
-and the remaining remote-delivery decision. Engram mirror remains unavailable.
+Budget fix and cross-mode audit are complete. Ask whether to implement the four
+copy proposals; remote delivery remains pending. Engram mirror is unavailable.
