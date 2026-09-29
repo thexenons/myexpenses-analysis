@@ -11,7 +11,7 @@
     color: var(--ink);
     background: transparent;
     border: 1px solid transparent;
-    border-radius: 999px;
+    border-radius: var(--radius-md);
     font-size: 0.78rem;
     font-weight: 750;
     letter-spacing: 0.015em;

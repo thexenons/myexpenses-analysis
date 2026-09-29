@@ -379,7 +379,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 0.85rem 1.35rem max(0.85rem, env(safe-area-inset-bottom));
-    background: rgb(255 253 248 / 95%);
+    background: var(--surface);
     border-top: 1px solid var(--line);
     box-shadow: 0 -0.75rem 2rem rgb(23 37 31 / 5%);
     backdrop-filter: blur(12px);

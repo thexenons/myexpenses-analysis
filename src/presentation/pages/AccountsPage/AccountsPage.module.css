@@ -30,6 +30,10 @@
   padding-top: 0.15rem;
 }
 
+.accountActions > details {
+  grid-column: 1 / -1;
+}
+
 .accountHeader {
   display: flex;
   gap: 0.8rem;

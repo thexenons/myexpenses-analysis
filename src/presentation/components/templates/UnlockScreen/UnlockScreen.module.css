@@ -27,6 +27,7 @@
 .vaultPanel {
   position: relative;
   display: grid;
+  overflow: hidden;
   align-content: center;
   justify-items: center;
   min-height: 100%;

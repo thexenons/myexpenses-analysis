@@ -37,7 +37,7 @@
     padding: 0.2rem;
     background: var(--paper-deep);
     border: 1px solid var(--line-dark);
-    border-radius: 999px;
+    border-radius: var(--radius-md);
   }
 
   .option {
@@ -64,7 +64,7 @@
     padding: 0.45rem 0.68rem;
     color: var(--muted);
     border: 1px solid transparent;
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     font-size: 0.7rem;
     font-weight: 760;
     line-height: 1.15;

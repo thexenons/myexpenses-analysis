@@ -107,6 +107,142 @@ test("preserves the component cascade across routes and drawer controls", async 
   await expect(drawerButton).toBeFocused();
 });
 
+test("keeps shared control geometry coherent without flattening semantic variants", async ({ page }, testInfo) => {
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  const period = toolbar.locator('[data-variant="compact"]');
+  const sharedRadius = await period.evaluate((element) => getComputedStyle(element).borderTopLeftRadius);
+  const expectSharedRadius = async (control: Locator) => {
+    expect.soft(await control.evaluate((element) => getComputedStyle(element).borderTopLeftRadius)).toBe(sharedRadius);
+  };
+  const expectCircle = async (control: Locator) => {
+    const shape = await control.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const radius = getComputedStyle(element).borderTopLeftRadius;
+      const pixels = Number.parseFloat(radius) * (radius.endsWith("%") ? box.width / 100 : 1);
+      return { radius: Math.min(pixels, box.width / 2, box.height / 2), width: box.width, height: box.height };
+    });
+    expect(shape.radius).toBeCloseTo(shape.width / 2, 0);
+    expect(shape.width).toBeCloseTo(shape.height, 0);
+  };
+  const scope = toolbar.getByRole("group", { name: "Ámbito de las estadísticas" });
+  const granularity = toolbar.getByRole("group", { name: "Granularidad de estadísticas y gráficas" });
+  await expectSharedRadius(scope.locator(":scope > div"));
+  await expectSharedRadius(granularity.locator(":scope > div"));
+  const search = toolbar.getByRole("searchbox");
+  if (await search.isVisible()) await expectSharedRadius(search.locator(".."));
+  const drawerButton = toolbar.getByRole("button", { name: /Abrir todos los filtros/ });
+  if (page.viewportSize()!.width <= 672) await expectCircle(drawerButton);
+  else await expectSharedRadius(drawerButton);
+  await drawerButton.click();
+  const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });
+  await expectSharedRadius(drawer.getByRole("button", { name: "Ver resultados", exact: true }));
+  await expectCircle(drawer.getByRole("button", { name: "Cerrar filtros", exact: true }));
+  const expandedModes = drawer.getByRole("group", { name: "Tipo de periodo" }).locator(":scope > div");
+  await expectSharedRadius(expandedModes);
+  const selectedInside = await expandedModes.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const radius = Math.min(Number.parseFloat(getComputedStyle(element).borderTopLeftRadius), box.width / 2, box.height / 2);
+    const selected = element.querySelector("input:checked + span")!;
+    const child = selected.getBoundingClientRect();
+    const childRadius = Math.min(Number.parseFloat(getComputedStyle(selected).borderTopLeftRadius), child.width / 2, child.height / 2);
+    const corners = [
+      [child.left + childRadius, child.top + childRadius, Math.PI],
+      [child.right - childRadius, child.top + childRadius, Math.PI * 1.5],
+      [child.right - childRadius, child.bottom - childRadius, 0],
+      [child.left + childRadius, child.bottom - childRadius, Math.PI / 2],
+    ];
+    return corners.every(([centerX, centerY, start]) => [0, Math.PI / 4, Math.PI / 2].every((angle) => {
+      const x = centerX! + Math.cos(start! + angle) * childRadius;
+      const y = centerY! + Math.sin(start! + angle) * childRadius;
+      const outerX = Math.max(box.left + radius, Math.min(x, box.right - radius));
+      const outerY = Math.max(box.top + radius, Math.min(y, box.bottom - radius));
+      return Math.hypot(x - outerX, y - outerY) <= radius + 0.5;
+    }));
+  });
+  expect.soft(selectedInside, "selected segments must remain inside the curved group when options wrap").toBe(true);
+  const footerSurface = await drawer.locator("footer").evaluate((element) => ({
+    footer: getComputedStyle(element).backgroundColor,
+    sheet: getComputedStyle(element.parentElement!).backgroundColor,
+  }));
+  expect.soft(footerSurface.footer).toBe(footerSurface.sheet);
+  const custom = expandedModes.locator('input[value="custom"]');
+  await custom.focus();
+  await page.keyboard.press("Space");
+  await expect(custom).toBeChecked();
+  const focus = await custom.evaluate((element) => {
+    const style = getComputedStyle(element.nextElementSibling!);
+    return { width: Number.parseFloat(style.outlineWidth), style: style.outlineStyle };
+  });
+  expect(focus.width).toBeGreaterThanOrEqual(2);
+  expect(focus.style).toBe("solid");
+  await drawer.screenshot({ path: testInfo.outputPath("shared-control-geometry.png"), animations: "disabled" });
+  const drawerSearch = drawer.getByRole("searchbox", { name: "Buscar en movimientos", exact: true });
+  await expectSharedRadius(drawerSearch.locator(".."));
+  await drawerSearch.fill("Cash");
+  const clear = drawer.getByRole("button", { name: "Limpiar búsqueda", exact: true });
+  await expectCircle(clear);
+  await clear.click();
+  await expect(drawerSearch).toHaveValue("");
+  await page.keyboard.press("Escape");
+  await expect(drawerButton).toBeFocused();
+  await expectNoDocumentOverflow(page);
+});
+
+// oxlint-disable no-await-in-loop -- Verify each responsive layout against the same expanded state.
+test("contains vault artwork without obstructing the unlock form", async ({ page }, testInfo) => {
+  await page.getByRole("button", { name: "Bloquear bóveda", exact: true }).click();
+  const viewport = page.viewportSize()!;
+  for (const width of viewport.width === 1280 ? [1280, 1024] : [viewport.width]) {
+    await page.setViewportSize({ ...viewport, width });
+    const escaped = await page.locator('main > section > div[aria-hidden="true"]').evaluate((panel) => {
+      const style = getComputedStyle(panel);
+      const ornament = getComputedStyle(panel, "::before");
+      const shadows = ornament.boxShadow.replace(/rgba?\([^)]+\)/g, "").split(",")
+        .map((shadow) => shadow.match(/-?[\d.]+px/g)?.map(Number.parseFloat) ?? [0, 0, 0, 0]);
+      return shadows.some(([x = 0, y = 0, blur = 0, spread = 0]) => {
+        const right = Number.parseFloat(ornament.left) + Number.parseFloat(ornament.width) + x + blur + spread;
+        const bottom = Number.parseFloat(ornament.top) + Number.parseFloat(ornament.height) + y + blur + spread;
+        return (right > panel.clientWidth && style.overflowX === "visible") ||
+          (bottom > panel.clientHeight && style.overflowY === "visible");
+      });
+    });
+    expect.soft(escaped, `vault decoration must not paint over the form at ${width}px`).toBe(false);
+    await expect(page.getByLabel("Frase de desbloqueo")).toBeVisible();
+    await expectNoDocumentOverflow(page);
+    await page.screenshot({ path: testInfo.outputPath(`${width}-contained-vault.png`), fullPage: true, animations: "disabled" });
+  }
+  await page.getByLabel("Frase de desbloqueo").fill(PASSPHRASE);
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Mostrar frase", exact: true })).toBeFocused();
+  await page.getByRole("button", { name: "Abrir bóveda", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Resumen general" })).toBeVisible();
+});
+
+test("keeps expanded account actions readable at every viewport", async ({ page }, testInfo) => {
+  await page.locator('a[href="/cuentas"]').click();
+  const card = page.getByRole("article").filter({ has: page.getByRole("heading", { name: "Cash", exact: true }) });
+  await card.getByText("Detalles de Cash", { exact: true }).click();
+  const viewport = page.viewportSize()!;
+  for (const width of viewport.width === 1280 ? [1280, 1024] : [viewport.width]) {
+    await page.setViewportSize({ ...viewport, width });
+    const clipped = await card.getByRole("button").evaluateAll((buttons) => buttons.filter((button) => {
+      const box = button.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(button);
+      return [...range.getClientRects()].some((text) => text.left < box.left - 1 || text.right > box.right + 1);
+    }).map((button) => button.textContent));
+    expect.soft(clipped, `expanded account labels at ${width}px`).toEqual([]);
+    const detailsWidth = await card.locator("details").evaluate((details) => ({
+      actual: details.getBoundingClientRect().width,
+      available: details.parentElement!.getBoundingClientRect().width,
+    }));
+    expect.soft(detailsWidth.actual).toBeCloseTo(detailsWidth.available, 0);
+    await expectNoDocumentOverflow(page);
+    await card.screenshot({ path: testInfo.outputPath(`${width}-expanded-account.png`), animations: "disabled" });
+  }
+});
+// oxlint-enable no-await-in-loop
+
 // oxlint-disable no-await-in-loop -- Resize and select each real control state in order.
 test("keeps period selector labels inside rounded borders in every mode", async ({ page }) => {
   const viewport = page.viewportSize()!;
