@@ -40,7 +40,7 @@ The user authorized implementation, commits and push to `main`. Preserve unrelat
 - RDD: on (global). Assess each committed work unit against the last reviewed
   boundary; follow native consent/transitions only when due. Initial base above.
 - Delivery strategy: `ask-on-risk`; revised forecast 320–390 authored lines including
-  tests and this record, no generated deliverables. Running committed count: 142.
+  tests and this record, no generated deliverables. Running authored count: 380.
 - Rollback: entry import/layer order and its regression (T1); shared-control CSS,
   drawer surface, vault-art containment, account-action layout and regressions
   (T2). No application logic or private data.
@@ -119,9 +119,15 @@ The user authorized implementation, commits and push to `main`. Preserve unrelat
 - Firefox/WebKit, physical devices and private datasets were not tested.
   Node/deployment suites were not rerun: changes are presentation CSS/import order
   and browser regressions; the existing harness builds only synthetic inputs.
-- T2 source/test diff: 152 authored lines across eight files. Work-unit commit,
-  final native assessment and main delivery pending.
+- T2 source/test diff: 152 authored lines across eight files. Work-unit commit:
+  `c2fb148` (`fix(ui): unify controls and contain responsive overflows`), 224 lines
+  including the task-record update. Native committed slice assessment: medium,
+  11 paths/334 net authored lines, not due (`under_budget`). No approval claimed.
+- Delivery verified: `main` fast-forwarded and pushed to configured `origin/main`
+  (`dbe738c..c2fb148`); local and remote-tracking refs matched. No force push, PR,
+  private data or unrelated working-tree edits included.
 
 ## Next step
 
-Commit and assess T2, then integrate into `main` and push the verified work units.
+Implementation is delivered. Engram mirroring remains pending host registration;
+do not invent an identity or retry agent-attributed memory calls meanwhile.
