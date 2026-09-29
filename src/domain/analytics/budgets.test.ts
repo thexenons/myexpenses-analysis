@@ -246,6 +246,180 @@ function analyticsFixture(): AnalyticsDataset {
   };
 }
 
+function debtAnalyticsFixture(): AnalyticsDataset {
+  const base = analyticsFixture();
+  const debtAccount = {
+    ...base.accounts[0]!,
+    id: "debt",
+    label: "Debt",
+    type: "DEBT" as const,
+  };
+  const shared = {
+    ...posting("shared", "2026-08-03", -500, ["Gastos", "Comida"]),
+    linked: true,
+    splitIndex: 1,
+    splitCount: 2,
+    transferPeerPostingId: "mirror",
+  };
+  const refund = {
+    ...posting("refund", "2026-08-04", 200, ["Gastos", "Comida"]),
+    linked: true,
+    transferPeerPostingId: "refund-mirror",
+  };
+  const debtPosting = (row: NormalizedPosting): NormalizedPosting => ({
+    ...row,
+    accountId: debtAccount.id,
+    accountLabel: debtAccount.label,
+    accountType: debtAccount.type,
+  });
+  return {
+    ...base,
+    accounts: [...base.accounts, debtAccount],
+    postings: [
+      { ...posting("own", "2026-08-03", -500, ["Gastos"]), splitIndex: 0, splitCount: 2 },
+      shared,
+      refund,
+      debtPosting({ ...shared, id: "mirror", amountEurMinor: 500, amountNativeMinor: 500, transferPeerPostingId: "shared" }),
+      debtPosting({ ...refund, id: "refund-mirror", amountEurMinor: -200, amountNativeMinor: -200, transferPeerPostingId: "refund" }),
+      debtPosting(posting("card", "2026-08-05", -1_000, ["Otros"])),
+      debtPosting(posting("card-refund", "2026-08-06", 100, ["Otros"])),
+    ],
+    backup: {
+      ...base.backup!,
+      accounts: [...base.backup!.accounts, {
+        ...base.backup!.accounts[0]!,
+        uuid: debtAccount.id,
+        label: debtAccount.label,
+        nativeType: "LIABILITY",
+        scope: "DEBT",
+      }],
+    },
+  };
+}
+
+describe("budget debt contributions", () => {
+  it.each([
+    ["debtsOnly", 1_200],
+    ["all", 1_400],
+    ["realCashFlow", 800],
+  ] as const)("reconciles mixed shared splits, direct charges and refunds in %s", (scope, consumedMinor) => {
+    const analytics = debtAnalyticsFixture();
+    const original = structuredClone(analytics);
+    const filtered = applyFilters(analytics, { ...createDefaultFilterState(), scope });
+    const result = analyzeBudgetPeriod(analytics, filtered, analytics.backup!.budgets[0]!);
+    if (result.status !== "ready") throw new Error(result.reason);
+    const { global, contributions, allocations, categorizedConsumedMinor, unallocatedConsumedMinor } = result.analysis;
+    expect(global.consumedMinor).toBe(consumedMinor);
+    expect(global.availableMinor).toBe(global.assignedMinor - consumedMinor);
+    expect(global.utilization).toBe(consumedMinor / global.assignedMinor);
+    expect(contributions.reduce((sum, entry) => sum + entry.amountMinor, 0)).toBe(consumedMinor);
+    expect(categorizedConsumedMinor + unallocatedConsumedMinor).toBe(consumedMinor);
+    for (const node of [allocations[0]!, ...allocations[0]!.children]) {
+      expect(budgetContributionsForPath(contributions, node.path).reduce((sum, entry) => sum + entry.amountMinor, 0))
+        .toBe(node.consumedMinor);
+    }
+    const expectedDebtAmounts = scope === "realCashFlow" ? [] : scope === "debtsOnly"
+      ? [["mirror", 500], ["refund-mirror", -200], ["card", 1_000], ["card-refund", -100]]
+      : [["mirror", -500], ["refund-mirror", 200], ["card", 1_000], ["card-refund", -100]];
+    expect(contributions.filter(({ posting: row }) => row.accountType === "DEBT")
+      .map(({ posting: row, amountMinor }) => [row.id, amountMinor])).toEqual(expectedDebtAmounts);
+    for (const entry of contributions) expect(entry.posting).toBe(analytics.postings.find((row) => row.id === entry.posting.id));
+    expect(analytics).toEqual(original);
+  });
+
+  it.each([
+    ["missing peer", "mirror", { transferPeerPostingId: "missing" }],
+    ["nonreciprocal peer", "shared", { transferPeerPostingId: "refund-mirror" }],
+    ["same signs", "shared", { amountNativeMinor: 500 }],
+    ["zero native amount", "shared", { amountNativeMinor: 0 }],
+    ["same account", "shared", { accountId: "debt", accountType: "DEBT" }],
+    ["missing account", "shared", { accountId: "missing" }],
+    ["VOID counterpart", "shared", { isVoid: true, status: "VOID" }],
+    ["debt counterpart", "shared", { accountId: "another-debt", accountType: "DEBT" }],
+  ] satisfies ReadonlyArray<readonly [string, string, Partial<NormalizedPosting>]>)("does not reinterpret a %s", (_, id, override) => {
+    const base = debtAnalyticsFixture();
+    const analytics: AnalyticsDataset = {
+      ...base,
+      accounts: [...base.accounts, { ...base.accounts[1]!, id: "another-debt" }],
+      postings: base.postings.map((row) => row.id === id ? Object.assign({}, row, override) : row),
+    };
+    const filtered = applyFilters(analytics, { ...createDefaultFilterState(), scope: "debtsOnly", accountIds: ["debt"] });
+    const result = analyzeBudgetPeriod(analytics, filtered, analytics.backup!.budgets[0]!);
+    if (result.status !== "ready") throw new Error(result.reason);
+    expect(result.analysis.contributions.find(({ posting: row }) => row.id === "mirror")?.amountMinor).toBe(-500);
+  });
+
+  it("verifies native signs even when the operational home amount rounds to zero", () => {
+    const base = debtAnalyticsFixture();
+    const analytics: AnalyticsDataset = {
+      ...base,
+      postings: base.postings.map((row) => row.id === "shared" ? Object.assign({}, row, { amountEurMinor: 0 }) : row),
+    };
+    const filtered = applyFilters(analytics, { ...createDefaultFilterState(), scope: "debtsOnly" });
+    const result = analyzeBudgetPeriod(analytics, filtered, analytics.backup!.budgets[0]!);
+    if (result.status !== "ready") throw new Error(result.reason);
+    expect(result.analysis.contributions.find(({ posting: row }) => row.id === "mirror")?.amountMinor).toBe(500);
+  });
+
+  it.each(["EUR", "GBP"] as const)("preserves selected-posting values and categories for a %s budget", (currency) => {
+    const base = debtAnalyticsFixture();
+    const analytics: AnalyticsDataset = {
+      ...base,
+      accounts: base.accounts.map((account) => account.type === "DEBT" ? Object.assign({}, account, { currency: "GBP" as const }) : account),
+      postings: base.postings.map((row) => row.accountType === "DEBT"
+        ? Object.assign({}, row, { currency: "GBP" as const, amountNativeMinor: row.amountEurMinor * 2 })
+        : Object.assign({}, row, { categoryPath: ["Otros"], amountEurMinor: row.amountEurMinor - 20 })),
+      backup: {
+        ...base.backup!,
+        accounts: base.backup!.accounts.map((account) => account.scope === "DEBT" ? Object.assign({}, account, { currency: "GBP" as const }) : account),
+        currencies: [...base.backup!.currencies, { sourceId: 2, code: "GBP", fractionDigits: 2, label: "Pound", symbol: "£", commodityType: "FIAT" }],
+      },
+    };
+    const budget = budgetFixture({ currency, accountUuid: "debt" });
+    const filtered = applyFilters(analytics, { ...createDefaultFilterState(), scope: "debtsOnly" });
+    // A home-currency budget spans accounts; an account budget uses that account's currency.
+    const result = analyzeBudgetPeriod(analytics, filtered, currency === "EUR" ? { ...budget, accountUuid: null } : budget);
+    if (result.status !== "ready") throw new Error(result.reason);
+    const mirror = result.analysis.contributions.find(({ posting: row }) => row.id === "mirror")!;
+    expect(mirror.amountMinor).toBe(currency === "EUR" ? 500 : 1_000);
+    expect(mirror.posting.categoryPath).toEqual(["Gastos", "Comida"]);
+    expect(result.analysis.global.consumedMinor).toBe(currency === "EUR" ? 1_200 : 2_400);
+  });
+
+  it.each([false, true])("retains uncategorized neutral inclusion with aggregateNeutral=%s", (aggregateNeutral) => {
+    const base = debtAnalyticsFixture();
+    const analytics: AnalyticsDataset = {
+      ...base,
+      postings: base.postings.map((row) => row.id === "mirror"
+        ? Object.assign({}, row, { categoryPath: [], categoryType: "NEUTRAL" as const, bucket: "income" as const })
+        : row),
+    };
+    const filtered = applyFilters(analytics, { ...createDefaultFilterState(), scope: "debtsOnly" });
+    const result = analyzeBudgetPeriod(analytics, filtered, budgetFixture({ aggregateNeutral }));
+    if (result.status !== "ready") throw new Error(result.reason);
+    const mirror = result.analysis.contributions.find(({ posting: row }) => row.id === "mirror");
+    expect(mirror).toEqual(aggregateNeutral
+      ? { amountMinor: 500, posting: analytics.postings.find((row) => row.id === "mirror") }
+      : undefined);
+    expect(result.analysis.unallocatedConsumedMinor).toBe(aggregateNeutral ? 1_400 : 900);
+  });
+
+  it("preserves missing limits and excludes VOID debt postings", () => {
+    const base = debtAnalyticsFixture();
+    const analytics: AnalyticsDataset = {
+      ...base,
+      postings: base.postings.map((row) => row.id === "refund-mirror" ? Object.assign({}, row, { isVoid: true, status: "VOID" as const }) : row),
+    };
+    const filtered = applyFilters(analytics, { ...createDefaultFilterState(), scope: "debtsOnly" });
+    const result = analyzeBudgetPeriod(analytics, filtered, budgetFixture({
+      allocations: [{ categoryUuid: null, year: 2026, period: 7, amountMinor: 0, rolloverPreviousMinor: 0, rolloverNextMinor: 0, oneTime: false }],
+    }));
+    if (result.status !== "ready") throw new Error(result.reason);
+    expect(result.analysis.global).toMatchObject({ consumedMinor: 1_400, assignedMinor: 0, utilization: null });
+    expect(result.analysis.contributions.some(({ posting: row }) => row.id === "refund-mirror")).toBe(false);
+  });
+});
+
 describe("budget periods", () => {
   it("treats MONTH second as zero-based and models every safe grouping", () => {
     const cases: Array<{

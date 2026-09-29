@@ -312,6 +312,17 @@ recuperación. Una devolución de Pareja registrada como transferencia reduce
 lo pendiente y aumenta «Recibido de deudas»; no borra el gasto histórico
 atribuido.
 
+En Presupuestos, «Solo deudas» orienta como consumo las contrapartidas de
+transferencias verificadas con cuentas propias; sus devoluciones lo reducen.
+Los cargos directos de deuda mantienen su tratamiento habitual. Este ajuste
+sólo cambia la contribución presupuestaria: conserva el apunte seleccionado,
+su categoría y su importe en la moneda del presupuesto, sin tomar el importe
+ni la categoría de la cuenta propia. Por ello no equivale necesariamente al
+gasto atribuido de Deudas cuando difieren las categorías o las conversiones.
+No cambia los ámbitos Real y Yo, los enlaces no verificados ni las reglas de
+inclusión de categorías neutrales. Los totales, categorías y detalles del
+presupuesto reutilizan las mismas contribuciones, sin alterar saldos contables.
+
 ### Consulta y representación
 
 Los rankings de barras ofrecen límites configurables y la opción de mostrar

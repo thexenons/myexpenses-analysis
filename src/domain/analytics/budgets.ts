@@ -15,6 +15,7 @@ import type {
 } from "./types.ts";
 import { monthPeriodForLabel } from "./periods.ts";
 import { postingDate } from "./filters.ts";
+import { resolvePostingAccounts } from "./transfer-relations.ts";
 
 export type BudgetHealth = "on-track" | "watch" | "exceeded" | "unallocated";
 export type BudgetAllocationSource = "EXACT" | "FALLBACK" | "NONE";
@@ -673,26 +674,38 @@ function ensureAllocationNode(
   return current!;
 }
 
-function postingSpend(posting: NormalizedPosting, scope: BudgetScope): number {
-  return -postingAmountForBudget(posting, scope);
+function postingSpend(
+  posting: NormalizedPosting,
+  scope: BudgetScope,
+  filtered: FilteredAnalyticsDataset,
+): number {
+  const amount = postingAmountForBudget(posting, scope);
+  if (filtered.filters.scope === "debtsOnly" && posting.accountType === "DEBT") {
+    const { peer, originAccount, destinationAccount } = resolvePostingAccounts(posting, filtered.source);
+    if (peer?.accountType === "DEFAULT" && !peer.isVoid && originAccount !== undefined && destinationAccount !== undefined) {
+      // Orient a verified mirror as consumption, preserving its own budget-currency
+      // amount and category. Direct debt charges/refunds keep the usual convention.
+      return amount;
+    }
+  }
+  return -amount;
 }
 
 function spentForPath(
-  postings: readonly NormalizedPosting[],
+  contributions: readonly BudgetContribution[],
   path: readonly string[],
-  scope: BudgetScope,
   exact: boolean,
 ): { consumedMinor: number; postingCount: number } {
   let consumedMinor = 0;
   let postingCount = 0;
-  for (const posting of postings) {
+  for (const { posting, amountMinor } of contributions) {
     const matches = exact
       ? pathKey(posting.categoryPath) === pathKey(path)
       : pathsStartWith(posting.categoryPath, path);
     if (!matches) continue;
     consumedMinor = addMinor(
       consumedMinor,
-      postingSpend(posting, scope),
+      amountMinor,
       `Budget category ${path.join(" > ")}`,
     );
     postingCount += 1;
@@ -702,12 +715,11 @@ function spentForPath(
 
 function finalizeAllocationNode(
   mutable: MutableAllocationNode,
-  postings: readonly NormalizedPosting[],
-  scope: BudgetScope,
+  contributions: readonly BudgetContribution[],
   depth: number,
 ): BudgetAllocationNode {
   const children = [...mutable.children.values()]
-    .map((child) => finalizeAllocationNode(child, postings, scope, depth + 1))
+    .map((child) => finalizeAllocationNode(child, contributions, depth + 1))
     .sort((left, right) => left.name.localeCompare(right.name, "es"));
   const childAssignedMinor = sumMinor(
     children.map((child) => child.assignedMinor),
@@ -731,15 +743,13 @@ function finalizeAllocationNode(
       `Next child rollovers for ${mutable.category.uuid}`,
     );
   const consumed = spentForPath(
-    postings,
+    contributions,
     mutable.category.path,
-    scope,
     false,
   );
   const directConsumed = spentForPath(
-    postings,
+    contributions,
     mutable.category.path,
-    scope,
     true,
   );
   return {
@@ -843,10 +853,10 @@ export function analyzeBudgetPeriod(
   );
   const contributions = postings.map((posting) => ({
     posting,
-    amountMinor: postingSpend(posting, scope),
+    amountMinor: postingSpend(posting, scope, filtered),
   }));
   const allocationNodes = [...roots.values()]
-    .map((node) => finalizeAllocationNode(node, postings, scope, 0))
+    .map((node) => finalizeAllocationNode(node, contributions, 0))
     .sort((left, right) => left.name.localeCompare(right.name, "es"));
   const globalResolved = resolveBudgetAllocation(globalAllocations, period);
   const exactAllocations = budget.allocations.filter((allocation) =>
