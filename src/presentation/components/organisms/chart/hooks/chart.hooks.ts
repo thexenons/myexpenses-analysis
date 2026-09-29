@@ -72,8 +72,9 @@ export function useSeriesChartModel(
   series: ReadonlyArray<ChartSeries>,
   width = CHART_WIDTH,
   formatter?: Intl.NumberFormat | ValueFormatter,
+  labelFormatter?: (label: string) => string,
 ): SeriesChartModel {
-  return useMemo(() => buildSeriesChartModel(series, width, formatter), [series, width, formatter])
+  return useMemo(() => buildSeriesChartModel(series, width, formatter, labelFormatter), [series, width, formatter, labelFormatter])
 }
 
 export function useHorizontalBarChartModel(

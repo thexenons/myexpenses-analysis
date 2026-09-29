@@ -5,6 +5,35 @@ import { describe, expect, it } from "vitest";
 import { SeriesChart } from "./SeriesChart.tsx";
 
 describe("SeriesChart", () => {
+  it("matches an overflowing SVG's physical and logical width without shrinking exact labels", () => {
+    const label = "1".repeat(150);
+    render(<SeriesChart formatValue={() => label} series={[{ id: "flow", label: "Flow", data: [{ label: "January", value: 1 }] }]} title="Wide exact labels" variant="line" />);
+    const region = screen.getByRole("region", { name: "Gráfico desplazable: Wide exact labels" });
+    const chart = screen.getByRole("img", { name: "Wide exact labels" });
+    const width = Number(chart.getAttribute("viewBox")!.split(" ")[2]);
+    expect(width).toBeGreaterThan(1000);
+    expect(chart).toHaveStyle({ minWidth: `${width}px` });
+    expect(chart.parentElement).toBe(region);
+    expect(chart.querySelector("text")!.textContent).toBe(label);
+  });
+
+  it("uses formatted period text when pruning overlapping axis labels", () => {
+    const props = {
+      formatValue: () => "1".repeat(150),
+      series: [{ id: "flow", label: "Flow", data: [
+        { label: "2026-W01", value: -1 }, { label: "2026-W02", value: 0 }, { label: "2026-W03", value: 1 },
+      ] }],
+      title: "Narrow weekly plot",
+      variant: "line" as const,
+    };
+    const { rerender } = render(<SeriesChart {...props} />);
+    const chart = screen.getByRole("img", { name: props.title });
+    expect(chart.querySelectorAll("text[class*='xAxisLabel']")).toHaveLength(1);
+    rerender(<SeriesChart {...props} formatLabel={(label) => label.slice(-2)} />);
+    expect(chart.querySelectorAll("text[class*='xAxisLabel']")).toHaveLength(3);
+    expect(chart.querySelectorAll("circle")).toHaveLength(3);
+  });
+
   it("toggles series by keyboard and can recover after hiding every series", async () => {
     const user = userEvent.setup();
     render(<SeriesChart

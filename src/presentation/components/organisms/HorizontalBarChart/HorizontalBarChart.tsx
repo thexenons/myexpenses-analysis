@@ -49,6 +49,7 @@ export function HorizontalBarChart({
   const {
     bars,
     chartHeight,
+    chartWidth: renderWidth,
     plotBottom,
     plotLeft,
     plotRight,
@@ -111,6 +112,7 @@ export function HorizontalBarChart({
         </div>
       ) : undefined}
       ref={setChartElement}
+      scrollable={renderWidth > chartWidth}
       title={title}
     >
       <svg
@@ -120,7 +122,8 @@ export function HorizontalBarChart({
         preserveAspectRatio="xMidYMid meet"
         onPointerLeave={() => inspectorRef.current?.scheduleDismiss()}
         role="img"
-        viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+        style={renderWidth > chartWidth ? { minWidth: renderWidth } : undefined}
+        viewBox={`0 0 ${renderWidth} ${chartHeight}`}
       >
         <title id={titleId}>{title}</title>
         <desc id={descriptionId}>{chartDescription(description, title)}</desc>

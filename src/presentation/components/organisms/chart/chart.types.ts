@@ -57,6 +57,7 @@ export interface PlottedSeries {
 }
 
 export interface SeriesChartModel {
+  chartWidth: number
   empty: boolean
   labels: ReadonlyArray<string>
   legendItems: ReadonlyArray<ChartLegendItem>
@@ -81,6 +82,7 @@ export interface HorizontalBarModelItem {
 export interface HorizontalBarChartModel {
   bars: ReadonlyArray<HorizontalBarModelItem>
   chartHeight: number
+  chartWidth: number
   plotBottom: number
   plotLeft: number
   plotRight: number

@@ -3,6 +3,54 @@ import { describe, expect, it } from "vitest"
 import { buildDivergingBarChartModel, buildHorizontalBarChartModel, buildSeriesChartModel, compactChartLabel, getSeriesPaths, visibleValueTicks } from "./chart.helpers"
 
 describe("buildSeriesChartModel", () => {
+  it.each([27, 80])("retains useful series geometry with %i-character exact labels", (length) => {
+    const formatter = () => "1".repeat(length);
+    const model = buildSeriesChartModel([{ id: "flow", label: "Flow", data: [
+      { label: "January", value: -1 }, { label: "February", value: 1 },
+    ] }], 220, formatter);
+    expect(model.plotRight - model.plotLeft).toBeGreaterThanOrEqual(96);
+    expect(model.chartWidth).toBeGreaterThan(220);
+    expect(model.plotLeft - 14).toBeGreaterThanOrEqual(length * 7 + 8);
+    expect(model.plottedSeries[0]!.coordinates[1]!.x).toBeGreaterThan(model.plottedSeries[0]!.coordinates[0]!.x);
+  });
+
+  it.each([220, 600])("preserves bar space and the original compact mode at %i pixels", (width) => {
+    const model = buildHorizontalBarChartModel([{ id: "expense", label: "Expense", value: -1 }], width, () => "1".repeat(80));
+    expect(model.plotRight - model.plotLeft).toBeGreaterThanOrEqual(width < 600 ? 80 * 7 + 14 + 33 : 96);
+    expect(model.chartWidth).toBeGreaterThan(width);
+    expect(model.plotLeft).toBe(width < 600 ? 18 : 230);
+    expect(model.bars[0]!.barWidth).toBeGreaterThan(0);
+  });
+
+  it("keeps a useful plot for EUR amounts within the supported safe-minor range", () => {
+    const formatter = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
+    const value = Number.MAX_SAFE_INTEGER / 100;
+    const model = buildSeriesChartModel([{ id: "balance", label: "Balance", data: [
+      { label: "January", value }, { label: "February", value: -value },
+    ] }], 220, formatter);
+    expect(model.plotRight - model.plotLeft).toBeGreaterThanOrEqual(96);
+    expect(model.chartWidth).toBeGreaterThan(220);
+  });
+
+  it("fits weekly axis labels to the remaining plot instead of the whole canvas", () => {
+    const series = [{ id: "flow", label: "Flow", data: [
+      { label: "2026-W01", value: -1 }, { label: "2026-W02", value: 0 }, { label: "2026-W03", value: 1 },
+    ] }];
+    const model = buildSeriesChartModel(series, 220, () => "1".repeat(27));
+    expect([...model.visibleLabels]).toEqual([0]);
+    expect(model.labels).toEqual(["2026-W01", "2026-W02", "2026-W03"]);
+    const abbreviated = buildSeriesChartModel(series, 220, () => "1".repeat(27), (label) => label.slice(-2));
+    expect([...abbreviated.visibleLabels]).toEqual([0, 1, 2]);
+  });
+
+  it.each([262, 1000])("keeps ordinary and million-EUR charts at their available %i-pixel width", (width) => {
+    const formatter = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
+    const series = buildSeriesChartModel([{ id: "flow", label: "Flow", data: [{ label: "January", value: -20_000_000 }] }], width, formatter);
+    const bars = buildHorizontalBarChartModel([{ id: "expense", label: "Expense", value: -20_000_000 }], width, formatter);
+    expect(series.chartWidth).toBe(width);
+    expect(bars.chartWidth).toBe(width);
+  });
+
   it.each([220, 280, 1000])("reserves complete signed currency ticks at %i pixels", (width) => {
     const formatter = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
     const model = buildSeriesChartModel([{ id: "flow", label: "Flow", data: [

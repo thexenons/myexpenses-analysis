@@ -1,3 +1,4 @@
+/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- Only overflowing chart regions receive a keyboard entry for panning. */
 import { cx } from "../../../utils/component.helpers.ts";
 import styles from "../chart/chart.module.css";
 import type { ChartFrameProps } from "./ChartFrame.types.ts";
@@ -11,6 +12,7 @@ export function ChartFrame({
   emptyMessage,
   legend,
   ref,
+  scrollable = false,
   title,
 }: ChartFrameProps) {
   return (
@@ -26,7 +28,11 @@ export function ChartFrame({
         <p className={styles.empty}>{emptyMessage}</p>
       ) : (
         <>
-          <div className={styles.canvas}>{children}</div>
+          <section
+            aria-label={scrollable ? `Gráfico desplazable: ${title}` : undefined}
+            className={styles.canvas}
+            tabIndex={scrollable ? 0 : undefined}
+          >{children}</section>
           {dataTable}
         </>
       )}

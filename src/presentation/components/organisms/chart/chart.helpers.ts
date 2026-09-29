@@ -12,6 +12,7 @@ import type {
 import { formatNumber, type ValueFormatter } from "../../../utils/component.helpers.ts"
 
 export const CHART_WIDTH = 1_000
+const MIN_PLOT_WIDTH = 96
 export const SERIES_CHART_HEIGHT = 360
 const SERIES_MARGIN = {
   top: 20,
@@ -160,6 +161,28 @@ function selectedLabelIndexes(
   return indexes
 }
 
+function fittingSeriesLabelIndexes(
+  labels: readonly string[],
+  candidates: ReadonlySet<number>,
+  plotLeft: number,
+  plotRight: number,
+  formatLabel: (label: string) => string,
+): ReadonlySet<number> {
+  const selected = new Map<number, { left: number; right: number }>();
+  for (const index of [0, labels.length - 1, ...candidates]) {
+    const label = labels[index];
+    if (label === undefined || selected.has(index)) continue;
+    const x = labels.length === 1 ? (plotLeft + plotRight) / 2 : scaleLinear(index, 0, labels.length - 1, plotLeft, plotRight);
+    const width = chartTextWidth(formatLabel(label));
+    const left = index === 0 ? x : index === labels.length - 1 ? x - width : x - width / 2;
+    const right = left + width;
+    if ([...selected.values()].every((other) => right + 8 <= other.left || left >= other.right + 8)) {
+      selected.set(index, { left, right });
+    }
+  }
+  return new Set([...candidates].filter((index) => selected.has(index)));
+}
+
 export function chartColorStyle(
   property: string,
   color: string | undefined,
@@ -179,6 +202,7 @@ export function buildSeriesChartModel(
   series: ReadonlyArray<ChartSeries>,
   width = CHART_WIDTH,
   formatter?: Intl.NumberFormat | ValueFormatter,
+  labelFormatter: (label: string) => string = identityLabel,
 ): SeriesChartModel {
   const labels: string[] = []
   const labelSet = new Set<string>()
@@ -204,7 +228,9 @@ export function buildSeriesChartModel(
 
   const scale = createScale(values)
   const plotLeft = Math.max(width < 600 ? 80 : SERIES_MARGIN.left, maximumValueWidth(scale.ticks, formatter) + 22)
-  const plotRight = width - (width < 600 ? 14 : SERIES_MARGIN.right)
+  const rightMargin = width < 600 ? 14 : SERIES_MARGIN.right
+  const chartWidth = Math.max(width, plotLeft + MIN_PLOT_WIDTH + rightMargin)
+  const plotRight = chartWidth - rightMargin
   const plotTop = SERIES_MARGIN.top
   const plotBottom = SERIES_CHART_HEIGHT - SERIES_MARGIN.bottom
   const zeroY = scaleLinear(0, scale.min, scale.max, plotBottom, plotTop)
@@ -225,6 +251,7 @@ export function buildSeriesChartModel(
   })
 
   return {
+    chartWidth,
     empty: values.length === 0 || labels.length === 0,
     labels,
     legendItems: series.map((item) => ({
@@ -238,7 +265,7 @@ export function buildSeriesChartModel(
     plotTop,
     plottedSeries,
     scale,
-    visibleLabels: selectedLabelIndexes(labels.length, width < 400 ? 3 : width < 600 ? 5 : 7),
+    visibleLabels: fittingSeriesLabelIndexes(labels, selectedLabelIndexes(labels.length, width < 400 ? 3 : width < 600 ? 5 : 7), plotLeft, plotRight, labelFormatter),
     zeroY,
   }
 }
@@ -274,7 +301,12 @@ export function buildHorizontalBarChartModel(
     BAR_MARGIN.top + BAR_MARGIN.bottom + validData.length * rowHeight,
   )
   const plotLeft = compact ? 18 : BAR_MARGIN.left
-  const plotRight = width - (compact ? 18 : Math.max(BAR_MARGIN.right, maximumValueWidth(validData.map((datum) => datum.value), formatter) + 18))
+  const valueWidth = maximumValueWidth(validData.map((datum) => datum.value), formatter)
+  const rightMargin = compact ? 18 : Math.max(BAR_MARGIN.right, valueWidth + 18)
+  // Compact rows also need a gap and at least three 11px category-label glyphs.
+  const minimumPlotWidth = compact ? Math.max(MIN_PLOT_WIDTH, valueWidth + 14 + 33) : MIN_PLOT_WIDTH
+  const chartWidth = Math.max(width, plotLeft + minimumPlotWidth + rightMargin)
+  const plotRight = chartWidth - rightMargin
   const plotBottom = chartHeight - BAR_MARGIN.bottom
   const zeroX = scaleLinear(0, scale.min, scale.max, plotLeft, plotRight)
 
@@ -298,6 +330,7 @@ export function buildHorizontalBarChartModel(
       }
     }),
     chartHeight,
+    chartWidth,
     plotBottom,
     plotLeft,
     plotRight,

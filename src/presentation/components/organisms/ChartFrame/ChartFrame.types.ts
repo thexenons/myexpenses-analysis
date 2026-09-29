@@ -9,5 +9,6 @@ export interface ChartFrameProps {
   readonly emptyMessage: ReactNode;
   readonly legend?: ReactNode;
   readonly ref?: Ref<HTMLElement>;
+  readonly scrollable?: boolean;
   readonly title: string;
 }

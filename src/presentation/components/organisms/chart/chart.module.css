@@ -35,6 +35,11 @@
   overscroll-behavior-inline: contain;
 }
 
+.canvas:focus-visible {
+  outline: 3px solid var(--accent-ink, #22330e);
+  outline-offset: -3px;
+}
+
 .svg {
   display: block;
   width: 100%;

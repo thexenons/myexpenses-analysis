@@ -60,6 +60,7 @@ export function SeriesChart({
   const inspectorRef = useRef<ChartInspectorHandle>(null);
   const { coloredSeries, hiddenSeriesIds, onToggleSeries, visibleSeries } = useChartSeriesVisibility(series);
   const {
+    chartWidth: renderWidth,
     empty,
     labels,
     plotBottom,
@@ -70,7 +71,7 @@ export function SeriesChart({
     scale,
     visibleLabels,
     zeroY,
-  } = useSeriesChartModel(visibleSeries, chartWidth, formatValue);
+  } = useSeriesChartModel(visibleSeries, chartWidth, formatValue, formatLabel);
   const createDataTableRows = useCallback(() => {
     const valuesBySeriesAndLabel = visibleSeries.map((item) => {
       const valuesByLabel = new Map<string, number | null>();
@@ -134,6 +135,7 @@ export function SeriesChart({
       emptyMessage={visibleSeries.length === 0 && series.length > 0 ? "Todas las series están ocultas. Activa una en la leyenda." : emptyMessage}
       legend={<ChartLegend hiddenItemIds={hiddenSeriesIds} items={coloredSeries} onToggleItem={onToggleSeries} />}
       ref={setChartElement}
+      scrollable={renderWidth > chartWidth}
       title={title}
     >
       <svg
@@ -143,7 +145,8 @@ export function SeriesChart({
         preserveAspectRatio="xMidYMid meet"
         onPointerLeave={() => inspectorRef.current?.scheduleDismiss()}
         role="img"
-        viewBox={`0 0 ${chartWidth} ${SERIES_CHART_HEIGHT}`}
+        style={renderWidth > chartWidth ? { minWidth: renderWidth } : undefined}
+        viewBox={`0 0 ${renderWidth} ${SERIES_CHART_HEIGHT}`}
       >
         <title id={titleId}>{title}</title>
         <desc id={descriptionId}>{chartDescription(description, title)}</desc>

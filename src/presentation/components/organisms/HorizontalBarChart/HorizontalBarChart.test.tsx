@@ -5,6 +5,18 @@ import { describe, expect, it, vi } from "vitest";
 import { HorizontalBarChart } from "./HorizontalBarChart.tsx";
 
 describe("HorizontalBarChart", () => {
+  it("contains an expanded SVG when exact bar amounts exhaust the available width", () => {
+    const label = "1".repeat(150);
+    render(<HorizontalBarChart data={[{ id: "expense", label: "Expense", value: -1 }]} formatValue={() => label} title="Wide exact amounts" />);
+    const region = screen.getByRole("region", { name: "Gráfico desplazable: Wide exact amounts" });
+    const chart = screen.getByRole("img", { name: "Wide exact amounts" });
+    const width = Number(chart.getAttribute("viewBox")!.split(" ")[2]);
+    expect(width).toBeGreaterThan(1000);
+    expect(chart).toHaveStyle({ minWidth: `${width}px` });
+    expect(chart.parentElement).toBe(region);
+    expect(chart.querySelector("text[class*='barValue']")!.textContent).toBe(label);
+  });
+
   it("keeps shortened category glyphs within the reserved label column", () => {
     render(<HorizontalBarChart
       data={[{ id: "account", label: "Household daily operational account with distinguishing suffix ALPHA12345678901234567890", value: 10 }]}

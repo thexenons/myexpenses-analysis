@@ -52,7 +52,7 @@ Preserve unrelated dirty `.atl` registry files and `odd/tasks/pcloud-cli-env.md`
   - Translate normalized reconciliation status in budget contribution detail;
     preserve the current status choice, amounts and source-data contract.
   - Rollback: these presentation changes and their regression assertions only.
-- [ ] T3 — Keep mobile filter actions and chart amounts visible.
+- [x] T3 — Keep mobile filter actions and chart amounts visible.
   - Delegated writer: `responsive_component_audit`; shared geometry/CSS plus
     tests are multiple non-trivial files. Verify failing bounds before the fix.
   - Long selected-category chips wrap inside the filter sheet and retain an
@@ -64,6 +64,22 @@ Preserve unrelated dirty `.atl` registry files and `odd/tasks/pcloud-cli-env.md`
     full Node/UI, types, lint and diff checks. Inspect screenshots after the fix.
   - Rollback: chart layout/filter-chip styles and matching regressions only.
   - Commit work units and follow native review; integrate/push main as requested.
+- [ ] T4 — Preserve a useful plot when exact labels exhaust the canvas width.
+  - Separate bounded follow-up to informational review finding R3-plot-width;
+    the acknowledged T2/T3 approval stands and is not reopened.
+  - Delegated writer `responsive_component_audit`: width 220 / 27-character tick
+    yields reversed series geometry; supported extreme EUR values leave only 9px.
+  - Grow logical/physical SVG width only when labels would consume the useful
+    plot. Preserve exact text/font size in the existing contained scroll canvas,
+    with a named keyboard entry for overflow. Normal-sized charts stay unchanged.
+  - TDD RED/GREEN for extreme labels, useful positive plot span, non-overflow
+    geometry and keyboard scrolling; verify actual rendered bounds and rerun
+    applicable full checks. No compact-value substitution or accounting changes.
+  - Extreme-width rendering also exposed overlapping weekly X-axis candidates;
+    prune only candidates whose formatted glyph bounds overlap, preserving all
+    data points and complete table/inspector periods. Keep this with T4.
+  - Forecast an additional 140–220 authored lines; rollback only this explicit
+    extreme-width fallback and its regressions, not the verified T2/T3 fixes.
 
 ## Evidence and progress
 
@@ -131,9 +147,48 @@ Preserve unrelated dirty `.atl` registry files and `odd/tasks/pcloud-cli-env.md`
   `/tmp/myexpenses-browser-source-gIWFg6` and `/tmp/myexpenses-browser-source-a1Jak1`.
 - The 320px filter-label diagnostic is intentional visually-hidden text with a
   complete accessible button name and visible icon/count, not lost UI content.
-  Standard isolated browser suite is still running; do not claim its result yet.
+  Standard isolated browser suite passed 78 tests, with 3 intentional device-specific
+  skips (desktop touch/mobile hover). Eighteen real 320px Patrones viewports also
+  confirm deferred panels and controls; evidence index:
+  `/tmp/myexpenses-ui-matrix-audit/evidence-index.md`.
+- T3 commit `3c9f955`: 224 authored lines; running total 519. Native pending slice
+  assessed medium/409 lines, `slice_budget_reached`. The user's explicit current
+  request for review and autonomous completion authorized this review without
+  another question; native mode was not changed. Reliability review approved,
+  exact acknowledgement consumed lineage `review-bb81c702b339d7cb`; next boundary
+  is `3c9f955`. Reviewer inspected immutable patches, not test execution.
+- Native advisory R3-plot-width is non-blocking and does not reopen that review.
+  Read-only reproduction confirmed its extreme-width boundary; accepted as T4
+  under the user's confident-fixes scope. All previously tested matrices pass.
+- T4 first iteration: nine expected unit failures before production; 42 focused
+  tests/types/lint passed after the width fallback. Parent full UI 346 passed,
+  Node 281 passed/three optional skips; those results precede the final axis-label
+  spacing edit and will be superseded by the delivery checks.
+- Rendered extreme source amounts remain safe minor integers. At 320px, the old
+  plot had only 58–65px; the fallback supplies 96px within a named overflow canvas.
+  Numeric glyphs, ArrowRight, native horizontal touch pan (31–38px) and vertical
+  page scrolling passed across 36 route/mode/device cases. Label-density follow-up
+  RED: all 12 narrow cases expose overlapping weekly labels while numeric/pan
+  assertions remain green. Do not treat that intermediate render as final success.
+  Evidence: `/tmp/myexpenses-ui-extreme-audit/`.
+- A queued intermediate standard-browser run was deliberately stopped after
+  20 passes/one device-specific skip once the label overlap was found. It is not
+  final verification; rerun the full suite after the bounded spacing correction.
+- T4 final source is stable: 12 files, 162 additions/8 deletions. Eleven expected
+  unit failures observed across width and spacing RED steps; final 44 focused
+  tests, types and lint passed (`/tmp/responsive-plot-*.log`).
+- Parent delivery checks after the spacing fix: 348/348 UI tests in 82 files,
+  281 Node passes/three optional-data skips, types/lint/diff checks passed.
+  Logs: `/tmp/interface-audit-{node,ui,types,lint}-delivery-final.log`.
+- Final extreme browser pass: 36 route/mode/device cases, three tests passed in
+  28.5 seconds, now including temporal-label intersections and real keyboard/
+  horizontal-touch/vertical-page panning. Final stress matrix also passed all
+  81 cases (three tests, 1.1 minutes). Ordinary matrix and standard suite remain
+  in progress; source is frozen for their final run.
+  Logs: `/tmp/myexpenses-ui-extreme-audit/green-final.log` and
+  `/tmp/myexpenses-ui-stress-audit/run-t4-verified.log`.
 
 ## Next step
 
-Finish the standard browser suite and native committed-candidate review, then
-record final evidence and deliver to main. Keep uncertain findings unchanged.
+Complete T4 as a separate work unit, verify its fallback and ordinary layouts,
+then record final evidence and deliver to main. No further product changes.
