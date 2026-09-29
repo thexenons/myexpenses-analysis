@@ -57,6 +57,86 @@ test.afterEach(async ({ page }) => {
   expect(outboundByPage.get(page)).toEqual([]);
 });
 
+// oxlint-disable no-await-in-loop -- Resize and select each real control state in order.
+test("keeps period selector labels inside rounded borders in every mode", async ({ page }) => {
+  const viewport = page.viewportSize()!;
+  const widths = viewport.width === 1280 ? [1280, 1024] : [viewport.width];
+  const selector = page.getByRole("region", { name: "Filtros globales" }).locator('[data-variant="compact"]');
+  for (const width of widths) {
+    await page.setViewportSize({ ...viewport, width });
+    for (const mode of ["all", "day", "week", "month", "year", "custom"]) {
+      await selector.getByRole("combobox", { name: "Tipo de periodo" }).selectOption(mode);
+      const outside = await selector.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const radius = Math.min(Number.parseFloat(getComputedStyle(element).borderTopLeftRadius), box.width / 2, box.height / 2);
+        const contains = (x: number, y: number) => {
+          if (x < box.left || x > box.right || y < box.top || y > box.bottom) return false;
+          const centerX = Math.max(box.left + radius, Math.min(x, box.right - radius));
+          const centerY = Math.max(box.top + radius, Math.min(y, box.bottom - radius));
+          return Math.hypot(x - centerX, y - centerY) <= radius + 0.5;
+        };
+        return [...element.querySelectorAll("label > span")].filter((label) => {
+          const range = document.createRange();
+          range.selectNodeContents(label);
+          return [...range.getClientRects()].some((text) =>
+            !contains(text.left, text.top) || !contains(text.right, text.top) ||
+            !contains(text.left, text.bottom) || !contains(text.right, text.bottom));
+        }).map((label) => label.textContent);
+      });
+      expect.soft(outside, `${mode} labels at ${width}px must fit the curved border`).toEqual([]);
+      await expectNoDocumentOverflow(page);
+    }
+  }
+});
+
+test("keeps period selector values readable and keyboard focus visible", async ({ page }, testInfo) => {
+  const viewport = page.viewportSize()!;
+  const widths = viewport.width === 1280 ? [1280, 1024] : [viewport.width];
+  const selector = page.getByRole("region", { name: "Filtros globales" }).locator('[data-variant="compact"]');
+  for (const width of widths) {
+    await page.setViewportSize({ ...viewport, width });
+    for (const mode of ["all", "day", "week", "month", "year", "custom"]) {
+      const modeControl = selector.getByRole("combobox", { name: "Tipo de periodo" });
+      await modeControl.selectOption(mode);
+      const sizes = await selector.locator("input, select").evaluateAll((controls) => controls.map((control) => {
+        const clone = control.cloneNode(true) as HTMLElement;
+        clone.removeAttribute("id");
+        clone.setAttribute("aria-hidden", "true");
+        clone.style.cssText = "position:absolute;visibility:hidden;width:max-content;min-width:0;max-width:none";
+        control.parentElement!.append(clone);
+        const intrinsic = clone.getBoundingClientRect().width;
+        clone.remove();
+        return { label: control.getAttribute("aria-label") ?? control.parentElement!.textContent, actual: control.getBoundingClientRect().width, intrinsic };
+      }));
+      for (const size of sizes) {
+        expect.soft(size.actual, `${size.label} at ${width}px needs its native readable width`).toBeGreaterThanOrEqual(size.intrinsic - 1);
+      }
+      await modeControl.focus();
+      await expect(modeControl).toBeFocused();
+      const outline = await modeControl.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { visible: element.matches(":focus-visible"), width: Number.parseFloat(style.outlineWidth), style: style.outlineStyle };
+      });
+      expect(outline).toMatchObject({ visible: true, style: "solid" });
+      expect(outline.width).toBeGreaterThanOrEqual(2);
+      if (mode === "custom") {
+        await page.keyboard.press("Tab");
+        await expect(selector.getByLabel("Desde")).toBeFocused();
+        await selector.getByLabel("Desde").fill("2026-08-01");
+        await selector.getByLabel("Hasta").fill("2026-08-22");
+        await expect(selector.getByLabel("Desde")).toHaveValue("2026-08-01");
+        await expect(selector.getByLabel("Hasta")).toHaveValue("2026-08-22");
+        await selector.screenshot({ path: testInfo.outputPath(`${width}-custom-focused.png`) });
+      }
+      await expectNoDocumentOverflow(page);
+      await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+      await selector.screenshot({ path: testInfo.outputPath(`${width}-${mode}.png`) });
+    }
+    await page.screenshot({ path: testInfo.outputPath(`${width}-page.png`) });
+  }
+});
+// oxlint-enable no-await-in-loop
+
 // oxlint-disable no-await-in-loop -- Real chart holds, pan and pinch must run in input order.
 test("keeps mobile chart inspection visible during a real touch hold without selecting plot text", async ({ page, browserName }) => {
   test.skip(page.viewportSize()!.width > 390 || browserName !== "chromium", "Mobile Chromium touch coverage");

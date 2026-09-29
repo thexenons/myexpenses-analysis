@@ -14,25 +14,30 @@
 
   .root[data-variant="compact"] {
     display: flex;
+    flex-basis: 22rem;
     flex-wrap: wrap;
     gap: 0.4rem;
     align-items: center;
     min-height: 2.75rem;
-    padding: 0.28rem 0.55rem;
+    padding: 0.5rem 0.75rem;
     background: var(--surface-bright);
     border: 1px solid var(--line-dark);
-    border-radius: 999px;
+    border-radius: var(--radius-md);
   }
 
   .root[data-variant="compact"] > .compactMode {
-    flex: 1 1 5.2rem;
+    flex: 1 1 8.5rem;
   }
 
   .root[data-variant="compact"] > .field,
   .root[data-variant="compact"] > .customFields,
   .root[data-variant="compact"] > .allPeriod {
-    flex: 1 1 8rem;
+    flex: 1 1 10rem;
     min-width: 0;
+  }
+
+  .root[data-variant="compact"] > .customFields {
+    flex-basis: 18.5rem;
   }
 
   .compactMode,
@@ -112,11 +117,12 @@
   }
 
   .root[data-variant="compact"] .customFields {
-    gap: 0.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+    gap: 0.5rem;
   }
 
   .root[data-variant="compact"] .separator {
-    padding-bottom: 0.35rem;
+    display: none;
   }
 }
 
