@@ -416,8 +416,8 @@ export function FilterDrawerView({
                 </div>
                 {amountError !== null ? <p aria-live="polite" className={styles.amountError} id="amount-filter-error">{amountError} Se mantienen los límites anteriores hasta corregirlo.</p> : null}
               </fieldset>
-              <SearchField label="Buscar en comentarios" onValueChange={onCommentSearchChange} value={filters.commentSearch ?? ""} />
-              <SearchField label="Buscar en referencias" onValueChange={onReferenceSearchChange} value={filters.referenceSearch ?? ""} />
+              <SearchField label="Buscar en comentarios" onValueChange={onCommentSearchChange} placeholder="Buscar comentarios…" value={filters.commentSearch ?? ""} />
+              <SearchField label="Buscar en referencias" onValueChange={onReferenceSearchChange} placeholder="Buscar referencias…" value={filters.referenceSearch ?? ""} />
             </div>
           </details>
         </div>

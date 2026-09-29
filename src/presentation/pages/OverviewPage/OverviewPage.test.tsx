@@ -62,6 +62,8 @@ describe("OverviewPageView", () => {
     expect(screen.getByText("Saldo en deudas")).toBeVisible();
     expect(screen.getByText("Apertura del periodo")).toBeVisible();
     expect(screen.getByText("Anulados visibles")).toBeVisible();
+    expect(screen.getByText("Sin conciliar")).toBeVisible();
+    expect(screen.getByText("3 apuntes")).toBeVisible();
   });
 
   it("renders the financial pulse and announces deferred filter updates", () => {

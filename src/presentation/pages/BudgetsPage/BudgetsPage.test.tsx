@@ -121,7 +121,7 @@ describe("BudgetsPageView", () => {
   it("shows the absence of a global limit instead of a calculated zero percent", () => {
     render(
       <BudgetsPageView
-        analysis={{ ...analysis, global: { ...analysis.global, assignedMinor: 0, utilization: null, health: "unallocated" } }}
+        analysis={{ ...analysis, filteredPostingCount: 1, global: { ...analysis.global, assignedMinor: 0, utilization: null, health: "unallocated" } }}
         budgetOptions={[]}
         emptyDescription={null}
         emptyTitle={null}
@@ -137,6 +137,7 @@ describe("BudgetsPageView", () => {
     expect(utilization).toHaveTextContent("Sin límite global");
     expect(utilization).not.toHaveTextContent("0 %");
     expect(utilization.querySelector("data")).toBeNull();
+    expect(screen.getByText("1 apunte efectivo")).toBeVisible();
   });
   it("opens exact global and category details without changing filters or the accordion", async () => {
     Object.defineProperty(HTMLDialogElement.prototype, "showModal", {

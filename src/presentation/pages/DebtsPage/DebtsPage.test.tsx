@@ -140,6 +140,8 @@ describe("DebtsPageView", () => {
     expect(screen.getByText("Recibido de deudas")).toBeVisible();
     expect(screen.getByText("Evolución de la selección")).toBeVisible();
     expect(screen.getByText("Seleccionar cuentas de deuda")).toBeVisible();
+    expect(screen.getByText("1 apunte")).toBeVisible();
+    expect(screen.getByText("1 cuenta incluida")).toBeVisible();
     const selection = screen.getByText("Seleccionar cuentas de deuda").closest("section");
     const balance = screen.getByText("Saldo conjunto en deudas");
     const trend = screen.getByText("Evolución de la selección");

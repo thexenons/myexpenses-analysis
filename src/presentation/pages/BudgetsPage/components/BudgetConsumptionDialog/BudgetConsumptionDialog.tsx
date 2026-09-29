@@ -1,3 +1,4 @@
+/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- The named overflow region needs a durable Tab entry after the final batch removes its button. */
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import type { BudgetContribution } from "../../../../../domain/analytics/budgets.ts";
@@ -75,7 +76,7 @@ export function BudgetConsumptionDialog({
           Cerrar detalle
         </button>
       </header>
-      <div className={styles.body}>
+      <section aria-labelledby={headingId} className={styles.body} tabIndex={0}>
         <p className={styles.note}>
           Importe con signo en {currency}: los reintegros reducen el consumo. El detalle conserva el filtro global y el filtro propio del presupuesto.
         </p>
@@ -118,7 +119,7 @@ export function BudgetConsumptionDialog({
             Mostrar más · {Math.min(visibleCount, contributions.length)} de {contributions.length}
           </button>
         ) : null}
-      </div>
+      </section>
     </dialog>
   );
 }

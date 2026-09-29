@@ -127,6 +127,8 @@ describe("BudgetConsumptionDialog", () => {
       />,
     );
     const dialog = screen.getByRole("dialog", { name: "Gasto neto · apuntes" });
+    const scrollRegion = within(dialog).getByRole("region", { name: "Gasto neto · apuntes" });
+    expect(scrollRegion).toHaveAttribute("tabindex", "0");
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(25);
     expect(within(dialog).getByText(/27 apuntes/)).toHaveTextContent("27,00");
     expect(within(dialog).getAllByText(/Original:/)).toHaveLength(25);
@@ -135,6 +137,7 @@ describe("BudgetConsumptionDialog", () => {
     await user.click(screen.getByRole("button", { name: /Mostrar más/ }));
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(27);
     expect(screen.queryByRole("button", { name: /Mostrar más/ })).not.toBeInTheDocument();
+    expect(scrollRegion).toHaveAttribute("tabindex", "0");
     expect(dialog.contains(document.activeElement)).toBe(true);
     expect(document.activeElement).not.toBe(dialog);
     unmount();

@@ -3,7 +3,7 @@ import { Icon } from "../../components/atoms/Icon/index.ts";
 import { Pagination } from "../../components/molecules/Pagination/index.ts";
 import { Panel } from "../../components/molecules/Panel/index.ts";
 import { AnalyticsPage } from "../../components/templates/AnalyticsPage/index.ts";
-import { countFormatter, formatEuroMinor } from "../../utils/format.ts";
+import { formatCount, formatEuroMinor } from "../../utils/format.ts";
 import { TransactionTable } from "./components/TransactionTable/index.ts";
 import { TransactionStatus } from "./components/TransactionStatus/index.ts";
 import type { TransactionsPageViewProps } from "./TransactionsPage.types.ts";
@@ -34,10 +34,10 @@ export function TransactionsPageView({
     >
       <output aria-atomic="true" aria-live="polite" className={styles.resultStatus}>
         {searchPending
-          ? `Actualizando búsqueda. ${countFormatter.format(resultCount)} resultados actuales.`
+          ? `Actualizando búsqueda. ${formatCount(resultCount, "resultado actual", "resultados actuales")}.`
           : resultCount === 0
             ? "No hay resultados."
-            : `${countFormatter.format(resultCount)} resultados.`}
+            : `${formatCount(resultCount, "resultado", "resultados")}.`}
       </output>
       {summary === undefined ? null : (
         <Panel description="Importes de todos los resultados, sin anulados. Las transferencias pueden compensarse entre cuentas; el flujo real sólo suma las cuentas reales seleccionadas." title="Totales del corte">
@@ -71,7 +71,7 @@ export function TransactionsPageView({
           </Button>
           </div>
         }
-        description={`${countFormatter.format(resultCount)} resultados${searchPending ? " · actualizando búsqueda" : ""}`}
+        description={`${formatCount(resultCount, "resultado", "resultados")}${searchPending ? " · actualizando búsqueda" : ""}`}
         title="Movimientos filtrados"
       >
         {uniformStatus === undefined ? null : (

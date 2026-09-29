@@ -189,8 +189,8 @@ describe("App integration", () => {
     const transactions = within(screen.getByRole("table", {
       name: "Transacciones que coinciden con los filtros globales",
     }));
-    expect(transactions.getByText("Tienda")).toBeVisible();
-    expect(screen.getByText("1 resultados")).toBeVisible();
+    expect(transactions.getAllByText("Tienda")[0]).toBeVisible();
+    expect(within(screen.getByRole("region", { name: "Movimientos filtrados" })).getByText("1 resultado")).toBeVisible();
     expect(transactions.queryByText("Empresa")).not.toBeInTheDocument();
   });
 

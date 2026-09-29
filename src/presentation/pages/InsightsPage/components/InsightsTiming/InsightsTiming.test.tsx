@@ -35,4 +35,9 @@ describe("InsightsTiming", () => {
     ).toBeVisible();
     expect(screen.getByText(/cobertura/u)).toBeVisible();
   });
+
+  it("agrees with one timed posting in the chart description", () => {
+    render(<InsightsTiming hourSeries={INSIGHTS_PAGE_PROPS.hourSeries} timing={{ ...INSIGHTS_PAGE_PROPS.insights.timing, timedPostingCount: 1 }} weekdayBars={INSIGHTS_PAGE_PROPS.weekdayBars} />);
+    expect(screen.getByText(/1 apunte conserva una hora de operación/, { selector: "p" })).toBeVisible();
+  });
 });

@@ -18,7 +18,7 @@ import { BudgetConsumptionDialog } from "./components/BudgetConsumptionDialog/Bu
 import { BudgetControls } from "./components/BudgetControls/BudgetControls.tsx";
 import { BudgetUtilization } from "./components/BudgetUtilization/BudgetUtilization.tsx";
 import styles from "./BudgetsPage.module.css";
-import { formatDate } from "../../utils/format.ts";
+import { formatCount, formatDate } from "../../utils/format.ts";
 
 const percentageFormatter = new Intl.NumberFormat("es-ES", {
   maximumFractionDigits: 1,
@@ -146,7 +146,7 @@ export function BudgetsPageView({
           value={toMajor(global.consumedMinor)}
         />
         <KpiCard
-          detail={`${analysis.filteredPostingCount} apuntes efectivos`}
+          detail={formatCount(analysis.filteredPostingCount, "apunte efectivo", "apuntes efectivos")}
           formatValue={amountFormatter}
           icon={<Icon name="trend" />}
           label={analysis.isFilteredComparison ? "Asignado menos corte" : "Disponible"}

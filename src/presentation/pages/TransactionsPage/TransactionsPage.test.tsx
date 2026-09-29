@@ -163,6 +163,11 @@ describe("TransactionsPageView", () => {
     const status = screen.getByRole("status");
     expect(status).toHaveAttribute("aria-live", "polite");
     expect(status).toHaveTextContent(/actualizando búsqueda/iu);
+    expect(status).toHaveTextContent("1 resultado actual.");
+
+    rerender(<TransactionsPageView {...props} searchPending={false} />);
+    expect(status).toHaveTextContent("1 resultado.");
+    expect(screen.getByRole("region", { name: "Movimientos filtrados" })).toHaveTextContent("1 resultado");
 
     rerender(<TransactionsPageView {...props} searchPending={false} resultCount={3} />);
     expect(screen.getByRole("status")).toBe(status);

@@ -12,6 +12,10 @@ export const euroFormatter = new Intl.NumberFormat("es-ES", {
 
 export const countFormatter = new Intl.NumberFormat("es-ES");
 
+export function formatCount(count: number, singular: string, plural: string): string {
+  return `${countFormatter.format(count)} ${count === 1 ? singular : plural}`;
+}
+
 const currencyFormatters = new Map<string, Intl.NumberFormat>();
 
 const monthFormatter = new Intl.DateTimeFormat("es-ES", {

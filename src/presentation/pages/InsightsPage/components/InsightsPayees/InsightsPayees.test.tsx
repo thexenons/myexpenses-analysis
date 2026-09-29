@@ -30,6 +30,11 @@ describe("InsightsPayees", () => {
     expect(screen.getByText(/con payee/u)).toBeVisible();
   });
 
+  it("uses singular coverage wording for one active posting and one payee", () => {
+    render(<InsightsPayees payees={{ ...INSIGHTS_FIXTURE.payees, activePostingCount: 1, payeePostingCount: 1, usedPayeeCount: 1, definedPayeeCount: 1 }} />);
+    expect(screen.getByText(/1 apunte activo · 1 payee usado de 1 definido/u)).toBeVisible();
+  });
+
   it("exposes distinct exact-identity actions for duplicate labels and disables pending actions", async () => {
     const onViewPayee = vi.fn<(identityKey: string) => void>();
     const first = INSIGHTS_FIXTURE.payees.topExpenses[0]!;

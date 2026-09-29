@@ -4,7 +4,7 @@ import { Badge } from "../../../../components/atoms/Badge/Badge.tsx";
 import { Panel } from "../../../../components/molecules/Panel/Panel.tsx";
 import { ChartDataTable } from "../../../../components/organisms/ChartDataTable/ChartDataTable.tsx";
 import { identityOptionLabel } from "../../../../components/organisms/FilterDrawer/FilterDrawer.helpers.ts";
-import { countFormatter, euroFormatter, formatEuroMinor } from "../../../../utils/format.ts";
+import { countFormatter, euroFormatter, formatCount, formatEuroMinor } from "../../../../utils/format.ts";
 import styles from "./InsightsPayees.module.css";
 import type { InsightsPayeesProps } from "./InsightsPayees.types.ts";
 
@@ -72,9 +72,9 @@ export function InsightsPayees({ onViewPayee, payees, searchPending = false }: I
           </Badge>
           <span>
             {countFormatter.format(payees.payeePostingCount)} de{" "}
-            {countFormatter.format(payees.activePostingCount)} apuntes activos ·{" "}
-            {countFormatter.format(payees.usedPayeeCount)} payees usados de{" "}
-            {countFormatter.format(payees.definedPayeeCount)} definidos
+            {formatCount(payees.activePostingCount, "apunte activo", "apuntes activos")} ·{" "}
+            {formatCount(payees.usedPayeeCount, "payee usado", "payees usados")} de{" "}
+            {formatCount(payees.definedPayeeCount, "definido", "definidos")}
           </span>
         </div>
       }

@@ -3,7 +3,7 @@ import { Panel } from "../../../../components/molecules/Panel/Panel.tsx";
 import { HorizontalBarChart } from "../../../../components/organisms/HorizontalBarChart/HorizontalBarChart.tsx";
 import { LineChart } from "../../../../components/organisms/LineChart/LineChart.tsx";
 import { AnalyticsPageGrid } from "../../../../components/templates/AnalyticsPageGrid/AnalyticsPageGrid.tsx";
-import { countFormatter } from "../../../../utils/format.ts";
+import { countFormatter, formatCount } from "../../../../utils/format.ts";
 import styles from "./InsightsTiming.module.css";
 import type { InsightsTimingProps } from "./InsightsTiming.types.ts";
 
@@ -31,7 +31,7 @@ export function InsightsTiming({
         className={`${styles.chartPanel} ${styles.deferredPanel}`}
       >
         <LineChart
-          description={`${countFormatter.format(timing.timedPostingCount)} apuntes conservan una hora ${valueBasis ? "de valor" : "de operación"} distinta de 00:00. ${valueBasis ? "Si falta la fecha valor se usa la operación; si existe sin hora, no se inventa una hora de valor. " : ""}Los anulados permanecen en el conteo; su importe es cero en agregados.`}
+          description={`${formatCount(timing.timedPostingCount, "apunte conserva", "apuntes conservan")} una hora ${valueBasis ? "de valor" : "de operación"} distinta de 00:00. ${valueBasis ? "Si falta la fecha valor se usa la operación; si existe sin hora, no se inventa una hora de valor. " : ""}Los anulados permanecen en el conteo; su importe es cero en agregados.`}
           formatValue={countFormatter}
           series={hourSeries}
           title={hourTitle}

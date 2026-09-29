@@ -14,6 +14,7 @@ import {
   countFormatter,
   euroFormatter,
   euroFromMinor,
+  formatCount,
   formatEuroMinor,
   formatPeriodLabel,
 } from "../../utils/format.ts";
@@ -52,7 +53,7 @@ export function AccountsPageView({
     >
       <AnalyticsPageGrid variant="kpis">
         <KpiCard
-          detail={`${countFormatter.format(accounts.length)} cuentas`}
+          detail={formatCount(accounts.length, "cuenta", "cuentas")}
           formatValue={euroFormatter}
           icon={<Icon name="wallet" />}
           label="Saldo real conjunto al cierre"
@@ -68,7 +69,7 @@ export function AccountsPageView({
           value={euroFromMinor(totals.flowEurMinor)}
         />
         <KpiCard
-          detail={`${accounts.length - totals.debtCount} operativas`}
+          detail={formatCount(accounts.length - totals.debtCount, "operativa", "operativas")}
           formatValue={countFormatter}
           icon={<Icon name="debt" />}
           label="Cuentas de deuda"
@@ -125,7 +126,7 @@ export function AccountsPageView({
                   Flujo filtrado {formatEuroMinor(item.netEurMinor)}
                 </span>
                 <span className={styles.accountMeta}>
-                  {countFormatter.format(item.postingCount)} apuntes
+                  {formatCount(item.postingCount, "apunte", "apuntes")}
                 </span>
               </div>
               <div className={styles.accountActions}>

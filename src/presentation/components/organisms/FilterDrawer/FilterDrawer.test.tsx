@@ -376,6 +376,8 @@ describe("FilterDrawer", () => {
     appStore.setState({ filterDrawerOpen: true })
     render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
     await user.click(screen.getByText("Criterios adicionales"))
+    expect(screen.getByRole("searchbox", { name: "Buscar en comentarios" })).toHaveAttribute("placeholder", "Buscar comentarios…")
+    expect(screen.getByRole("searchbox", { name: "Buscar en referencias" })).toHaveAttribute("placeholder", "Buscar referencias…")
     await user.type(screen.getByRole("searchbox", { name: "Buscar en comentarios" }), "café")
     await user.type(screen.getByRole("searchbox", { name: "Buscar en referencias" }), "factura")
     expect(appStore.getState().filters).toMatchObject({ commentSearch: "café", referenceSearch: "factura", search: "" })

@@ -281,7 +281,7 @@ test("drills from exact Patterns identities without dropping other facets", asyn
   await payeeAction.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "Transacciones" })).toBeVisible();
-  await expect(page.locator("main output")).toContainText("1 resultados.");
+  await expect(page.locator("main output")).toContainText("1 resultado.");
   await expect(toolbar.getByRole("button", { name: /Quitar filtro Moneda: EUR/ })).toBeVisible();
   await expect(toolbar.getByRole("button", { name: /Quitar filtro Beneficiario:/ })).toBeVisible();
   expect(page.url()).not.toContain("Synthetic food");
@@ -290,7 +290,7 @@ test("drills from exact Patterns identities without dropping other facets", asyn
 
   await page.getByRole("link", { name: "Patrones" }).click();
   await page.getByRole("button", { name: "Ver 1 movimiento computado de Neutral method" }).click();
-  await expect(page.locator("main output")).toContainText("1 resultados.");
+  await expect(page.locator("main output")).toContainText("1 resultado.");
   await expect(toolbar.getByRole("button", { name: /Quitar filtro Beneficiario:/ })).toBeVisible();
   await expect(toolbar.getByRole("button", { name: /Quitar filtro Método:/ })).toBeVisible();
   await expectNoDocumentOverflow(page);
@@ -359,6 +359,111 @@ test("keeps every primary route inside the document viewport", async ({ page }) 
     // oxlint-disable-next-line no-await-in-loop -- each route is a separate overflow assertion.
     await expectNoDocumentOverflow(page);
   }
+});
+
+test("keeps shared navigation, controls and serious accessibility checks consistent across routes", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
+  const routes = [
+    "/resumen", "/flujo-de-caja", "/comparativa", "/deudas", "/presupuestos",
+    "/categorias", "/cuentas", "/patrones", "/transacciones",
+  ];
+  const navigation = page.getByRole("navigation", { name: "Secciones principales" });
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  for (const route of routes) {
+    const link = navigation.locator(`a[href="${route}"]`);
+    // oxlint-disable-next-line no-await-in-loop -- each route's active state follows its navigation.
+    await link.click();
+    // oxlint-disable-next-line no-await-in-loop -- wait for the selected route before checking shared UI.
+    await expect.poll(() => new URL(page.url()).pathname).toBe(route);
+    // oxlint-disable-next-line no-await-in-loop -- route-specific current location is announced once.
+    await expect(link).toHaveAttribute("aria-current", "page");
+    // oxlint-disable-next-line no-await-in-loop -- shared controls must remain available after every transition.
+    await expect(toolbar.getByRole("combobox", { name: "Tipo de periodo" })).toBeVisible();
+    // oxlint-disable-next-line no-await-in-loop -- granularity must remain reachable on mobile.
+    await expect(toolbar.getByRole("group", { name: "Granularidad de estadísticas y gráficas" })).toBeVisible();
+    // oxlint-disable-next-line no-await-in-loop -- each route needs an independent rendered accessibility result.
+    const violations = await page.evaluate(async () => {
+      const axe = (window as unknown as { axe: { run: (context: Element) => Promise<{ violations: { id: string; impact: string | null }[] }> } }).axe;
+      return (await axe.run(document.body)).violations
+        .filter(({ impact }) => impact === "critical" || impact === "serious")
+        .map(({ id, impact }) => ({ id, impact }));
+    });
+    expect(violations, `${route} axe critical/serious`).toEqual([]);
+    // oxlint-disable-next-line no-await-in-loop -- one representative focus target per route checks the fixed chrome boundary.
+    const focusTarget = page.locator("main button:not([disabled]):visible, main select:not([disabled]):visible, main summary:visible").last();
+    // oxlint-disable-next-line no-await-in-loop -- focus and measurement belong to this route.
+    await focusTarget.focus();
+    // oxlint-disable-next-line no-await-in-loop -- focus must survive scrolling below sticky chrome.
+    await expect(focusTarget).toBeFocused();
+    // oxlint-disable-next-line no-await-in-loop -- measure the focused target, not an unrelated element.
+    const focus = await focusTarget.evaluate((target) => {
+      const rect = target.getBoundingClientRect();
+      const filters = document.querySelector<HTMLElement>("[aria-label='Filtros globales']")?.getBoundingClientRect();
+      const nav = document.querySelector<HTMLElement>("nav[aria-label='Secciones principales']")?.getBoundingClientRect();
+      const bottom = nav && nav.top > window.innerHeight / 2 ? nav.top : window.innerHeight;
+      return Math.max(0, Math.min(rect.bottom, bottom) - Math.max(rect.top, filters?.bottom ?? 0));
+    });
+    expect(focus, `${route} focus not fully covered`).toBeGreaterThan(0);
+    // oxlint-disable-next-line no-await-in-loop -- route content may change after focus scroll.
+    await expectNoDocumentOverflow(page);
+  }
+});
+
+test("reaches the end of a long filter drawer by keyboard and restores its trigger", async ({ page }, testInfo) => {
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  const opener = toolbar.getByRole("button", { name: /Abrir todos los filtros/ });
+  await opener.click();
+  const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });
+  await drawer.getByText("Criterios adicionales").click();
+  const reference = drawer.getByRole("searchbox", { name: "Buscar en referencias" });
+  await reference.focus();
+  await expect(reference).toBeFocused();
+  const bodyScroll = await reference.evaluate((element) => {
+    let parent = element.parentElement;
+    while (parent && getComputedStyle(parent).overflowY !== "auto") parent = parent.parentElement;
+    return parent?.scrollTop ?? 0;
+  });
+  expect(bodyScroll).toBeGreaterThan(0);
+  await page.keyboard.press("Tab");
+  await expect(drawer.getByRole("button", { name: "Ver resultados" })).toBeFocused();
+  await mkdir("/tmp/myexpenses-u8-visual", { recursive: true });
+  await page.screenshot({ path: `/tmp/myexpenses-u8-visual/filter-drawer-${testInfo.project.name}.png` });
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toBeVisible();
+  await expect(opener).toBeFocused();
+  await expectNoDocumentOverflow(page);
+});
+
+test("uses consistent reconciliation and singular result copy in the rendered routes", async ({ page }, testInfo) => {
+  await page.route("**/data/app-dataset.vault.json", async (route) => {
+    const variant = await route.fetch({ url: `${BASE}/data/u6-transactions.vault.json` });
+    await route.fulfill({ response: variant });
+  });
+  await page.reload();
+  await page.getByLabel("Frase de desbloqueo").fill(PASSPHRASE);
+  await page.getByRole("button", { name: "Abrir bóveda" }).click();
+  const details = page.getByText("Saldos, deuda y conciliación", { exact: true });
+  await details.focus();
+  await page.keyboard.press("Enter");
+  const reconciliationLabel = page.locator("main").getByText("Sin conciliar", { exact: true });
+  await expect(reconciliationLabel).toBeVisible();
+  await reconciliationLabel.scrollIntoViewIfNeeded();
+  await mkdir("/tmp/myexpenses-u8-visual", { recursive: true });
+  await page.screenshot({ path: `/tmp/myexpenses-u8-visual/overview-copy-${testInfo.project.name}.png` });
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  await toolbar.getByRole("button", { name: /Abrir todos los filtros/ }).click();
+  const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });
+  await drawer.getByRole("searchbox", { name: "Buscar en movimientos" }).fill("Synthetic food");
+  await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expect(drawer).not.toBeVisible();
+  await page.getByRole("link", { name: /^(Transacciones|Movimientos)$/ }).click();
+  const results = page.getByRole("region", { name: "Movimientos filtrados" });
+  await expect(results).toContainText("1 resultado");
+  await expect(page.locator("main").getByRole("status")).toContainText("1 resultado.");
+  await results.getByText("1 resultado", { exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `/tmp/myexpenses-u8-visual/transaction-copy-${testInfo.project.name}.png` });
+  await expectNoDocumentOverflow(page);
 });
 
 test("reveals complete transaction text and source status by keyboard at every viewport", async ({ page }, testInfo) => {
@@ -700,11 +805,21 @@ test("keeps the no-limit budget honest and moves focus into the final 27-item ba
   await expect(dialog.locator("ol > li")).toHaveCount(27);
   await expect(more).toHaveCount(0);
   await expect(dialog.locator("ol > li").nth(25)).toBeFocused();
+  const scrollRegion = dialog.getByRole("region", { name: "Gasto neto · apuntes" });
+  await dialog.getByRole("button", { name: "Cerrar detalle" }).focus();
+  await page.keyboard.press("Tab");
+  await expect(scrollRegion).toBeFocused();
+  await scrollRegion.evaluate((element) => { element.scrollTop = 0; });
+  await page.keyboard.press("ArrowDown");
+  await expect.poll(() => scrollRegion.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await scrollRegion.evaluate((element) => { element.scrollTop = 0; });
+  await page.keyboard.press("PageDown");
+  await expect.poll(() => scrollRegion.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
   await expectNoDocumentOverflow(page);
   await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
   const violations = await page.evaluate(async () => {
     const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
-    return (await axe.run(document.querySelector("dialog")!, { runOnly: { type: "rule", values: ["aria-dialog-name", "button-name", "aria-hidden-focus"] } })).violations.map(({ id }) => id);
+    return (await axe.run(document.querySelector("dialog")!, { runOnly: { type: "rule", values: ["aria-dialog-name", "button-name", "aria-hidden-focus", "scrollable-region-focusable"] } })).violations.map(({ id }) => id);
   });
   expect(violations).toEqual([]);
   await page.screenshot({ path: `/tmp/myexpenses-u3-visual/budget-no-limit-dialog-${page.viewportSize()!.width}.png` });

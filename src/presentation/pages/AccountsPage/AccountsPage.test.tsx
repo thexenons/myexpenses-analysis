@@ -139,6 +139,8 @@ describe("AccountsPageView", () => {
 
     expect(inventory.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(card).toHaveTextContent(/Saldo real al cierre.*250,00.*Flujo filtrado.*50,00/s);
+    expect(screen.getByText("1 cuenta")).toBeVisible();
+    expect(screen.getByText("1 operativa")).toBeVisible();
     expect(card).toContainElement(filterButton);
     expect(filterButton).not.toContainElement(disclosure);
     await user.click(filterButton);

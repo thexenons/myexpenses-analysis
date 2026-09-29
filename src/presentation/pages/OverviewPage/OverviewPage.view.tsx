@@ -11,6 +11,7 @@ import {
   countFormatter,
   euroFormatter,
   euroFromMinor,
+  formatCount,
   formatEuroMinor,
   formatPeriodLabel,
 } from "../../utils/format.ts";
@@ -37,7 +38,7 @@ export function OverviewPageView({
     >
       <AnalyticsPageGrid className={styles.primaryKpis} variant="three">
         <KpiCard
-          detail={`${countFormatter.format(kpis.postingCount)} apuntes`}
+          detail={formatCount(kpis.postingCount, "apunte", "apuntes")}
           formatValue={euroFormatter}
           icon={<Icon name="trend" />}
           label="Flujo del periodo"
@@ -87,12 +88,12 @@ export function OverviewPageView({
             { id: "Apertura del periodo", label: "Apertura del periodo", value: formatEuroMinor(kpis.periodOpeningBalanceEurMinor) },
             { id: "Saldo al cierre del periodo", label: "Saldo al cierre del periodo", value: formatEuroMinor(kpis.periodClosingBalanceEurMinor) },
             { id: "Valoración actual por cuenta · corte final, ámbito y cuentas", label: "Valoración actual por cuenta · corte final, ámbito y cuentas", value: formatEuroMinor(valuationBalanceEurMinor) },
-            { id: "Saldo en deudas", label: "Saldo en deudas", value: <>{formatEuroMinor(debtBalanceEurMinor)} · {debtAccountCount} cuentas</> },
+            { id: "Saldo en deudas", label: "Saldo en deudas", value: <>{formatEuroMinor(debtBalanceEurMinor)} · {formatCount(debtAccountCount, "cuenta", "cuentas")}</> },
             { id: "Flujo real", label: "Flujo real", value: formatEuroMinor(kpis.realCashFlowEurMinor) },
             { id: "Flujo de deuda", label: "Flujo de deuda", value: formatEuroMinor(kpis.debtFlowEurMinor) },
             { id: "Transferencias", label: "Transferencias", value: formatEuroMinor(kpis.transfersEurMinor) },
             { id: "Reconciliados", label: "Reconciliados", value: countFormatter.format(status.RECONCILED.count) },
-            { id: "Sin reconciliar", label: "Sin reconciliar", value: <Badge tone="warning">{countFormatter.format(status.UNRECONCILED.count)}</Badge> },
+            { id: "Sin conciliar", label: "Sin conciliar", value: <Badge tone="warning">{countFormatter.format(status.UNRECONCILED.count)}</Badge> },
             { id: "Compensados", label: "Compensados", value: <Badge tone="info">{countFormatter.format(status.CLEARED.count)}</Badge> },
             { id: "Anulados visibles", label: "Anulados visibles", value: <Badge tone="neutral">{countFormatter.format(status.VOID.count)}</Badge> },
             { id: "Cuentas activas", label: "Cuentas activas", value: <Badge tone="cash">{countFormatter.format(accounts.length)}</Badge> },

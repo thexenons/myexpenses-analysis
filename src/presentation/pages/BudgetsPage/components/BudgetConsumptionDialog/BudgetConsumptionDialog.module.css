@@ -66,6 +66,11 @@
   overflow: auto;
 }
 
+.body:focus-visible {
+  outline: 3px solid var(--accent-ink);
+  outline-offset: -3px;
+}
+
 .note,
 .rowMain span,
 .amounts span {

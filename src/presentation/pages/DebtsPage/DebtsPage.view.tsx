@@ -9,9 +9,9 @@ import { LineChart } from "../../components/organisms/LineChart/index.ts";
 import { AnalyticsPage } from "../../components/templates/AnalyticsPage/index.ts";
 import { AnalyticsPageGrid } from "../../components/templates/AnalyticsPageGrid/index.ts";
 import {
-  countFormatter,
   euroFormatter,
   euroFromMinor,
+  formatCount,
   formatEuroMinor,
   formatPeriodLabel,
 } from "../../utils/format.ts";
@@ -58,7 +58,7 @@ export function DebtsPageView({
           </p>
         </div>
         <Badge tone="warning">
-          {countFormatter.format(debts.length)} cuentas incluidas
+          {formatCount(debts.length, "cuenta incluida", "cuentas incluidas")}
         </Badge>
       </div>
 
@@ -95,7 +95,7 @@ export function DebtsPageView({
                     <div>
                       <h3 className={styles.accountName}>{debt.account.label}</h3>
                       <p className={styles.accountMeta}>
-                        {countFormatter.format(debt.postingCount)} apuntes
+                        {formatCount(debt.postingCount, "apunte", "apuntes")}
                       </p>
                     </div>
                   </div>
