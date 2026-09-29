@@ -1,14 +1,19 @@
 # Runtime pCloud configuration
 
-The container worker and the one-shot `pnpm deploy:sync-pcloud` CLI share these
-runtime variables and validation. The CLI automatically reads `.env` from its
-working directory; exported variables take precedence, including empty values.
-The worker still receives its environment from Compose, not a `.env` loader.
-JSON `--config` is no longer supported. See the [CLI migration](pcloud-sync.md#migración-desde-json).
-Outside Docker, set `MYEXPENSES_REPOSITORY_ROOT` to the absolute checkout path
-(the shared default is `/app`). The CLI does not schedule cycles or send email;
-interval/timeout variables apply only to the worker. Notification configuration
-is validated by both, but used for delivery only by the worker.
+The container worker uses the full runtime configuration below. The local
+`pnpm deploy:sync-pcloud` CLI shares **only the `PCLOUD_*` source variables and
+validation**; it downloads the latest ZIP to the working directory's `data/`
+without importing, encrypting, building or deploying. It ignores every
+worker-only setting, including invalid values.
+
+The CLI automatically reads `.env` from its working directory; exported values
+win, including empty values. The worker receives its environment from Compose,
+not a `.env` loader. JSON `--config` is unsupported. See the
+[local recovery guide](pcloud-sync.md).
+
+## Worker configuration
+
+All `MYEXPENSES_*` variables below apply only to the worker.
 
 | Variable | Requirement |
 | --- | --- |
@@ -16,7 +21,7 @@ is validated by both, but used for delivery only by the worker.
 | `PCLOUD_FOLDER_ID` | Exactly one folder selector; unsigned decimal pCloud ID (up to uint64). |
 | `PCLOUD_FOLDER_PATH` | Alternative selector: safe absolute pCloud folder path. |
 | `PCLOUD_TOKEN` | Required pCloud access token. |
-| `MYEXPENSES_VAULT_PASSPHRASE` | Required static-vault passphrase. |
+| `MYEXPENSES_VAULT_PASSPHRASE` | Worker only: required static-vault passphrase. |
 | `MYEXPENSES_TIME_ZONE` | Optional IANA time zone; defaults to `Europe/Madrid`. |
 | `MYEXPENSES_DEPLOY_ROOT` | Optional absolute path; defaults to `/srv/myexpenses`. |
 | `MYEXPENSES_REPOSITORY_ROOT` | Optional absolute path; defaults to `/app`. |
@@ -70,9 +75,10 @@ not send live test mail without separate authorization.
 
 The worker performs one forced bootstrap before writing `/run/myexpenses/ready`,
 then serial non-forced cycles. The readiness directory must be a private runtime
-directory supplied by the container. Shutdown removes the marker. The worker and
-one-shot CLI share a persistent Linux `flock` lease at `<deploy-root>/.sync.lock`;
-the image must provide util-linux `/usr/bin/flock`. Stop all legacy PID-lock
+directory supplied by the container. Shutdown removes the marker. The worker
+holds a persistent Linux `flock` lease at `<deploy-root>/.sync.lock`; the local
+download CLI does not access the deployment tree or this lock. The worker image
+must provide util-linux `/usr/bin/flock`. Stop all legacy PID-lock
 writers before migrating and remove an old non-empty PID lock only after they
 have stopped. Never run old and new workers against the same deployment root.
 On build cancellation, the worker escalates from TERM to KILL after five seconds

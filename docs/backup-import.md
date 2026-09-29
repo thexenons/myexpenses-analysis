@@ -45,8 +45,10 @@ fichero privado:
 pnpm data:encrypt -- --passphrase-file /ruta/privada/vault.passphrase
 ```
 
-El pipeline pCloud no invoca el prompt: selecciona el backup remoto más reciente
-y recibe `MYEXPENSES_VAULT_PASSPHRASE` del entorno (en el CLI, también de `.env`).
+El worker pCloud no invoca el prompt: selecciona el backup remoto más reciente
+y recibe `MYEXPENSES_VAULT_PASSPHRASE` del entorno para su pipeline completo.
+El CLI `pnpm deploy:sync-pcloud` sólo descarga el ZIP en `data/`; no importa ni
+cifra y no requiere esa frase. En local, estos pasos se ejecutan por separado.
 
 La relación entre la versión y el esquema está declarada en el código oficial:
 

@@ -164,15 +164,23 @@ Git y deben generarse localmente.
 > sirve siempre por HTTPS y protege el servidor: JavaScript malicioso podría
 > capturar la frase al introducirla.
 
-## Sincronización y despliegue
+## Recuperación local y despliegue
 
-El comando `pnpm deploy:sync-pcloud` consulta una carpeta concreta mediante
-OAuth Bearer, selecciona la copia más reciente, verifica sus checksums, importa,
-cifra y construye una release nueva. Sólo después cambia de forma atómica el
-symlink `current`; un fallo conserva la versión anterior. Para un host Linux
-con cron, consulta [deploy/README.md](deploy/README.md). Para Coolify con
-Docker Compose, usa la [guía de Coolify](docs/coolify-deployment.md) en su
-lugar; no ejecutes ambos métodos sobre el mismo volumen.
+Configura las variables `PCLOUD_*` en el `.env` privado del checkout y ejecuta:
+
+```sh
+pnpm deploy:sync-pcloud
+```
+
+El comando descarga únicamente el último backup de pCloud en `data/`, con su
+nombre original y checksums verificados. No importa, cifra ni publica nada;
+después puedes elegir `pnpm data:import-backup`, `pnpm data:encrypt:dev` o
+`pnpm data:encrypt`, y levantar `pnpm dev` cuando corresponda. Consulta la
+[configuración y recuperación local](docs/pcloud-sync.md).
+
+El **worker** conserva el flujo completo de importación, cifrado, build y
+publicación atómica. Para ese despliegue automatizado, sigue la
+[guía de Coolify](docs/coolify-deployment.md), no el CLI local ni el antiguo cron.
 
 ## Verificación
 

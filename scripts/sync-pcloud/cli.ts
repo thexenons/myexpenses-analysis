@@ -5,13 +5,12 @@ import {
     loadSyncPCloudCliEnvironment,
     type SyncPCloudCliEnvironmentOptions,
 } from "./cli-environment.ts";
-import { loadSyncPCloudRuntimeConfig } from "./runtime-config.ts";
-import { SyncLeaseError } from "./lease.ts";
+import { loadPCloudSourceConfig } from "./source-config.ts";
 import {
-    PCloudSyncError,
-    runPCloudSync,
-    type PCloudSyncDependencies,
-} from "./orchestrator.ts";
+    LocalBackupError,
+    downloadLatestPCloudBackup,
+    type LocalBackupDependencies,
+} from "./local-download.ts";
 import { PCloudError } from "./pcloud.ts";
 
 export interface SyncPCloudCliOptions {
@@ -41,22 +40,17 @@ export function parseSyncPCloudArguments(
 function publicError(error: unknown): string {
     if (
         error instanceof SyncConfigError ||
-        error instanceof SyncLeaseError ||
         error instanceof PCloudError ||
-        error instanceof PCloudSyncError
+        error instanceof LocalBackupError
     ) {
         return error.message;
     }
-    return "The backup processing pipeline failed";
+    return "The local backup download failed";
 }
 
-/**
- * Root integration supplies processBackup, which must run importBackup, static
- * vault encryption and the production build inside the provided workspace.
- */
 export async function runSyncPCloudCli(
     args: readonly string[],
-    dependencies: PCloudSyncDependencies,
+    dependencies: LocalBackupDependencies = {},
     io: SyncPCloudCliIo = {
         stderr: (message) => process.stderr.write(message),
         stdout: (message) => process.stdout.write(message),
@@ -66,26 +60,20 @@ export async function runSyncPCloudCli(
 ): Promise<number> {
     try {
         const options = parseSyncPCloudArguments(args);
-        const runtime = loadSyncPCloudRuntimeConfig(
+        const source = loadPCloudSourceConfig(
             await loadSyncPCloudCliEnvironment(environmentOptions),
         );
-        const result = await runPCloudSync(
-            runtime.config,
-            {
-                ...dependencies,
-                loadSecrets: async () => runtime.secrets,
-                logger: { info: (message) => io.stdout(`${message}\n`) },
-            },
-            { force: options.force, signal },
-        );
-        if (result.status === "noop") {
-            io.stdout("Synchronization completed without changes.\n");
-        } else {
-            io.stdout("Synchronization and atomic publication completed.\n");
-        }
+        const result = await downloadLatestPCloudBackup(source, dependencies, {
+            cwd: environmentOptions.cwd ?? process.cwd(),
+            force: options.force,
+            signal,
+        });
+        io.stdout(result === "noop"
+            ? "Latest backup is already present in data/ and its checksum matches.\n"
+            : "Latest backup downloaded to data/.\n");
         return 0;
     } catch (error) {
-        io.stderr(`Synchronization failed: ${publicError(error)}.\n`);
+        io.stderr(`Backup download failed: ${publicError(error)}.\n`);
         return 1;
     }
 }

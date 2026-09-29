@@ -1,13 +1,14 @@
 # Despliegue de MyExpenses en Coolify con Docker Compose
 
-Esta es la ruta **Coolify + Docker Compose**. No combines estas instrucciones
-con el procedimiento de servidor independiente, ficheros de credenciales y cron
-de [`deploy/README.md`](../deploy/README.md): son dos despliegues alternativos.
-Aquí el repositorio aporta `compose.yaml`, `Dockerfile` y la configuración de
-nginx; Coolify aporta las variables **de ejecución**. Nadie debe crear un JSON,
-un token ni una frase de paso dentro del contenedor. El CLI puntual comparte
-las variables de entorno y carga `.env` localmente, pero no participa en esta
-ruta ni acepta `--config`.
+Esta es la ruta **Coolify + Docker Compose**: el worker descarga, importa,
+cifra, construye y publica. El repositorio aporta `compose.yaml`, `Dockerfile`
+y nginx; Coolify aporta las variables **de ejecución**. Nadie debe crear un JSON,
+un token ni una frase de paso dentro del contenedor.
+
+El CLI `pnpm deploy:sync-pcloud` es un flujo diferente: lee `.env` y descarga
+únicamente el último ZIP en `data/` para trabajo local. Comparte sólo las variables
+`PCLOUD_*`; no requiere configuración de despliegue y no acepta `--config`.
+El antiguo despliegue por CLI y cron está retirado; no instales ese cron.
 
 ## 1. Preparar origen y credenciales
 

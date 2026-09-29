@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,6 +21,14 @@ test("entrypoint automatically reads cwd .env and sanitizes failures without net
         const obsolete = run("--config", "private-path");
         assert.equal(obsolete.status, 1);
         assert.doesNotMatch(obsolete.stderr, /private-path/);
+        await writeFile(join(cwd, ".env"),
+            "PCLOUD_API_HOST=eapi.pcloud.com\nPCLOUD_FOLDER_ID=1\nPCLOUD_TOKEN=synthetic-token\n");
+        await mkdir(join(cwd, "outside"));
+        await symlink(join(cwd, "outside"), join(cwd, "data"));
+        const local = run();
+        assert.equal(local.status, 1);
+        assert.match(local.stderr, /project data path must be a directory/);
+        assert.doesNotMatch(local.stderr, /synthetic-token|VAULT|deployment/);
         await rm(join(cwd, ".env"));
         await mkdir(join(cwd, ".env"));
         const unreadable = run();

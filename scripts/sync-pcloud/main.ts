@@ -1,7 +1,6 @@
 import { pathToFileURL } from "node:url";
 
 import { runSyncPCloudCli } from "./cli.ts";
-import { processBackupForStaticRelease } from "./process-backup.ts";
 
 export async function runSyncPCloudMain(
     args: readonly string[],
@@ -11,9 +10,7 @@ export async function runSyncPCloudMain(
     process.once("SIGTERM", stop);
     process.once("SIGINT", stop);
     try {
-        return await runSyncPCloudCli(args, {
-            processBackup: processBackupForStaticRelease,
-        }, undefined, controller.signal);
+        return await runSyncPCloudCli(args, {}, undefined, controller.signal);
     } finally {
         process.off("SIGTERM", stop);
         process.off("SIGINT", stop);
