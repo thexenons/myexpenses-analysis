@@ -64,7 +64,7 @@ Preserve unrelated dirty `.atl` registry files and `odd/tasks/pcloud-cli-env.md`
     full Node/UI, types, lint and diff checks. Inspect screenshots after the fix.
   - Rollback: chart layout/filter-chip styles and matching regressions only.
   - Commit work units and follow native review; integrate/push main as requested.
-- [ ] T4 — Preserve a useful plot when exact labels exhaust the canvas width.
+- [x] T4 — Preserve a useful plot when exact labels exhaust the canvas width.
   - Separate bounded follow-up to informational review finding R3-plot-width;
     the acknowledged T2/T3 approval stands and is not reopened.
   - Delegated writer `responsive_component_audit`: width 220 / 27-character tick
@@ -78,6 +78,11 @@ Preserve unrelated dirty `.atl` registry files and `odd/tasks/pcloud-cli-env.md`
   - Extreme-width rendering also exposed overlapping weekly X-axis candidates;
     prune only candidates whose formatted glyph bounds overlap, preserving all
     data points and complete table/inspector periods. Keep this with T4.
+  - Stabilize the existing browser keyboard-scroll assertion only: wait for a
+    positive native ArrowDown scrollend before PageDown, without resetting an
+    in-flight animation. Preserve and strengthen the keyboard/focus assertions.
+    Inline one-file correction after delegated reproduction and exact-patch proof;
+    no budget behavior changes. Rollback is limited to this test sequencing.
   - Forecast an additional 140–220 authored lines; rollback only this explicit
     extreme-width fallback and its regressions, not the verified T2/T3 fixes.
 
@@ -188,7 +193,37 @@ Preserve unrelated dirty `.atl` registry files and `odd/tasks/pcloud-cli-env.md`
   Logs: `/tmp/myexpenses-ui-extreme-audit/green-final.log` and
   `/tmp/myexpenses-ui-stress-audit/run-t4-verified.log`.
 
+## Final verification
+
+T4 production commit `5c51871` contains 233 authored lines including evidence;
+running total 752. Native assessment is medium, `under_budget`; reviewed boundary
+remains `3c9f955`. The final ordinary matrix passed all 81 combinations. Standard
+browser run passed 77 tests with three intentional skips and one keyboard-test
+failure at narrow width. A focused replay reproduced it (two passes/one failure).
+The test reset scrollTop while native ArrowDown animation was still running,
+then sent PageDown. Instrumented events show focus retained, ArrowDown settling
+at 40px and fresh PageDown at 453px. Guarding positive scrollend before PageDown
+passed five exact-patch repetitions, without globals, sleeps or weaker assertions.
+Logs: `/tmp/myexpenses-ui-matrix-audit/budget-scroll-{fresh-and-settled,promise-verified}.log`.
+
+The verified one-file browser correction is applied. Final standard suite:
+78 passed, three intentional device-specific skips, 3.9 minutes. Log:
+`/tmp/myexpenses-ui-matrix-audit/standard-browser-final.log`.
+Final type-check, lint and diff checks passed after that test-only change;
+logs `/tmp/interface-audit-{types,lint}-test-final.log`. The final production
+snapshot is unchanged from the successful 348 UI / 281 Node checks and the
+81 ordinary / 81 stress / 36 extreme rendered combinations above. No failed
+checks remain; three optional-private-dataset checks were also intentionally
+skipped. Original failures and diagnostic iterations remain recorded above.
+
+Only Chromium desktop/mobile emulation and synthetic data were verified, not
+every physical device, browser engine or screen reader. Temporary evidence
+index: `/tmp/myexpenses-ui-matrix-audit/evidence-index.md`. The Engram mirror
+remains pending under the host registration prohibition; this file is the local
+recovery record. Unrelated pre-existing edits remain excluded from delivery.
+
 ## Next step
 
-Complete T4 as a separate work unit, verify its fallback and ordinary layouts,
-then record final evidence and deliver to main. No further product changes.
+Commit this browser-test stabilization and final evidence, assess its committed
+slice from `3c9f955`, then fast-forward main and push main to the authorized
+origin. No further product changes or deployment.

@@ -1225,11 +1225,20 @@ test("keeps the no-limit budget honest and moves focus into the final 27-item ba
   await page.keyboard.press("Tab");
   await expect(scrollRegion).toBeFocused();
   await scrollRegion.evaluate((element) => { element.scrollTop = 0; });
+  const arrowDownFinished = scrollRegion.evaluate((element) => new Promise<number>((resolve) => {
+    const onScrollEnd = () => {
+      if (element.scrollTop <= 0) return;
+      element.removeEventListener("scrollend", onScrollEnd);
+      resolve(element.scrollTop);
+    };
+    element.addEventListener("scrollend", onScrollEnd);
+  }));
   await page.keyboard.press("ArrowDown");
-  await expect.poll(() => scrollRegion.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
-  await scrollRegion.evaluate((element) => { element.scrollTop = 0; });
+  const afterArrowDown = await arrowDownFinished;
+  expect(afterArrowDown).toBeGreaterThan(0);
+  await expect(scrollRegion).toBeFocused();
   await page.keyboard.press("PageDown");
-  await expect.poll(() => scrollRegion.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await expect.poll(() => scrollRegion.evaluate((element) => element.scrollTop)).toBeGreaterThan(afterArrowDown);
   await expectNoDocumentOverflow(page);
   await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
   const violations = await page.evaluate(async () => {
