@@ -50,6 +50,41 @@ function contribution(index: number): BudgetContribution {
 }
 
 describe("BudgetConsumptionDialog", () => {
+  it("translates the selected reconciliation status without changing signed amounts", () => {
+    installDialogStub();
+    const trigger = document.createElement("button");
+    document.body.append(trigger);
+    const statuses = ["RECONCILED", "CLEARED", "UNRECONCILED"] as const;
+    const labels = ["Conciliada", "Compensada", "Sin conciliar"];
+    const contributions = statuses.map((status, index) => {
+      const entry = contribution(index);
+      return Object.assign({}, entry, {
+        amountMinor: index === 1 ? -25 : 100,
+        posting: Object.assign({}, entry.posting, { status, backupStatus: "VOID" as const }),
+      });
+    });
+    const { unmount } = render(
+      <BudgetConsumptionDialog
+        contributions={contributions}
+        currency="EUR"
+        dateBasis="operation"
+        fractionDigits={2}
+        onDismiss={vi.fn<() => void>()}
+        title="Gasto neto"
+        trigger={trigger}
+      />,
+    );
+    const rows = screen.getAllByRole("listitem");
+    for (const [index, label] of labels.entries()) {
+      expect(within(rows[index]!).getByText(`Gastos · ${label}`)).toBeVisible();
+    }
+    expect(within(rows[1]!).getByText("-0,25 €")).toBeVisible();
+    expect(screen.getByText(/3 apuntes/)).toHaveTextContent("1,75 €");
+    expect(screen.queryByText(/RECONCILED|CLEARED|UNRECONCILED|VOID|Anulada/)).not.toBeInTheDocument();
+    unmount();
+    trigger.remove();
+  });
+
   it("ignores a delayed close event from StrictMode effect replay", async () => {
     Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
       configurable: true,

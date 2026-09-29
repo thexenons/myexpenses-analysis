@@ -2,11 +2,18 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import type { BudgetContribution } from "../../../../../domain/analytics/budgets.ts";
+import type { TransactionStatus } from "../../../../../domain/analytics/types.ts";
 import { formatDate } from "../../../../utils/format.ts";
 import { formatBudgetMinor } from "../../BudgetsPage.helpers.ts";
 import styles from "./BudgetConsumptionDialog.module.css";
 
 const PAGE_SIZE = 25;
+const STATUS_LABELS: Readonly<Record<TransactionStatus, string>> = {
+  CLEARED: "Compensada",
+  RECONCILED: "Conciliada",
+  UNRECONCILED: "Sin conciliar",
+  VOID: "Anulada",
+};
 
 interface BudgetConsumptionDialogProps {
   readonly title: string;
@@ -94,7 +101,7 @@ export function BudgetConsumptionDialog({
                 <div className={styles.rowMain}>
                   <strong>{posting.payee || posting.comment || "Apunte sin concepto"}</strong>
                   <span>{formatDate(dateBasis === "value" ? posting.valueDate ?? posting.date : posting.date)} · {posting.accountLabel}</span>
-                  <span>{posting.categoryPath.join(" › ") || "Sin categoría"} · {posting.status}</span>
+                  <span>{posting.categoryPath.join(" › ") || "Sin categoría"} · {STATUS_LABELS[posting.status]}</span>
                   <span className={styles.identifier}>ID: {posting.id}</span>
                 </div>
                 <div className={styles.amounts}>

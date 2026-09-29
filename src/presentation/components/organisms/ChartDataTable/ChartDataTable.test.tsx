@@ -5,8 +5,35 @@ import { describe, expect, it, vi } from "vitest";
 import { ChartDataTable } from "./ChartDataTable.tsx";
 import { createChartCsv } from "./ChartDataTable.helpers.ts";
 import * as csvHelpers from "./ChartDataTable.helpers.ts";
+import { formatPeriodLabel } from "../../../utils/format.ts";
 
 describe("ChartDataTable", () => {
+  it("distinguishes shortened dates across years without changing drilldowns or CSV rows", async () => {
+    const user = userEvent.setup();
+    const onSelectRow = vi.fn<(id: string) => void>();
+    const download = vi.spyOn(csvHelpers, "downloadChartCsv").mockImplementation(() => {});
+    const columns = [{ id: "value", label: "Neto EUR" }];
+    const rows = [
+      { id: "first-day", label: "2024-01-01", values: [-125.25] },
+      { id: "next-year", label: "2025-01-01", values: [150] },
+    ];
+    render(<ChartDataTable caption="Evolución diaria" columns={columns} formatLabel={formatPeriodLabel} labelHeader="Periodo" onSelectRow={onSelectRow} rows={rows} />);
+    await user.click(screen.getByText("Ver datos exactos"));
+    expect(screen.getByRole("rowheader", { name: "01 ene · 2024-01-01" })).toBeVisible();
+    expect(screen.getByRole("rowheader", { name: "01 ene · 2025-01-01" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Ver movimientos: 01 ene · 2025-01-01" }));
+    expect(onSelectRow).toHaveBeenCalledWith("next-year");
+    await user.click(screen.getByRole("button", { name: "Descargar CSV: Evolución diaria" }));
+    expect(download).toHaveBeenCalledWith("Periodo", columns, rows);
+  });
+
+  it("retains original labels in read-only exact tables too", async () => {
+    const user = userEvent.setup();
+    render(<ChartDataTable caption="Día exacto" columns={[]} formatLabel={formatPeriodLabel} labelHeader="Periodo" rows={[{ id: "day", label: "2024-01-01", values: [] }]} />);
+    await user.click(screen.getByText("Ver datos exactos"));
+    expect(screen.getByRole("rowheader", { name: "01 ene · 2024-01-01" })).toBeVisible();
+  });
+
   it("downloads only after an explicit action and includes every exact row", async () => {
     const user = userEvent.setup();
     const download = vi.spyOn(csvHelpers, "downloadChartCsv").mockImplementation(() => {});

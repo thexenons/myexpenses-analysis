@@ -61,27 +61,31 @@ export function ChartDataTable({
               </tr>
             </thead>
             <tbody>
-              {resolvedRows.map((row) => (
-                <tr className={styles.row} key={row.id}>
-                  <th className={styles.rowHeader} scope="row">
-                    {onSelectRow ? (
-                      <Button
-                        aria-label={`Ver movimientos: ${formatLabel(row.label)}`}
-                        onClick={() => onSelectRow(row.id)}
-                        size="compact"
-                        variant="ghost"
-                      >
-                        {formatLabel(row.label)}
-                      </Button>
-                    ) : formatLabel(row.label)}
-                  </th>
-                  {row.values.map((value, index) => (
-                    <td className={styles.value} key={columns[index]?.id ?? index}>
-                      {value === null ? "—" : formatNumber(value, formatValue)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {resolvedRows.map((row) => {
+                const label = formatLabel(row.label);
+                const exactLabel = label === row.label ? label : `${label} · ${row.label}`;
+                return (
+                  <tr className={styles.row} key={row.id}>
+                    <th className={styles.rowHeader} scope="row">
+                      {onSelectRow ? (
+                        <Button
+                          aria-label={`Ver movimientos: ${exactLabel}`}
+                          onClick={() => onSelectRow(row.id)}
+                          size="compact"
+                          variant="ghost"
+                        >
+                          {exactLabel}
+                        </Button>
+                      ) : exactLabel}
+                    </th>
+                    {row.values.map((value, index) => (
+                      <td className={styles.value} key={columns[index]?.id ?? index}>
+                        {value === null ? "—" : formatNumber(value, formatValue)}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </TableScrollRegion>

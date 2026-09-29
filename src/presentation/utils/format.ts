@@ -8,6 +8,7 @@ export const euroFormatter = new Intl.NumberFormat("es-ES", {
   currency: "EUR",
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
+  signDisplay: "negative",
 });
 
 export const countFormatter = new Intl.NumberFormat("es-ES");
@@ -58,6 +59,7 @@ export function formatCurrencyMinor(
       maximumFractionDigits: fractionDigits,
       minimumFractionDigits: fractionDigits,
       style: "currency",
+      signDisplay: "negative",
     });
     currencyFormatters.set(formatterKey, formatter);
   }

@@ -90,6 +90,7 @@ export function budgetAmountFormatter(
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits,
       style: "currency",
+      signDisplay: "negative",
     });
     formatterCache.set(key, formatter);
   }

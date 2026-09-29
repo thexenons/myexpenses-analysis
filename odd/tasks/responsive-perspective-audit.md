@@ -42,7 +42,7 @@ Preserve unrelated dirty `.atl` registry files and `odd/tasks/pcloud-cli-env.md`
   - Exercise narrow mobile, negative/zero/large amounts, long labels and empty
     states where fixtures permit. Separate verified defects from design opinions.
   - Record exact coverage, evidence, limitations and bounded fixes below.
-- [ ] T2 — Correct monetary, exact-date and status presentation.
+- [x] T2 — Correct monetary, exact-date and status presentation.
   - Delegated writer: `interface_semantics_audit`; several non-trivial files and
     their tests require delegation. Observed RED/GREEN with existing Vitest runner.
   - Suppress negative zero in all three currency formatters, including budget
@@ -56,7 +56,8 @@ Preserve unrelated dirty `.atl` registry files and `odd/tasks/pcloud-cli-env.md`
   - Delegated writer: `responsive_component_audit`; shared geometry/CSS plus
     tests are multiple non-trivial files. Verify failing bounds before the fix.
   - Long selected-category chips wrap inside the filter sheet and retain an
-    accessible visible remove control at 320/390 widths.
+    accessible visible remove control at 320/390 widths. Long root-category
+    choices also wrap inside their desktop grid cell without covering neighbors.
   - Reserve enough SVG space for formatted signed numeric labels in series and
     horizontal-bar charts; never drop leading digits or signs to fit margins.
   - Re-run rendered matrix and stress cases, standard isolated browser tests,
@@ -67,6 +68,8 @@ Preserve unrelated dirty `.atl` registry files and `odd/tasks/pcloud-cli-env.md`
 ## Evidence and progress
 
 - CodeGraph root/index verified and current before structural exploration.
+- T1 commit `5357d1e`: 100 authored documentation lines; native assessment passive,
+  not due (`non_executable_only`). Next reviewed boundary is `5357d1e`.
 - Previous budget/copy fix is already on main and origin/main at the base above.
 - Baseline rendered matrix: 81 route/mode/width combinations passed in nine
   Chromium tests, 50.9 seconds (1440, 390 and 320 widths). Exact financial checks
@@ -77,8 +80,11 @@ Preserve unrelated dirty `.atl` registry files and `odd/tasks/pcloud-cli-env.md`
   and desktop category screenshots: removal action beyond the sheet edge, and
   20,000,000 EUR axis text losing leading digits. Horizontal-bar values also clip.
   Evidence: `/tmp/myexpenses-browser-source-MVUVvS/source/node_modules/.tmp/playwright-results`.
-  A 320px empty-search diagnostic using Escape needs harness clarification;
-  do not claim that auxiliary stress suite passed in full yet.
+  Completed stress functional pass: 3/3 tests, 81 expanded route/mode/width
+  combinations, 43.7 seconds, including keyboard drawer/focus restoration and
+  empty results. The earlier temporary test misused native search Escape (which
+  clears that input) and expected the wrong stable empty-state copy; corrected
+  only the diagnostic. Log: `/tmp/myexpenses-ui-stress-audit/run-final.log`.
 - Numerical audit: 407 synthetic assertions across 11 fixtures and three modes;
   42 debt/comparison/category-average tests passed. Empty, zero, cancelling,
   refund-only, large and VOID-only cases preserve documented financial contracts.
@@ -91,10 +97,24 @@ Preserve unrelated dirty `.atl` registry files and `odd/tasks/pcloud-cli-env.md`
   Intentional horizontal table scrolling and offscreen content-visibility capture
   gaps are not defects. Value-date tie sorting lacks a stronger documented rule;
   no speculative sorting or accounting changes will be made.
-- No production edits yet. Emulation is not a claim of testing every physical
-  device, browser engine, data set or assistive technology.
+- Extra drawer reproduction: a long root-category label overlaps its neighboring
+  desktop checkbox. Include it in T3's same wrapping correction and bounds test.
+- T2/T3 bounded writers are implementing the accepted findings. Emulation is not
+  a claim of testing every physical device, browser engine, data set or assistive
+  technology.
+- T2 completed: three currency formatter options, exact chart-table period labels
+  and translated normalized budget status; source values, CSV and callbacks are
+  unchanged. Eight files, 136 additions/23 deletions (159 authored lines).
+  RED: seven expected failures/ten passes; GREEN: 17/17 focused tests, plus 16
+  related tests. Logs `/tmp/interface-t2-{red,green,related}.log`.
+- Parent full verification with both writers' stable source: Node 281 passed,
+  three optional-private-data skips; UI 335/335 in 82 files. Type-check, lint and
+  diff check passed. Logs `/tmp/interface-audit-{node,ui,types,lint}.log`.
+- T3 observed six geometry failures before implementation and 44 focused tests
+  passed afterward; actual glyph bounds, mobile removal and final browser suites
+  are still being verified before closing its work unit.
 
 ## Next step
 
-Implement T2 and T3 with regressions; repeat rendered verification against the
-final source. Keep uncertain findings unchanged and report actual coverage.
+Finish T3 rendered verification, record work-unit/native assessments and deliver
+the verified changes to main. Keep uncertain findings unchanged.
