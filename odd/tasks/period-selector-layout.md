@@ -28,7 +28,8 @@ enough width or wrapping for complete date values.
 - RDD: on, source global. Assess the work-unit commit against the base above;
   candidate consent and native transitions remain separate from implementation.
 - Delivery strategy: `ask-on-risk`; forecast 160–240 authored changed lines,
-  including this document. Running committed count: 0. No chain anticipated.
+  including this document. Work-unit authored count: 190 (+184/-6).
+  This evidence-only follow-up remains within the forecast; no chain needed.
 - Rollback boundary: selector CSS, associated browser regression additions and
   this recovery record; unrelated pCloud work and user registry edits excluded.
 - Engram mirror `odd/period-selector-layout/tasks`: pending. Runtime identity
@@ -84,9 +85,18 @@ enough width or wrapping for complete date values.
 - Firefox/WebKit and live/private datasets were not tested. Node/deployment suites
   were not rerun for this CSS/browser-test-only change; worker/CLI are untouched.
 - Implementation/test diff: 98 authored changed lines (+92/-6), plus this record.
-- Work-unit commit: pending. Native review: pending. Remote delivery: pending.
+- Work-unit commit: `c47c48647998feae8bc441a17af06e10bd4ed6ad`
+  (`fix(filters): keep period labels and dates inside controls`).
+- Native committed-only assessment against `a12e300`: medium (`executable_change`),
+  3 paths / 190 authored lines, `review_due: false`, reason `under_budget`.
+  No reviewer was invoked and no approval receipt is claimed. The slice remains
+  under budget against the same base for this evidence-only follow-up.
+- Delivery verified: fast-forwarded `main`, then pushed `origin/main` using the
+  configured authorized GitHub SSH transport. Both refs resolved to `c47c486`
+  after successful push (`a12e300..c47c486`). No force push or PR. Existing
+  `.atl` changes and the pCloud task-record update were preserved and excluded.
 
 ## Next step
 
-Commit this verified work unit, assess its native review requirements, then
-integrate into `main` and push without including unrelated working-tree edits.
+No implementation work remains. Engram mirroring is still pending host session
+registration; do not invent an identity or retry agent-attributed calls meanwhile.
