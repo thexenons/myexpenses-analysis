@@ -79,8 +79,20 @@ Debt comparison was delivered separately at `1f1c61d` before this feature.
   87 passed, three intentional device skips. Logs `/tmp/transaction-t1-browser-*.log`.
   One initial mobile radio-name locator failure was corrected in the test only.
   Parent hook spot-check passed 5/5; final types/lint/diff checks passed.
+- T1 work-unit commit: `164e188`, 479 authored lines (289 additions, 190 deletions).
+  Native assessment: medium, `slice_budget_reached`; review is due. Exact returned
+  STATUS/START reached candidate-specific consent. Current instructions require
+  relaying this choice and waiting; earlier general automation authorization does
+  not replace that candidate-specific answer. Review and main delivery are pending.
+  Target: `sha256:ee830d8c8b38fb3bfa1b5bcfc513cd898f7b8878574ab1a30b6d19f5a37fef19`.
+  Proposed lineage: `review-48722d5766c10f26`. No reviewer has run for this candidate.
+- User subsequently answered `granted`. Native reliability review inspected all
+  30 immutable patches and approved without findings; it did not execute tests.
+  Exact acknowledgement succeeded and burned the authority. Reviewed boundary:
+  `164e18844b44178d1b3e37444e979af25681ed8b`. T1 is ready for its authorized main push.
 
 ## Next step
 
-Commit and assess T1, then implement T2. After both tasks and delivery, begin
-the separately requested lock-screen simplification without altering cryptography.
+Deliver T1 and this evidence to main, then implement T2 on the feature branch.
+After T2 delivery, begin the separately requested lock-screen simplification
+without altering cryptography.
