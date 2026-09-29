@@ -57,6 +57,122 @@ test.afterEach(async ({ page }) => {
   expect(outboundByPage.get(page)).toEqual([]);
 });
 
+// oxlint-disable no-await-in-loop -- Real chart holds, pan and pinch must run in input order.
+test("keeps mobile chart inspection visible during a real touch hold without selecting plot text", async ({ page, browserName }) => {
+  test.skip(page.viewportSize()!.width > 390 || browserName !== "chromium", "Mobile Chromium touch coverage");
+  await page.locator('a[href="/flujo-de-caja"]').click();
+  await page.getByText("Composición del flujo", { exact: true }).click();
+  const client = await page.context().newCDPSession(page);
+  const charts = [
+    { title: "Flujo neto por periodo", target: "circle" },
+    { title: "Tensión entre entradas y salidas", target: "rect[class*='bar']" },
+    { title: "Presión por categoría", target: "rect[class*='bar']" },
+  ];
+  const chartStyles: { title: string; userSelect: string; webkitUserSelect: string; touchAction: string }[] = [];
+
+  for (const { title, target } of charts) {
+    const figure = page.locator("figure").filter({ has: page.getByRole("heading", { name: title, exact: true }) });
+    const svg = figure.locator("svg");
+    const point = svg.locator(target).first();
+    await point.scrollIntoViewIfNeeded();
+    const box = await point.boundingBox();
+    expect(box, `${title} needs a visible touch target`).not.toBeNull();
+    const x = box!.x + box!.width / 2;
+    const y = box!.y + box!.height / 2;
+    const value = await point.evaluate((element) =>
+      (element.querySelector("title") ?? element.parentElement?.querySelector("title"))?.textContent?.split(":").at(-1)?.trim(),
+    );
+    expect(value, `${title} needs an exact native data label`).toBeTruthy();
+    const selection = await svg.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { userSelect: style.userSelect, webkitUserSelect: style.webkitUserSelect, touchAction: style.touchAction };
+    });
+    chartStyles.push({ title, ...selection });
+    await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+    try {
+      await expect(figure.getByRole("tooltip")).toBeVisible();
+      await expect(figure.getByRole("tooltip")).toContainText(value!);
+      await page.waitForTimeout(850);
+      await expect(figure.getByRole("tooltip")).toBeVisible();
+      await expect(figure.getByRole("tooltip")).toContainText(value!);
+      expect(await page.evaluate(() => window.getSelection()?.toString() ?? "")).toBe("");
+    } finally {
+      await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    }
+  }
+  for (const { title, ...selection } of chartStyles) {
+    expect(selection, `${title} must suppress selection only on its SVG`).toMatchObject({
+      userSelect: "none", webkitUserSelect: "none", touchAction: "auto",
+    });
+  }
+  const outside = page.getByRole("heading", { name: "Flujo de caja", exact: true });
+  expect(await outside.evaluate((element) => getComputedStyle(element).userSelect)).not.toBe("none");
+  await outside.scrollIntoViewIfNeeded();
+  const outsideBox = await outside.boundingBox();
+  expect(outsideBox).not.toBeNull();
+  await page.mouse.move(outsideBox!.x + 4, outsideBox!.y + outsideBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(outsideBox!.x + outsideBox!.width - 4, outsideBox!.y + outsideBox!.height / 2, { steps: 6 });
+  await page.mouse.up();
+  expect(await page.evaluate(() => window.getSelection()?.toString().trim() ?? "")).not.toBe("");
+
+  const panChart = page.locator("figure").filter({ has: page.getByRole("heading", { name: "Flujo neto por periodo" }) });
+  const panSvg = panChart.locator("svg");
+  await panSvg.scrollIntoViewIfNeeded();
+  const panBox = await panSvg.boundingBox();
+  expect(panBox).not.toBeNull();
+  const beforePan = await page.evaluate(() => window.scrollY);
+  expect(beforePan).toBeGreaterThan(0);
+  const panX = panBox!.x + panBox!.width / 2;
+  const panY = panBox!.y + panBox!.height / 2;
+  await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: panX, y: panY }] });
+  try {
+    for (const delta of [25, 50, 75, 100, 125]) {
+      await client.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: panX, y: panY + delta }] });
+      await page.waitForTimeout(16);
+    }
+  } finally {
+    await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  }
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(beforePan);
+  await expect(panChart.getByRole("tooltip")).toHaveCount(0);
+
+  await panSvg.scrollIntoViewIfNeeded();
+  const pinchBox = await panSvg.boundingBox();
+  expect(pinchBox).not.toBeNull();
+  const pinchX = pinchBox!.x + pinchBox!.width / 2;
+  const pinchY = pinchBox!.y + pinchBox!.height / 2;
+  const beforePinch = await page.evaluate(() => window.visualViewport?.scale ?? 1);
+  await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [
+    { x: pinchX - 20, y: pinchY }, { x: pinchX + 20, y: pinchY },
+  ] });
+  try {
+    for (const distance of [40, 60, 80, 100]) {
+      await client.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [
+        { x: pinchX - distance, y: pinchY }, { x: pinchX + distance, y: pinchY },
+      ] });
+      await page.waitForTimeout(16);
+    }
+  } finally {
+    await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  }
+  await expect.poll(() => page.evaluate(() => window.visualViewport?.scale ?? 1)).toBeGreaterThan(beforePinch);
+});
+// oxlint-enable no-await-in-loop
+
+test("preserves desktop chart hover and keyboard dismissal", async ({ page }) => {
+  test.skip(page.viewportSize()!.width < 1000, "Desktop pointer regression");
+  await page.locator('a[href="/flujo-de-caja"]').click();
+  const figure = page.locator("figure").filter({ has: page.getByRole("heading", { name: "Flujo neto por periodo" }) });
+  await figure.locator("circle").last().hover();
+  const tooltip = figure.getByRole("tooltip");
+  await expect(tooltip).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(tooltip).toHaveCount(0);
+  await figure.getByText("Consultar un punto").click();
+  await expect(figure.getByRole("combobox", { name: "Punto de Flujo neto por periodo" })).toBeVisible();
+});
+
 test("keeps summary and cash-flow detail reachable without obscuring primary figures", async ({ page }) => {
   const summary = page.getByText("Saldos, deuda y conciliación", { exact: true });
   await expect(page.getByText("Flujo del periodo", { exact: true })).toBeVisible();
