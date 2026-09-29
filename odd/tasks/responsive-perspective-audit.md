@@ -188,8 +188,8 @@ Preserve unrelated dirty `.atl` registry files and `odd/tasks/pcloud-cli-env.md`
 - Final extreme browser pass: 36 route/mode/device cases, three tests passed in
   28.5 seconds, now including temporal-label intersections and real keyboard/
   horizontal-touch/vertical-page panning. Final stress matrix also passed all
-  81 cases (three tests, 1.1 minutes). Ordinary matrix and standard suite remain
-  in progress; source is frozen for their final run.
+  81 cases (three tests, 1.1 minutes). Ordinary matrix and standard-suite final
+  outcomes are recorded below against this frozen production source.
   Logs: `/tmp/myexpenses-ui-extreme-audit/green-final.log` and
   `/tmp/myexpenses-ui-stress-audit/run-t4-verified.log`.
 
@@ -222,8 +222,14 @@ index: `/tmp/myexpenses-ui-matrix-audit/evidence-index.md`. The Engram mirror
 remains pending under the host registration prohibition; this file is the local
 recovery record. Unrelated pre-existing edits remain excluded from delivery.
 
+Browser stabilization and final evidence commit: `df94c06`, 56 authored lines;
+running work-unit total 808. Native assessment of the pending committed slice
+from `3c9f955`: medium, 283 changed lines, `under_budget`, review not due. The
+reviewed boundary remains `3c9f955`; no new receipt is claimed for this slice.
+This closing update changes documentation only.
+
 ## Next step
 
-Commit this browser-test stabilization and final evidence, assess its committed
-slice from `3c9f955`, then fast-forward main and push main to the authorized
-origin. No further product changes or deployment.
+Implementation and applicable verification are complete. Fast-forward main and
+push main to the authorized origin, then verify local/remote tracking identity.
+No further product changes or deployment.
