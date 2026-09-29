@@ -112,9 +112,34 @@ permits commit and push to main once evidence and tests establish safety.
   the shared browser file was staged by behavior so each work unit is coherent.
   All planned functional checks now pass; only the six documented optional/data
   or device-specific checks were skipped. No further product changes are needed.
+- T2 commit `da9e22d`: 149 authored lines; running work-unit total 466. Native
+  pending-slice assessment from `5c390ca`: medium, 454 changed lines,
+  `slice_budget_reached`. Exact returned STATUS and START with consent relay ran.
+  The user explicitly granted automatic review and subsequent push, and asked
+  for autonomous completion of the queued tasks without further interaction.
+- Frozen candidate: `sha256:08e421293c56a5722fdb9546afc41aae17ad0ff5dde9b21bf77f93538a577392`.
+  Lineage: `review-aa9a6cead03ba518`. Base tree:
+  `448104c91b63a66008af6b0ad79f209e82d232dc`; candidate tree:
+  `3b37e24bf221ebb25de570a1021dd999c357fd4f`; paths digest:
+  `sha256:89ea730bfea2c94205eb32be38d80fc9da599d0adb0610c314be0d48ab641404`.
+  Compiled Codex reliability review inspected all 15 immutable patches and
+  approved with no findings. It did not run tests; functional evidence is above.
+  Exact native acknowledgement succeeded; reviewed boundary is now `da9e22d`.
+  This final bookkeeping changes documentation only. Main push follows it.
 
 ## Next step
 
-Commit verified T2, assess the pending slice from `5c390ca` and follow native
-review before the explicitly requested main push. Then start the user's separate
-transaction visibility / compact budget-detail request; do not mix it here.
+Commit this evidence, assess the documentation-only range from `da9e22d`, then
+fast-forward and push main before starting the next feature.
+
+Queued next feature, explicitly requested after this delivery: hide VOID
+transactions without deleting original data; remove the status filter and table
+column. In the budget contribution dialog keep date, payee, category, account,
+amount, comment and transfer origin/destination visible, with secondary metadata
+in a disclosure. Explore and track it separately after the current main push.
+
+Queued after transaction presentation: simplify the locked-vault screen. Remove
+unlocking hints, password-creation advice and explanations of how the vault or
+application works. Retain the necessary unlock controls; assess this separate UI
+scope only after both preceding deliveries, without changing cryptography or
+security behavior as part of a copy/layout simplification.
