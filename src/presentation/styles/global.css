@@ -1,4 +1,4 @@
-@layer reset, tokens, base;
+@layer reset, tokens, base, layout, components;
 
 @layer reset {
   *,

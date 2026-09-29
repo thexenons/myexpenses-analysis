@@ -1,3 +1,5 @@
+import "./presentation/styles/global.css";
+
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
@@ -5,7 +7,6 @@ import { RouterProvider } from "@tanstack/react-router";
 import { appStore } from "./composition/app-store.ts";
 import { AppStoreProvider } from "./presentation/providers/AppStoreProvider/index.ts";
 import { appRouter } from "./presentation/router/app-router.ts";
-import "./presentation/styles/global.css";
 
 const root = document.getElementById("root");
 if (root === null) {

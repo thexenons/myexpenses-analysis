@@ -57,6 +57,56 @@ test.afterEach(async ({ page }) => {
   expect(outboundByPage.get(page)).toEqual([]);
 });
 
+test("preserves the component cascade across routes and drawer controls", async ({ page }, testInfo) => {
+  const assertControl = async (control: Locator, fontRem: number, bordered = false) => {
+    const appearance = await control.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        fontRem: Number.parseFloat(style.fontSize) / Number.parseFloat(getComputedStyle(document.documentElement).fontSize),
+        borderWidth: Number.parseFloat(style.borderTopWidth),
+        borderStyle: style.borderTopStyle,
+      };
+    });
+    expect.soft(appearance.fontRem, "component typography must override the font reset").toBeCloseTo(fontRem, 2);
+    if (bordered) {
+      expect.soft(appearance.borderWidth, "component boundaries must override the base border reset").toBeGreaterThanOrEqual(1);
+      expect.soft(appearance.borderStyle).toBe("solid");
+    }
+  };
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  const drawerButton = toolbar.getByRole("button", { name: /Abrir todos los filtros/ });
+  const period = toolbar.getByRole("combobox", { name: "Tipo de periodo" });
+  const routes = [
+    { path: "/cuentas", heading: "Cuentas" },
+    { path: "/transacciones", heading: "Transacciones" },
+    { path: "/resumen", heading: "Resumen general" },
+  ];
+  // oxlint-disable no-await-in-loop -- Visit lazy routes sequentially to detect cascade changes after navigation.
+  for (const route of routes) {
+    await page.locator(`a[href="${route.path}"]`).click();
+    await expect(page.getByRole("heading", { name: route.heading, exact: true })).toBeVisible();
+    await assertControl(drawerButton, 0.78, true);
+    await assertControl(period, 0.68);
+    const search = toolbar.getByRole("searchbox");
+    if (await search.isVisible()) await assertControl(search, 0.82);
+    await expectNoDocumentOverflow(page);
+  }
+  // oxlint-enable no-await-in-loop
+  await page.screenshot({ path: testInfo.outputPath("cascade-overview.png"), animations: "disabled" });
+  await period.selectOption("custom");
+  await drawerButton.click();
+  const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });
+  await expect(drawer).toBeVisible();
+  await assertControl(drawer.getByRole("searchbox", { name: "Buscar en movimientos", exact: true }), 0.82);
+  await assertControl(drawer.getByLabel("Desde", { exact: true }), 0.68, true);
+  await assertControl(drawer.getByLabel("Hasta", { exact: true }), 0.68, true);
+  await assertControl(drawer.getByRole("button", { name: "Ver resultados", exact: true }), 0.78, true);
+  await drawer.screenshot({ path: testInfo.outputPath("cascade-drawer.png"), animations: "disabled" });
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toBeVisible();
+  await expect(drawerButton).toBeFocused();
+});
+
 // oxlint-disable no-await-in-loop -- Resize and select each real control state in order.
 test("keeps period selector labels inside rounded borders in every mode", async ({ page }) => {
   const viewport = page.viewportSize()!;
