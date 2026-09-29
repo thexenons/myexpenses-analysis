@@ -43,9 +43,9 @@ const EMPTY_ANALYTICS: AnalyticsDataset = {
 };
 
 function FilteredAnalyticsProbe() {
-  const { filtered, granularity, searchPending } = useFilteredAnalytics();
+  const { filtered, filters, granularity, searchPending } = useFilteredAnalytics();
   return (
-    <output data-testid="probe">
+    <output data-testid="probe" data-count={filtered?.postings.length} data-source-count={filtered?.source.postings.length} data-statuses={filters.statuses.join(",")} data-budget-statuses={filtered?.filters.statuses.join(",")}>
       {searchPending ? "pending" : "ready"}:{filtered?.filters.search ?? "missing"}:
       {granularity}
     </output>
@@ -53,6 +53,29 @@ function FilteredAnalyticsProbe() {
 }
 
 describe("useFilteredAnalytics", () => {
+  it("projects only active rows and ignores stale status selections without mutating the source", () => {
+    const store = createAppStore({ load: vi.fn<DatasetRepository["load"]>() }, window.localStorage);
+    const initial = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+      categories: { Food: { categoryType: "EXPENSE" } },
+      parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "cleared", sourceTransactionUuid: "cleared", date: "2025-01-02", amount: -10, category: ["Food"], sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+        { uuid: "void", sourceTransactionUuid: "void", date: "2025-01-03", amount: -10, category: ["Food"], sourceStatus: "VOID", splitIndex: null, splitCount: null },
+      ] }],
+    });
+    store.setState({ analytics: initial, loadPhase: "ready" });
+    store.getState().actions.setStatuses(["VOID"]);
+    render(<AppStoreProvider store={store}><FilteredAnalyticsProbe /></AppStoreProvider>);
+    expect(screen.getByTestId("probe")).toHaveAttribute("data-count", "1");
+    expect(screen.getByTestId("probe")).toHaveAttribute("data-source-count", "2");
+    expect(screen.getByTestId("probe")).toHaveAttribute("data-statuses", "");
+    expect(screen.getByTestId("probe")).toHaveAttribute("data-budget-statuses", "");
+    expect(initial.postings).toHaveLength(2);
+    expect(store.getState().filters.statuses).toEqual(["VOID"]);
+    act(() => store.getState().actions.setStatuses(["CLEARED"]));
+    expect(screen.getByTestId("probe")).toHaveAttribute("data-count", "1");
+    expect(screen.getByTestId("probe")).toHaveAttribute("data-budget-statuses", "");
+  });
   it("derives automatic granularity from the selected value-date history", () => {
     window.localStorage.clear();
     const store = createAppStore({ load: vi.fn<DatasetRepository["load"]>() }, window.localStorage);

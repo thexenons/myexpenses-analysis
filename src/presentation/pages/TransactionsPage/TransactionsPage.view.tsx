@@ -5,7 +5,6 @@ import { Panel } from "../../components/molecules/Panel/index.ts";
 import { AnalyticsPage } from "../../components/templates/AnalyticsPage/index.ts";
 import { formatCount, formatEuroMinor } from "../../utils/format.ts";
 import { TransactionTable } from "./components/TransactionTable/index.ts";
-import { TransactionStatus } from "./components/TransactionStatus/index.ts";
 import type { TransactionsPageViewProps } from "./TransactionsPage.types.ts";
 import styles from "./TransactionsPage.module.css";
 
@@ -25,11 +24,10 @@ export function TransactionsPageView({
   searchPending,
   sortKey,
   summary,
-  uniformStatus,
 }: TransactionsPageViewProps) {
   return (
     <AnalyticsPage
-      description="Libro mayor completo, incluidas las partes de splits y las operaciones anuladas cuando el filtro de estado las solicita."
+      description="Movimientos activos del libro mayor, incluidas las partes de splits."
       title="Transacciones"
     >
       <output aria-atomic="true" aria-live="polite" className={styles.resultStatus}>
@@ -40,7 +38,7 @@ export function TransactionsPageView({
             : `${formatCount(resultCount, "resultado", "resultados")}.`}
       </output>
       {summary === undefined ? null : (
-        <Panel description="Importes de todos los resultados, sin anulados. Las transferencias pueden compensarse entre cuentas; el flujo real sólo suma las cuentas reales seleccionadas." title="Totales del corte">
+        <Panel description="Importes de todos los resultados. Las transferencias pueden compensarse entre cuentas; el flujo real sólo suma las cuentas reales seleccionadas." title="Totales del corte">
           <dl className={styles.totals}>
             <div><dt>Flujo de cuentas reales</dt><dd>{formatEuroMinor(summary.realCashFlowEurMinor)}</dd></div>
             <div><dt>Neto seleccionado</dt><dd>{formatEuroMinor(summary.netEurMinor)}</dd></div>
@@ -74,11 +72,6 @@ export function TransactionsPageView({
         description={`${formatCount(resultCount, "resultado", "resultados")}${searchPending ? " · actualizando búsqueda" : ""}`}
         title="Movimientos filtrados"
       >
-        {uniformStatus === undefined ? null : (
-          <p className={styles.commonStatus}>
-            Estado de todos los resultados: <TransactionStatus posting={{ status: uniformStatus }} />
-          </p>
-        )}
         <TransactionTable
           dataset={dataset}
           dateBasis={dateBasis}
@@ -86,7 +79,6 @@ export function TransactionsPageView({
           onSort={onSort}
           postings={postings}
           sortKey={sortKey}
-          uniformStatus={uniformStatus}
         />
         <Pagination
           label="Páginas de movimientos"

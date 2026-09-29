@@ -155,22 +155,36 @@ describe("FilterDrawer", () => {
     expect(appStore.getState().granularity).toBe("auto")
   })
 
-  it("exposes the cleared audit status without flattening it into reconciled", async () => {
-    const user = userEvent.setup()
-    appStore.setState({ filterDrawerOpen: true })
-    render(
-      <AppStoreProvider store={appStore}>
-        <FilterDrawer />
-      </AppStoreProvider>,
-    )
+  it("does not expose a status control or treat stale statuses as active", () => {
+    appStore.setState({ filterDrawerOpen: true, filters: { ...createDefaultFilterState(), scope: "realCashFlow", statuses: ["VOID"] } })
+    render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
+    expect(screen.queryByRole("group", { name: "Estado" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("checkbox", { name: "Anuladas" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Restablecer" })).toBeDisabled()
+  })
 
-    await user.click(screen.getByRole("checkbox", { name: "Compensadas" }))
-
-    expect(appStore.getState().filters.statuses).toEqual([
-      "UNRECONCILED",
-      "RECONCILED",
-      "VOID",
-    ])
+  it("excludes facets supplied only by VOID postings while retaining catalog categories", async () => {
+    const analytics = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+      categories: { Active: { categoryType: "EXPENSE" }, Archived: { categoryType: "EXPENSE" } },
+      parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "active", sourceTransactionUuid: "active", date: "2026-01-01", amount: -2, category: ["Active"], sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+        { uuid: "void", sourceTransactionUuid: "void", date: "2026-01-02", amount: -3, category: ["Archived"], sourceStatus: "VOID", splitIndex: null, splitCount: null },
+      ] }],
+    })
+    Object.assign(analytics.postings[0]!, { payee: "Visible", payeeSourceId: 1, tags: ["Current"], currency: "EUR" })
+    Object.assign(analytics.postings[1]!, { payee: "Hidden", payeeSourceId: 2, tags: ["Void only"], currency: "GBP" })
+    appStore.setState({ analytics, filterDrawerOpen: true })
+    render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
+    expect(screen.getByRole("checkbox", { name: "Active" })).toBeVisible()
+    expect(screen.getByRole("checkbox", { name: "Archived" })).toBeVisible()
+    expect(screen.getByRole("checkbox", { name: "Current" })).toBeVisible()
+    expect(screen.queryByRole("checkbox", { name: "Void only" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "Archived" })).not.toBeInTheDocument()
+    await userEvent.setup().click(screen.getByText("Criterios adicionales"))
+    expect(screen.getByRole("checkbox", { name: "Visible" })).toBeVisible()
+    expect(screen.queryByRole("checkbox", { name: "Hidden" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("checkbox", { name: "GBP" })).not.toBeInTheDocument()
   })
 
   it("removes an exact nested category from the shared global filter", async () => {
@@ -284,14 +298,7 @@ describe("FilterDrawer", () => {
     expect(appStore.getState().filters).toEqual({ ...createDefaultFilterState(), scope: "realCashFlow" })
   })
 
-  it("does not turn the last selected status into all statuses", () => {
-    appStore.setState({ filterDrawerOpen: true, filters: { ...createDefaultFilterState(), statuses: ["CLEARED"] } })
-    render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
-    expect(screen.getByRole("checkbox", { name: "Compensadas" })).toBeDisabled()
-    expect(screen.getByRole("checkbox", { name: "Anuladas" })).not.toBeChecked()
-  })
-
-  it("offers exact payees, missing methods, types and currencies from the full dataset", async () => {
+  it("offers exact payees, missing methods, types and currencies from active postings", async () => {
     const user = userEvent.setup()
     const analytics = normalizeDataset({
       accounts: { version: 2, accounts: { cash: { label: "Caja", type: "DEFAULT" } } },

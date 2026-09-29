@@ -2,7 +2,6 @@ import type {
   AnalyticsScope,
   CategoryType,
   LinkedFilter,
-  TransactionStatus,
 } from "../../../../domain/analytics/types"
 import { useState } from "react"
 import { categoryPathsEqual } from "../../../../domain/analytics/filters.ts"
@@ -32,16 +31,6 @@ const LINKED_OPTIONS: readonly SegmentedControlOption<LinkedFilter>[] = [
   { value: "unlinked", label: "Sin vínculo", shortLabel: "Sueltos" },
 ]
 
-const STATUS_OPTIONS: readonly {
-  label: string
-  value: TransactionStatus
-}[] = [
-  { value: "UNRECONCILED", label: "Sin conciliar" },
-  { value: "CLEARED", label: "Compensadas" },
-  { value: "RECONCILED", label: "Conciliadas" },
-  { value: "VOID", label: "Anuladas" },
-]
-
 const CATEGORY_TYPE_OPTIONS: readonly { value: CategoryType; label: string }[] = [
   { value: "EXPENSE", label: "Gasto" },
   { value: "INCOME", label: "Ingreso" },
@@ -54,7 +43,6 @@ export function FilterDrawerView({
   endpointAccounts,
   categoryPaths,
   allAccountsSelected,
-  allStatusesSelected,
   availableTags,
   payeeOptions,
   methodOptions,
@@ -78,7 +66,6 @@ export function FilterDrawerView({
   onReset,
   onScopeChange,
   onSearchChange,
-  onStatusToggle,
   onTagToggle,
   onPayeeToggle,
   onMethodToggle,
@@ -297,30 +284,10 @@ export function FilterDrawerView({
             <div className={styles.sectionHeading}>
               <span aria-hidden="true">04</span>
               <div>
-                <h3>Estado y relación</h3>
-                <p>Audita conciliaciones, anulaciones y movimientos vinculados.</p>
+                <h3>Relación</h3>
+                <p>Limita los movimientos según sus vínculos con otras cuentas.</p>
               </div>
             </div>
-
-            <fieldset className={styles.choiceGroup}>
-              <legend>Estado</legend>
-              <p>{allStatusesSelected ? "Todos los estados" : "Selección personalizada"}</p>
-              <div className={styles.compactChoices}>
-                {STATUS_OPTIONS.map((option) => (
-                  <label className={styles.choice} key={option.value}>
-                    <input
-                      checked={
-                        allStatusesSelected || filters.statuses.includes(option.value)
-                      }
-                      disabled={filters.statuses.length === 1 && filters.statuses.includes(option.value)}
-                      onChange={() => onStatusToggle(option.value)}
-                      type="checkbox"
-                    />
-                    <span>{option.label}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
 
             <SegmentedControl
               label="Vínculo con otra cuenta"

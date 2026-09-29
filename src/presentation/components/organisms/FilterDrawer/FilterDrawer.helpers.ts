@@ -29,6 +29,7 @@ export function collectIdentityOptions(dataset: AnalyticsDataset | null, kind: "
   if (dataset === null) return []
   const options = new Map<string, string | undefined>()
   for (const posting of dataset.postings) {
+    if (posting.isVoid) continue;
     const key = kind === "payee" ? payeeIdentityKey(posting) : paymentMethodIdentityKey(posting)
     const label = kind === "payee" ? posting.payee : posting.paymentMethod
     options.set(key, label)
@@ -46,7 +47,7 @@ export function collectIdentityOptions(dataset: AnalyticsDataset | null, kind: "
 
 export function includeSelectedIdentityOptions(options: readonly IdentityOption[], selected: readonly string[], kind: "payee" | "method"): readonly IdentityOption[] {
   const known = new Set(options.map((option) => option.key))
-  return [...options, ...selected.filter((key) => !known.has(key)).map((key) => ({ key, label: `${identityOptionLabel(key, undefined, kind)} · no disponible en esta exportación` }))]
+  return [...options, ...selected.filter((key) => !known.has(key)).map((key) => ({ key, label: `${identityOptionLabel(key, undefined, kind)} · no disponible entre movimientos activos` }))]
 }
 
 /** Parse an absolute EUR amount without floating-point cent rounding. */
@@ -94,6 +95,7 @@ export function collectFilterDrawerTags(
   if (dataset === null) return []
   const tags = new Set<string>()
   for (const posting of dataset.postings) {
+    if (posting.isVoid) continue;
     for (const tag of posting.tags) tags.add(tag)
   }
   return [...tags].toSorted((left, right) => SPANISH_COLLATOR.compare(left, right))
@@ -103,6 +105,7 @@ export function collectFilterDrawerCategoryPaths(dataset: AnalyticsDataset | nul
   if (dataset === null) return []
   const paths = new Map<string, readonly string[]>()
   for (const posting of dataset.postings) {
+    if (posting.isVoid) continue;
     if (posting.categoryPath.length === 0) paths.set("[]", [])
     for (let length = 1; length <= posting.categoryPath.length; length += 1) {
       const path = posting.categoryPath.slice(0, length)
@@ -151,7 +154,6 @@ export function hasActiveDrawerFilters(
     filters.categoryMatch === "either" ||
     filters.categoryDepth === "exact" ||
     filters.categoryPrefixes.length > 0 ||
-    filters.statuses.length > 0 ||
     filters.tags.length > 0 ||
     filters.search.trim().length > 0 ||
     filters.linked !== "all" ||

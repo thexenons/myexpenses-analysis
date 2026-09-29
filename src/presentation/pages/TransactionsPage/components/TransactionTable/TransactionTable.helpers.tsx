@@ -6,7 +6,6 @@ import type { TransactionSortKey } from "../../TransactionsPage.types.ts";
 import { TransactionAccount } from "../TransactionAccount/index.ts";
 import { TransactionAmount } from "../TransactionAmount/index.ts";
 import { TransactionConcept } from "../TransactionConcept/index.ts";
-import { TransactionStatus } from "../TransactionStatus/index.ts";
 import { TransactionLinks } from "../TransactionLinks/index.ts";
 
 export function createTransactionTableColumns(
@@ -15,7 +14,6 @@ export function createTransactionTableColumns(
   onSort: (key: TransactionSortKey) => void,
   dataset?: AnalyticsDataset,
   dateBasis: "operation" | "value" = "operation",
-  uniformStatus?: NormalizedPosting["status"],
 ): readonly DataTableColumn<NormalizedPosting>[] {
   return [
     {
@@ -70,12 +68,6 @@ export function createTransactionTableColumns(
       header: "Cuenta de destino",
       cell: (posting) => dataset === undefined ? "—" : resolvePostingAccounts(posting, dataset).destinationAccount?.label ?? "Externa o sin vincular",
     },
-    ...(uniformStatus === undefined ? [{
-      key: "status",
-      header: "Estado",
-      cell: (posting: NormalizedPosting) => <TransactionStatus posting={posting} />,
-      align: "center" as const,
-    }] : []),
   ];
 }
 

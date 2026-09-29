@@ -32,7 +32,6 @@ export function useGlobalFilters(): GlobalFiltersViewProps {
   if (filters.dateBasis === "value") activeSelections.push({ id: "dateBasis", label: "Fecha valor", onRemove: () => patchFilters({ dateBasis: "operation" }) })
   if (filters.categoryMatch === "either") activeSelections.push({ id: "categoryMatch", label: "Categoría de ambas partes", onRemove: () => patchFilters({ categoryMatch: "posting" }) })
   if (filters.categoryDepth === "exact") activeSelections.push({ id: "categoryDepth", label: "Categoría exacta", onRemove: () => patchFilters({ categoryDepth: "subtree" }) })
-  if (filters.statuses.length > 0) activeSelections.push({ id: "statuses", label: `Estados: ${filters.statuses.map((status) => ({ UNRECONCILED: "sin conciliar", CLEARED: "compensadas", RECONCILED: "conciliadas", VOID: "anuladas" })[status]).join(", ")}`, onRemove: () => patchFilters({ statuses: [] }) })
   if (filters.linked !== "all") activeSelections.push({ id: "linked", label: filters.linked === "linked" ? "Vinculados" : "Sin vínculo", onRemove: () => patchFilters({ linked: "all" }) })
   for (const tag of filters.tags) activeSelections.push({ id: `tag:${tag}`, label: `Etiqueta: ${tag}`, onRemove: () => patchFilters({ tags: filters.tags.filter((candidate) => candidate !== tag) }) })
   if (filters.search.trim()) activeSelections.push({ id: "search", label: `Texto: ${filters.search.trim()}`, onRemove: () => patchFilters({ search: "" }) })

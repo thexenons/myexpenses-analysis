@@ -18,7 +18,6 @@ export function countGlobalFilters(
   if (filters.categoryMatch === "either") count += 1
   if (filters.categoryDepth === "exact") count += 1
   if (filters.categoryPrefixes.length > 0) count += 1
-  if (filters.statuses.length > 0) count += 1
   if (filters.tags.length > 0) count += 1
   if (filters.search.trim().length > 0) count += 1
   if (filters.linked !== "all") count += 1

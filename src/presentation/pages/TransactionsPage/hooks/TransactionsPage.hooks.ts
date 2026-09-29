@@ -25,12 +25,7 @@ export function useTransactionsPage(): TransactionsPageViewProps {
   const dateBasis = filtered?.filters.dateBasis ?? "operation";
   const descending = search.direction === "desc";
   const sortKey = search.sort;
-  const sourcePostings = filtered?.postings ?? EMPTY_POSTINGS;
-  const firstStatus = sourcePostings[0]?.status;
-  const uniformStatus = firstStatus !== undefined && firstStatus !== "VOID" &&
-    sourcePostings.every((posting) => posting.status === firstStatus)
-    ? firstStatus
-    : undefined;
+  const sourcePostings = filtered?.activePostings ?? EMPTY_POSTINGS;
   const previousSourcePostings = useRef(sourcePostings);
   const postings = useMemo(
     () => sortPostings(sourcePostings, sortKey, descending, dateBasis),
@@ -110,6 +105,5 @@ export function useTransactionsPage(): TransactionsPageViewProps {
     sortKey,
     onSort,
     summary,
-    uniformStatus,
   };
 }

@@ -6,13 +6,10 @@ import { TRANSACTION_POSTING_FIXTURE } from "../../TransactionsPage.test.helpers
 import { TransactionTable } from "./TransactionTable.tsx";
 
 describe("TransactionTable", () => {
-  it("keeps mixed and VOID statuses in their rows while omitting a uniform non-VOID status column", () => {
-    const props = { descending: true, onSort: vi.fn<(key: "amount" | "date") => void>(), postings: [TRANSACTION_POSTING_FIXTURE], sortKey: "date" as const };
-    const { rerender } = render(<TransactionTable {...props} uniformStatus="RECONCILED" />);
+  it("omits the status column for mixed active rows", () => {
+    render(<TransactionTable descending onSort={vi.fn<(key: "amount" | "date") => void>()} postings={[TRANSACTION_POSTING_FIXTURE, { ...TRANSACTION_POSTING_FIXTURE, id: "cleared", status: "CLEARED" }]} sortKey="date" />);
     expect(screen.queryByRole("columnheader", { name: "Estado" })).not.toBeInTheDocument();
-    rerender(<TransactionTable {...props} postings={[TRANSACTION_POSTING_FIXTURE, { ...TRANSACTION_POSTING_FIXTURE, id: "void", isVoid: true, status: "VOID" }]} />);
-    expect(screen.getByRole("columnheader", { name: "Estado" })).toBeVisible();
-    expect(screen.getByText("Anulado")).toBeVisible();
+    expect(screen.queryByText("Conciliado")).not.toBeInTheDocument();
   });
 
   it("renders posting cells and forwards column sorting", async () => {

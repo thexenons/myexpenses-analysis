@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const BASE = "http://127.0.0.1:41789";
@@ -482,7 +482,7 @@ test("keeps summary and cash-flow detail reachable without obscuring primary fig
   await page.keyboard.press("Enter");
   await expect(summary.locator("xpath=..")).toHaveAttribute("open", "");
   await expect(page.getByText("Saldo en deudas", { exact: true })).toBeVisible();
-  await expect(page.getByText("Anulados visibles", { exact: true })).toBeVisible();
+  await expect(page.getByText("Anulados visibles", { exact: true })).toHaveCount(0);
   await page.keyboard.press("Space");
   await expect(summary.locator("xpath=..")).not.toHaveAttribute("open");
   await page.getByText("Composición y categorías", { exact: true }).click();
@@ -669,6 +669,7 @@ test("keeps mobile time controls outside the filter drawer and search inside it"
 
   await toolbar.getByRole("button", { name: /Abrir todos los filtros/ }).click();
   const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });
+  await expect(drawer.getByRole("group", { name: "Estado", exact: true })).toHaveCount(0);
   await expect(drawer.getByRole("searchbox", { name: "Buscar en movimientos" })).toBeVisible();
   await drawer.getByRole("searchbox", { name: "Buscar en movimientos" }).fill("Synthetic food");
   await drawer.getByRole("group", { name: "Ámbito de las estadísticas" }).getByRole("radio", { name: "Yo" }).check();
@@ -951,6 +952,39 @@ test("uses consistent reconciliation and singular result copy in the rendered ro
   await expectNoDocumentOverflow(page);
 });
 
+test("keeps VOID out of scoped transaction counts, rows and CSV without changing its schema", async ({ page }) => {
+  await page.getByRole("link", { name: /^(Transacciones|Movimientos)$/ }).click();
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  const scope = toolbar.getByRole("group", { name: "Ámbito de las estadísticas" });
+  const table = page.getByRole("table", { name: "Transacciones que coinciden con los filtros globales" });
+  const results = page.getByRole("region", { name: "Movimientos filtrados" });
+
+  for (const { value, count } of [
+    { value: "realCashFlow", count: 12 },
+    { value: "all", count: 13 },
+    { value: "debtsOnly", count: 1 },
+  ]) {
+    // oxlint-disable-next-line no-await-in-loop -- Each scope must be observed before selecting the next.
+    await scope.locator(`input[type="radio"][value="${value}"]`).check();
+    // oxlint-disable-next-line no-await-in-loop -- Wait for the rendered scope, not a guessed store delay.
+    await expect(results).toContainText(`${count} ${count === 1 ? "resultado" : "resultados"}`);
+    // oxlint-disable-next-line no-await-in-loop -- The active row count is part of each scope's contract.
+    await expect(table.locator("tbody tr")).toHaveCount(count);
+    // oxlint-disable-next-line no-await-in-loop -- The obsolete column must stay absent across scope changes.
+    await expect(table.getByRole("columnheader", { name: "Estado" })).toHaveCount(0);
+    const downloadPromise = page.waitForEvent("download");
+    // oxlint-disable-next-line no-await-in-loop -- Download uses the currently rendered scope.
+    await results.getByRole("button", { name: "Exportar CSV" }).click();
+    // oxlint-disable-next-line no-await-in-loop -- Await the matching download event before changing scope.
+    const download = await downloadPromise;
+    // oxlint-disable-next-line no-await-in-loop -- The isolated browser runner owns this temporary artifact.
+    const csv = await readFile(await download.path(), "utf8");
+    expect(csv).toContain("estado_myexpenses");
+    expect(csv.split(/\r?\n/u)).toHaveLength(count + 1);
+    expect(csv).not.toMatch(/(?:^|,)VOID(?:,|$)/mu);
+  }
+});
+
 test("reveals complete transaction text and source status by keyboard at every viewport", async ({ page }, testInfo) => {
   const visualDirectory = "/tmp/myexpenses-u6-visual";
   await mkdir(visualDirectory, { recursive: true });
@@ -974,7 +1008,7 @@ test("reveals complete transaction text and source status by keyboard at every v
   expect(await table.getByRole("columnheader").allTextContents()).toEqual([
     "Fecha", "Concepto", "Categoría", "Cuenta", "Importe", "Cuenta de origen", "Cuenta de destino",
   ]);
-  await expect(page.getByText(/Estado de todos los resultados:/)).toContainText("Sin conciliar");
+  await expect(page.getByText(/Estado de todos los resultados:/)).toHaveCount(0);
   const summary = row.getByText("Ver concepto completo y trazabilidad");
   await summary.scrollIntoViewIfNeeded();
   await page.screenshot({ path: join(visualDirectory, `transaction-row-closed-${testInfo.project.name}.png`) });
@@ -1016,7 +1050,7 @@ test("reveals complete transaction text and source status by keyboard at every v
   await drawer.getByRole("searchbox", { name: "Buscar en movimientos" }).fill("");
   await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
   await expect.poll(() => table.locator("tbody tr").count()).toBeGreaterThan(1);
-  await expect(table.getByRole("columnheader", { name: "Estado" })).toBeVisible();
+  await expect(table.getByRole("columnheader", { name: "Estado" })).toHaveCount(0);
   await summary.focus();
   await page.keyboard.press("Enter");
   await expect(summary.locator("..")).toHaveAttribute("open", "");

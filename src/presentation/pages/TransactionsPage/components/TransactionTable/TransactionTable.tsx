@@ -25,13 +25,12 @@ export function TransactionTable({
   onSort,
   postings,
   sortKey,
-  uniformStatus,
 }: TransactionTableProps) {
   return (
     <DataTable
       caption="Transacciones que coinciden con los filtros globales"
       className={styles.root}
-      columns={createTransactionTableColumns(descending, sortKey, onSort, dataset, dateBasis, uniformStatus)}
+      columns={createTransactionTableColumns(descending, sortKey, onSort, dataset, dateBasis)}
       empty={EMPTY_TRANSACTIONS}
       rowKey={transactionTableRowKey}
       rows={postings}

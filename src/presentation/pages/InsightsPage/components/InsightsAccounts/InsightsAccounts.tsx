@@ -85,10 +85,6 @@ export function InsightsAccounts({
             </dd>
           </div>
           <div>
-            <dt>VOID</dt>
-            <dd>{countFormatter.format(provenance.voidPostingCount)}</dd>
-          </div>
-          <div>
             <dt>Peers vinculados</dt>
             <dd>{countFormatter.format(provenance.linkedPostingCount)}</dd>
           </div>

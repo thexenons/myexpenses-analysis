@@ -5,6 +5,8 @@ import { datasetDateBounds } from "../../../domain/analytics/date-bounds.ts";
 import { applyFilters } from "../../../domain/analytics/filters.ts";
 import { useAppStore } from "../../providers/AppStoreProvider/index.ts";
 
+const PRESENTATION_STATUSES: [] = [];
+
 export function useFilteredAnalytics() {
   const analytics = useAppStore((state) => state.analytics);
   const filters = useAppStore((state) => state.filters);
@@ -26,7 +28,7 @@ export function useFilteredAnalytics() {
       periodMode: filters.periodMode,
       scope: filters.scope,
       search: deferredSearch,
-      statuses: filters.statuses,
+      statuses: PRESENTATION_STATUSES,
       tags: filters.tags,
       payeeKeys: filters.payeeKeys,
       paymentMethodKeys: filters.paymentMethodKeys,
@@ -52,7 +54,6 @@ export function useFilteredAnalytics() {
       filters.linked,
       filters.periodMode,
       filters.scope,
-      filters.statuses,
       filters.tags,
       filters.payeeKeys,
       filters.paymentMethodKeys,
@@ -63,8 +64,16 @@ export function useFilteredAnalytics() {
     ],
   );
   const filtered = useMemo(
-    () => (analytics === null ? null : applyFilters(analytics, deferredFilters)),
+    () => {
+      if (analytics === null) return null;
+      const result = applyFilters(analytics, deferredFilters);
+      return { ...result, postings: result.activePostings };
+    },
     [analytics, deferredFilters],
+  );
+  const effectiveFilters = useMemo(
+    () => filters.statuses.length === 0 ? filters : { ...filters, statuses: PRESENTATION_STATUSES },
+    [filters],
   );
   const bounds = analytics === null ? null : datasetDateBounds(analytics, filters.dateBasis);
   const granularity = resolveTimeGranularity(
@@ -78,7 +87,7 @@ export function useFilteredAnalytics() {
   return {
     analytics,
     filtered,
-    filters,
+    filters: effectiveFilters,
     granularity,
     granularitySetting,
     searchPending: filters.search !== deferredSearch || filters.commentSearch !== deferredCommentSearch || filters.referenceSearch !== deferredReferenceSearch,

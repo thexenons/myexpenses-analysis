@@ -8,5 +8,4 @@ export interface TransactionTableProps {
   readonly onSort: (key: TransactionSortKey) => void;
   readonly postings: readonly NormalizedPosting[];
   readonly sortKey: TransactionSortKey;
-  readonly uniformStatus?: NormalizedPosting["status"];
 }

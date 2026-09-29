@@ -16,6 +16,7 @@ describe("InsightsTiming", () => {
     expect(screen.getByRole("img", { name: "Ritmo por hora de valor" })).toBeVisible();
     expect(screen.getByText(/no se inventa una hora de valor/, { selector: "p" })).toBeVisible();
     expect(screen.getByText(/valor \(operación si falta\)/, { selector: "p" })).toBeVisible();
+    expect(screen.queryByText(/Los anulados permanecen/)).not.toBeInTheDocument();
   });
 
   it("exposes hour and weekday charts with accessible names", () => {

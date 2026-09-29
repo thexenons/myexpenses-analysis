@@ -5,7 +5,7 @@ import {
   useState,
 } from "react"
 
-import type { CategoryType, CurrencyCode, TransactionStatus } from "../../../../../domain/analytics/types"
+import type { CategoryType, CurrencyCode } from "../../../../../domain/analytics/types"
 import { toggleCategoryPath } from "../../../../../domain/analytics/filters.ts"
 import { useAppStore } from "../../../../providers/AppStoreProvider/index.ts"
 import {
@@ -23,13 +23,6 @@ import {
 } from "../FilterDrawer.helpers"
 import type { FilterDrawerViewProps } from "../FilterDrawer.types"
 
-const STATUS_VALUES: readonly TransactionStatus[] = [
-  "UNRECONCILED",
-  "CLEARED",
-  "RECONCILED",
-  "VOID",
-]
-
 export function useFilterDrawer(): FilterDrawerViewProps {
   const analytics = useAppStore((state) => state.analytics)
   const clearFilters = useAppStore((state) => state.actions.clearFilters)
@@ -44,7 +37,6 @@ export function useFilterDrawer(): FilterDrawerViewProps {
     (state) => state.actions.setCategoryPrefixes,
   )
   const onGranularityChange = useAppStore((state) => state.actions.setGranularity)
-  const setStatuses = useAppStore((state) => state.actions.setStatuses)
   const setTags = useAppStore((state) => state.actions.setTags)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -75,7 +67,7 @@ export function useFilterDrawer(): FilterDrawerViewProps {
   )
   const payeeOptions = useMemo(() => includeSelectedIdentityOptions(collectIdentityOptions(analytics, "payee"), filters.payeeKeys ?? [], "payee"), [analytics, filters.payeeKeys])
   const methodOptions = useMemo(() => includeSelectedIdentityOptions(collectIdentityOptions(analytics, "method"), filters.paymentMethodKeys ?? [], "method"), [analytics, filters.paymentMethodKeys])
-  const availableCurrencies = useMemo(() => [...new Set([...(analytics?.postings.map((posting) => posting.currency) ?? []), ...(filters.currencies ?? [])])].toSorted(), [analytics, filters.currencies])
+  const availableCurrencies = useMemo(() => [...new Set([...(analytics?.postings.filter((posting) => !posting.isVoid).map((posting) => posting.currency) ?? []), ...(filters.currencies ?? [])])].toSorted(), [analytics, filters.currencies])
 
   useEffect(() => {
     const min = filters.minAmountEurMinor ?? null
@@ -132,7 +124,6 @@ export function useFilterDrawer(): FilterDrawerViewProps {
     endpointAccounts,
     categoryPaths,
     allAccountsSelected: filters.accountIds.length === 0,
-    allStatusesSelected: filters.statuses.length === 0,
     availableTags,
     payeeOptions,
     methodOptions,
@@ -163,10 +154,6 @@ export function useFilterDrawer(): FilterDrawerViewProps {
     },
     onScopeChange: (scope) => patchFilters({ scope }),
     onSearchChange: (search) => patchFilters({ search }),
-    onStatusToggle: (status) =>
-      setStatuses(
-        toggleFilterDrawerUniversalValue(filters.statuses, status, STATUS_VALUES),
-      ),
     onTagToggle: (tag) =>
       setTags(toggleFilterDrawerOptionalValue(filters.tags, tag)),
     onPayeeToggle: (key) => patchFilters({ payeeKeys: toggleFilterDrawerOptionalValue(filters.payeeKeys ?? [], key) }),

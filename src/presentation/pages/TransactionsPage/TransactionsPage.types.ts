@@ -18,5 +18,4 @@ export interface TransactionsPageViewProps {
   readonly searchPending: boolean;
   readonly sortKey: TransactionSortKey;
   readonly summary?: KpiSummary;
-  readonly uniformStatus?: NormalizedPosting["status"];
 }

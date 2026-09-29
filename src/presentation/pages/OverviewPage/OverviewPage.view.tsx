@@ -35,7 +35,7 @@ export function OverviewPageView({
 
   return (
     <AnalyticsPage
-      description="Movimientos y gastos según los filtros. Apertura, cierre y saldo de deuda incluyen el historial completo de las cuentas seleccionadas hasta su fecha de corte; no se limitan por categorías, texto, estado, origen o destino."
+      description="Movimientos y gastos según los filtros. Apertura, cierre y saldo de deuda incluyen el historial completo de las cuentas seleccionadas hasta su fecha de corte; no se limitan por categorías, texto, origen o destino."
       notice={searchPending ? "Actualizando resultados…" : undefined}
       title="Resumen general"
     >
@@ -70,13 +70,6 @@ export function OverviewPageView({
         />
       </AnalyticsPageGrid>
 
-      {status.VOID.count > 0 ? (
-        <p className={styles.exception}>
-          <strong>{countFormatter.format(status.VOID.count)} {status.VOID.count === 1 ? "apunte anulado visible" : "apuntes anulados visibles"}</strong>
-          {" · No se incluyen en los importes."}
-        </p>
-      ) : null}
-
       <Panel className={styles.chartPanel}>
         <AreaChart
           description="Ingresos, movimiento contable de gastos y movimiento neto del ámbito seleccionado; se conserva el signo de los apuntes."
@@ -102,7 +95,6 @@ export function OverviewPageView({
             { id: "Reconciliados", label: "Reconciliados", value: countFormatter.format(status.RECONCILED.count) },
             { id: "Sin conciliar", label: "Sin conciliar", value: <Badge tone="warning">{countFormatter.format(status.UNRECONCILED.count)}</Badge> },
             { id: "Compensados", label: "Compensados", value: <Badge tone="info">{countFormatter.format(status.CLEARED.count)}</Badge> },
-            { id: "Anulados visibles", label: "Anulados visibles", value: <Badge tone="neutral">{countFormatter.format(status.VOID.count)}</Badge> },
             { id: "Cuentas activas", label: "Cuentas activas", value: <Badge tone="cash">{countFormatter.format(accounts.length)}</Badge> },
           ]} />
         </div>

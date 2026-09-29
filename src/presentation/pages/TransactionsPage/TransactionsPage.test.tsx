@@ -53,14 +53,14 @@ describe("TransactionsPageView", () => {
     );
 
     expect(screen.getAllByText("Restaurante")[0]).toBeVisible();
-    expect(screen.getByText("Conciliado")).toBeVisible();
+    expect(screen.queryByText("Conciliado")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Fecha" }));
     expect(onSort).toHaveBeenCalledWith("date");
     await user.click(screen.getByRole("button", { name: /Exportar CSV/ }));
     expect(onDownload).toHaveBeenCalledOnce();
   });
 
-  it("states a shared non-VOID status once without hiding sort, export, or source detail", async () => {
+  it("omits status summary while preserving sort, export, and source detail", async () => {
     const user = userEvent.setup();
     const onDownload = vi.fn<() => void>();
     const onSort = vi.fn<(key: "amount" | "date") => void>();
@@ -75,9 +75,8 @@ describe("TransactionsPageView", () => {
       resultCount={1}
       searchPending={false}
       sortKey="date"
-      uniformStatus="RECONCILED"
     />);
-    expect(screen.getByText(/Estado de todos los resultados/)).toBeVisible();
+    expect(screen.queryByText(/Estado de todos los resultados/)).not.toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Estado" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Importe" }));
     expect(onSort).toHaveBeenCalledWith("amount");
@@ -87,7 +86,7 @@ describe("TransactionsPageView", () => {
     expect(screen.getByText("Estado MyExpenses").nextElementSibling).toHaveTextContent("RECONCILED");
   });
 
-  it("keeps row status when this page is uniform but the full result is mixed", () => {
+  it("omits status even when the full result is mixed", () => {
     render(<TransactionsPageView
       descending
       onDownload={vi.fn<() => void>()}
@@ -100,8 +99,8 @@ describe("TransactionsPageView", () => {
       searchPending={false}
       sortKey="date"
     />);
-    expect(screen.getByRole("columnheader", { name: "Estado" })).toBeVisible();
-    expect(screen.getByText("Conciliado")).toBeVisible();
+    expect(screen.queryByRole("columnheader", { name: "Estado" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Conciliado")).not.toBeInTheDocument();
     expect(screen.queryByText(/Estado de todos los resultados/)).not.toBeInTheDocument();
   });
 
@@ -123,27 +122,6 @@ describe("TransactionsPageView", () => {
 
     expect(screen.getByText("No hay movimientos")).toBeVisible();
     expect(screen.getByRole("button", { name: /Exportar CSV/ })).toBeDisabled();
-  });
-
-  it("shows the original amount of an annulled posting for audit consistency", () => {
-    render(
-      <TransactionsPageView
-        descending
-        onDownload={vi.fn<() => void>()}
-        onPageChange={vi.fn<(page: number) => void>()}
-        onSort={vi.fn<(key: "amount" | "date") => void>()}
-        page={1}
-        pageCount={1}
-        postings={[{ ...posting, isVoid: true, status: "VOID" }]}
-        resultCount={1}
-        searchPending={false}
-        sortKey="date"
-      />,
-    );
-
-    expect(screen.getByText("Anulado")).toBeVisible();
-    expect(screen.getByText(/-12,50/, { selector: "strong" })).toBeVisible();
-    expect(screen.queryByText(/0,00/)).not.toBeInTheDocument();
   });
 
   it("keeps one polite result status through searching, completion and zero results", () => {

@@ -7,7 +7,6 @@ import type {
   FilterState,
   LinkedFilter,
   NormalizedAccount,
-  TransactionStatus,
 } from "../../../../domain/analytics/types"
 import type { IdentityOption } from "./FilterDrawer.helpers"
 
@@ -16,7 +15,6 @@ export interface FilterDrawerViewProps {
   endpointAccounts: readonly NormalizedAccount[]
   categoryPaths: readonly (readonly string[])[]
   allAccountsSelected: boolean
-  allStatusesSelected: boolean
   availableTags: readonly string[]
   payeeOptions: readonly IdentityOption[]
   methodOptions: readonly IdentityOption[]
@@ -40,7 +38,6 @@ export interface FilterDrawerViewProps {
   onReset(): void
   onScopeChange(scope: AnalyticsScope): void
   onSearchChange(search: string): void
-  onStatusToggle(status: TransactionStatus): void
   onTagToggle(tag: string): void
   onPayeeToggle(key: string): void
   onMethodToggle(key: string): void

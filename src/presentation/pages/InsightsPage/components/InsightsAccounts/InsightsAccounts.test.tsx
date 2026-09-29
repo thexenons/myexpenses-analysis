@@ -21,5 +21,6 @@ describe("InsightsAccounts", () => {
     expect(screen.getByText(/La exclusión de totales no se aplica en este análisis/)).toBeVisible();
     expect(screen.getByText("aaaaaaaa…aaaaaa")).toBeVisible();
     expect(screen.getByText("Europe/Madrid")).toBeVisible();
+    expect(screen.queryByText("VOID")).not.toBeInTheDocument();
   });
 });

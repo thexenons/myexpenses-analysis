@@ -28,7 +28,7 @@ const kpis: KpiSummary = {
 };
 
 describe("OverviewPageView", () => {
-  it("keeps the signed period result and a nonzero annulment visible before secondary details open", async () => {
+  it("keeps the signed period result while omitting obsolete annulment copy", async () => {
     const user = userEvent.setup();
     render(
       <OverviewPageView
@@ -53,7 +53,7 @@ describe("OverviewPageView", () => {
     const flow = screen.getByText("Flujo del periodo").closest("article");
     expect(flow).not.toBeNull();
     expect(within(flow!).getByText(/-53,00\s€/)).toBeVisible();
-    expect(screen.getByText(/1 apunte anulado visible/)).toBeVisible();
+    expect(screen.queryByText(/apunte anulado visible/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Pulso financiero" })).toBeVisible();
     const details = screen.getByText("Saldos, deuda y conciliación");
     expect(details.closest("details")).not.toHaveAttribute("open");
@@ -61,7 +61,7 @@ describe("OverviewPageView", () => {
     expect(details.closest("details")).toHaveAttribute("open");
     expect(screen.getByText("Saldo en deudas")).toBeVisible();
     expect(screen.getByText("Apertura del periodo")).toBeVisible();
-    expect(screen.getByText("Anulados visibles")).toBeVisible();
+    expect(screen.queryByText("Anulados visibles")).not.toBeInTheDocument();
     expect(screen.getByText("Sin conciliar")).toBeVisible();
     expect(screen.getByText("3 apuntes")).toBeVisible();
     await user.click(screen.getByText("Composición y categorías"));

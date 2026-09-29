@@ -138,7 +138,7 @@ describe("GlobalFilters", () => {
     expect(screen.getByRole("button", { name: "Abrir todos los filtros, 4 activos" })).toBeVisible()
   })
 
-  it("counts new dimensions and exposes concrete chips including the existing search and status", async () => {
+  it("counts new dimensions and exposes concrete chips without exposing obsolete status", async () => {
     const user = userEvent.setup()
     appStore.getState().actions.patchFilters({
       search: "viaje", statuses: ["CLEARED", "VOID"], payeeKeys: ['["source",10]'],
@@ -146,14 +146,14 @@ describe("GlobalFilters", () => {
       minAmountEurMinor: 0, maxAmountEurMinor: 125, commentSearch: "nota", referenceSearch: "abc",
     })
     render(<AppStoreProvider store={appStore}><GlobalFilters /></AppStoreProvider>)
-    expect(screen.getByRole("button", { name: "Abrir todos los filtros, 9 activos" })).toBeVisible()
-    expect(screen.getByRole("button", { name: /Quitar filtro Estados: compensadas, anuladas/ })).toBeVisible()
+    expect(screen.getByRole("button", { name: "Abrir todos los filtros, 8 activos" })).toBeVisible()
+    expect(screen.queryByRole("button", { name: /Quitar filtro Estados:/ })).not.toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: "Quitar filtro Texto: viaje" }))
     await user.click(screen.getByRole("button", { name: /Quitar filtro Importe absoluto ≥ 0,00 EUR/ }))
     expect(appStore.getState().filters.search).toBe("")
     expect(appStore.getState().filters.minAmountEurMinor).toBeNull()
     expect(appStore.getState().filters.maxAmountEurMinor).toBe(125)
-    expect(screen.getByRole("button", { name: "Abrir todos los filtros, 8 activos" })).toBeVisible()
+    expect(screen.getByRole("button", { name: "Abrir todos los filtros, 7 activos" })).toBeVisible()
   })
 
   it("uses a human label on an unambiguous exact-identity chip", () => {

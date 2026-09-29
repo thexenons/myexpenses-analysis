@@ -1,5 +1,5 @@
 import { aggregateBackupInsights } from "../../../domain/analytics/backup-insights.ts";
-import type { FilteredAnalyticsDataset, FilterState, TransactionStatus } from "../../../domain/analytics/types.ts";
+import type { FilteredAnalyticsDataset, FilterState } from "../../../domain/analytics/types.ts";
 import type { InsightsPageViewProps } from "./InsightsPage.types.ts";
 
 const ACCOUNT_TYPE_LABELS = {
@@ -38,16 +38,10 @@ const LAG_BANDS: readonly LagBand[] = [
   { id: "late-long", label: "Más de +30 días", matches: (lag) => lag > 30 },
 ];
 
-const NON_VOID_STATUSES: readonly TransactionStatus[] = ["UNRECONCILED", "CLEARED", "RECONCILED"];
-
-export function createIdentityDrilldownPatch(filters: FilterState, kind: "payee" | "method", identityKey: string): Partial<FilterState> {
-  const statuses = filters.statuses.length === 0
-    ? [...NON_VOID_STATUSES]
-    : filters.statuses.filter((status) => status !== "VOID");
-  if (statuses.length === 0) throw new Error("No computed movements are available for the selected statuses");
+export function createIdentityDrilldownPatch(_filters: FilterState, kind: "payee" | "method", identityKey: string): Partial<FilterState> {
   return kind === "payee"
-    ? { payeeKeys: [identityKey], statuses }
-    : { paymentMethodKeys: [identityKey], statuses };
+    ? { payeeKeys: [identityKey], statuses: [] }
+    : { paymentMethodKeys: [identityKey], statuses: [] };
 }
 
 export function createInsightsPageModel(

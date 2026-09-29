@@ -102,7 +102,7 @@ export function BudgetsPageView({
     >
       <Panel
         className={styles.controlsPanel}
-        description="La selección es local a esta vista. El filtro guardado por el presupuesto se combina con cuentas, categorías, estados y búsqueda globales."
+        description="La selección es local a esta vista. El filtro guardado por el presupuesto se combina con cuentas, categorías y búsqueda globales."
         title="Marco de análisis"
       >
         {controls}
@@ -128,7 +128,7 @@ export function BudgetsPageView({
         <KpiCard
           detail={
             <>
-              Neto de los apuntes seleccionados · anulados excluidos
+              Neto de los apuntes seleccionados
               <button
                 aria-label="Ver apuntes del gasto neto"
                 className={styles.inspectButton}
