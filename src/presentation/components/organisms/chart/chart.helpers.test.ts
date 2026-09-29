@@ -1,8 +1,35 @@
 import { describe, expect, it } from "vitest"
 
-import { buildDivergingBarChartModel, buildHorizontalBarChartModel, buildSeriesChartModel, compactChartLabel, getSeriesPaths } from "./chart.helpers"
+import { buildDivergingBarChartModel, buildHorizontalBarChartModel, buildSeriesChartModel, compactChartLabel, getSeriesPaths, visibleValueTicks } from "./chart.helpers"
 
 describe("buildSeriesChartModel", () => {
+  it.each([220, 280, 1000])("reserves complete signed currency ticks at %i pixels", (width) => {
+    const formatter = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
+    const model = buildSeriesChartModel([{ id: "flow", label: "Flow", data: [
+      { label: "2026-01", value: -13_000_000 },
+      { label: "2026-02", value: 20_000_000 },
+    ] }], width, formatter);
+    const longestTick = Math.max(...model.scale.ticks.map((tick) => Array.from(formatter.format(tick)).length * 7));
+    expect(model.plotLeft - 14).toBeGreaterThanOrEqual(longestTick + 8);
+    expect(model.plotRight).toBeGreaterThan(model.plotLeft);
+  });
+
+  it("reserves the whole formatted amount beside desktop bars", () => {
+    const formatter = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
+    const data = [{ id: "expense", label: "Expense", value: -13_000_000 }];
+    const model = buildHorizontalBarChartModel(data, 1000, formatter);
+    expect(1000 - model.plotRight - 10).toBeGreaterThanOrEqual(Array.from(formatter.format(data[0]!.value)).length * 7 + 8);
+  });
+
+  it("keeps exact endpoint labels and omits only ticks that would overlap", () => {
+    const formatter = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
+    const scale = { min: -20_000_000, max: 20_000_000, ticks: [-20_000_000, -10_000_000, 0, 10_000_000, 20_000_000] };
+    expect(visibleValueTicks(scale, 18, 262, formatter)).toEqual([-20_000_000, 20_000_000]);
+    expect(visibleValueTicks(scale, 230, 870, formatter)).toEqual([-20_000_000, 0, 20_000_000]);
+    expect(visibleValueTicks(scale, 230, 1000, formatter)).toEqual(scale.ticks);
+    expect(visibleValueTicks(scale, 18, 262, (value) => formatter.format(Math.abs(value)))).toEqual([-20_000_000, 20_000_000]);
+  });
+
   it("keeps all mobile bars, axes and series inside the available width", () => {
     const horizontal = buildHorizontalBarChartModel([
       { id: "out", label: "Salidas", value: -250 },
@@ -30,6 +57,7 @@ describe("buildSeriesChartModel", () => {
     expect(compactChartLabel(fullLabel)).toHaveLength(32);
     expect(compactChartLabel(fullLabel)).toContain("…");
     expect(compactChartLabel(fullLabel).endsWith("ductos de limpieza")).toBe(true);
+    expect(compactChartLabel(fullLabel, 3)).toBe("G…a");
   });
 
   it("orders misaligned temporal series before indexing the axis and paths", () => {

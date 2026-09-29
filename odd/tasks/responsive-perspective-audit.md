@@ -107,14 +107,33 @@ Preserve unrelated dirty `.atl` registry files and `odd/tasks/pcloud-cli-env.md`
   unchanged. Eight files, 136 additions/23 deletions (159 authored lines).
   RED: seven expected failures/ten passes; GREEN: 17/17 focused tests, plus 16
   related tests. Logs `/tmp/interface-t2-{red,green,related}.log`.
+- T2 work-unit commit `b96015a`: 195 authored lines including evidence; native
+  medium assessment `under_budget`. Pending reviewed boundary remains `5357d1e`.
 - Parent full verification with both writers' stable source: Node 281 passed,
   three optional-private-data skips; UI 335/335 in 82 files. Type-check, lint and
   diff check passed. Logs `/tmp/interface-audit-{node,ui,types,lint}.log`.
-- T3 observed six geometry failures before implementation and 44 focused tests
-  passed afterward; actual glyph bounds, mobile removal and final browser suites
-  are still being verified before closing its work unit.
+- T3 final source: 184 additions/11 deletions in ten files. Numeric labels reserve
+  conservative space from their formatted text; categorical labels respect the
+  available column and keep full names in exact tables/inspectors. Tick selection
+  avoids text overlap; long filter choices/chips wrap and keep removal visible.
+- T3 RED: six initial geometry failures plus one long-name regression exposed
+  by the first post-fix browser pass; GREEN: 45 focused tests in nine files. The
+  extra category-name fix stays in the same bounded chart layout correction.
+  Logs: `/tmp/responsive-chart-{red,label-red,focused,types,lint}.log`.
+- Final parent checks after the last source edit: 336/336 UI tests, 281 Node
+  passes/three optional-private-data skips; types, lint and diff check passed.
+  Logs: `/tmp/interface-audit-{node,ui,types,lint}-final.log`.
+- Final rendered numeric matrix passed all 81 cases (nine tests, 49.5 seconds).
+  Stress pass: all 81 cases (three tests, 1.2 minutes), with actual SVG glyph
+  containment, tick-overlap checks, visible chip removal, keyboard/focus and empty
+  results. Parent inspected corrected mobile drawer and desktop category charts.
+  Logs: `/tmp/myexpenses-ui-{matrix,stress}-audit/run-verified.log`; snapshots
+  `/tmp/myexpenses-browser-source-gIWFg6` and `/tmp/myexpenses-browser-source-a1Jak1`.
+- The 320px filter-label diagnostic is intentional visually-hidden text with a
+  complete accessible button name and visible icon/count, not lost UI content.
+  Standard isolated browser suite is still running; do not claim its result yet.
 
 ## Next step
 
-Finish T3 rendered verification, record work-unit/native assessments and deliver
-the verified changes to main. Keep uncertain findings unchanged.
+Finish the standard browser suite and native committed-candidate review, then
+record final evidence and deliver to main. Keep uncertain findings unchanged.

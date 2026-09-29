@@ -70,7 +70,7 @@ export function SeriesChart({
     scale,
     visibleLabels,
     zeroY,
-  } = useSeriesChartModel(visibleSeries, chartWidth);
+  } = useSeriesChartModel(visibleSeries, chartWidth, formatValue);
   const createDataTableRows = useCallback(() => {
     const valuesBySeriesAndLabel = visibleSeries.map((item) => {
       const valuesByLabel = new Map<string, number | null>();

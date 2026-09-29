@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useState } from "react"
+import type { ValueFormatter } from "../../../../utils/component.helpers.ts"
 
 import {
   buildDivergingBarChartModel,
@@ -70,15 +71,17 @@ export function useChartIds(prefix: string): ChartIds {
 export function useSeriesChartModel(
   series: ReadonlyArray<ChartSeries>,
   width = CHART_WIDTH,
+  formatter?: Intl.NumberFormat | ValueFormatter,
 ): SeriesChartModel {
-  return useMemo(() => buildSeriesChartModel(series, width), [series, width])
+  return useMemo(() => buildSeriesChartModel(series, width, formatter), [series, width, formatter])
 }
 
 export function useHorizontalBarChartModel(
   data: ReadonlyArray<ChartBarDatum>,
   width = CHART_WIDTH,
+  formatter?: Intl.NumberFormat | ValueFormatter,
 ): HorizontalBarChartModel {
-  return useMemo(() => buildHorizontalBarChartModel(data, width), [data, width])
+  return useMemo(() => buildHorizontalBarChartModel(data, width, formatter), [data, width, formatter])
 }
 
 export function useDivergingBarChartModel(

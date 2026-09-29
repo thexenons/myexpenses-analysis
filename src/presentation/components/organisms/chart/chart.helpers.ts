@@ -9,6 +9,7 @@ import type {
   SeriesChartModel,
   SeriesPaths,
 } from "./chart.types"
+import { formatNumber, type ValueFormatter } from "../../../utils/component.helpers.ts"
 
 export const CHART_WIDTH = 1_000
 export const SERIES_CHART_HEIGHT = 360
@@ -43,6 +44,42 @@ export function compactChartLabel(label: string, maximumLength = 32): string {
   const prefixLength = Math.ceil((maximumLength - 1) * 0.4);
   const suffixLength = maximumLength - prefixLength - 1;
   return characters.length <= maximumLength ? label : `${characters.slice(0, prefixLength).join("")}…${characters.slice(-suffixLength).join("")}`;
+}
+
+/** Numeric SVG labels use a 10px monospace font; reserve a conservative glyph width. */
+export function chartTextWidth(label: string): number {
+  return Array.from(label).length * 7;
+}
+
+function maximumValueWidth(values: readonly number[], formatter?: Intl.NumberFormat | ValueFormatter): number {
+  let width = 0;
+  for (const value of values) width = Math.max(width, chartTextWidth(formatNumber(value, formatter)));
+  return width;
+}
+
+/** Keep exact tick text, prioritizing endpoints and zero without overlapping labels. */
+export function visibleValueTicks(
+  scale: Scale,
+  plotLeft: number,
+  plotRight: number,
+  formatter?: Intl.NumberFormat | ValueFormatter,
+): readonly number[] {
+  const bounds = scale.ticks.map((tick) => {
+    const x = scaleLinear(tick, scale.min, scale.max, plotLeft, plotRight);
+    const width = chartTextWidth(formatNumber(tick, formatter));
+    const left = tick === scale.min ? x : tick === scale.max ? x - width : x - width / 2;
+    return { left, right: left + width };
+  });
+  const selected = new Set<number>();
+  const priority = [0, scale.ticks.length - 1, scale.ticks.indexOf(0), ...scale.ticks.map((_tick, index) => index)];
+  for (const index of priority) {
+    const candidate = bounds[index];
+    if (candidate === undefined || selected.has(index)) continue;
+    if ([...selected].every((other) => candidate.right + 8 <= bounds[other]!.left || candidate.left >= bounds[other]!.right + 8)) {
+      selected.add(index);
+    }
+  }
+  return scale.ticks.filter((_tick, index) => selected.has(index));
 }
 
 export function seriesColor(color: string | undefined, index: number): string {
@@ -141,6 +178,7 @@ export function chartDescription(
 export function buildSeriesChartModel(
   series: ReadonlyArray<ChartSeries>,
   width = CHART_WIDTH,
+  formatter?: Intl.NumberFormat | ValueFormatter,
 ): SeriesChartModel {
   const labels: string[] = []
   const labelSet = new Set<string>()
@@ -165,7 +203,7 @@ export function buildSeriesChartModel(
   )
 
   const scale = createScale(values)
-  const plotLeft = width < 600 ? 80 : SERIES_MARGIN.left
+  const plotLeft = Math.max(width < 600 ? 80 : SERIES_MARGIN.left, maximumValueWidth(scale.ticks, formatter) + 22)
   const plotRight = width - (width < 600 ? 14 : SERIES_MARGIN.right)
   const plotTop = SERIES_MARGIN.top
   const plotBottom = SERIES_CHART_HEIGHT - SERIES_MARGIN.bottom
@@ -225,6 +263,7 @@ export function getSeriesPaths(
 export function buildHorizontalBarChartModel(
   data: ReadonlyArray<ChartBarDatum>,
   width = CHART_WIDTH,
+  formatter?: Intl.NumberFormat | ValueFormatter,
 ): HorizontalBarChartModel {
   const compact = width < 600;
   const rowHeight = compact ? 56 : BAR_ROW_HEIGHT;
@@ -235,7 +274,7 @@ export function buildHorizontalBarChartModel(
     BAR_MARGIN.top + BAR_MARGIN.bottom + validData.length * rowHeight,
   )
   const plotLeft = compact ? 18 : BAR_MARGIN.left
-  const plotRight = width - (compact ? 18 : BAR_MARGIN.right)
+  const plotRight = width - (compact ? 18 : Math.max(BAR_MARGIN.right, maximumValueWidth(validData.map((datum) => datum.value), formatter) + 18))
   const plotBottom = chartHeight - BAR_MARGIN.bottom
   const zeroX = scaleLinear(0, scale.min, scale.max, plotLeft, plotRight)
 

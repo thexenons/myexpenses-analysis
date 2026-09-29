@@ -57,6 +57,39 @@ test.afterEach(async ({ page }) => {
   expect(outboundByPage.get(page)).toEqual([]);
 });
 
+test("wraps long filter category names without hiding selection or removal", async ({ page }) => {
+  await page.getByRole("button", { name: /Abrir todos los filtros/ }).click();
+  const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });
+  const category = drawer.getByRole("group", { name: "Categorías raíz", exact: true }).getByRole("checkbox", { name: "Expense", exact: true });
+  await category.check();
+  await category.evaluate((input) => input.setAttribute("aria-label", "Expense"));
+  const rootLabel = category.locator("..");
+  const removal = drawer.getByRole("button", { name: "Quitar Expense", exact: true });
+  // Change only visible synthetic text: these assertions exercise CSS containment,
+  // not category matching, which keeps the fixture's original accessible identity.
+  const longLabel = "MantenimientoextraordinariodelhogarSharedHouseholdExpensesWithUniqueIdentifyingSuffix123456789";
+  await rootLabel.locator("span").evaluate((span, text) => { span.textContent = text; }, longLabel);
+  await removal.locator("span").first().evaluate((span, text) => { span.textContent = text; }, longLabel);
+  for (const control of [rootLabel, removal]) {
+    // oxlint-disable-next-line no-await-in-loop -- Each real control has its own text and bounds.
+    await control.scrollIntoViewIfNeeded();
+    // oxlint-disable-next-line no-await-in-loop -- Compare rendered glyphs, not just element widths.
+    const clipped = await control.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return [...element.querySelectorAll("span")].some((span) => {
+        const range = document.createRange();
+        range.selectNodeContents(span);
+        return [...range.getClientRects()].some((text) => text.left < box.left - 1 || text.right > box.right + 1);
+      }) || box.right > window.innerWidth;
+    });
+    expect(clipped).toBe(false);
+  }
+  await removal.focus();
+  await page.keyboard.press("Space");
+  await expect(removal).toHaveCount(0);
+  await expect(category).not.toBeChecked();
+});
+
 test("preserves the component cascade across routes and drawer controls", async ({ page }, testInfo) => {
   const assertControl = async (control: Locator, fontRem: number, bordered = false) => {
     const appearance = await control.evaluate((element) => {

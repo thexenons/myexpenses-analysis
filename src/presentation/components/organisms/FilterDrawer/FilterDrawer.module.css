@@ -289,6 +289,11 @@
     min-width: 0;
   }
 
+  .choice > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
   .choiceCopy strong {
     overflow: hidden;
     font-size: 0.68rem;
@@ -320,6 +325,8 @@
     display: inline-flex;
     gap: 0.45rem;
     align-items: center;
+    min-width: 0;
+    max-width: 100%;
     min-height: 2.25rem;
     padding: 0.4rem 0.7rem;
     color: var(--accent-ink);
@@ -328,6 +335,21 @@
     border-radius: 999px;
     font-size: 0.66rem;
     font-weight: 700;
+    text-align: left;
+  }
+
+  .selectedCategories > li {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .selectedCategories button > span:first-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .selectedCategories button > span:last-child {
+    flex: none;
   }
 
   .selectedCategories button:hover {

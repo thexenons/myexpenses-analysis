@@ -10,10 +10,12 @@ import {
   BAR_ROW_HEIGHT,
   chartColorStyle,
   chartDescription,
+  chartTextWidth,
   compactChartLabel,
   identityLabel,
   scaleLinear,
   seriesColor,
+  visibleValueTicks,
 } from "../chart/chart.helpers.ts";
 import styles from "../chart/chart.module.css";
 import {
@@ -52,7 +54,7 @@ export function HorizontalBarChart({
     plotRight,
     scale,
     zeroX,
-  } = useHorizontalBarChartModel(visibleData, chartWidth);
+  } = useHorizontalBarChartModel(visibleData, chartWidth, formatValue);
   const getInspectorValues = useCallback((id: string) => {
     const index = data.findIndex((item) => item.id === id);
     const datum = data[index];
@@ -124,7 +126,7 @@ export function HorizontalBarChart({
         <desc id={descriptionId}>{chartDescription(description, title)}</desc>
 
         <g aria-hidden="true" className={styles.grid}>
-          {scale.ticks.filter((_tick, index) => !compactChart || index === 0 || index === scale.ticks.length - 1 || (chartWidth >= 320 && index === Math.floor((scale.ticks.length - 1) / 2))).map((tick) => {
+          {visibleValueTicks(scale, plotLeft, plotRight, formatValue).map((tick) => {
             const x = scaleLinear(tick, scale.min, scale.max, plotLeft, plotRight);
             return (
               <g key={tick}>
@@ -156,6 +158,11 @@ export function HorizontalBarChart({
         </g>
 
         {bars.map(({ barWidth, barX, centerY, color, datum }) => {
+          const labelWidth = compactChart
+            ? plotRight - plotLeft - chartTextWidth(formatNumber(datum.value, formatValue)) - 14
+            : plotLeft - 24;
+          // Bold category labels use 11px type, wider than the numeric labels.
+          const labelLimit = Math.max(3, Math.min(32, Math.floor(labelWidth / 11)));
           const tooltip =
             datum.tooltip ??
             tooltipFormatter?.(datum) ??
@@ -177,7 +184,7 @@ export function HorizontalBarChart({
                 x={compactChart ? plotLeft : plotLeft - 16}
                 y={compactChart ? centerY - 12 : centerY}
               >
-                {compactChartLabel(formatLabel(datum.label), compactChart ? Math.max(10, Math.floor((plotRight - plotLeft - 95) / 6)) : 32)}
+                {compactChartLabel(formatLabel(datum.label), labelLimit)}
               </text>
               <rect
                 className={styles.bar}

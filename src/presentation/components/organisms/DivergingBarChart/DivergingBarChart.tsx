@@ -14,6 +14,7 @@ import {
   compactChartLabel,
   identityLabel,
   scaleLinear,
+  visibleValueTicks,
 } from "../chart/chart.helpers.ts";
 import styles from "../chart/chart.module.css";
 import {
@@ -125,7 +126,7 @@ export function DivergingBarChart({
         <desc id={descriptionId}>{chartDescription(description, title)}</desc>
 
         <g aria-hidden="true" className={styles.grid}>
-          {tickScale.ticks.filter((tick, index) => !compactChart || tick === 0 || index === 0 || index === tickScale.ticks.length - 1).map((tick) => {
+          {visibleValueTicks(tickScale, plotLeft, plotRight, (tick) => formatNumber(Math.abs(tick), formatValue)).map((tick) => {
             const x = scaleLinear(
               tick,
               tickScale.min,
@@ -163,6 +164,7 @@ export function DivergingBarChart({
         </g>
 
         {bars.map(({ centerY, datum, leftWidth, rightWidth }) => {
+          const labelLimit = Math.max(3, Math.min(32, Math.floor((compactChart ? plotRight - plotLeft : plotLeft - 24) / 11)));
           const leftTooltip =
             datum.leftTooltip ??
             `${leftLabel} · ${formatLabel(datum.label)}: ${formatNumber(datum.leftValue, formatValue)}`;
@@ -179,7 +181,7 @@ export function DivergingBarChart({
                 x={compactChart ? plotLeft : plotLeft - 16}
                 y={compactChart ? centerY - 12 : centerY}
               >
-                {compactChartLabel(formatLabel(datum.label))}
+                {compactChartLabel(formatLabel(datum.label), labelLimit)}
               </text>
               {leftVisible ? <rect
                 className={cx(styles.bar, styles.leftBar)}
