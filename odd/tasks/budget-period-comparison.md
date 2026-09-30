@@ -51,6 +51,10 @@ after each verified task. No pull requests, deployment or private-data access.
   rows. Keep primary reference and mean visible on mobile; show one relevant
   textual comparison signal and disclose additional periods/deltas/provenance.
   Verify reference changes, empty states, period changes and transaction access.
+- [ ] B3a — Preserve the current budget view when comparison arithmetic rejects
+  out-of-range history. Add observed RED/GREEN hook regressions for the error
+  state and intact base model. Separate follow-up to native advisory R3-001;
+  do not reopen the approved B3 candidate.
 - [ ] B4 — Add/execute isolated responsive and interaction regressions at
   desktop, 390px and 320px across Real/Yo/Deudas. Verify useful readable amounts,
   nested categories, details, keyboard focus, no overflow and no runtime errors.
@@ -64,13 +68,13 @@ after each verified task. No pull requests, deployment or private-data access.
   GREEN and refactor. Runner: installed Vitest
   (`node node_modules/vitest/vitest.mjs run <focused test paths>`).
 - Branch: `feat/budget-period-comparison`; branch point: `e389b3c`.
-- Last reviewed boundary: `2afb7fc` (passive bookkeeping after acknowledged
-  `4b5c18b`, B2). RDD is on (global); assess each new work-unit commit and follow
+- Last reviewed boundary: `47907bf` (acknowledged B3 including pending B2a).
+  RDD is on (global); assess each new work-unit commit and follow
   exact native transitions/consent when due. B2a routes delegated direct because
   financial arithmetic and regression tests need coordinated edits.
 - Delivery strategy: `auto-chain`, `stacked-to-main`; B1, B2, B3 and B4 are the
-  planned delivery boundaries. Forecast roughly 1,400–2,000 authored lines across
-  all tasks including tests/docs, not a hard task limit. Keep cohesive changes;
+  planned delivery boundaries. Revised forecast roughly 2,600–3,300 authored
+  lines across all tasks including tests/docs, not a hard task limit. Keep cohesive changes;
   do not remove tests, compress code or split artificially for a line budget.
 - Engram mirror pending: no authoritative registered runtime session identity.
   Agent-attributed memory tools are prohibited; this file is the recovery record.
@@ -347,3 +351,29 @@ and tests were not trimmed to meet the advisory heuristic. Native assessment,
 candidate-specific review when due, commit evidence and main delivery follow.
 B4 remains pending for durable richer multi-period browser regressions and final
 integration closure. Engram mirror is still prohibited pending registration.
+
+### B3 review and delivery handoff
+
+B3 commit: `47907bf1ef33b9d4c757df42961f3249156e77ca` (18 paths, 1235
+authored lines including this record). Index and committed trees matched:
+`de713feb066d835acac2323ddf7bc7e456d31031`; no commit-hook source mutation.
+Assessment from `2afb7fc` included pending B2a: medium, 18 paths/1312 lines,
+review due at the slice budget. The user explicitly granted this candidate.
+Native reliability review inspected all 18 immutable patches; it did not run
+tests. Exact acknowledgement succeeded for `review-8a7489d51b376a09`, target
+`sha256:cd4a9d2549c4c707e405f052e51803a863a6b1bdbfdf2f13e9623180be1926cb`:
+authority burned. The transaction is closed and must not be resumed or reused.
+
+Non-blocking advisory R3-001: comparison arithmetic rejection currently escapes
+from the page hook instead of leaving the usable current-budget model and a
+comparison error state. Address this as separate B3a after B3 delivery. Catch
+only the comparison boundary, keep current financial analysis unchanged, use
+neutral existing UI error copy, and add a real throwing-history hook regression.
+Strict TDD enabled by AGENTS; installed Vitest hook/page/domain focused tests,
+full UI/domain, three TypeScript projects, Oxlint and whitespace. Delegated
+direct: hook and behavioral test require coordinated edits; forecast 50–120
+authored lines. Parent repeats a focused command; no new private-data access.
+
+B4 follows B3a: retain durable richer synthetic-history browser tests for reference
+controls, zero/missing history, mean and income, perspectives and responsive
+interaction; source-only snapshot final verification. No broader product scope.
