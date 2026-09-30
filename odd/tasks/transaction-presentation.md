@@ -110,8 +110,12 @@ Debt comparison was delivered separately at `1f1c61d` before this feature.
   assessment: medium, `under_budget`, no review due yet. This is not an approval:
   the reviewed boundary remains `6f28dc9`, carried into the next work-unit slice.
   Authorized push succeeded; local main and origin/main match `a3a7c70`.
+- The pending T2 slice was reviewed together with L1 through `4fb1e54` on
+  2026-09-30. Native reliability review approved without findings and exact
+  acknowledgement burned its authority. See `minimal-lock-screen.md` for evidence.
+  Final Engram mirror synchronization is pending because runtime session identity
+  is unavailable; current recovery state is preserved in these repository records.
 
 ## Next step
 
-Both tasks are delivered. Continue the separately requested lock-screen
-simplification; retain T2 in the pending native review slice from `6f28dc9`.
+Both tasks are delivered and reviewed; no transaction-presentation work remains.

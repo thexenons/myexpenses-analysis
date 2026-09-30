@@ -74,8 +74,22 @@ The preceding transaction and budget-modal tasks are delivered at `a3a7c70`.
   Six total skipped cases are intentional viewport/private-reference checks.
 - Obsolete decorative CSS removal exceeds the initial authored-line forecast;
   deletion is part of the requested simplification, not budget-driven formatting.
+- L1 commit `4fb1e54`: 600 authored lines (203 additions, 397 deletions). Combined
+  pending slice from `6f28dc9` includes delivered T2 and L1: native medium risk,
+  18 paths, 995 changed lines, `slice_budget_reached`. Exact STATUS/START returned
+  candidate consent; no reviewer has run for this new target yet.
+  Target: `sha256:3c6856f91233b7295c2f5004877fe3d9d36254792f900972e4a351f32af4e6a3`.
+  Proposed lineage: `review-4a049c4cbba4cfb2`. Main remains `a3a7c70`; L1 not pushed.
+- On 2026-09-30 the user answered `granted` for this exact candidate. Native
+  reliability review inspected all 18 immutable patches and approved without
+  findings. The reviewer did not run commands; functional proof is recorded above.
+  Exact acknowledgement succeeded and burned the authority. Reviewed boundary:
+  `4fb1e54e62a7cd03d48012e6a0b2568b8167e98b`, covering both T2 and L1.
+- Engram mirror update is pending: the runtime currently lacks a registered session
+  identity and prohibits agent-attributed memory writes. This repository record
+  preserves the final review outcome; no alternate session or manual save was used.
 
 ## Next step
 
-Commit L1 and assess the pending slice from `6f28dc9`; follow exact native
-transitions and candidate consent if due before completing the authorized push.
+No implementation or review work remains. The authorized main delivery includes
+this final evidence commit; preserve the unrelated registry and pcloud task edits.
