@@ -61,9 +61,9 @@ after each verified task. No pull requests, deployment or private-data access.
   GREEN and refactor. Runner: installed Vitest
   (`node node_modules/vitest/vitest.mjs run <focused test paths>`).
 - Branch: `feat/budget-period-comparison`; branch point: `e389b3c`.
-- Last acknowledged native review boundary: `2f233a7`; CSV changes since then
-  are medium/under-budget, not reviewed. RDD is on (global); assess each work-unit
-  commit and follow exact native transitions/consent when due. Never invent PASS.
+- Last acknowledged native review boundary: `a9446eb` (B1 and the preceding CSV
+  slice). RDD is on (global); assess each work-unit commit and follow exact native
+  transitions/consent when due. Never invent PASS.
 - Delivery strategy: `auto-chain`, `stacked-to-main`; B1, B2, B3 and B4 are the
   planned delivery boundaries. Forecast roughly 1,400–2,000 authored lines across
   all tasks including tests/docs, not a hard task limit. Keep cohesive changes;
@@ -134,5 +134,17 @@ build, real financial data or manual screen-reader audit was used.
 Rollback boundary: BudgetAllocationTable Item/CSS/test, BudgetUtilization
 component/types/CSS, BudgetsPage.test.tsx and the scoped regression added to
 `tests/browser/financial-explainability.spec.ts`. Source/tests: 367 authored lines.
-Commit/review/delivery pending. Next: assess and deliver B1, then implement B2.
+B1 commit: `a9446ebace021e03d59f66aa208b64a5cb0e5094` on the feature branch;
+505 authored lines including this recovery document. Commit hooks did not change
+the staged tree (`bc3c104f2633968b42434fc226899f0701be0c28`).
+
+Native review from the prior boundary `2f233a7`: medium, 12 paths, 707 authored
+lines including the CSV under-budget slice. The user granted this candidate's
+review. The provider reliability reviewer inspected all 12 immutable patches,
+reported no findings and did not execute tests. Exact acknowledgement succeeded:
+`review-1a4cf0c4a0e9d23f`, target
+`sha256:765402368a25e6231ac6b7d170d3d56c04e9dabc1b167c6c937953186a2de242`,
+authority burned. This transaction is closed and must not be resumed or reused.
+
+B1 is ready for authorized main integration/push. Next: deliver B1, then B2.
 Engram mirror remains prohibited pending runtime registration.
