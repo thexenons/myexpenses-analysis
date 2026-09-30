@@ -44,6 +44,9 @@ after each verified task. No pull requests, deployment or private-data access.
 - [x] B2 — Add a budget-scoped reference/mean model with synthetic regressions
   for period boundaries, available history, zero activity, refunds, VOID, each
   perspective, scope/currency, hierarchy and separate income totals.
+- [ ] B2a — Guard integer-baseline comparison deltas against unsafe minor-unit
+  subtraction, preserving fractional historical means. Add boundary regressions.
+  Separate follow-up to non-blocking native advisory R3-001; never reopen B2.
 - [ ] B3 — Connect reference controls and mean context to the page and compact
   rows. Keep primary reference and mean visible on mobile; show one relevant
   textual comparison signal and disclose additional periods/deltas/provenance.
@@ -61,9 +64,10 @@ after each verified task. No pull requests, deployment or private-data access.
   GREEN and refactor. Runner: installed Vitest
   (`node node_modules/vitest/vitest.mjs run <focused test paths>`).
 - Branch: `feat/budget-period-comparison`; branch point: `e389b3c`.
-- Last reviewed boundary: `19e0b45` (passive bookkeeping after acknowledged
-  `a9446eb`, covering B1 and the preceding CSV slice). RDD is on (global); assess
-  each work-unit commit and follow exact native transitions/consent when due.
+- Last acknowledged review boundary: `4b5c18b` (B2). Passive bookkeeping may
+  advance it. RDD is on (global); assess each new work-unit commit and follow
+  exact native transitions/consent when due. B2a routes delegated direct because
+  financial arithmetic and regression tests need coordinated edits.
 - Delivery strategy: `auto-chain`, `stacked-to-main`; B1, B2, B3 and B4 are the
   planned delivery boundaries. Forecast roughly 1,400–2,000 authored lines across
   all tasks including tests/docs, not a hard task limit. Keep cohesive changes;
@@ -195,5 +199,27 @@ Rollback boundary: `budgets.ts`, `budget-period-comparison.ts` and its test.
 Source/tests: 731 authored lines. This exceeds the planning heuristic because
 shared scope, calendar/reference/mean behavior and 14 regression cases form a
 single coherent domain model; no PR is being created and tests were not trimmed.
-Commit/review/push pending. Next: close B2 delivery, then B3 controls and row wiring.
+B2 commit: `4b5c18be000f5099f75f35996330861552a9dd6f`; 790 authored lines
+including task-document updates. Staged and committed trees matched exactly:
+`27d8babff22121cccdc4cb1226ca6fc7d2e8167e`. Main/origin remain at `19e0b45`;
+B2 is not integrated/pushed yet.
+
+Native assessment from `19e0b45`: medium, 4 paths/790 lines. The user granted
+review; the provider reliability reviewer inspected all four immutable patches.
+It approved the candidate with non-blocking advisory R3-001: integer delta
+subtraction can exceed safe minor units when individually safe totals have
+opposite signs. The reviewer did not run tests. Exact acknowledgement succeeded:
+`review-b3c705576009af2b`, target
+`sha256:19c46b95a340368622884818bfa37c934da1a51639384b30b09a5f1faf0740c5`,
+authority burned. No correction transition exists; this review is closed.
+
+B2 is ready for authorized integration/push. Address R3-001 as separate B2a
+before UI wiring, using observed RED/GREEN. Arithmetic guard is within approved
+comparison correctness scope, not a change to financial meaning. Retain
+fractional mean deltas and valid integer results; match existing out-of-range
+amount policy, not silent rounding. Strict TDD remains enabled by AGENTS.
+B2a focused runner: installed Vitest on `budget-period-comparison.test.ts` and
+`budgets.test.ts`; full UI/domain, three TypeScript projects, Oxlint and
+whitespace at closure. Runtime browser is N/A for this pure arithmetic boundary.
+Next: deliver B2, finish B2a, then B3 controls/row wiring and B4 final integration.
 Engram mirror remains prohibited pending runtime registration.
