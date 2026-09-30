@@ -34,7 +34,7 @@ export function DebtsPageView({
 
   return (
     <AnalyticsPage
-      description="Dinero enviado y recibido, gastos atribuidos y saldos de las cuentas de deuda. Las transferencias se identifican por su contrapartida; el signo del saldo por sí solo no indica quién debe a quién."
+      description="Saldos, movimientos y gastos atribuidos a las cuentas de deuda."
       introAction={
         showClearAccounts ? (
           <Button onClick={onClearAccounts} variant="secondary">
@@ -54,7 +54,8 @@ export function DebtsPageView({
           </div>
           <p className={styles.debtSummaryNote}>
             Saldo real al cierre de las fechas elegidas. Los filtros de contenido
-            y origen/destino solo limitan los movimientos y gastos analizados.
+            y origen/destino solo limitan los movimientos y gastos analizados;
+            el signo del saldo por sí solo no indica quién debe a quién.
           </p>
         </div>
         <Badge tone="warning">
@@ -197,7 +198,7 @@ export function DebtsPageView({
       <AnalyticsPageGrid variant="two">
         <Panel className={styles.chartPanel}>
           <LineChart
-            description="Los movimientos respetan todos los filtros. El saldo real incorpora todos los movimientos de las cuentas seleccionadas, aunque no coincidan con los filtros de contenido."
+            description="Saldo real al cierre y movimientos filtrados por periodo."
             formatLabel={formatPeriodLabel}
             formatValue={euroFormatter}
             series={debtSeries}

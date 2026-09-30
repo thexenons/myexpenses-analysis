@@ -77,7 +77,7 @@ required below; do not claim source inspection proves visual acceptance.
   numeric reconciliation and all balance-versus-movement/debt-adjustment caveats;
   consolidate secondary method details without disturbing charts or totals.
   Tests first for visible caveats and initially closed/open informational content.
-- [ ] C3 — Review and refine Debts, Accounts, Categories, Insights, Transactions
+- [x] C3 — Review and refine Debts, Accounts, Categories, Insights, Transactions
   and shared controls where the audit identifies actual redundancy. Retain good
   existing disclosures; document intentional no-change surfaces. Add focused
   copy/hierarchy regressions without expanding product scope.
@@ -126,7 +126,7 @@ runtime identity; agent-attributed memory tools are prohibited.
 
 ## Progress and rollback
 
-Audit, C1 and C2 complete; C3 is next. C1 changes seven source/test paths (382
+Audit and C1–C3 complete; independent C4 is next. C1 changes seven source/test paths (382
 authored additions plus deletions). Native Information is closed initially;
 the budget ledger and long method follow the category tree. Date/filter scope,
 full-period/no-proration, missing/reference/mean context and parent/child
@@ -172,6 +172,30 @@ Parent repeated 22 page tests successfully and inspected comparison imagery.
 Evidence: `/tmp/c2-caveat-*`. Three stale Information-location browser assertions
 were updated after an initial 18/21; final rerun passed 21/21. Independent whole
 application acceptance remains C4. Commit identity follows creation.
+
+C2 commit `dca152f546a7ae3157a9dd803b1363e3de2ec5a1` is pushed to main,
+remote identity confirmed. Slice 333 authored lines including tracking; running
+task total 880. Read-only native assessment: medium, 1,252 accumulated lines
+against unchanged `a37eabc`, due/slice-budget; no interactive receipt claimed.
+
+User clarification also exposed confusing budget terminology: our imported
+`cat_id = 0` allocation is the independent total allocation, not the sum of
+category limits. C3 includes a presentation-only rename to total terminology
+with short visible independence context. No inferred limit or data repair is
+authorized by this discovery; actual private-data cause of 0 remains unverified.
+
+C3 changes five presentation/test paths, 53 authored lines. Budgets now says
+Assigned total (Spanish UI), explicitly not the sum of category allocations;
+Debts places its sign/cutoff caveat beside the balance and shortens repeated
+chart/intro prose. Accounts, Categories, Insights, Transactions and shared
+controls remain unchanged intentionally: existing scope/history/sign warnings
+and disclosures are already clear; no useful data is removed for cosmetic churn.
+
+C3 RED: three new assertions failed before source edits. Final focused 43/43,
+full Vitest 412/412, isolated browser 21/21 at 1280/390/320, three TypeScript
+configs, Oxlint zero warnings/errors and both whitespace checks passed. Parent
+repeated 18 budget/debt tests successfully and inspected the narrow total card.
+Evidence: `/tmp/c3-frozen-*` and `/tmp/c3-browser-frozen-results/`.
 
 To identify this task's commits (read-only):
 `git log --oneline --fixed-strings --grep='[ui-clarity-20260930]'`.

@@ -196,7 +196,7 @@ describe("BudgetsPageView", () => {
     />);
 
     expect(screen.getByText(/No hay solapamiento entre las fechas globales/)).toBeVisible();
-    expect(screen.getByText("Límite global excedido.")).toBeVisible();
+    expect(screen.getByText("Límite total excedido.")).toBeVisible();
     expect(screen.getByRole("article", { name: "Gasto neto" })).toBeVisible();
     expect(screen.getByText("Información del presupuesto").closest("details")).not.toHaveAttribute("open");
   });
@@ -276,7 +276,7 @@ describe("BudgetsPageView", () => {
     expect(screen.getByText(/10,00.*más que la referencia/)).toBeVisible();
     expect(screen.getByRole("meter", { name: "Utilización de Gastos › Comida" })).toBeVisible();
   });
-  it("shows the absence of a global limit instead of a calculated zero percent", () => {
+  it("shows the absence of a total limit instead of a calculated zero percent", () => {
     render(
       <BudgetsPageView
         analysis={{ ...analysis, filteredPostingCount: 1, global: { ...analysis.global, assignedMinor: 0, utilization: null, health: "unallocated" } }}
@@ -293,7 +293,7 @@ describe("BudgetsPageView", () => {
       />,
     );
     const utilization = screen.getByRole("article", { name: "Utilización" });
-    expect(utilization).toHaveTextContent("Sin límite global");
+    expect(utilization).toHaveTextContent("Sin límite total");
     expect(utilization).not.toHaveTextContent("0 %");
     expect(utilization.querySelector("data")).toBeNull();
     expect(screen.getByText("1 apunte efectivo")).toBeVisible();
@@ -424,7 +424,7 @@ describe("BudgetsPageView", () => {
     expect(screen.getByText("Corte filtrado")).toBeVisible();
   });
 
-  it("renders budget KPIs, the technical global allocation and hierarchy", async () => {
+  it("renders budget KPIs, the independent total allocation and hierarchy", async () => {
     const user = userEvent.setup();
     const onBudgetChange = vi.fn<(uuid: string) => void>();
     const onPeriodChange = vi.fn<(key: string) => void>();
@@ -451,7 +451,10 @@ describe("BudgetsPageView", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Presupuestos" })).toBeVisible();
-    expect(screen.getByText("Asignado global")).toBeVisible();
+    const totalAllocation = screen.getByRole("article", { name: "Asignado total" });
+    expect(totalAllocation).toBeVisible();
+    expect(within(totalAllocation).getByText(/No se calcula sumando categorías/)).toBeVisible();
+    expect(screen.getByText("Información del presupuesto").closest("details")).not.toHaveAttribute("open");
     expect(screen.getByText("Gasto neto")).toBeVisible();
     expect(screen.getByRole("list", { name: "Asignaciones jerárquicas del presupuesto" })).toBeVisible();
     expect(screen.getByText("Comida")).toBeVisible();

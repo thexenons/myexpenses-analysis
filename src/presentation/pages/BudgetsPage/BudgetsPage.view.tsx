@@ -146,10 +146,10 @@ export function BudgetsPageView({
 
       <AnalyticsPageGrid variant="kpis">
         <KpiCard
-          detail={`Base ${formatBudgetMinor(global.baseMinor, currency, fractionDigits)}`}
+          detail={`Base ${formatBudgetMinor(global.baseMinor, currency, fractionDigits)} · No se calcula sumando categorías.`}
           formatValue={amountFormatter}
           icon={<Icon name="wallet" />}
-          label="Asignado global"
+          label="Asignado total"
           tone="cash"
           value={toMajor(global.assignedMinor)}
         />
@@ -183,7 +183,7 @@ export function BudgetsPageView({
         />
         <KpiCard
           detail={analysis.period.label}
-          emptyValue="Sin límite global"
+          emptyValue="Sin límite total"
           formatValue={percentageFormatter}
           icon={<Icon name="calendar" />}
           label="Utilización"
@@ -201,14 +201,14 @@ export function BudgetsPageView({
       <div className={styles.progressSummary}>
         <BudgetUtilization
           health={analysis.isFilteredComparison ? "unallocated" : global.health}
-          label={analysis.isFilteredComparison ? "Utilización del corte filtrado" : "Ritmo de consumo global"}
+          label={analysis.isFilteredComparison ? "Utilización del corte filtrado" : "Ritmo de consumo total"}
           utilization={global.utilization}
         />
         {analysis.isFilteredComparison ? null : (
           <p className={styles.healthNote}>
-            {global.health === "exceeded" ? "Límite global excedido." :
-              global.health === "watch" ? "Cerca del límite global." :
-                global.health === "unallocated" ? "Sin límite global asignado." : "Dentro del límite global."}
+            {global.health === "exceeded" ? "Límite total excedido." :
+              global.health === "watch" ? "Cerca del límite total." :
+                global.health === "unallocated" ? "Sin límite total asignado." : "Dentro del límite total."}
           </p>
         )}
       </div>
@@ -275,7 +275,7 @@ export function BudgetsPageView({
       <InformationDisclosure label="Información del presupuesto">
         <div className={styles.informationBody}>
           <p>El filtro del presupuesto se combina con cuentas, categorías y búsqueda globales antes de cruzarse con las fechas del periodo.</p>
-          <p>Un padre con asignación propia limita todo su subárbol; sus hijos son detalle y no se vuelven a sumar. La asignación global procede de la fila técnica sin categoría y no se presenta como categoría inventada.</p>
+          <p>Un padre con asignación propia limita todo su subárbol; sus hijos son detalle y no se vuelven a sumar. La asignación total procede de la fila técnica sin categoría y no se presenta como categoría inventada.</p>
           {primaryReference === undefined ? null : (
             <p>Referencia completa: {formatDate(primaryReference.range.startDate)} – {formatDate(primaryReference.range.endDate)}. No se prorratea con el corte actual.</p>
           )}

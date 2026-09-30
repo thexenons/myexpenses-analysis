@@ -1332,7 +1332,7 @@ test("keeps budget decisions ahead of closed method information across perspecti
     await expect(tree.getByText("Media").first()).toBeVisible();
     await expect(info).not.toHaveAttribute("open");
     const boxes = await Promise.all([
-      page.getByRole("article", { name: "Asignado global" }).boundingBox(),
+      page.getByRole("article", { name: "Asignado total" }).boundingBox(),
       tree.boundingBox(), infoSummary.boundingBox(),
     ]);
     expect(boxes.every(Boolean)).toBe(true);
@@ -1544,7 +1544,7 @@ test("shows categorized transfer endpoints and long comments in the compact budg
   await expect(trigger).toBeFocused();
 });
 
-test("keeps debt selection next to balance and preserves budget action names", async ({ page }) => {
+test("keeps debt selection next to balance and preserves budget action names", async ({ page }, testInfo) => {
   await page.getByRole("link", { name: "Deudas" }).click();
   const selection = page.getByRole("region", { name: "Seleccionar cuentas de deuda" });
   await expect(selection).toBeVisible();
@@ -1559,8 +1559,10 @@ test("keeps debt selection next to balance and preserves budget action names", a
   expect(inOrder).toBe(true);
   await expect(selection.getByText("Deuda", { exact: true })).toHaveCount(0);
   await expect(balance).toBeVisible();
+  await expect(balance.locator("..").getByText(/el signo del saldo por sí solo no indica quién debe a quién/i)).toBeVisible();
   await expect(trend).toBeVisible();
   await expectNoDocumentOverflow(page);
+  await page.getByRole("main").screenshot({ path: testInfo.outputPath("debt-balance-context.png"), animations: "disabled" });
   await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
   const debtViolations = await page.evaluate(async () => {
     const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
@@ -1579,7 +1581,11 @@ test("keeps debt selection next to balance and preserves budget action names", a
   const action = page.getByRole("button", { name: /Ver apuntes consumidos de Expense:/ });
   await expect(action).toBeVisible();
   expect(await action.getAttribute("aria-label")).toContain((await action.textContent())!.trim());
-  await expect(page.getByText("Asignado global")).toBeVisible();
+  const totalAllocation = page.getByRole("article", { name: "Asignado total" });
+  await expect(totalAllocation).toBeVisible();
+  await expect(totalAllocation.getByText(/No se calcula sumando categorías/)).toBeVisible();
+  await totalAllocation.screenshot({ path: testInfo.outputPath("budget-total-card.png"), animations: "disabled" });
+  await page.getByRole("main").screenshot({ path: testInfo.outputPath("budget-total-context.png"), animations: "disabled" });
   const information = page.locator("summary").filter({ hasText: "Información del presupuesto" });
   await expect(information.locator("..")).not.toHaveAttribute("open");
   await information.press("Enter");
@@ -1625,7 +1631,7 @@ test("keeps the no-limit budget honest and moves focus into the final 27-item ba
   await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
   await page.getByRole("group", { name: "Marco del presupuesto" }).getByLabel("Periodo").selectOption("MONTH:2026:7");
   const utilization = page.getByRole("article", { name: "Utilización" });
-  await expect(utilization).toContainText("Sin límite global");
+  await expect(utilization).toContainText("Sin límite total");
   await expect(utilization).not.toContainText("0 %");
   const trigger = page.getByRole("button", { name: "Ver apuntes del gasto neto" });
   await trigger.click();

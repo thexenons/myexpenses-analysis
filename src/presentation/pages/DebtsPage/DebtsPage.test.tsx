@@ -136,6 +136,9 @@ describe("DebtsPageView", () => {
     );
 
     expect(screen.getByText("Saldo conjunto en deudas")).toBeVisible();
+    const balanceContext = screen.getByText("Saldo conjunto en deudas").parentElement;
+    expect(within(balanceContext!).getByText(/el signo del saldo por sí solo no indica quién debe a quién/i)).toBeVisible();
+    expect(within(balanceContext!).getByText(/filtros de contenido y origen\/destino solo limitan los movimientos/i)).toBeVisible();
     expect(screen.getByText("Enviado a deudas")).toBeVisible();
     expect(screen.getByText("Recibido de deudas")).toBeVisible();
     expect(screen.getByText("Evolución de la selección")).toBeVisible();
