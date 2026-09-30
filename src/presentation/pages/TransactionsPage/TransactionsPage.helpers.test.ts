@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createPostingsCsv,
+  downloadPostingsCsv,
   sortPostings,
 } from "./TransactionsPage.helpers.ts";
 import { TRANSACTION_POSTING_FIXTURE } from "./TransactionsPage.test.helpers.ts";
@@ -170,6 +171,101 @@ describe("createPostingsCsv", () => {
     ]);
 
     expect(csv).toContain('"línea uno\rlínea dos"');
+  });
+});
+
+describe("downloadPostingsCsv", () => {
+  let createObjectURL: ReturnType<typeof vi.fn>;
+  let revokeObjectURL: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    let sequence = 0;
+    createObjectURL = vi.fn<typeof URL.createObjectURL>(() => `blob:csv-${++sequence}`);
+    revokeObjectURL = vi.fn<typeof URL.revokeObjectURL>();
+    vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    document.querySelectorAll('a[download="movimientos-filtrados.csv"]').forEach((anchor) => anchor.remove());
+  });
+
+  it("downloads the same UTF-8 CSV and releases its temporary resources", async () => {
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      expect(this.isConnected).toBe(true);
+    });
+    const postings = [TRANSACTION_POSTING_FIXTURE];
+
+    downloadPostingsCsv(postings);
+
+    const clickedAnchor = clickSpy.mock.instances[0] as HTMLAnchorElement | undefined;
+    expect(clickedAnchor?.download).toBe("movimientos-filtrados.csv");
+    expect(clickedAnchor?.href).toBe("blob:csv-1");
+    expect(clickedAnchor?.isConnected).toBe(false);
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(revokeObjectURL).toHaveBeenCalledExactlyOnceWith("blob:csv-1");
+    const blob = createObjectURL.mock.calls[0]?.[0] as Blob;
+    expect(blob.type).toBe("text/csv;charset=utf-8");
+    const bytes = await new Promise<Uint8Array>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(blob);
+    });
+    expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+    expect(new TextDecoder().decode(bytes.subarray(3))).toBe(createPostingsCsv(postings));
+  });
+
+  it("releases resources and preserves each click error across repeated attempts", () => {
+    const failures = [new Error("first click failed"), new Error("second click failed")];
+    let attempt = 0;
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {
+      const failure = failures[attempt++];
+      if (failure) throw failure;
+    });
+
+    for (const failure of failures) {
+      let caught: unknown;
+      try {
+        downloadPostingsCsv([TRANSACTION_POSTING_FIXTURE]);
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBe(failure);
+      expect(document.querySelectorAll('a[download="movimientos-filtrados.csv"]')).toHaveLength(0);
+    }
+    downloadPostingsCsv([TRANSACTION_POSTING_FIXTURE]);
+    expect(document.querySelectorAll('a[download="movimientos-filtrados.csv"]')).toHaveLength(0);
+    expect(createObjectURL).toHaveBeenCalledTimes(3);
+    expect(revokeObjectURL.mock.calls.map(([url]) => url)).toEqual([
+      "blob:csv-1", "blob:csv-2", "blob:csv-3",
+    ]);
+  });
+
+  it("revokes the URL if attaching the anchor fails", () => {
+    const failure = new Error("append failed");
+    vi.spyOn(document.body, "append").mockImplementation(() => { throw failure; });
+
+    let caught: unknown;
+    try {
+      downloadPostingsCsv([TRANSACTION_POSTING_FIXTURE]);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBe(failure);
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(revokeObjectURL).toHaveBeenCalledExactlyOnceWith("blob:csv-1");
+    expect(document.querySelectorAll('a[download="movimientos-filtrados.csv"]')).toHaveLength(0);
+  });
+
+  it("revokes the URL even if anchor removal fails", () => {
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const failure = new Error("remove failed");
+    vi.spyOn(Element.prototype, "remove").mockImplementation(() => { throw failure; });
+
+    expect(() => downloadPostingsCsv([TRANSACTION_POSTING_FIXTURE])).toThrow(failure);
+    expect(revokeObjectURL).toHaveBeenCalledExactlyOnceWith("blob:csv-1");
   });
 });
 

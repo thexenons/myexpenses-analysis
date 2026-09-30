@@ -138,14 +138,21 @@ export function downloadPostingsCsv(
       type: "text/csv;charset=utf-8",
     }),
   );
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "movimientos-filtrados.csv";
-  anchor.hidden = true;
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
+  let anchor: HTMLAnchorElement | undefined;
+  try {
+    anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "movimientos-filtrados.csv";
+    anchor.hidden = true;
+    document.body.append(anchor);
+    anchor.click();
+  } finally {
+    try {
+      anchor?.remove();
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
 }
 
 function comparePostingsByDate(
