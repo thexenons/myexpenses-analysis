@@ -25,6 +25,67 @@ import type {
   AppStoreState,
   AppStoreStorage,
 } from "./app-store.types.ts";
+import { readFilterPreferences, reconcileSavedFilters, saveFilterPreferences } from "./filter-preferences.ts";
+
+function isPromise<Value>(value: Value | Promise<Value>): value is Promise<Value> {
+  return typeof value === "object" && value !== null && "then" in value;
+}
+
+function isFutureUiState(raw: string | null): boolean {
+  if (raw === null) return false;
+  try {
+    const value: unknown = JSON.parse(raw);
+    return typeof value === "object" && value !== null && "version" in value &&
+      typeof value.version === "number" && value.version > APP_STORE_STORAGE_VERSION;
+  } catch {
+    return false;
+  }
+}
+
+/** Keep browser exceptions from escaping Zustand, including future-version writes. */
+function safeAppStoreStorage(storage: AppStoreStorage): AppStoreStorage {
+  const read = (name: string) => {
+    try {
+      const result = storage.getItem(name);
+      return isPromise(result) ? result.catch(() => null) : result;
+    } catch {
+      return null;
+    }
+  };
+  const write = (name: string, value: string) => {
+    try {
+      const result = storage.setItem(name, value);
+      return isPromise(result) ? result.catch(() => undefined) : result;
+    } catch {
+      return;
+    }
+  };
+  return {
+    getItem: read,
+    setItem(name, value) {
+      if (name !== APP_STORE_STORAGE_NAME) return write(name, value);
+      const existing = read(name);
+      return isPromise(existing)
+        ? existing.then((raw) => isFutureUiState(raw) ? undefined : write(name, value))
+        : isFutureUiState(existing) ? undefined : write(name, value);
+    },
+    removeItem(name) {
+      const remove = () => {
+        try {
+          const result = storage.removeItem(name);
+          return isPromise(result) ? result.catch(() => undefined) : result;
+        } catch {
+          return;
+        }
+      };
+      if (name !== APP_STORE_STORAGE_NAME) return remove();
+      const existing = read(name);
+      return isPromise(existing)
+        ? existing.then((raw) => isFutureUiState(raw) ? undefined : remove())
+        : isFutureUiState(existing) ? undefined : remove();
+    },
+  };
+}
 
 export function createAppStore(
   repository: DatasetRepository,
@@ -32,9 +93,11 @@ export function createAppStore(
   environment: AppStoreEnvironment = defaultAppStoreEnvironment(),
 ) {
   let activeController: AbortController | null = null;
+  let preserveFutureFilterPreferences = false;
+  const safeStorage = safeAppStoreStorage(storage);
   const blockedReason = unlockBlockedReason(environment);
 
-  return createStore<AppStoreState>()(
+  const store = createStore<AppStoreState>()(
     persist(
       (set) => {
         const actions: AppStoreActions = {
@@ -115,12 +178,14 @@ export function createAppStore(
                 controller.signal,
               );
               if (controller.signal.aborted) return;
+              const saved = await readFilterPreferences(safeStorage);
+              if (controller.signal.aborted) return;
+              preserveFutureFilterPreferences = saved.kind === "future";
               set((current) => ({
                 analytics: loaded.analytics,
-                filters: reconcileFilterAccounts(
-                  current.filters,
-                  loaded.analytics,
-                ),
+                filters: saved.kind === "saved"
+                  ? reconcileSavedFilters(saved.value, loaded.analytics)
+                  : reconcileFilterAccounts(current.filters, loaded.analytics),
                 loadPhase: "ready",
                 error: null,
               }));
@@ -155,7 +220,7 @@ export function createAppStore(
       {
         name: APP_STORE_STORAGE_NAME,
         version: APP_STORE_STORAGE_VERSION,
-        storage: createJSONStorage(() => storage),
+        storage: createJSONStorage(() => safeStorage),
         migrate: (persistedState, version) =>
           version < APP_STORE_STORAGE_VERSION
             ? { granularity: "auto" }
@@ -170,4 +235,11 @@ export function createAppStore(
       },
     ),
   );
+  store.subscribe((state, previous) => {
+    if (state.loadPhase !== "ready" || state.analytics === null || preserveFutureFilterPreferences) return;
+    if (state.filters !== previous.filters || previous.loadPhase !== "ready") {
+      saveFilterPreferences(safeStorage, state.filters, state.analytics);
+    }
+  });
+  return store;
 }

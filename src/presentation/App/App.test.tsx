@@ -6,14 +6,18 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { appStore } from "../../composition/app-store.ts";
+import { createAppStore } from "../../application/store/app-store/app-store.ts";
 import { INSECURE_CONTEXT_MESSAGE } from "../../application/store/app-store/app-store.helpers.ts";
+import { encryptedHttpDatasetRepository } from "../../infrastructure/data/encrypted-http-dataset-repository.ts";
+import { createResilientAppStoreStorage } from "../../infrastructure/storage/resilient-app-store-storage.ts";
 import { AppStoreProvider } from "../providers/AppStoreProvider/index.ts";
 import { createAppRouter } from "../router/app-router.ts";
 import {
   APP_TEST_PASSPHRASE,
   installAppFetchMock,
 } from "./App.test.helpers.ts";
+
+let appStore: ReturnType<typeof createAppStore>;
 
 function renderAppAt(pathname = "/resumen") {
   const history = createMemoryHistory({ initialEntries: [pathname] });
@@ -59,7 +63,7 @@ async function unlockApp(
 describe("App integration", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    appStore.setState(appStore.getInitialState(), true);
+    appStore = createAppStore(encryptedHttpDatasetRepository, createResilientAppStoreStorage());
   });
 
   afterEach(() => vi.unstubAllGlobals());
