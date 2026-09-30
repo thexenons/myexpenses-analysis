@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { applyFilters, createDefaultFilterState } from "../../../domain/analytics/filters.ts";
@@ -154,7 +155,8 @@ describe("perspective comparison", () => {
     expect(screen.getByText(/no es un saldo ni necesariamente dinero gastado/)).toBeVisible();
   });
 
-  it("leads with Yo and explains the related signed perspectives next to their values", () => {
+  it("leads with Yo and explains the related signed perspectives next to their values", async () => {
+    const user = userEvent.setup();
     const rows = createPerspectiveComparisonModel(dataset, createDefaultFilterState());
     render(<PerspectiveComparisonPageView categories={[]} rows={rows} searchPending={false} />);
     const summary = screen.getByRole("region", { name: "Resumen de perspectivas" });
@@ -167,6 +169,14 @@ describe("perspective comparison", () => {
     ]);
     expect(within(articles[0]!).getByText(/Yo \+ Ajuste por deudas = Flujo real/)).toBeVisible();
     expect(within(articles[1]!).getByText(/no es un saldo ni necesariamente dinero gastado/)).toBeVisible();
+    expect(screen.getByText(/Son movimientos del mismo periodo, no saldos/)).toBeVisible();
+    expect(screen.getByText(/Los hijos detallan el total del padre; no se suman de nuevo/)).toBeVisible();
+    const information = screen.getByText("Información de la comparativa");
+    expect(information.closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByRole("region", { name: "Categorías por perspectiva" }).compareDocumentPosition(information) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    await user.click(information);
+    expect(information.closest("details")).toHaveAttribute("open");
+    expect(screen.getByText(/Los tipos de ingreso, gasto y transferencia no se reclasifican/)).toBeVisible();
     expect(articles.map((article) => within(article).getByText(/movimientos?$/).textContent)).toEqual([
       "Movimiento neto · 6 movimientos",
       "Ajuste contable · 2 movimientos",

@@ -2,6 +2,25 @@
   min-width: 0;
 }
 
+.scopeNote {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.informationBody {
+  display: grid;
+  gap: 0.65rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.informationBody p {
+  margin: 0;
+}
+
 .consolidatedResult {
   padding: 0.65rem 1rem;
   border: 1px solid var(--line);

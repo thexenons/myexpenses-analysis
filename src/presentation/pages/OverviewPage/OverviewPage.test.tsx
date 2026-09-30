@@ -53,8 +53,12 @@ describe("OverviewPageView", () => {
     const flow = screen.getByText("Flujo del periodo").closest("article");
     expect(flow).not.toBeNull();
     expect(within(flow!).getByText(/-53,00\s€/)).toBeVisible();
+    expect(screen.getByText(/El flujo usa los apuntes filtrados; los saldos de apertura, cierre y deuda incluyen todo el historial/)).toBeVisible();
     expect(screen.queryByText(/apunte anulado visible/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Pulso financiero" })).toBeVisible();
+    const information = screen.getByText("Información del resumen");
+    expect(information.closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByRole("heading", { name: "Pulso financiero" }).compareDocumentPosition(information) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
     const details = screen.getByText("Saldos, deuda y conciliación");
     expect(details.closest("details")).not.toHaveAttribute("open");
     await user.click(details);
@@ -65,10 +69,11 @@ describe("OverviewPageView", () => {
     expect(screen.getByText("Sin conciliar")).toBeVisible();
     expect(screen.getByText("3 apuntes")).toBeVisible();
     await user.click(screen.getByText("Composición y categorías"));
-    expect(screen.getByText(
-      "Un neto negativo puede deberse a devoluciones o a asignaciones en deudas. Las asignaciones no son dinero devuelto.",
-      { exact: false },
-    )).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Composición del gasto" })).toBeVisible();
+    await user.click(information);
+    expect(information.closest("details")).toHaveAttribute("open");
+    expect(screen.getByText(/Un neto negativo puede deberse a devoluciones o a asignaciones/)).toBeVisible();
+    expect(screen.getByText(/Asignación en deudas: 0,00/)).toBeVisible();
   });
 
   it("renders the financial pulse and announces deferred filter updates", () => {

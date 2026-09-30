@@ -73,7 +73,7 @@ required below; do not claim source inspection proves visual acceptance.
   secondary ledger/method explanation and retain concise critical scope warnings.
   Tests first: disclosure semantics plus visible filtered/no-history/unit states,
   reference/mean/income and transaction actions; isolated budget browser proof.
-- [ ] C2 — Apply the hierarchy to Overview, Cash flow and Comparison. Preserve
+- [x] C2 — Apply the hierarchy to Overview, Cash flow and Comparison. Preserve
   numeric reconciliation and all balance-versus-movement/debt-adjustment caveats;
   consolidate secondary method details without disturbing charts or totals.
   Tests first for visible caveats and initially closed/open informational content.
@@ -126,7 +126,7 @@ runtime identity; agent-attributed memory tools are prohibited.
 
 ## Progress and rollback
 
-Audit and C1 complete; C2 is next. C1 changes seven source/test paths (382
+Audit, C1 and C2 complete; C3 is next. C1 changes seven source/test paths (382
 authored additions plus deletions). Native Information is closed initially;
 the budget ledger and long method follow the category tree. Date/filter scope,
 full-period/no-proration, missing/reference/mean context and parent/child
@@ -146,7 +146,32 @@ still requires scrolling; this is less clutter, not initial-fold visibility.
 Initial browser run was 24/27: three old assertions expected the now-folded
 ledger visible. Assertions now open Information and final 27/27 passed.
 No manual screen-reader audit or native review approval is claimed. Protected
-user files remain byte-identical. Commit identity is recorded after creation.
+user files remain byte-identical.
+
+C1 commit `213b8f1b1cf5ce1b25cdf463921189bdda8e1be1` is pushed to main and
+remote identity was confirmed. Delivery slice: this one work-unit commit
+(547 authored lines including the audit/task document; source/test scope 382).
+Native read-only assessment against `a37eabc`: medium, 925 accumulated lines,
+`review_due=true`, `slice_budget_reached`. Interactive review omitted under the
+task-specific no-interaction instruction; no receipt or reviewed-boundary advance.
+
+C2 simplifies Overview, Cash flow and Comparison introductions and puts long
+method explanations in closed Information disclosures, after primary figures.
+Visible balance/history-versus-flow scope, real cash/debt-payment interpretation,
+available-cash warning, numerical reconciliation and tree non-double-counting
+remain. Parent review caught nonzero debt-allocation context hidden from primary
+Overview KPIs and opened Cash flow composition; the writer restored the signed
+amounts and not-refund/not-income-reversal caveats adjacent to those figures.
+No financial model or hooks changed. Scope: 11 source/test paths, 302 lines.
+
+C2 RED: three hierarchy assertions before implementation, then four active
+adjustment-context regressions before the bounded correction. Final focused
+33/33, full Vitest 412/412, isolated browser 21/21 across 1280/390/320 and all
+perspectives, three TypeScript configs, Oxlint and whitespace checks passed.
+Parent repeated 22 page tests successfully and inspected comparison imagery.
+Evidence: `/tmp/c2-caveat-*`. Three stale Information-location browser assertions
+were updated after an initial 18/21; final rerun passed 21/21. Independent whole
+application acceptance remains C4. Commit identity follows creation.
 
 To identify this task's commits (read-only):
 `git log --oneline --fixed-strings --grep='[ui-clarity-20260930]'`.

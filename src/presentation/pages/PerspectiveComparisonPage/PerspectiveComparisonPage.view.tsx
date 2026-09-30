@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { Panel } from "../../components/molecules/Panel/index.ts";
+import { InformationDisclosure } from "../../components/molecules/InformationDisclosure/InformationDisclosure.tsx";
 import { AccordionTree } from "../../components/organisms/AccordionTree/index.ts";
 import { TableScrollRegion } from "../../components/organisms/TableScrollRegion";
 import { AnalyticsPage } from "../../components/templates/AnalyticsPage/index.ts";
@@ -46,7 +47,7 @@ export function PerspectiveComparisonPageView({
 
   return (
     <AnalyticsPage
-      description="Conciliación de movimientos del mismo periodo, no de saldos. Los demás filtros globales se aplican a cada columna; el selector de ámbito no oculta ninguna."
+      description="Compara las tres perspectivas del periodo."
       notice={searchPending ? "Actualizando búsqueda…" : undefined}
       title="Comparativa de perspectivas"
     >
@@ -74,10 +75,9 @@ export function PerspectiveComparisonPageView({
         ))}
       </section>
 
-      <Panel
-        description="Cada fila cumple Yo + Ajuste por deudas = Flujo real. Se mantienen los tipos de ingreso, gasto y transferencia, sin reclasificar movimientos."
-        title="Desglose del periodo"
-      >
+      <p className={styles.scopeNote}>Son movimientos del mismo periodo, no saldos. Los filtros globales se aplican a cada columna; el selector de ámbito no oculta ninguna.</p>
+
+      <Panel title="Desglose del periodo">
         {isEmpty ? (
           <p className={styles.empty}>
             No hay movimientos en el periodo con los filtros aplicados.
@@ -108,7 +108,7 @@ export function PerspectiveComparisonPageView({
         </TableScrollRegion>
       </Panel>
       <Panel
-        description="Cada ruta cumple la misma conciliación. Sus importes incluyen los apuntes directos y sus descendientes; no sumes padres e hijos entre sí. Este árbol no modifica los filtros."
+        description="Los hijos detallan el total del padre; no se suman de nuevo."
         title="Categorías por perspectiva"
       >
         <label className={styles.categoryControl}>
@@ -132,6 +132,13 @@ export function PerspectiveComparisonPageView({
           </AccordionTree>
         )}
       </Panel>
+      <InformationDisclosure label="Información de la comparativa">
+        <div className={styles.informationBody}>
+          <p>Los tipos de ingreso, gasto y transferencia no se reclasifican. Cada concepto y cada ruta cumplen Yo + Ajuste por deudas = Flujo real con los mismos filtros.</p>
+          <p>El ajuste por deudas es Flujo real − Yo. No representa el saldo de una cuenta de deuda ni, por sí solo, un ingreso o un gasto.</p>
+          <p>Los importes de cada categoría incluyen sus apuntes directos y los de sus descendientes. La exploración de este árbol no cambia los filtros.</p>
+        </div>
+      </InformationDisclosure>
     </AnalyticsPage>
   );
 }

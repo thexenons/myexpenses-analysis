@@ -1,6 +1,7 @@
 import { Badge } from "../../components/atoms/Badge/index.ts";
 import { Icon } from "../../components/atoms/Icon/index.ts";
 import { FinancialFactList } from "../../components/molecules/FinancialFactList/index.ts";
+import { InformationDisclosure } from "../../components/molecules/InformationDisclosure/InformationDisclosure.tsx";
 import { KpiCard } from "../../components/molecules/KpiCard/index.ts";
 import { Panel } from "../../components/molecules/Panel/index.ts";
 import { AreaChart } from "../../components/organisms/AreaChart/index.ts";
@@ -32,10 +33,12 @@ export function OverviewPageView({
 }: OverviewPageViewProps) {
   const expenseAllocation = kpis.debtExpenseAdjustmentsEurMinor ?? 0;
   const incomeAllocation = kpis.debtIncomeAdjustmentsEurMinor ?? 0;
+  const incomeDetail = `${formatEuroMinor(kpis.grossIncomeEurMinor)} bruto`;
+  const expenseDetail = `${formatEuroMinor(kpis.expenseRefundsEurMinor)} devuelto`;
 
   return (
     <AnalyticsPage
-      description="Movimientos y gastos según los filtros. Apertura, cierre y saldo de deuda incluyen el historial completo de las cuentas seleccionadas hasta su fecha de corte; no se limitan por categorías, texto, origen o destino."
+      description="Flujo seleccionado y evolución de las cuentas."
       notice={searchPending ? "Actualizando resultados…" : undefined}
       title="Resumen general"
     >
@@ -50,8 +53,8 @@ export function OverviewPageView({
         />
         <KpiCard
           detail={incomeAllocation === 0
-            ? `${formatEuroMinor(kpis.grossIncomeEurMinor)} bruto`
-            : `${formatEuroMinor(kpis.grossIncomeEurMinor)} bruto. Asignación en deudas: ${formatEuroMinor(incomeAllocation)}; no es una reversión de ingreso.`}
+            ? incomeDetail
+            : `${incomeDetail} · Asignación en deudas: ${formatEuroMinor(incomeAllocation)}; no es reversión de ingreso.`}
           formatValue={euroFormatter}
           icon={<Icon name="bank" />}
           label="Ingresos netos"
@@ -60,8 +63,8 @@ export function OverviewPageView({
         />
         <KpiCard
           detail={expenseAllocation === 0
-            ? `${formatEuroMinor(kpis.expenseRefundsEurMinor)} devuelto`
-            : `${formatEuroMinor(kpis.expenseRefundsEurMinor)} devuelto. Asignación en deudas: ${formatEuroMinor(expenseAllocation)}; no es dinero devuelto.`}
+            ? expenseDetail
+            : `${expenseDetail} · Asignación en deudas: ${formatEuroMinor(expenseAllocation)}; no es devolución.`}
           formatValue={euroFormatter}
           icon={<Icon name="receipt" />}
           label="Gastos netos"
@@ -69,6 +72,8 @@ export function OverviewPageView({
           value={euroFromMinor(-kpis.expensesEurMinor)}
         />
       </AnalyticsPageGrid>
+
+      <p className={styles.scopeNote}>El flujo usa los apuntes filtrados; los saldos de apertura, cierre y deuda incluyen todo el historial de las cuentas seleccionadas hasta el corte.</p>
 
       <Panel className={styles.chartPanel}>
         <AreaChart
@@ -83,7 +88,6 @@ export function OverviewPageView({
       <details className={styles.details}>
         <summary>Saldos, deuda y conciliación</summary>
         <div className={styles.detailsBody}>
-          <p className={styles.context}>Los saldos incorporan el historial de las cuentas seleccionadas; el flujo refleja los movimientos filtrados.</p>
           <FinancialFactList items={[
             { id: "Apertura del periodo", label: "Apertura del periodo", value: formatEuroMinor(kpis.periodOpeningBalanceEurMinor) },
             { id: "Saldo al cierre del periodo", label: "Saldo al cierre del periodo", value: formatEuroMinor(kpis.periodClosingBalanceEurMinor) },
@@ -106,7 +110,7 @@ export function OverviewPageView({
           <Panel>
             <HorizontalBarChart
               title="Categorías dominantes"
-              description="Actividad neta por raíz, sin sumar padres e hijos. Elige cuántas mostrar; la tabla y el CSV incluyen todas."
+              description="Actividad neta por categoría raíz. Elige cuántas mostrar; la tabla y el CSV incluyen todas."
               formatValue={euroFormatter}
               labelHeader="Categoría"
               data={topCategories.map(({ category }) => ({
@@ -119,7 +123,6 @@ export function OverviewPageView({
           </Panel>
           <Panel
             actions={<Icon name="receipt" size={18} />}
-            description="Gasto neto = bruto − devoluciones − asignación en deudas. Un neto negativo puede deberse a devoluciones o a asignaciones en deudas. Las asignaciones no son dinero devuelto."
             title="Composición del gasto"
           >
             <FinancialFactList items={expenseComposition.map(({ amountEurMinor, label }) => ({
@@ -130,6 +133,13 @@ export function OverviewPageView({
           </Panel>
         </AnalyticsPageGrid>
       </details>
+      <InformationDisclosure label="Información del resumen">
+        <div className={styles.informationBody}>
+          <p>Gasto neto = bruto − devoluciones − asignación en deudas. Un neto negativo puede deberse a devoluciones o a asignaciones; las asignaciones no son dinero devuelto.</p>
+          <p>Asignación en deudas: {formatEuroMinor(expenseAllocation)} en gastos y {formatEuroMinor(incomeAllocation)} en ingresos. La asignación de ingreso no es una reversión de ingreso.</p>
+          <p>Las categorías dominantes agrupan actividad neta por raíz; los importes de padres e hijos no se suman dos veces.</p>
+        </div>
+      </InformationDisclosure>
     </AnalyticsPage>
   );
 }

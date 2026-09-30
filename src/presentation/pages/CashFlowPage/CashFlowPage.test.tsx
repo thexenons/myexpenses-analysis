@@ -31,11 +31,13 @@ const kpis: KpiSummary = {
 };
 
 describe("CashFlowPageView", () => {
-  it("distinguishes signed real flow from the consolidated result in the primary reading", () => {
+  it("distinguishes signed real flow and shows active debt adjustments beside the composition", async () => {
     render(
       <CashFlowPageView
         composition={{
           expenseRefundsEurMinor: 250,
+          debtExpenseAdjustmentsEurMinor: 125,
+          debtIncomeAdjustmentsEurMinor: 75,
           grossExpensesEurMinor: 4_000,
           grossIncomeEurMinor: 8_000,
           incomeReversalsEurMinor: 0,
@@ -56,8 +58,20 @@ describe("CashFlowPageView", () => {
     expect(real).not.toBeNull();
     expect(within(real!).getByText(/-2,00\s€/)).toBeVisible();
     expect(screen.getByText("Resultado consolidado").parentElement).toHaveTextContent(/42,50\s€/);
+    expect(screen.getByText(/El flujo real usa cuentas sin deuda e incluye pagos transferidos hacia cuentas de deuda/)).toBeVisible();
+    expect(screen.getByText(/se compensan en el neto cuando ambos extremos/)).toBeVisible();
+    expect(screen.getByText(/no equivale al efectivo disponible/)).toBeVisible();
     expect(screen.getByRole("heading", { name: "Flujo neto por periodo" })).toBeVisible();
     expect(screen.getByText("Presión por categoría").closest("details")).not.toHaveAttribute("open");
+    const information = screen.getByText("Información del flujo de caja");
+    expect(information.closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByRole("heading", { name: "Flujo neto por periodo" }).compareDocumentPosition(information) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    await userEvent.setup().click(screen.getByText("Composición del flujo"));
+    const composition = screen.getByText("Composición del flujo").closest("details");
+    expect(composition).toHaveAttribute("open");
+    expect(within(composition!).getByText(/Asignación de gasto en deudas: 1,25\s*€; no es una devolución/)).toBeVisible();
+    expect(within(composition!).getByText(/Asignación de ingreso en deudas: 0,75\s*€; no es una reversión de ingreso/)).toBeVisible();
+    expect(information.closest("details")).not.toHaveAttribute("open");
   });
 
   it("shows cash-flow KPIs and both period comparisons", () => {

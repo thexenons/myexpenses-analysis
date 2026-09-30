@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { applyFilters, createDefaultFilterState } from "../../../domain/analytics/filters.ts";
@@ -15,7 +16,7 @@ describe("Overview expense orientation", () => {
     { name: "direct card charge", amount: -10, peerAmount: null, income: false },
     { name: "direct card refund", amount: 1, peerAmount: null, income: false },
     { name: "income mirror", amount: -7, peerAmount: 7, income: true },
-  ])("explains $name without changing signed amounts", ({ amount, peerAmount, income }) => {
+  ])("explains $name without changing signed amounts", async ({ amount, peerAmount, income }) => {
     const transaction = (value: number): ParsedDirectTransaction => ({
       uuid: "movement", sourceTransactionUuid: "movement", date: "2026-01-15",
       amount: value, category: ["Category"], sourceStatus: "RECONCILED",
@@ -58,9 +59,15 @@ describe("Overview expense orientation", () => {
     expect(model.kpis.expenseRefundsEurMinor).toBe(expectedRefund);
     const card = screen.getByRole("article", { name: income ? "Ingresos netos" : "Gastos netos" });
     const baseDetail = income ? `${formatEuroMinor(0)} bruto` : `${formatEuroMinor(expectedRefund)} devuelto`;
-    const allocationDetail = peerAmount === null ? ""
-      : `. Asignación en deudas: ${formatEuroMinor(amount * 100)}; ${income ? "no es una reversión de ingreso" : "no es dinero devuelto"}.`;
-    expect(within(card).getByText(`${baseDetail}${allocationDetail}`, { normalizer: (text) => text })).toBeVisible();
+    const allocation = income ? model.kpis.debtIncomeAdjustmentsEurMinor ?? 0 : model.kpis.debtExpenseAdjustmentsEurMinor ?? 0;
+    const expectedDetail = allocation === 0 ? baseDetail : `${baseDetail} · Asignación en deudas: ${formatEuroMinor(allocation)}; no es ${income ? "reversión de ingreso" : "devolución"}.`;
+    expect(within(card).getByText(expectedDetail, { normalizer: (text) => text })).toBeVisible();
+    const information = screen.getByText("Información del resumen");
+    expect(information.closest("details")).not.toHaveAttribute("open");
+    await userEvent.setup().click(information);
+    expect(information.closest("details")!.textContent?.replaceAll("\u00a0", " "))
+      .toContain(formatEuroMinor(peerAmount === null ? 0 : amount * 100).replaceAll("\u00a0", " "));
+    expect(information.closest("details")).toHaveTextContent(income ? "no es una reversión de ingreso" : "no son dinero devuelto");
     expect(model.chartSeries.find(({ id }) => id === "expenses")).toMatchObject({
       label: "Movimiento contable de gastos",
       data: [{ value: signedExpense / 100 }],

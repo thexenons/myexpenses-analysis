@@ -481,6 +481,126 @@ test("preserves desktop chart hover and keyboard dismissal", async ({ page }) =>
   await expect(figure.getByRole("combobox", { name: "Punto de Flujo neto por periodo" })).toBeVisible();
 });
 
+test("keeps overview balances scoped visibly and method information secondary", async ({ page }, testInfo) => {
+  await page.locator('a[href="/resumen"]').click();
+  const summary = page.locator("summary").filter({ hasText: "Información del resumen" });
+  const information = summary.locator("..");
+  const measurements: Array<{ scope: string; kpiTop: number; chartTop: number; informationTop: number }> = [];
+  const checkScope = async (scope: string) => {
+    await page.getByRole("region", { name: "Filtros globales" })
+      .getByRole("group", { name: "Ámbito de las estadísticas" }).locator(`input[value="${scope}"]`).check();
+    await expect(page.getByText(/El flujo usa los apuntes filtrados; los saldos de apertura, cierre y deuda/)).toBeVisible();
+    await expect(information).not.toHaveAttribute("open");
+    const boxes = await Promise.all([
+      page.getByRole("article", { name: "Flujo del periodo" }).boundingBox(),
+      page.getByRole("heading", { name: "Pulso financiero" }).boundingBox(), summary.boundingBox(),
+    ]);
+    expect(boxes.every(Boolean)).toBe(true);
+    expect(boxes[0]!.y).toBeLessThan(boxes[1]!.y);
+    expect(boxes[1]!.y).toBeLessThan(boxes[2]!.y);
+    return { scope, kpiTop: boxes[0]!.y, chartTop: boxes[1]!.y, informationTop: boxes[2]!.y };
+  };
+  for (const scope of ["realCashFlow", "all", "debtsOnly"]) {
+    // oxlint-disable-next-line no-await-in-loop -- Each perspective is measured after its own render.
+    measurements.push(await checkScope(scope));
+  }
+  await writeFile(testInfo.outputPath("overview-hierarchy.json"), JSON.stringify(measurements, null, 2));
+  await page.getByRole("region", { name: "Filtros globales" })
+    .getByRole("group", { name: "Ámbito de las estadísticas" }).locator('input[value="realCashFlow"]').check();
+  await page.getByRole("main").screenshot({ path: testInfo.outputPath("overview-clarity.png"), animations: "disabled" });
+  await summary.press("Enter");
+  await expect(information).toHaveAttribute("open");
+  await expect(information.getByText(/Gasto neto = bruto/)).toBeVisible();
+  await expect(summary).toBeFocused();
+  await summary.press("Space");
+  await expect(information).not.toHaveAttribute("open");
+  await page.getByText("Saldos, deuda y conciliación", { exact: true }).click();
+  await expect(information).not.toHaveAttribute("open");
+  await expectNoDocumentOverflow(page);
+});
+
+test("keeps cash-flow scope and available-cash warning ahead of methods", async ({ page }, testInfo) => {
+  await page.locator('a[href="/flujo-de-caja"]').click();
+  const summary = page.locator("summary").filter({ hasText: "Información del flujo de caja" });
+  const information = summary.locator("..");
+  const measurements: Array<{ scope: string; kpiTop: number; chartTop: number; informationTop: number }> = [];
+  const checkScope = async (scope: string) => {
+    await page.getByRole("region", { name: "Filtros globales" })
+      .getByRole("group", { name: "Ámbito de las estadísticas" }).locator(`input[value="${scope}"]`).check();
+    await expect(page.getByText(/El flujo real usa cuentas sin deuda e incluye pagos transferidos hacia cuentas de deuda/)).toBeVisible();
+    await expect(page.getByText(/se compensan en el neto cuando ambos extremos/)).toBeVisible();
+    await expect(page.getByText(/no equivale al efectivo disponible/)).toBeVisible();
+    await expect(information).not.toHaveAttribute("open");
+    const boxes = await Promise.all([
+      page.getByRole("article", { name: "Flujo real" }).boundingBox(),
+      page.getByRole("heading", { name: "Flujo neto por periodo" }).boundingBox(), summary.boundingBox(),
+    ]);
+    expect(boxes.every(Boolean)).toBe(true);
+    expect(boxes[0]!.y).toBeLessThan(boxes[1]!.y);
+    expect(boxes[1]!.y).toBeLessThan(boxes[2]!.y);
+    return { scope, kpiTop: boxes[0]!.y, chartTop: boxes[1]!.y, informationTop: boxes[2]!.y };
+  };
+  for (const scope of ["realCashFlow", "all", "debtsOnly"]) {
+    // oxlint-disable-next-line no-await-in-loop -- Each perspective is measured after its own render.
+    measurements.push(await checkScope(scope));
+  }
+  await writeFile(testInfo.outputPath("cash-flow-hierarchy.json"), JSON.stringify(measurements, null, 2));
+  await page.getByRole("region", { name: "Filtros globales" })
+    .getByRole("group", { name: "Ámbito de las estadísticas" }).locator('input[value="realCashFlow"]').check();
+  await page.getByRole("main").screenshot({ path: testInfo.outputPath("cash-flow-clarity.png"), animations: "disabled" });
+  await summary.press("Enter");
+  await expect(information).toHaveAttribute("open");
+  await expect(information.getByText(/Ingresos y gastos brutos conservan sus importes/)).toBeVisible();
+  await expect(summary).toBeFocused();
+  await summary.press("Space");
+  await expect(information).not.toHaveAttribute("open");
+  await page.getByText("Composición del flujo", { exact: true }).click();
+  await expect(information).not.toHaveAttribute("open");
+  await expectNoDocumentOverflow(page);
+});
+
+test("keeps comparison reconciliation and hierarchy caveats before methods", async ({ page }, testInfo) => {
+  await page.locator('a[href="/comparativa"]').click();
+  const summary = page.locator("summary").filter({ hasText: "Información de la comparativa" });
+  const information = summary.locator("..");
+  const comparison = page.getByRole("region", { name: "Resumen de perspectivas" });
+  const categories = page.getByRole("region", { name: "Categorías por perspectiva" });
+  const measurements: Array<{ scope: string; summaryTop: number; categoriesTop: number; informationTop: number }> = [];
+  const checkScope = async (scope: string) => {
+    await page.getByRole("region", { name: "Filtros globales" })
+      .getByRole("group", { name: "Ámbito de las estadísticas" }).locator(`input[value="${scope}"]`).check();
+    await expect(page.getByText(/Son movimientos del mismo periodo, no saldos/)).toBeVisible();
+    await expect(comparison.getByText(/Yo \+ Ajuste por deudas = Flujo real/)).toBeVisible();
+    await expect(comparison.getByText(/no es un saldo ni necesariamente dinero gastado/)).toBeVisible();
+    await expect(categories.getByText(/Los hijos detallan el total del padre/)).toBeVisible();
+    await expect(information).not.toHaveAttribute("open");
+    expect(await comparison.locator("data").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("value"))))
+      .toEqual(["4.52", "-0.5", "4.02"]);
+    const boxes = await Promise.all([comparison.boundingBox(), categories.boundingBox(), summary.boundingBox()]);
+    expect(boxes.every(Boolean)).toBe(true);
+    expect(boxes[0]!.y).toBeLessThan(boxes[1]!.y);
+    expect(boxes[1]!.y).toBeLessThan(boxes[2]!.y);
+    return { scope, summaryTop: boxes[0]!.y, categoriesTop: boxes[1]!.y, informationTop: boxes[2]!.y };
+  };
+  for (const scope of ["realCashFlow", "all", "debtsOnly"]) {
+    // oxlint-disable-next-line no-await-in-loop -- Each perspective is measured after its own render.
+    measurements.push(await checkScope(scope));
+  }
+  await writeFile(testInfo.outputPath("comparison-hierarchy.json"), JSON.stringify(measurements, null, 2));
+  await page.getByRole("region", { name: "Filtros globales" })
+    .getByRole("group", { name: "Ámbito de las estadísticas" }).locator('input[value="realCashFlow"]').check();
+  await page.getByRole("main").screenshot({ path: testInfo.outputPath("comparison-clarity.png"), animations: "disabled" });
+  await summary.press("Enter");
+  await expect(information).toHaveAttribute("open");
+  await expect(information.getByText(/Los tipos de ingreso, gasto y transferencia no se reclasifican/)).toBeVisible();
+  await expect(summary).toBeFocused();
+  await summary.press("Space");
+  await expect(information).not.toHaveAttribute("open");
+  await categories.getByRole("button", { name: "Contraer Expense" }).click();
+  await expect(information).not.toHaveAttribute("open");
+  await expectNoDocumentOverflow(page);
+});
+
 test("keeps summary and cash-flow detail reachable without obscuring primary figures", async ({ page }) => {
   const summary = page.getByText("Saldos, deuda y conciliación", { exact: true });
   await expect(page.getByText("Flujo del periodo", { exact: true })).toBeVisible();
