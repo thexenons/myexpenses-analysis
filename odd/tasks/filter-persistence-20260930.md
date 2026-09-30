@@ -171,8 +171,26 @@ probe authoring errors were retained and corrected, not production findings.
 
 Delivery includes F1 and F2 only; UI rollback group remains separate. No private
 data test, manual screen-reader certification or native interactive approval is
-claimed. Unrelated user files remain byte-identical. Next step: tagged F2 commit,
-closing record and authorized fast-forward/main push with remote confirmation.
+claimed. Unrelated user files remain byte-identical.
+
+F2 work-unit commit `7e42485d9a7ed57be56bd2c41cf4ea0592456e81` includes 280
+authored lines with tracking. Running feature count before this closing record:
+918 (slightly above the initial forecast, coherent behavior and durable proof,
+not grounds to omit tests or create artificial slices). Read-only diagnostic:
+medium/due, 2,426 accumulated lines against `a37eabc`. Native boundary unchanged;
+no interactive review receipt. Delivery is an authorized fast-forward to main,
+normal push and remote SHA confirmation. Both requested features are complete.
+
+## Rollback manifest
+
+| Commit | Work unit |
+| --- | --- |
+| `91609a3` | Versioned preferences, validated restoration and store lifecycle |
+| `7e42485` | Durable reload/unlock guards and final independent proof |
+| Tagged `docs(filters): close local preference delivery` | Final delivery record; locate with the exact tag below |
+
+Revert this group only if requested. It does not include the five UI clarity
+commits ending at main `4a019df`. No pending implementation remains in this scope.
 
 Locate only this feature's commits:
 `git log --oneline --fixed-strings --grep='[filter-persistence-20260930]'`.
