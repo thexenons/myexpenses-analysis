@@ -8,6 +8,9 @@ import { createBackupZipFixture, createImportDatabaseFixture } from "../../scrip
 import { importBackup } from "../../scripts/import-backup/import-backup.ts";
 import { encryptDataset } from "../../scripts/encrypt-dataset/encrypt-dataset.ts";
 import { runBuildStaticCli } from "../../scripts/build-static/cli.ts";
+import { applyFilters, createDefaultFilterState } from "../../src/domain/analytics/filters.ts";
+import { normalizeDataset } from "../../src/domain/analytics/normalize.ts";
+import { createImportedHistorySeed, makeSyntheticHistory } from "../performance/synthetic-history.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const PORT = 41789;
@@ -55,6 +58,10 @@ async function main(): Promise<void> {
     const historyDatasetPath = join(temporary, "u7-budget-history-dataset.json");
     const historyVaultPath = join(temporary, "u7-budget-history.vault.json");
   const distPath = join(temporary, "dist");
+  const performanceCount = process.env.MYEXPENSES_PERF_COUNT;
+  if (performanceCount !== undefined && !["1000", "10000", "50000"].includes(performanceCount)) {
+    throw new Error("Invalid synthetic performance fixture size");
+  }
   let server: ReturnType<typeof createServer> | undefined;
   let closing = false;
   const cleanup = async () => {
@@ -88,6 +95,21 @@ async function main(): Promise<void> {
       backupFilenameTimestamp: "20260822210453",
       importedAt: "2026-08-23T10:00:00.000Z",
     });
+    let performanceMetadata: Record<string, number> | undefined;
+    if (performanceCount !== undefined) {
+      const seed = await createImportedHistorySeed(temporary);
+      const source = makeSyntheticHistory(seed, Number(performanceCount));
+      await writeFile(datasetPath, JSON.stringify(source), { mode: 0o600 });
+      const analytics = normalizeDataset(source);
+      const filters = { ...createDefaultFilterState(), scope: "realCashFlow" as const };
+      performanceMetadata = {
+        postings: analytics.postings.length,
+        real: applyFilters(analytics, filters).activePostings.length,
+        search: applyFilters(analytics, { ...filters, search: "perf-marker" }).activePostings.length,
+        debts: applyFilters(analytics, { ...filters, scope: "debtsOnly" }).activePostings.length,
+        date: applyFilters(analytics, { ...filters, periodMode: "custom", dateRange: { from: "2026-07-01", to: "2026-08-31" } }).activePostings.length,
+      };
+    }
     const legacy = JSON.parse(await readFile(datasetPath, "utf8")) as { source: Record<string, unknown> };
     delete legacy.source.backupFilenameTimestamp;
     delete legacy.source.importedAt;
@@ -100,6 +122,9 @@ async function main(): Promise<void> {
     process.env.MYEXPENSES_APP_REVISION = REVISION;
     const built = await runBuildStaticCli(["--vault", vaultPath, "--out-dir", distPath], { prompt: async () => PASSPHRASE });
     if (built !== 0) throw new Error("Synthetic browser build failed");
+    if (performanceMetadata !== undefined) {
+      await writeFile(join(distPath, "data", "performance-meta.json"), JSON.stringify(performanceMetadata));
+    }
     await copyFile(legacyVaultPath, join(distPath, "data", "legacy.vault.json"));
     const noLimitDatabase = await createImportDatabaseFixture({ extraSql: [
       ...baseExtraSql,
@@ -181,11 +206,11 @@ async function main(): Promise<void> {
         if (/(?:\.\.|%2e)/iu.test(request.url ?? "")) { response.writeHead(400).end(); return; }
         const pathname = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
         if (!pathname.startsWith("/assets/") &&
-            pathname !== "/data/app-dataset.vault.json" && pathname !== "/data/legacy.vault.json" && pathname !== "/data/u3-budget.vault.json" && pathname !== "/data/u6-transactions.vault.json" && pathname !== "/data/u7-budget-history.vault.json" &&
+            pathname !== "/data/app-dataset.vault.json" && pathname !== "/data/legacy.vault.json" && pathname !== "/data/u3-budget.vault.json" && pathname !== "/data/u6-transactions.vault.json" && pathname !== "/data/u7-budget-history.vault.json" && !(performanceMetadata !== undefined && pathname === "/data/performance-meta.json") &&
             pathname !== "/index.html" && !APP_ROUTES.has(pathname)) {
           response.writeHead(404).end(); return;
         }
-        const file = pathname.startsWith("/assets/") || pathname === "/data/app-dataset.vault.json" || pathname === "/data/legacy.vault.json" || pathname === "/data/u3-budget.vault.json" || pathname === "/data/u6-transactions.vault.json" || pathname === "/data/u7-budget-history.vault.json"
+        const file = pathname.startsWith("/assets/") || pathname === "/data/app-dataset.vault.json" || pathname === "/data/legacy.vault.json" || pathname === "/data/u3-budget.vault.json" || pathname === "/data/u6-transactions.vault.json" || (performanceMetadata !== undefined && pathname === "/data/performance-meta.json") || pathname === "/data/u7-budget-history.vault.json"
           ? join(distReal, decodeURIComponent(pathname))
           : join(distReal, "index.html");
         const fileReal = await realpath(file);

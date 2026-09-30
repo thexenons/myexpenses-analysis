@@ -8,6 +8,7 @@ const runtimeLibraryDirectory = process.env.MYEXPENSES_BROWSER_RUNTIME_LIB_DIR;
 export default defineConfig({
   testDir: ".",
   testMatch: "*.spec.ts",
+  testIgnore: process.env.MYEXPENSES_PERF_COUNT === undefined ? ["large-history-performance.spec.ts"] : [],
   timeout: 30_000,
   expect: { timeout: 10_000 },
   retries: 0,

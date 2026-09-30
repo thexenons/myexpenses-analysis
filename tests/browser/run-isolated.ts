@@ -78,6 +78,10 @@ async function linkInstalledPackages(snapshot: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  const performanceCount = process.env.MYEXPENSES_PERF_COUNT;
+  if (performanceCount !== undefined && !["1000", "10000", "50000"].includes(performanceCount)) {
+    throw new Error("MYEXPENSES_PERF_COUNT must be 1000, 10000, or 50000");
+  }
   if (isWithin(ROOT, tmpdir())) throw new Error("Temporary directory must be outside the repository");
   const browserPath = process.env.PLAYWRIGHT_BROWSERS_PATH ?? join(homedir(), ".cache", "ms-playwright");
   if (!isAbsolute(browserPath) || isWithin(ROOT, browserPath)) throw new Error("Browser cache must be outside the repository");
@@ -104,6 +108,7 @@ async function main(): Promise<void> {
         CI: "true", TZ: "Europe/Madrid", COREPACK_ENABLE_NETWORK: "0",
         PLAYWRIGHT_BROWSERS_PATH: browserPath,
         ...(runtimeLib === undefined ? {} : { MYEXPENSES_BROWSER_RUNTIME_LIB_DIR: runtimeLib }),
+        ...(performanceCount === undefined ? {} : { MYEXPENSES_PERF_COUNT: performanceCount }),
       },
       stdio: "inherit",
     });
