@@ -16,9 +16,12 @@ import type { BudgetsPageViewProps } from "./BudgetsPage.types.ts";
 import { BudgetAllocationTable } from "./components/BudgetAllocationTable/BudgetAllocationTable.tsx";
 import { BudgetConsumptionDialog } from "./components/BudgetConsumptionDialog/BudgetConsumptionDialog.tsx";
 import { BudgetControls } from "./components/BudgetControls/BudgetControls.tsx";
+import { BudgetReferenceControls } from "./components/BudgetReferenceControls/BudgetReferenceControls.tsx";
 import { BudgetUtilization } from "./components/BudgetUtilization/BudgetUtilization.tsx";
 import styles from "./BudgetsPage.module.css";
 import { formatCount, formatDate } from "../../utils/format.ts";
+import { formatBudgetComparisonDelta } from "./BudgetsPage.helpers.ts";
+import type { BudgetPeriodMean } from "../../../domain/analytics/budget-period-comparison.ts";
 
 const percentageFormatter = new Intl.NumberFormat("es-ES", {
   maximumFractionDigits: 1,
@@ -34,14 +37,32 @@ function filterSummaryLabel(
   return `${summary.rootOperator} · ${accounts} · ${categories}`;
 }
 
+const meanUnitLabels = {
+  DAY: ["día", "días"], WEEK: ["semana", "semanas"],
+  MONTH: ["mes", "meses"], YEAR: ["año", "años"],
+  NONE: ["intervalo", "intervalos"],
+} as const;
+
+function meanContext(mean: BudgetPeriodMean): string {
+  if (mean.status === "unsupported-grouping") return "Media no disponible: el intervalo libre no tiene una unidad comparable.";
+  if (mean.status === "no-complete-history") return "Media no disponible: no hay periodos anteriores completos en el historial.";
+  const unit = meanUnitLabels[mean.unit ?? "NONE"];
+  return `${mean.periodCount} ${mean.periodCount === 1 ? unit[0] : unit[1]} ${mean.periodCount === 1 ? "completo" : "completos"} (${formatDate(mean.firstDate!)} – ${formatDate(mean.lastDate!)}).`;
+}
+
 export function BudgetsPageView({
   analysis,
+  comparison = null,
+  comparisonError = null,
   budgetOptions,
   dataset,
   emptyDescription,
   emptyTitle,
   onBudgetChange,
   onPeriodChange,
+  onReferenceAdd,
+  onReferenceRemove,
+  onPrimaryReferenceChange,
   periodOptions,
   searchPending,
   selectedBudgetUuid,
@@ -90,6 +111,9 @@ export function BudgetsPageView({
   }
 
   const { fractionDigits, currency, global } = analysis;
+  const primaryReference = comparison?.references.find((reference) => reference.range.key === comparison.primaryReferenceKey);
+  const primaryIncome = comparison?.income.references.find((reference) => reference.referenceKey === comparison.primaryReferenceKey);
+  const primaryElapsed = comparison?.elapsed?.references.find((reference) => reference.referenceKey === comparison.primaryReferenceKey);
   const amountFormatter = budgetAmountFormatter(currency, fractionDigits);
   const toMajor = (amountMinor: number) =>
     budgetMinorToMajor(amountMinor, fractionDigits);
@@ -247,8 +271,54 @@ export function BudgetsPageView({
         }
         title="Desglose jerárquico"
       >
+        {comparisonError === null ? null : <output className={styles.technicalNote}>No se ha podido calcular la comparación con los datos actuales.</output>}
+        {comparison === null ? null : (
+          <div className={styles.comparisonHeader}>
+            {dataset.backup?.preferences === undefined || onReferenceAdd === undefined || onReferenceRemove === undefined || onPrimaryReferenceChange === undefined ? null : (
+              <BudgetReferenceControls
+                key={`${selectedBudgetUuid}:${selectedPeriodKey}`}
+                period={analysis.period}
+                preferences={dataset.backup.preferences}
+                references={comparison.references}
+                primaryReferenceKey={comparison.primaryReferenceKey}
+                onAdd={onReferenceAdd}
+                onRemove={onReferenceRemove}
+                onPrimaryChange={onPrimaryReferenceChange}
+              />
+            )}
+            <p className={styles.comparisonContext}>
+              {primaryReference === undefined ? "Sin referencia principal seleccionada." :
+                `Referencia principal: ${primaryReference.range.label}. Periodo completo: ${formatDate(primaryReference.range.startDate)} – ${formatDate(primaryReference.range.endDate)}${primaryReference.status === "unavailable" ? " (sin datos completos)" : ""}.`}
+              {" "}{meanContext(comparison.mean)}
+              {" "}Los importes de referencia y media son de periodos completos; no se prorratean con el corte actual.
+            </p>
+            <section aria-label="Ingresos en el mismo ámbito" className={styles.incomeComparison}>
+              <div>
+                <strong>Ingresos en el mismo ámbito</strong>
+                <p>Apuntes de categorías de ingreso; no reducen el consumo del presupuesto.</p>
+              </div>
+              <dl>
+                <div><dt>Actual</dt><dd>{formatBudgetMinor(comparison.income.currentMinor, currency, fractionDigits)}</dd></div>
+                <div><dt>Referencia completa</dt><dd>{primaryReference === undefined ? "Sin referencia" : primaryIncome?.amountMinor === null || primaryIncome?.amountMinor === undefined ? "Sin datos" : formatBudgetMinor(primaryIncome.amountMinor, currency, fractionDigits)}</dd></div>
+                <div><dt>Media</dt><dd>{comparison.mean.status !== "ready" || comparison.income.mean.averageMinor === null ? "Sin media" : formatBudgetMinor(comparison.income.mean.averageMinor, currency, fractionDigits)}</dd></div>
+              </dl>
+              {primaryReference === undefined ? null : (
+                <p className={styles.incomeDelta}>Diferencia con la referencia: {formatBudgetComparisonDelta(primaryIncome?.deltaMinor ?? null, primaryIncome?.percentChange ?? null, currency, fractionDigits)}</p>
+              )}
+              {primaryElapsed === undefined ? null : (
+                <details className={styles.incomeElapsed}>
+                  <summary>Mismo tramo transcurrido · ingresos</summary>
+                  <p>{primaryElapsed.status === "complete" ?
+                    `${formatDate(primaryElapsed.currentRange!.from)} – ${formatDate(primaryElapsed.currentRange!.to)}: ${formatBudgetMinor(primaryElapsed.currentIncomeMinor!, currency, fractionDigits)} / ${formatDate(primaryElapsed.referenceRange!.from)} – ${formatDate(primaryElapsed.referenceRange!.to)}: ${formatBudgetMinor(primaryElapsed.referenceIncomeMinor!, currency, fractionDigits)} · ${formatBudgetComparisonDelta(primaryElapsed.incomeDeltaMinor, primaryElapsed.incomePercentChange, currency, fractionDigits)}` :
+                    "No hay días comparables con cobertura completa."}</p>
+                </details>
+              )}
+            </section>
+          </div>
+        )}
         <BudgetAllocationTable
           allocations={analysis.allocations}
+          comparison={comparison}
           currency={currency}
           isFilteredComparison={analysis.isFilteredComparison}
           fractionDigits={fractionDigits}

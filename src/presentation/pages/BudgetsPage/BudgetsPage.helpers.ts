@@ -116,3 +116,19 @@ export function formatBudgetMinor(
     budgetMinorToMajor(amountMinor, fractionDigits),
   );
 }
+
+const comparisonPercentFormatter = new Intl.NumberFormat("es-ES", {
+  maximumFractionDigits: 1,
+  signDisplay: "exceptZero",
+});
+
+export function formatBudgetComparisonDelta(
+  deltaMinor: number | null,
+  percentChange: number | null,
+  currency: string,
+  fractionDigits: number,
+): string {
+  if (deltaMinor === null) return "Sin diferencia disponible";
+  const amount = `${deltaMinor > 0 ? "+" : ""}${formatBudgetMinor(deltaMinor, currency, fractionDigits)}`;
+  return `${amount} · ${percentChange === null ? "sin porcentaje (base cero)" : `${comparisonPercentFormatter.format(percentChange)} %`}`;
+}

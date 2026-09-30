@@ -1,0 +1,104 @@
+.root {
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--paper) 64%, transparent);
+}
+
+.summary {
+  min-height: 2.75rem;
+  padding: 0.7rem;
+  color: var(--transfer);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.summary:focus-visible,
+.body button:focus-visible,
+.field :is(input, select):focus-visible {
+  outline: 2px solid var(--accent-ink);
+  outline-offset: 2px;
+}
+
+.body {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.25rem 0.7rem 0.7rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.field :is(input, select) {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.55rem;
+  color: var(--ink);
+  background: var(--surface-bright);
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius-sm);
+  font: inherit;
+}
+
+.selected {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.selected li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.7rem;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  font-size: 0.78rem;
+}
+
+.selected li span {
+  overflow-wrap: anywhere;
+}
+
+.body button {
+  min-height: 2.75rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--line-dark);
+  border-radius: var(--radius-sm);
+  color: var(--transfer);
+  background: var(--surface-bright);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: end;
+}
+
+.add .field {
+  flex: 1 1 10rem;
+}
+
+.addButton {
+  flex: 0 0 auto;
+}
+
+.note,
+.error {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.note { color: var(--muted); }
+.error { color: var(--expense); }

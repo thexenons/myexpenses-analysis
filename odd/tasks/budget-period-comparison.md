@@ -47,7 +47,7 @@ after each verified task. No pull requests, deployment or private-data access.
 - [x] B2a — Guard integer-baseline comparison deltas against unsafe minor-unit
   subtraction, preserving fractional historical means. Add boundary regressions.
   Separate follow-up to non-blocking native advisory R3-001; never reopen B2.
-- [ ] B3 — Connect reference controls and mean context to the page and compact
+- [x] B3 — Connect reference controls and mean context to the page and compact
   rows. Keep primary reference and mean visible on mobile; show one relevant
   textual comparison signal and disclose additional periods/deltas/provenance.
   Verify reference changes, empty states, period changes and transaction access.
@@ -223,6 +223,7 @@ amount policy, not silent rounding. Strict TDD remains enabled by AGENTS.
 B2a focused runner: installed Vitest on `budget-period-comparison.test.ts` and
 `budgets.test.ts`; full UI/domain, three TypeScript projects, Oxlint and
 whitespace at closure. Runtime browser is N/A for this pure arithmetic boundary.
+
 ## B2a verification and next step
 
 Integer current/reference deltas now use the existing `safeAdd` guard; fractional
@@ -240,6 +241,109 @@ Evidence: `/tmp/b2a-CvLmBW/` (`focused-red.log`, `focused-green.log`,
 `/tmp/b2ap-Idflo2/`. No browser/runtime boundary for this pure arithmetic task;
 full Node suite and build intentionally not run. No changes to B3/UI yet.
 
-B2a commit/assessment/delivery pending. The B2 approval remains closed; this is a
-new work unit, not a correction transaction. Next: deliver B2a and implement B3.
+B2a commit `6f00017d92ea4d1822fadc882bc96fec35898cce` was fast-forwarded
+and pushed to main; the actual remote ref matched. Assessment from `2afb7fc`:
+medium, 3 paths/81 lines, `review_due:false`, `under_budget`. No new native
+approval is claimed; the pending slice keeps reviewed boundary `2afb7fc`.
+The B2 approval remains closed. Next: B3 controls and compact row wiring.
+
+## B3 in progress
+
+Connect the already verified comparison model to the page with default previous
+period, multiple explicit references and one primary reference. Show current /
+budget plus primary reference and mean at a glance on desktop AND mobile;
+additional deltas/periods/provenance stay in Details. For an incomplete current
+period, clearly separate the detailed same-elapsed-days comparison from the
+visible full-reference totals and the full-period mean. Never cap or alter the
+existing current budget totals to create that pacing detail. Reuse scoped data
+and add minimal domain support/tests only if needed. Keep existing transactions,
+calendar semantics, filtered-cut labels and native finance calculations intact.
+Use one panel-level reference/mean date/unit/count explanation. Scope income
+separately and clearly. Avoid thousands of generated select options or duplicate
+historical scans when selecting references. Preserve empty/missing/zero states.
+
+Delegated direct: hook, page model, controls, row presentation and tests require
+coordinated edits. Strict TDD from AGENTS; runner installed Vitest for existing
+Budgets page/helper/table tests plus focused new controls/hook/helper tests.
+At closure run full UI/domain, all three TypeScript projects, Oxlint and whitespace;
+parent repeats focused check and delegates source-only browser/visual validation
+including desktop/390/320 and intermediate sidebar/indentation widths. No browser
+or budget private input, localhost:5173, installation or deployment is allowed.
+B3 forecast roughly 800–1,100 authored lines including tests; a cohesive clear UI
+integration may exceed the heuristic, no PR is being created. B4 remains pending
+for durable comparison browser regressions and final integration verification.
 Engram mirror remains prohibited pending runtime registration.
+
+### B3 first integration check — correction required
+
+Writer implementation passed focused 53/53 (parent repeated), full synthetic
+UI/domain 406/406, all three TypeScript projects, Oxlint and whitespace. TDD
+RED evidence: `/tmp/b3-WBGMAP/{elapsed-red,page-red,controls-red}.log`;
+final writer logs: `*-final3.log`; parent repeat: `/tmp/b3p-nvP1DD/`.
+
+Independent browser proof is partial, not acceptance: 12/15 durable cases passed;
+the utilization block overlaps the current/assigned label and intercepts ordinary
+consumption-button clicks at 1280/390/320px. All nine detached perspective/viewport
+probes retain that blocker. Correct the layout root cause without forced clicks,
+pointer-event masking or hidden content; add durable non-overlap/pointer proof.
+Then rerun functional checks and isolated browser/visual acceptance on final bytes.
+
+Other synthetic-history behavior passed: reference selection/reset/persistence,
+zero-inclusive mean, missing versus zero, separate income, elapsed versus full
+totals, exact dialog posting IDs with keyboard activation, focus return, no page
+errors and horizontal containment at intermediate widths. Existing row-height
+measurements are invalid compactness proof while text overlaps. Parent inspected
+desktop/mobile screenshots and confirmed the overlap. Evidence:
+`/tmp/b3v-yvc1gaj_/` (logs, measurements, screenshots and preservation report).
+No source, index, protected user files or HEAD changed during verification.
+
+### B3 final verification
+
+The comparison integration is verified on corrected bytes. Reference selection
+supports add/remove/one primary, defaults to the preceding compatible period,
+resets for budget/target changes and persists across perspectives. Current/budget,
+full primary reference and mean stay visible; secondary deltas and separately
+scoped same-elapsed figures remain in Details. Income has its own scoped summary.
+Current budget financial totals and transaction inspection are unchanged.
+
+Overlap root cause: legacy grid-area declarations also applied to nested children
+of the new current block, creating implicit overlapping tracks. Grid areas now
+apply only to direct legacy summary children; equal narrow-screen columns retain
+space for long names. No pointer-event masking, forced click, clipping or reduced
+font size was used. New durable non-overlap/center-hit/ordinary-click assertions
+failed 3/3 before the correction, then passed. RED:
+`/tmp/b3correct-red2.log`; final writer checks: `/tmp/b3correct-*-final2.log`.
+
+Final proof:
+- Focused tests 53/53 (parent repeated on final bytes); full UI/domain 406/406.
+- TypeScript node/app/browser, Oxlint zero warnings/errors and whitespace passed.
+- Final writer durable budget browser 15/15 and synthetic-history probe 9/9.
+- Independent fresh-source browser 15/15 and probe 9/9, all three perspectives
+  at 1280/390/320px plus 768/900/1024 containment. No page errors or external
+  requests. Ordinary pointer and keyboard dialogs return exact posting IDs and
+  restore focus; controls >=44x44px. Current/reference/mean, covered zero versus
+  missing history, separate income, elapsed/full distinction, reference resets
+  and persistence, Details/tree independence all passed.
+- Parent inspected corrected desktop/390/320 images; the independent verifier
+  also inspected 900px. Meter/button and label/meter intersections are zero.
+
+Real parent/child closed heights: 87.91/87.91px desktop, 180.20/180.20px at390,
+180.20/195.11px at320, 131.41/131.41px at intermediate widths. The 320px child's
+utilization label wraps naturally; preserve readable text rather than force the
+185px advisory target. DOM-only extreme-name/billion-value stress stays contained
+but grows much taller; this is layout proof, not financial proof.
+
+Parent repeat: `/tmp/b3p2-pNV5fq/`. Independent evidence/screenshots/measurements:
+`/tmp/b3f-vd0_j4mt/`; fresh557-file manifest SHA256:
+`e41080980c3ef9e4f8c87aa659455a8dea6ef78b78233dc954eb09db2eceff25`.
+All17 candidate paths matched the staged index; source, protected dirty files,
+HEAD and index bytes/modes stayed unchanged during verification. Synthetic only;
+no private input, workspace build/full Node suite or manual screen-reader audit.
+
+Rollback: the B3 comparison integration and its tests (17 source/test/browser
+paths), retaining B1/B2/B2a. Source/tests1125 authored lines form one cohesive
+page integration with financial/interaction regressions; no PR is being created
+and tests were not trimmed to meet the advisory heuristic. Native assessment,
+candidate-specific review when due, commit evidence and main delivery follow.
+B4 remains pending for durable richer multi-period browser regressions and final
+integration closure. Engram mirror is still prohibited pending registration.

@@ -77,6 +77,8 @@ export interface BudgetPeriodComparison {
   readonly references: readonly BudgetReference[];
   readonly categories: readonly BudgetCategoryComparison[];
   readonly mean: BudgetPeriodMean;
+  /** Same-offset days only for an in-progress target; full-period figures are unchanged. */
+  readonly elapsed: BudgetElapsedComparison | null;
   /** Signed income-category postings in the same account/currency/filter scope. */
   readonly income: {
     readonly scope: "income-category-postings";
@@ -84,6 +86,34 @@ export interface BudgetPeriodComparison {
     readonly references: readonly BudgetAmountComparison[];
     readonly mean: { readonly averageMinor: number | null; readonly deltaMinor: number | null; readonly percentChange: number | null };
   };
+}
+
+export interface BudgetElapsedReference {
+  readonly referenceKey: string;
+  readonly status: "complete" | "unavailable";
+  readonly reason: "no-current-days" | "outside-coverage" | "not-yet-complete" | "shorter-reference" | null;
+  readonly currentRange: { readonly from: IsoDate; readonly to: IsoDate } | null;
+  readonly referenceRange: { readonly from: IsoDate; readonly to: IsoDate } | null;
+  readonly currentConsumedMinor: number | null;
+  readonly referenceConsumedMinor: number | null;
+  readonly deltaMinor: number | null;
+  readonly percentChange: number | null;
+  readonly currentIncomeMinor: number | null;
+  readonly referenceIncomeMinor: number | null;
+  readonly incomeDeltaMinor: number | null;
+  readonly incomePercentChange: number | null;
+  readonly categories: readonly ({
+    readonly categoryUuid: string;
+    readonly currentConsumedMinor: number | null;
+    readonly referenceConsumedMinor: number | null;
+    readonly deltaMinor: number | null;
+    readonly percentChange: number | null;
+  })[];
+}
+
+export interface BudgetElapsedComparison {
+  readonly cutoffDate: IsoDate;
+  readonly references: readonly BudgetElapsedReference[];
 }
 
 export type BudgetPeriodComparisonResult =
@@ -123,6 +153,13 @@ function comparison(current: number, baseline: number | null) {
     deltaMinor,
     percentChange: baseline === null || baseline === 0 ? null : deltaMinor! / Math.abs(baseline) * 100,
   };
+}
+
+function dayNumber(date: IsoDate): number {
+  const day = new Date(0);
+  day.setUTCHours(0, 0, 0, 0);
+  day.setUTCFullYear(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10)));
+  return Math.floor(day.getTime() / 86_400_000);
 }
 
 function datasetCoverage(
@@ -308,6 +345,66 @@ export function analyzeBudgetPeriodComparison(
   const currentIncome = currentRange === null ? 0 :
     currentRange === undefined ? sumRange(analysis.period.startDate, analysis.period.endDate).income :
       sumRange(currentRange.from, currentRange.to).income;
+  const elapsedFrom = currentRange?.from ?? analysis.period.startDate;
+  const elapsedTo = currentRange?.to !== undefined && currentRange.to < options.today
+    ? currentRange.to : options.today;
+  const elapsed = options.today < analysis.period.startDate || options.today > analysis.period.endDate ? null : {
+    cutoffDate: options.today,
+    references: ranges.map((range): BudgetElapsedReference => {
+      const unavailable = (
+        reason: NonNullable<BudgetElapsedReference["reason"]>,
+        currentWindow: BudgetElapsedReference["currentRange"] = null,
+        referenceWindow: BudgetElapsedReference["referenceRange"] = null,
+      ): BudgetElapsedReference => ({
+        referenceKey: range.key, status: "unavailable", reason,
+        currentRange: currentWindow, referenceRange: referenceWindow,
+        currentConsumedMinor: null, referenceConsumedMinor: null, deltaMinor: null, percentChange: null,
+        currentIncomeMinor: null, referenceIncomeMinor: null, incomeDeltaMinor: null, incomePercentChange: null,
+        categories: [],
+      });
+      if (currentRange === null || elapsedFrom > elapsedTo) return unavailable("no-current-days");
+      const startOffset = dayNumber(elapsedFrom) - dayNumber(analysis.period.startDate);
+      const lastOffset = Math.min(
+        dayNumber(elapsedTo) - dayNumber(analysis.period.startDate),
+        dayNumber(range.endDate) - dayNumber(range.startDate),
+      );
+      if (startOffset > lastOffset) return unavailable("shorter-reference");
+      const currentWindow = { from: elapsedFrom, to: addIsoDays(analysis.period.startDate, lastOffset) };
+      const referenceWindow = {
+        from: addIsoDays(range.startDate, startOffset),
+        to: addIsoDays(range.startDate, lastOffset),
+      };
+      if (referenceWindow.to >= options.today) return unavailable("not-yet-complete", currentWindow, referenceWindow);
+      if (coverage === null || currentWindow.from < coverage.from || currentWindow.to > coverage.to ||
+        referenceWindow.from < coverage.from || referenceWindow.to > coverage.to) {
+        return unavailable("outside-coverage", currentWindow, referenceWindow);
+      }
+      const currentBucket = sumRange(currentWindow.from, currentWindow.to);
+      const referenceBucket = sumRange(referenceWindow.from, referenceWindow.to);
+      const consumed = comparison(currentBucket.consumption, referenceBucket.consumption);
+      const income = comparison(currentBucket.income, referenceBucket.income);
+      return {
+        referenceKey: range.key, status: "complete", reason: null,
+        currentRange: currentWindow, referenceRange: referenceWindow,
+        currentConsumedMinor: currentBucket.consumption,
+        referenceConsumedMinor: referenceBucket.consumption,
+        deltaMinor: consumed.deltaMinor, percentChange: consumed.percentChange,
+        currentIncomeMinor: currentBucket.income,
+        referenceIncomeMinor: referenceBucket.income,
+        incomeDeltaMinor: income.deltaMinor,
+        incomePercentChange: income.percentChange,
+        categories: categories.map((node) => {
+          const currentConsumedMinor = currentBucket.categories.get(node.categoryUuid) ?? 0;
+          const referenceConsumedMinor = referenceBucket.categories.get(node.categoryUuid) ?? 0;
+          const category = comparison(currentConsumedMinor, referenceConsumedMinor);
+          return {
+            categoryUuid: node.categoryUuid, currentConsumedMinor, referenceConsumedMinor,
+            deltaMinor: category.deltaMinor, percentChange: category.percentChange,
+          };
+        }),
+      };
+    }),
+  };
   const incomeMean = mean.incomeAverageMinor;
   return {
     status: "ready",
@@ -321,6 +418,7 @@ export function analyzeBudgetPeriodComparison(
       references,
       categories: categoryComparisons,
       mean,
+      elapsed,
       income: {
         scope: "income-category-postings",
         currentMinor: currentIncome,

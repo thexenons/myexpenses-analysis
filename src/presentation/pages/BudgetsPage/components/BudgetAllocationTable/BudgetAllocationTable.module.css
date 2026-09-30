@@ -25,6 +25,33 @@
   min-width: 0;
 }
 
+.summaryWithComparison {
+  grid-template-areas: "category current reference mean details";
+  grid-template-columns: minmax(7rem, 1fr) minmax(11rem, 1.25fr) minmax(6rem, 0.8fr) minmax(6rem, 0.8fr) auto;
+}
+
+.currentBlock {
+  grid-area: current;
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.referenceMetric,
+.meanMetric {
+  min-width: 0;
+  margin: 0;
+}
+
+.referenceMetric { grid-area: reference; }
+.meanMetric { grid-area: mean; }
+
+.signal {
+  color: var(--transfer);
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
+}
+
 .category {
   grid-area: category;
   display: flex;
@@ -39,10 +66,11 @@
 }
 
 .primaryMetrics {
-  grid-area: amount;
   min-width: 0;
   margin: 0;
 }
+
+.summary > .primaryMetrics { grid-area: amount; }
 
 .amountPair {
   display: flex;
@@ -57,9 +85,10 @@
 }
 
 .utilization {
-  grid-area: utilization;
   min-width: 0;
 }
+
+.summary > .utilization { grid-area: utilization; }
 
 .detailsToggle {
   grid-area: details;
@@ -100,6 +129,29 @@
 
 .metrics[hidden] {
   display: none;
+}
+
+.wideMetric { grid-column: 1 / -1; }
+
+.referenceList {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.referenceList li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.65rem;
+  align-items: baseline;
+}
+
+.referenceList li span:first-child {
+  min-width: 8rem;
+  font-family: inherit;
+  font-weight: 700;
 }
 
 .metric {
@@ -191,6 +243,20 @@
   .summary {
     grid-template-areas: "category amount details" "utilization utilization utilization";
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+}
+
+@container budget-row (max-width: 46rem) {
+  .summary.summaryWithComparison {
+    grid-template-areas: "category current details" "reference mean details";
+    grid-template-columns: minmax(7rem, 1fr) minmax(11rem, 1.4fr) auto;
+  }
+}
+
+@container budget-row (max-width: 28rem) {
+  .summary.summaryWithComparison {
+    grid-template-areas: "category details" "current current" "reference mean";
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

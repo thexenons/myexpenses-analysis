@@ -1194,17 +1194,37 @@ test("puts category paths and account balances before charts without losing keyb
   expect(violations).toEqual([]);
 });
 
-test("keeps closed budget rows compact without coupling details and tree expansion", async ({ page }, testInfo) => {
+test("keeps current, reference and mean visible in compact rows without coupling disclosures", async ({ page }, testInfo) => {
   await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
   await page.getByRole("group", { name: "Marco del presupuesto" }).getByLabel("Periodo").selectOption("MONTH:2026:7");
 
   const tree = page.getByRole("list", { name: "Asignaciones jerárquicas del presupuesto" });
   const root = tree.locator(":scope > li").first();
   const row = root.locator(":scope > div");
+  await expect(row.getByText("Referencia", { exact: true })).toBeVisible();
+  await expect(row.getByText("Media", { exact: true })).toBeVisible();
   const width = page.viewportSize()!.width;
   const height = (await row.boundingBox())!.height;
-  expect(height, `closed current-budget row at ${width}px`).toBeLessThanOrEqual(width >= 900 ? 95 : width <= 320 ? 150 : 140);
+  expect(height, `closed comparison row at ${width}px`).toBeLessThanOrEqual(width >= 900 ? 110 : 185);
+  const current = await row.locator("dl").first().boundingBox();
+  const utilization = await row.locator("meter").first().locator("xpath=../..").boundingBox();
+  expect(current).not.toBeNull();
+  expect(utilization).not.toBeNull();
+  const separated = current!.x + current!.width <= utilization!.x || utilization!.x + utilization!.width <= current!.x ||
+    current!.y + current!.height <= utilization!.y || utilization!.y + utilization!.height <= current!.y;
+  expect(separated, `current amount and utilization must not overlap at ${width}px`).toBe(true);
+  const consumed = row.getByRole("button", { name: /Ver apuntes consumidos de Expense:/ });
+  await consumed.scrollIntoViewIfNeeded();
+  expect(await consumed.evaluate((button) => {
+    const bounds = button.getBoundingClientRect();
+    const hit = document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    return button === hit || button.contains(hit);
+  }), `consumed amount must receive pointer events at ${width}px`).toBe(true);
   await row.screenshot({ path: testInfo.outputPath(`budget-row-closed-${width}.png`) });
+  await consumed.click();
+  const consumptionDialog = page.getByRole("dialog", { name: "Expense · apuntes" });
+  await expect(consumptionDialog).toBeVisible();
+  await consumptionDialog.getByRole("button", { name: "Cerrar detalle" }).click();
 
   if (width === 1280) {
     // oxlint-disable no-await-in-loop -- Each viewport needs a settled layout before measuring its rows.

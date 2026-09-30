@@ -5,6 +5,7 @@ import type { BudgetAllocationTableProps } from "./BudgetAllocationTable.types.t
 
 export function BudgetAllocationTable({
   allocations,
+  comparison = null,
   currency,
   fractionDigits,
   isFilteredComparison = false,
@@ -14,11 +15,15 @@ export function BudgetAllocationTable({
     return <p className={styles.empty}>Este periodo no tiene asignaciones por categoría.</p>;
   }
 
+  const categoryComparisons = new Map(comparison?.categories.map((category) => [category.categoryUuid, category]) ?? []);
+
   return (
     <AccordionTree aria-label="Asignaciones jerárquicas del presupuesto">
       {allocations.map((allocation) => (
         <BudgetAllocationItem
           allocation={allocation}
+          comparison={comparison}
+          categoryComparisons={categoryComparisons}
           currency={currency}
           depth={0}
           fractionDigits={fractionDigits}

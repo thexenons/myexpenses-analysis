@@ -7,6 +7,7 @@ import type {
   BudgetAnalysis,
 } from "../../../domain/analytics/budgets.ts";
 import type { BackupBudgetV1 } from "../../../domain/analytics/backup-dataset.types.ts";
+import type { BudgetPeriodComparison, BudgetReferenceRange } from "../../../domain/analytics/budget-period-comparison.ts";
 import type { AnalyticsDataset, NormalizedPosting } from "../../../domain/analytics/types.ts";
 import { BudgetsPageView } from "./BudgetsPage.view.tsx";
 
@@ -122,7 +123,106 @@ const analysis: BudgetAnalysis = {
   },
 };
 
+const comparison: BudgetPeriodComparison = {
+  budgetUuid: "budget", targetPeriod: analysis.period, currency: "EUR", fractionDigits: 2,
+  coverage: { from: "2026-06-01", to: "2026-08-31" }, primaryReferenceKey: "MONTH:2026:6",
+  references: [
+    { status: "complete", reason: null, range: analysis.periods[1]!, consumedMinor: 2_500,
+      incomeMinor: 100, deltaMinor: 4_000, percentChange: 160 },
+    { status: "complete", reason: null, range: { key: "MONTH:2026:5", label: "Junio de 2026", startDate: "2026-06-01", endDate: "2026-06-30" },
+      consumedMinor: 0, incomeMinor: 0, deltaMinor: 6_500, percentChange: null },
+  ],
+  categories: [{
+    categoryUuid: "food", name: "Comida", path: ["Gastos", "Comida"], currentConsumedMinor: 3_500,
+    references: [
+      { referenceKey: "MONTH:2026:6", consumedMinor: 2_500, amountMinor: 2_500, deltaMinor: 1_000, percentChange: 40 },
+      { referenceKey: "MONTH:2026:5", consumedMinor: 0, amountMinor: 0, deltaMinor: 3_500, percentChange: null },
+    ],
+    mean: { averageMinor: 2_000, deltaMinor: 1_500, percentChange: 75 },
+  }],
+  mean: { status: "ready", reason: null, unit: "MONTH", periodCount: 2,
+    periods: [analysis.periods[1]!], firstDate: "2026-06-01", lastDate: "2026-07-31",
+    consumedTotalMinor: 4_000, consumedAverageMinor: 2_000,
+    incomeTotalMinor: 200, incomeAverageMinor: 100 },
+  elapsed: { cutoffDate: "2026-08-15", references: [{
+    referenceKey: "MONTH:2026:6", status: "complete", reason: null,
+    currentRange: { from: "2026-08-01", to: "2026-08-15" },
+    referenceRange: { from: "2026-07-01", to: "2026-07-15" },
+    currentConsumedMinor: 1_000, referenceConsumedMinor: 800, deltaMinor: 200, percentChange: 25,
+    currentIncomeMinor: 200, referenceIncomeMinor: 100, incomeDeltaMinor: 100, incomePercentChange: 100,
+    categories: [{ categoryUuid: "food", currentConsumedMinor: 500, referenceConsumedMinor: 400,
+      deltaMinor: 100, percentChange: 25 }],
+  }] },
+  income: { scope: "income-category-postings", currentMinor: 200,
+    references: [{ referenceKey: "MONTH:2026:6", amountMinor: 100, deltaMinor: 100, percentChange: 100 },
+      { referenceKey: "MONTH:2026:5", amountMinor: 0, deltaMinor: 200, percentChange: null }],
+    mean: { averageMinor: 100, deltaMinor: 100, percentChange: 100 } },
+};
+
 describe("BudgetsPageView", () => {
+  it("shows primary and mean values at a glance, with other deltas and elapsed pace in details", async () => {
+    const user = userEvent.setup();
+    render(<BudgetsPageView
+      analysis={analysis} comparison={comparison} dataset={EMPTY_DATASET}
+      budgetOptions={[]} periodOptions={[]} emptyDescription={null} emptyTitle={null}
+      onBudgetChange={vi.fn<(uuid: string) => void>()} onPeriodChange={vi.fn<(key: string) => void>()}
+      onReferenceAdd={vi.fn<(range: BudgetReferenceRange) => void>()} onReferenceRemove={vi.fn<(key: string) => void>()} onPrimaryReferenceChange={vi.fn<(key: string) => void>()}
+      searchPending={false} selectedBudgetUuid="budget" selectedPeriodKey="MONTH:2026:7"
+    />);
+    expect(screen.getByText(/2 meses completos/i)).toBeVisible();
+    const tree = screen.getByRole("list", { name: "Asignaciones jerárquicas del presupuesto" });
+    expect(within(tree).getByText("Referencia")).toBeVisible();
+    expect(within(tree).getByText("Media")).toBeVisible();
+    expect(within(tree).getAllByText(/25,00/).find((node) => node.closest("[hidden]") === null)).toBeVisible();
+    expect(within(tree).getAllByText(/20,00/).find((node) => node.closest("[hidden]") === null)).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Detalles de Gastos › Comida" }));
+    expect(within(tree).getByText(/Junio de 2026/)).toBeVisible();
+    expect(within(tree).getByText(/Mismo tramo transcurrido/)).toBeVisible();
+    expect(screen.getByText(/Ingresos en el mismo ámbito/)).toBeVisible();
+  });
+
+  it("distinguishes an empty reference selection, missing history and a custom unit", () => {
+    const noHistory: BudgetPeriodComparison = {
+      ...comparison,
+      primaryReferenceKey: null,
+      references: [],
+      categories: [{ ...comparison.categories[0]!, references: [], mean: { averageMinor: null, deltaMinor: null, percentChange: null } }],
+      mean: { ...comparison.mean, status: "no-complete-history", reason: "no-complete-history",
+        periodCount: 0, periods: [], firstDate: null, lastDate: null,
+        consumedTotalMinor: null, consumedAverageMinor: null, incomeTotalMinor: null, incomeAverageMinor: null },
+    };
+    const { rerender } = render(<BudgetsPageView
+      analysis={analysis} comparison={noHistory} dataset={EMPTY_DATASET}
+      budgetOptions={[]} periodOptions={[]} emptyDescription={null} emptyTitle={null}
+      onBudgetChange={vi.fn<(uuid: string) => void>()} onPeriodChange={vi.fn<(key: string) => void>()}
+      searchPending={false} selectedBudgetUuid="budget" selectedPeriodKey="MONTH:2026:7"
+    />);
+    const tree = screen.getByRole("list", { name: "Asignaciones jerárquicas del presupuesto" });
+    expect(within(tree).getByText("Sin referencia")).toBeVisible();
+    expect(within(tree).getByText("Sin historial")).toBeVisible();
+    expect(screen.getByText(/no hay periodos anteriores completos/)).toBeVisible();
+    rerender(<BudgetsPageView
+      analysis={{ ...analysis, period: { ...analysis.period, grouping: "NONE" } }}
+      comparison={{ ...noHistory, mean: { ...noHistory.mean, status: "unsupported-grouping", reason: "custom-range-has-no-calendar-unit", unit: null } }}
+      dataset={EMPTY_DATASET} budgetOptions={[]} periodOptions={[]} emptyDescription={null} emptyTitle={null}
+      onBudgetChange={vi.fn<(uuid: string) => void>()} onPeriodChange={vi.fn<(key: string) => void>()}
+      searchPending={false} selectedBudgetUuid="budget" selectedPeriodKey="NONE:all:all"
+    />);
+    expect(within(tree).getByText("Sin unidad")).toBeVisible();
+    expect(screen.getByText(/intervalo libre no tiene una unidad comparable/)).toBeVisible();
+  });
+
+  it("gives a short above-reference signal without replacing current budget semantics", () => {
+    render(<BudgetsPageView
+      analysis={{ ...analysis, allocations: [{ ...allocation, health: "on-track", assignedMinor: 5_000, availableMinor: 1_500, utilization: 0.7 }] }}
+      comparison={comparison} dataset={EMPTY_DATASET}
+      budgetOptions={[]} periodOptions={[]} emptyDescription={null} emptyTitle={null}
+      onBudgetChange={vi.fn<(uuid: string) => void>()} onPeriodChange={vi.fn<(key: string) => void>()}
+      searchPending={false} selectedBudgetUuid="budget" selectedPeriodKey="MONTH:2026:7"
+    />);
+    expect(screen.getByText(/10,00.*más que la referencia/)).toBeVisible();
+    expect(screen.getByRole("meter", { name: "Utilización de Gastos › Comida" })).toBeVisible();
+  });
   it("shows the absence of a global limit instead of a calculated zero percent", () => {
     render(
       <BudgetsPageView
@@ -182,6 +282,7 @@ describe("BudgetsPageView", () => {
             { posting: makePosting("other", ["Otros"]), amountMinor: 3_000 },
           ],
         }}
+        comparison={comparison}
         dataset={EMPTY_DATASET}
         budgetOptions={[]}
         emptyDescription={null}

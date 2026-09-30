@@ -336,4 +336,62 @@ describe("budget period comparison", () => {
       .toMatchObject({ averageMinor: 0.5, deltaMinor: 1.5, percentChange: 300 });
     expect(comparison.income.mean).toMatchObject({ averageMinor: 1.5, deltaMinor: 0.5, percentChange: 0.5 / 1.5 * 100 });
   });
+
+  it("keeps full current totals while comparing only elapsed days and excluding future postings", () => {
+    const rows = [
+      coverage("2026-07-01"), coverage("2026-08-31"),
+      posting("july", "2026-07-10", -200, ["Expense", "Food"]),
+      posting("august", "2026-08-10", -100, ["Expense", "Food"]),
+      posting("future", "2026-08-25", -900, ["Expense", "Food"]),
+      posting("july-income", "2026-07-11", 400, ["Income"], { bucket: "income", categoryType: "INCOME" }),
+      posting("august-income", "2026-08-11", 300, ["Income"], { bucket: "income", categoryType: "INCOME" }),
+    ];
+    const { current, comparison } = compare(dataset(rows), createDefaultFilterState(), { today: "2026-08-15" });
+    expect(current.global.consumedMinor).toBe(1_000);
+    expect(comparison.references[0]).toMatchObject({ consumedMinor: 200 });
+    expect(comparison.elapsed?.references[0]).toMatchObject({
+      status: "complete",
+      currentRange: { from: "2026-08-01", to: "2026-08-15" },
+      referenceRange: { from: "2026-07-01", to: "2026-07-15" },
+      currentConsumedMinor: 100,
+      referenceConsumedMinor: 200,
+      deltaMinor: -100,
+      currentIncomeMinor: 300,
+      referenceIncomeMinor: 400,
+    });
+    expect(comparison.elapsed?.references[0]?.categories.find((item) => item.categoryUuid === "child"))
+      .toMatchObject({ currentConsumedMinor: 100, referenceConsumedMinor: 200, deltaMinor: -100 });
+  });
+
+  it("clamps a shorter reference month to the same number of current days", () => {
+    const march = budget({ allocations: allocationsAt(2026, 2) });
+    const rows = [
+      coverage("2026-02-01"), coverage("2026-03-31"),
+      posting("february", "2026-02-28", -20, ["Expense", "Food"]),
+      posting("march-28", "2026-03-28", -50, ["Expense", "Food"]),
+      posting("march-29", "2026-03-29", -100, ["Expense", "Food"]),
+    ];
+    const { comparison } = compare(dataset(rows, march), createDefaultFilterState(), { today: "2026-03-30" }, "MONTH:2026:2");
+    expect(comparison.elapsed?.references[0]).toMatchObject({
+      currentRange: { from: "2026-03-01", to: "2026-03-28" },
+      referenceRange: { from: "2026-02-01", to: "2026-02-28" },
+      currentConsumedMinor: 50, referenceConsumedMinor: 20,
+    });
+  });
+
+  it("maps a selected current-date cut to matching reference-day offsets", () => {
+    const rows = [
+      coverage("2026-07-01"), coverage("2026-08-31"),
+      posting("outside-reference-cut", "2026-07-01", -500, ["Expense", "Food"]),
+      posting("within-reference-cut", "2026-07-11", -300, ["Expense", "Food"]),
+      posting("within-current-cut", "2026-08-11", -100, ["Expense", "Food"]),
+    ];
+    const filters = { ...createDefaultFilterState(), dateRange: { from: "2026-08-10" as const, to: "2026-08-12" as const } };
+    const { comparison } = compare(dataset(rows), filters, { today: "2026-08-15" });
+    expect(comparison.elapsed?.references[0]).toMatchObject({
+      currentRange: { from: "2026-08-10", to: "2026-08-12" },
+      referenceRange: { from: "2026-07-10", to: "2026-07-12" },
+      currentConsumedMinor: 100, referenceConsumedMinor: 300,
+    });
+  });
 });

@@ -47,6 +47,80 @@
   min-width: 0;
 }
 
+.comparisonHeader {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  margin-bottom: 0.9rem;
+}
+
+.comparisonContext {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.incomeComparison {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1.2fr) minmax(0, 2fr);
+  gap: 0.25rem 0.8rem;
+  align-items: center;
+  min-width: 0;
+  padding: 0.65rem 0.75rem;
+  background: color-mix(in srgb, var(--income) 6%, var(--paper));
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.incomeComparison strong {
+  font-size: 0.8rem;
+}
+
+.incomeComparison p {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.incomeComparison dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.incomeComparison dt {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.incomeComparison dd {
+  margin: 0.1rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.incomeDelta,
+.incomeElapsed {
+  grid-column: 1 / -1;
+}
+
+.incomeElapsed summary {
+  min-height: 2.75rem;
+  padding: 0.5rem 0;
+  color: var(--transfer);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.incomeElapsed summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
 .technicalNote {
   max-width: 58rem;
   margin: 0;
@@ -75,5 +149,13 @@
 @media (max-width: 560px) {
   .ledger {
     grid-template-columns: 1fr;
+  }
+
+  .incomeComparison {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .incomeComparison dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
