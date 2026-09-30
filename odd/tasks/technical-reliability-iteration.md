@@ -121,4 +121,8 @@ Evidence: `/tmp/appshell-t3-red-f9ODWT/focused-red.log`,
 Node/browser suites were not rerun for this test-only change; their previous
 verification remains historical, not a new result. No app behavior was modified.
 Rollback boundary: the AppShell test file. Source/test delta: 9 additions and
-3 deletions. Next: commit and assess T3. Engram task mirror remains pending.
+3 deletions. T3 committed as `cb44f45` (49 authored changed lines with tracking).
+Assessment from `e65a364`: medium, 292 accumulated changed lines,
+`review_due: false`, `under_budget`. Native review remains deferred with no
+approval claimed; the reviewed boundary is unchanged. T3 is complete locally,
+without main integration or push. Engram task mirror remains pending.
