@@ -128,7 +128,7 @@ runtime identity; agent-attributed memory tools are prohibited.
 
 ## Progress and rollback
 
-Audit and C1–C4 complete; final tagged delivery is next. C1 changes seven source/test paths (382
+Audit and C1–C4 complete. C1 changes seven source/test paths (382
 authored additions plus deletions). Native Information is closed initially;
 the budget ledger and long method follow the category tree. Date/filter scope,
 full-period/no-proration, missing/reference/mean context and parent/child
@@ -246,6 +246,18 @@ remaining confirmed UI finding within the bounded audit. Synthetic-only proof;
 DOM stress is layout-only, not financial evidence. No private-data verification,
 manual screen-reader certification or interactive native approval is claimed.
 
+C4a work-unit commit: `bb870e45c7832cfc01d983e682a61cb8fc2e7c84`.
+Its 190 authored lines include the correction (125) and final audit tracking.
+Running task total before this closing record: 1,151 authored lines. Read-only
+native diagnostic: medium/due, 1,501 accumulated lines against `a37eabc`.
+The native boundary remains unchanged; independent evidence is the acceptance
+record, not a native receipt. Source normalization/checks preceded commit;
+no hook modified the tested source. Protected unrelated changes remain intact.
+
+The closing documentation commit carries the same task identifier. Delivery is
+an authorized fast-forward to main and normal push, with remote SHA confirmation.
+Next: begin the separately authorized localStorage filter-persistence feature.
+
 ## Rollback manifest
 
 All task commits contain `[ui-clarity-20260930]`. Revert only this group in reverse
@@ -256,7 +268,8 @@ chronological order if requested; the later filter-persistence feature is separa
 | `213b8f1` | Budget hierarchy and Information primitive |
 | `dca152f` | Overview, Cash flow and Comparison hierarchy |
 | `f133153` | Budget total terminology and debt context |
-| Final responsive correction / closing record | Locate with the exact tag below; hashes recorded after creation |
+| `bb870e4` | Categories available-width containment and touch targets |
+| Tagged `docs(ui): close clarity audit and rollback record` | Final verification/delivery record; locate with the exact tag below |
 
 To identify this task's commits (read-only):
 `git log --oneline --fixed-strings --grep='[ui-clarity-20260930]'`.
