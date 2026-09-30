@@ -1,5 +1,8 @@
 # Optional remembered vault access
 
+Status: implemented, independently verified and pushed to origin/main on
+2026-10-01. Production delivery: 698ae58a5ad6018707b97204ca4bc7e91562369c.
+
 ## Intent and authority
 
 Allow repeat visits to unlock the same encrypted vault without retyping its
@@ -32,7 +35,7 @@ No private vault, backups, environment secrets or unrelated changes are in scope
   Route: delegated writer (repository/store/UI lifecycle integration).
   Acceptance: default off, opt-in reload success, changed vault fallback, failed
   unlock cannot save keys, abort/lock races cannot reopen, concise accessible UI.
-- [ ] R3 — Independently verify real-browser persistence and delivery.
+- [x] R3 — Independently verify real-browser persistence and delivery.
   Route: delegated verifier (security/lifecycle and browser checks), parent
   structural readback and spot check. Commit tests with their behavior.
 
@@ -52,8 +55,8 @@ line budget. Tag every commit [remembered-vault-access-20260930].
 Base: 25e03eecfb1e0547e6aad8494f0cfa7e11ddbeea.
 RDD is on: assess actual work-unit candidates and honor native consent and
 continuations without inventing approval. User authorization to push is not a
-candidate review consent. R1 review was granted, approved and acknowledged;
-the next reviewed boundary is fba3f15757a4587c3166293e64b0a05a29bab401.
+candidate review consent. R1 and R2 reviews were granted, approved and
+acknowledged; the reviewed boundary is 698ae58a5ad6018707b97204ca4bc7e91562369c.
 
 ## Recovery
 
@@ -116,5 +119,21 @@ Preserve pre-existing changes in .atl/.skill-registry.cache.json,
   rollback. Real transaction-timeout rollback remains untested. If both durable
   stores fail during revocation, the user is warned to clear site data; success
   is not claimed. Runtime identity still unavailable; Engram mirror pending.
-- Next: commit and assess corrected R2, honor its separate native consent, then
-  integrate and push main under the existing user authorization.
+- R2 commit 698ae58: 1,038 authored changed lines, including tests and recovery
+  notes. Native assessment medium / slice_budget_reached; user granted review.
+  Consolidated reliability review approved with no findings, and acknowledgement
+  consumed review-a86bccb2cab72efb. No source changes followed that review.
+- Delivery: fast-forward integrated fba3f15 and 698ae58 into main; push succeeded
+  and remote refs/heads/main matched 698ae58a5ad6018707b97204ca4bc7e91562369c.
+  All three pre-existing dirty files retained their original SHA-256 hashes.
+- Final documentation-only closure records R3 evidence; no runtime retest applies
+  to this passive record. No required implementation work remains. Known coverage
+  limits above are retained rather than represented as passing checks.
+
+## Rollback
+
+Reverse the tagged integration commit 698ae58, then the base commit fba3f15;
+retain unrelated history and user changes. The documentation closure can be
+reverted independently. Removing the feature does not erase previously stored
+browser keys; clear this site's data if removal of local remembered access is
+required. The feature never changes the encrypted vault format or financial data.
