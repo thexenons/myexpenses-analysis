@@ -1,5 +1,11 @@
 # Improve filtering efficiency and development vault freshness
 
+## Final status
+
+All four tasks were delivered to `origin/main` in successive small pushes.
+T4 implementation commit: `0a0388e`; its push succeeded after native review.
+The checkpoint history below preserves the evidence and limitations at each stage.
+
 ## Scope and constraints
 
 The user authorized a technical improvement iteration. A read-only audit sampled
@@ -175,5 +181,16 @@ T1, T2 and T3 were fast-forwarded and pushed separately to `origin/main`, ending
 at `d7f5494`, `9d5d949` and `b5638d7` respectively; each push succeeded. Remote
 `main` was verified at `b5638d7`. A temporary clean Git worktree kept unrelated
 user edits and the pending T4 candidate untouched during delivery.
-Next: commit and assess T4, then finish its required review and delivery.
-Engram mirror remains pending authoritative runtime registration.
+T4 committed as `0a0388e` (144 authored changed lines including tracking).
+Assessment against `e65a364`: medium, 8 paths, 436 lines; review due because the
+accumulated slice budget was reached. The user explicitly granted this candidate.
+Native lineage `review-0d685a8254f8687b` inspected all eight immutable patches and
+returned no findings. It did not execute or independently reproduce tests; the
+functional evidence above comes from the writer, parent and isolated verifier.
+Exact acknowledgement succeeded with `authority: burned`; reviewed boundary
+advanced to `0a0388e`. No further action belongs to that consumed lineage.
+T4 was fast-forwarded and pushed to `origin/main` at `0a0388e`; Git confirmed the
+push and matching local/remote-tracking tips. All unrelated user edits remain.
+No implementation or delivery tasks remain. Engram mirror synchronization is still
+pending authoritative runtime registration; no agent memory writes were attempted
+during this closure.
