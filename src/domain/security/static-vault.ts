@@ -477,6 +477,53 @@ export function serializeStaticVaultEnvelope(
   });
 }
 
+/** SHA-256 of the complete canonical encrypted envelope, including ciphertext. */
+export async function staticVaultEnvelopeDigest(
+  value: unknown,
+  cryptoProvider: StaticVaultCrypto,
+): Promise<string> {
+  const bytes = new TextEncoder().encode(
+    serializeStaticVaultEnvelope(parseStaticVaultEnvelope(value)),
+  );
+  const digest = new Uint8Array(await cryptoProvider.subtle.digest("SHA-256", bytes));
+  return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+/** Derives a key that the browser can clone into IndexedDB but cannot export. */
+export async function deriveVaultDecryptionKey(
+  value: unknown,
+  passphrase: string,
+  cryptoProvider: StaticVaultCrypto,
+  options: StaticVaultPassphraseOptions = {},
+): Promise<CryptoKey> {
+  return deriveAesKey(
+    passphrase,
+    parseEnvelopeParts(value).salt,
+    cryptoProvider,
+    "decrypt",
+    options,
+  );
+}
+
+export function isVaultDecryptionKey(value: unknown): value is CryptoKey {
+  if (typeof value !== "object" || value === null) return false;
+  if (typeof CryptoKey === "undefined" || !(value instanceof CryptoKey)) return false;
+  const key = value as Partial<CryptoKey>;
+  const algorithm = key.algorithm as { name?: unknown; length?: unknown } | undefined;
+  return key.type === "secret" && key.extractable === false &&
+    algorithm?.name === "AES-GCM" && algorithm.length === 256 &&
+    Array.isArray(key.usages) && key.usages.length === 1 && key.usages[0] === "decrypt";
+}
+
+export async function decryptCompressedDatasetWithKey(
+  value: unknown,
+  key: CryptoKey,
+  cryptoProvider: StaticVaultCrypto,
+): Promise<Uint8Array<ArrayBuffer>> {
+  if (!isVaultDecryptionKey(key)) invalidVault("Vault key must be non-extractable and decrypt-only");
+  return decryptWithKey(value, key, cryptoProvider);
+}
+
 export async function encryptCompressedDataset(
   bytes: Uint8Array,
   passphrase: string,
@@ -550,14 +597,16 @@ export async function decryptCompressedDataset(
   cryptoProvider: StaticVaultCrypto,
   options: StaticVaultPassphraseOptions = {},
 ): Promise<Uint8Array<ArrayBuffer>> {
-  const { aad, ciphertext, envelope, iv, salt } = parseEnvelopeParts(value);
-  const key = await deriveAesKey(
-    passphrase,
-    salt,
-    cryptoProvider,
-    "decrypt",
-    options,
-  );
+  const key = await deriveVaultDecryptionKey(value, passphrase, cryptoProvider, options);
+  return decryptWithKey(value, key, cryptoProvider);
+}
+
+async function decryptWithKey(
+  value: unknown,
+  key: CryptoKey,
+  cryptoProvider: StaticVaultCrypto,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const { aad, ciphertext, envelope, iv } = parseEnvelopeParts(value);
   let decrypted: Uint8Array<ArrayBuffer>;
   try {
     decrypted = new Uint8Array(
