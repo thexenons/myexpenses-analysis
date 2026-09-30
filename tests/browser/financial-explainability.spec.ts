@@ -1194,6 +1194,53 @@ test("puts category paths and account balances before charts without losing keyb
   expect(violations).toEqual([]);
 });
 
+test("keeps closed budget rows compact without coupling details and tree expansion", async ({ page }, testInfo) => {
+  await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
+  await page.getByRole("group", { name: "Marco del presupuesto" }).getByLabel("Periodo").selectOption("MONTH:2026:7");
+
+  const tree = page.getByRole("list", { name: "Asignaciones jerárquicas del presupuesto" });
+  const root = tree.locator(":scope > li").first();
+  const row = root.locator(":scope > div");
+  const width = page.viewportSize()!.width;
+  const height = (await row.boundingBox())!.height;
+  expect(height, `closed current-budget row at ${width}px`).toBeLessThanOrEqual(width >= 900 ? 95 : width <= 320 ? 150 : 140);
+  await row.screenshot({ path: testInfo.outputPath(`budget-row-closed-${width}.png`) });
+
+  if (width === 1280) {
+    // oxlint-disable no-await-in-loop -- Each viewport needs a settled layout before measuring its rows.
+    for (const intermediateWidth of [1024, 900, 768]) {
+      await page.setViewportSize({ width: intermediateWidth, height: 800 });
+      const extents = await tree.locator("li > div").evaluateAll((rows) => rows.map((element) => ({
+        name: element.querySelector("strong")?.textContent,
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+      })));
+      for (const extent of extents) {
+        expect(extent.scrollWidth, `${extent.name} row at ${intermediateWidth}px`).toBeLessThanOrEqual(extent.clientWidth);
+      }
+      if (intermediateWidth === 900) await tree.screenshot({ path: testInfo.outputPath("budget-rows-900.png") });
+      await expectNoDocumentOverflow(page);
+    }
+    // oxlint-enable no-await-in-loop
+    await page.setViewportSize({ width, height: 800 });
+  }
+
+  const treeToggle = row.locator(":scope > button");
+  const detailToggle = row.locator('[aria-label="Detalles de Expense"]');
+  await expect(detailToggle).toBeVisible();
+  await expect(detailToggle).toHaveAttribute("aria-expanded", "false");
+  await detailToggle.click();
+  await expect(detailToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(row.getByText("Periodo")).toBeVisible();
+  await expect(treeToggle).toHaveAttribute("aria-expanded", "true");
+  await treeToggle.click();
+  await expect(treeToggle).toHaveAttribute("aria-expanded", "false");
+  await expect(treeToggle).toHaveAttribute("aria-label", "Desplegar Expense");
+  await expect(detailToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(row.getByText("Periodo")).toBeVisible();
+  await expectNoDocumentOverflow(page);
+});
+
 test("budget details retain exact movement IDs and native close returns focus", async ({ page }) => {
   await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
   await expect(page.getByRole("heading", { name: "Presupuestos" })).toBeVisible();

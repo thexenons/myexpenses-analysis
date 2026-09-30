@@ -1,35 +1,105 @@
 .itemRow {
   align-items: start;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  padding-block: 0.25rem;
 }
 
-.category,
-.metrics {
+.itemRow > button {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.content {
   grid-column: 2;
+  display: grid;
+  min-width: 0;
+  container: budget-row / inline-size;
+}
+
+.summary {
+  display: grid;
+  grid-template-areas: "category amount utilization details";
+  grid-template-columns: minmax(7rem, 1fr) minmax(11rem, 1.1fr) minmax(8rem, 0.9fr) auto;
+  gap: 0.3rem 0.65rem;
+  align-items: center;
   min-width: 0;
 }
 
 .category {
-  display: grid;
-  gap: 0.08rem;
+  grid-area: category;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  min-width: 0;
 }
 
 .categoryName {
   overflow-wrap: anywhere;
 }
 
-.path {
-  color: var(--muted);
-  font-size: 0.72rem;
+.primaryMetrics {
+  grid-area: amount;
+  min-width: 0;
+  margin: 0;
+}
+
+.amountPair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.35rem;
+  align-items: center;
+}
+
+.assignedAmount {
+  min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.utilization {
+  grid-area: utilization;
+  min-width: 0;
+}
+
+.detailsToggle {
+  grid-area: details;
+  min-height: 2.75rem;
+  padding: 0.15rem 0.45rem;
+  color: var(--transfer);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.detailsToggle::before {
+  display: inline-block;
+  margin-right: 0.25rem;
+  content: "▸";
+}
+
+.detailsToggle[aria-expanded="true"]::before {
+  content: "▾";
+}
+
+.detailsToggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 
 .metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem 1rem;
+  gap: 0.55rem 0.75rem;
   margin: 0;
-  padding-top: 0.65rem;
+  padding: 0.5rem 0 0.15rem;
   border-top: 1px solid var(--line-dark);
+}
+
+.metrics[hidden] {
+  display: none;
 }
 
 .metric {
@@ -54,7 +124,7 @@
 }
 
 .inspectButton {
-  min-height: 2rem;
+  min-height: 2.75rem;
   padding: 0.15rem 0.3rem;
   margin: -0.15rem -0.3rem;
   color: var(--transfer);
@@ -116,7 +186,22 @@
   }
 }
 
-@media (max-width: 560px) {
+/* The sidebar and tree depth change the row width independently of the viewport. */
+@container budget-row (max-width: 34rem) {
+  .summary {
+    grid-template-areas: "category amount details" "utilization utilization utilization";
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
+}
+
+@container budget-row (max-width: 21rem) {
+  .summary {
+    grid-template-areas: "category details" "amount amount" "utilization utilization";
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+@media (max-width: 360px) {
   .metrics {
     grid-template-columns: minmax(0, 1fr);
   }

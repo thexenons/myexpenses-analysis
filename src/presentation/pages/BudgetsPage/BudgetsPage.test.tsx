@@ -240,7 +240,8 @@ describe("BudgetsPageView", () => {
     expect(screen.getByText(/no indican la disponibilidad real del presupuesto completo/)).toBeVisible();
   });
 
-  it("does not describe a filtered slice as on track when the full budget is exceeded", () => {
+  it("does not describe a filtered slice as on track when the full budget is exceeded", async () => {
+    const user = userEvent.setup();
     render(
       <BudgetsPageView
         analysis={{
@@ -264,6 +265,7 @@ describe("BudgetsPageView", () => {
     // The unselected 120 € may push actual spending to 130 €.
     expect(screen.queryByText("En margen")).not.toBeInTheDocument();
     expect(screen.queryByText("Disponible", { exact: true })).not.toBeInTheDocument();
+    await user.click(screen.getByLabelText("Detalles de Gastos › Comida"));
     expect(screen.getByText("Corte filtrado")).toBeVisible();
   });
 
@@ -297,10 +299,14 @@ describe("BudgetsPageView", () => {
     expect(screen.getByText("Asignado global")).toBeVisible();
     expect(screen.getByText("Gasto neto")).toBeVisible();
     expect(screen.getByRole("list", { name: "Asignaciones jerárquicas del presupuesto" })).toBeVisible();
-    expect(screen.getByText("Gastos › Comida")).toBeVisible();
+    expect(screen.getByText("Comida")).toBeVisible();
+    expect(screen.getByRole("meter", { name: "Utilización de Gastos › Comida" })).toBeVisible();
     expect(screen.queryByRole("button", { name: /Filtrar.*Comida/ })).not.toBeInTheDocument();
-    expect(screen.getByText("Heredada")).toBeVisible();
-    expect(screen.getByText("Excedido")).toBeVisible();
+    const detailsToggle = screen.getByRole("button", { name: "Detalles de Gastos › Comida" });
+    await user.click(detailsToggle);
+    const details = document.getElementById(detailsToggle.getAttribute("aria-controls")!);
+    expect(within(details!).getByText("Heredada")).toBeVisible();
+    expect(within(details!).getByText("Excedido")).toBeVisible();
     expect(screen.getByText("AND · 7 cuentas · 2 categorías")).toBeVisible();
     expect(screen.getAllByRole("meter").length).toBeGreaterThan(1);
     expect(

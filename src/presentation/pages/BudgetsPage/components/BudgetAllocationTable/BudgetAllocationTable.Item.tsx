@@ -1,3 +1,5 @@
+import { useId, useState } from "react";
+
 import type { BudgetAllocationNode } from "../../../../../domain/analytics/budgets.ts";
 import { Badge } from "../../../../components/atoms/Badge/Badge.tsx";
 import { AccordionTreeItem } from "../../../../components/organisms/AccordionTree/index.ts";
@@ -23,16 +25,62 @@ export function BudgetAllocationItem({
 }) {
   const pathLabel = allocation.path.join(" › ");
   const availableLabel = isFilteredComparison ? "Asignado menos corte" : "Disponible";
+  const detailsId = useId();
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   return (
     <AccordionTreeItem
       header={
-        <>
-          <div className={styles.category}>
-            <strong className={styles.categoryName}>{allocation.name}</strong>
-            <span className={styles.path}>{pathLabel}</span>
+        <div className={styles.content}>
+          <div className={styles.summary}>
+            <div className={styles.category}>
+              <strong className={styles.categoryName}>{allocation.name}</strong>
+              {!isFilteredComparison && allocation.health === "exceeded" ? (
+                <Badge tone="negative">Excedido</Badge>
+              ) : null}
+            </div>
+            <dl className={styles.primaryMetrics}>
+              <div className={styles.metric}>
+                <dt><span>Consumido</span> / <span>Asignado</span></dt>
+                <dd className={styles.amountPair}>
+                  {onInspectConsumption === undefined ? formatBudgetMinor(allocation.consumedMinor, currency, fractionDigits) : (
+                    <button
+                      aria-label={`Ver apuntes consumidos de ${pathLabel}: ${formatBudgetMinor(allocation.consumedMinor, currency, fractionDigits)}`}
+                      className={styles.inspectButton}
+                      onClick={(event) => onInspectConsumption(allocation.path, pathLabel, event.currentTarget)}
+                      type="button"
+                    >
+                      {formatBudgetMinor(allocation.consumedMinor, currency, fractionDigits)}
+                    </button>
+                  )}
+                  <span className={styles.assignedAmount}>
+                    <span aria-hidden="true">/ </span>
+                    {formatBudgetMinor(allocation.assignedMinor, currency, fractionDigits)}
+                  </span>
+                </dd>
+              </div>
+            </dl>
+            <div className={styles.utilization}>
+              <BudgetUtilization
+                accessibleLabel={`${isFilteredComparison ? "Utilización del corte de" : "Utilización de"} ${pathLabel}`}
+                health={isFilteredComparison ? "unallocated" : allocation.health}
+                label={isFilteredComparison ? "Utilización del corte" : "Utilización"}
+                utilization={allocation.utilization}
+                variant="inline"
+              />
+            </div>
+            <button
+              aria-controls={detailsId}
+              aria-expanded={detailsOpen}
+              aria-label={`Detalles de ${pathLabel}`}
+              className={styles.detailsToggle}
+              onClick={() => setDetailsOpen((open) => !open)}
+              type="button"
+            >
+              Detalles
+            </button>
           </div>
-          <dl className={styles.metrics}>
+          <dl className={styles.metrics} hidden={!detailsOpen} id={detailsId}>
             <div className={styles.metric}>
               <dt>Origen</dt>
               <dd className={styles.badges}>
@@ -41,10 +89,6 @@ export function BudgetAllocationItem({
                 </Badge>
                 {allocation.oneTime ? <Badge tone="accent">Única</Badge> : null}
               </dd>
-            </div>
-            <div className={styles.metric}>
-              <dt>Asignado</dt>
-              <dd>{formatBudgetMinor(allocation.assignedMinor, currency, fractionDigits)}</dd>
             </div>
             <div className={styles.metric}>
               <dt>Arrastre</dt>
@@ -58,36 +102,11 @@ export function BudgetAllocationItem({
               </dd>
             </div>
             <div className={styles.metric}>
-              <dt>Consumido</dt>
-              <dd>
-                {onInspectConsumption === undefined ? formatBudgetMinor(allocation.consumedMinor, currency, fractionDigits) : (
-                  <button
-                    aria-label={`Ver apuntes consumidos de ${pathLabel}: ${formatBudgetMinor(allocation.consumedMinor, currency, fractionDigits)}`}
-                    className={styles.inspectButton}
-                    onClick={(event) => onInspectConsumption(allocation.path, pathLabel, event.currentTarget)}
-                    type="button"
-                  >
-                    {formatBudgetMinor(allocation.consumedMinor, currency, fractionDigits)}
-                  </button>
-                )}
-              </dd>
-            </div>
-            <div className={styles.metric}>
               <dt>{availableLabel}</dt>
               <dd>
                 <strong className={styles[isFilteredComparison ? "unallocatedAmount" : `${allocation.health}Amount`]}>
                   {formatBudgetMinor(allocation.availableMinor, currency, fractionDigits)}
                 </strong>
-              </dd>
-            </div>
-            <div className={styles.metric}>
-              <dt>Utilización</dt>
-              <dd>
-                <BudgetUtilization
-                  health={isFilteredComparison ? "unallocated" : allocation.health}
-                  label={`${isFilteredComparison ? "Utilización del corte de" : "Utilización de"} ${pathLabel}`}
-                  utilization={allocation.utilization}
-                />
               </dd>
             </div>
             <div className={styles.metric}>
@@ -99,7 +118,7 @@ export function BudgetAllocationItem({
               </dd>
             </div>
           </dl>
-        </>
+        </div>
       }
       initialExpanded={depth === 0}
       label={pathLabel}

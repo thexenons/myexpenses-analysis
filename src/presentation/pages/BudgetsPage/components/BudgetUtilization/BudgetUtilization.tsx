@@ -8,6 +8,7 @@ const percentageFormatter = new Intl.NumberFormat("es-ES", {
 });
 
 export function BudgetUtilization({
+  accessibleLabel,
   health,
   label,
   utilization,
@@ -22,6 +23,7 @@ export function BudgetUtilization({
       className={cx(
         styles.root,
         variant === "hero" && styles.hero,
+        variant === "inline" && styles.inline,
         health === "watch" && styles.watch,
         health === "exceeded" && styles.exceeded,
         health === "unallocated" && styles.unallocated,
@@ -32,7 +34,7 @@ export function BudgetUtilization({
         <strong className={styles.value}>{valueText}</strong>
       </div>
       <meter
-        aria-label={label}
+        aria-label={accessibleLabel ?? label}
         aria-valuemax={100}
         aria-valuemin={0}
         aria-valuenow={Math.round(progress * 100)}
