@@ -1,0 +1,26 @@
+.root {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.summary {
+  box-sizing: border-box;
+  min-height: 2.75rem;
+  padding: 0.72rem 1rem;
+  color: var(--ink);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.summary:focus-visible {
+  outline: 2px solid var(--transfer);
+  outline-offset: 2px;
+}
+
+.body {
+  min-width: 0;
+  padding: 0.9rem 1rem 1rem;
+  border-top: 1px solid var(--line);
+}

@@ -160,6 +160,47 @@ const comparison: BudgetPeriodComparison = {
 };
 
 describe("BudgetsPageView", () => {
+  it("places budget comparisons before secondary ledger and method information", async () => {
+    const user = userEvent.setup();
+    render(<BudgetsPageView
+      analysis={analysis} comparison={comparison} dataset={EMPTY_DATASET}
+      budgetOptions={[]} periodOptions={[]} emptyDescription={null} emptyTitle={null}
+      onBudgetChange={vi.fn<(uuid: string) => void>()} onPeriodChange={vi.fn<(key: string) => void>()}
+      searchPending={false} selectedBudgetUuid="budget" selectedPeriodKey="MONTH:2026:7"
+    />);
+
+    const tree = screen.getByRole("list", { name: "Asignaciones jerárquicas del presupuesto" });
+    const summary = screen.getByText("Información del presupuesto");
+    const information = summary.closest("details");
+    expect(information).not.toHaveAttribute("open");
+    expect(tree.compareDocumentPosition(information!) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(screen.getByText("Asignaciones categorizadas").closest("details")).toBe(information);
+    expect(screen.getByText(/fila técnica sin categoría/i).closest("details")).toBe(information);
+    expect(screen.getByText("Los hijos detallan el total del padre; no se suman de nuevo.")).toBeVisible();
+    expect(screen.getByText(/2 meses completos/i)).toBeVisible();
+    expect(screen.getByRole("region", { name: "Ingresos en el mismo ámbito" })).toBeVisible();
+
+    await user.click(summary);
+    expect(information).toHaveAttribute("open");
+    expect(summary).toHaveFocus();
+  });
+
+  it("keeps date mismatch and exceeded-limit warnings beside the primary amounts", () => {
+    render(<BudgetsPageView
+      analysis={{ ...analysis, consumptionDateRange: null, global: { ...analysis.global,
+        consumedMinor: 12_000, availableMinor: -1_000, utilization: 12_000 / 11_000, health: "exceeded" } }}
+      dataset={EMPTY_DATASET} budgetOptions={[]} periodOptions={[]}
+      emptyDescription={null} emptyTitle={null}
+      onBudgetChange={vi.fn<(uuid: string) => void>()} onPeriodChange={vi.fn<(key: string) => void>()}
+      searchPending={false} selectedBudgetUuid="budget" selectedPeriodKey="MONTH:2026:7"
+    />);
+
+    expect(screen.getByText(/No hay solapamiento entre las fechas globales/)).toBeVisible();
+    expect(screen.getByText("Límite global excedido.")).toBeVisible();
+    expect(screen.getByRole("article", { name: "Gasto neto" })).toBeVisible();
+    expect(screen.getByText("Información del presupuesto").closest("details")).not.toHaveAttribute("open");
+  });
+
   it("shows a neutral comparison failure without hiding the current budget or exposing the technical reason", () => {
     render(<BudgetsPageView
       analysis={analysis} comparisonError="Private calculation detail" dataset={EMPTY_DATASET}
@@ -349,7 +390,8 @@ describe("BudgetsPageView", () => {
       />,
     );
     expect(screen.getAllByText("Asignado menos corte")).toHaveLength(2);
-    expect(screen.getByText(/sin prorratear/)).toHaveTextContent("Consumo consultado: 10 ago 2026 – 12 ago 2026");
+    expect(screen.getByText(/Consumo consultado:/)).toHaveTextContent("Consumo consultado: 10 ago 2026 – 12 ago 2026");
+    expect(screen.getByText(/sin prorratear/)).toBeVisible();
     expect(screen.getByText(/no indican la disponibilidad real del presupuesto completo/)).toBeVisible();
   });
 
@@ -420,6 +462,7 @@ describe("BudgetsPageView", () => {
     const details = document.getElementById(detailsToggle.getAttribute("aria-controls")!);
     expect(within(details!).getByText("Heredada")).toBeVisible();
     expect(within(details!).getByText("Excedido")).toBeVisible();
+    await user.click(screen.getByText("Información del presupuesto"));
     expect(screen.getByText("AND · 7 cuentas · 2 categorías")).toBeVisible();
     expect(screen.getAllByRole("meter").length).toBeGreaterThan(1);
     expect(

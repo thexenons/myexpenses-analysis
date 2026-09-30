@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 const BASE = "http://127.0.0.1:41789";
@@ -1194,6 +1194,69 @@ test("puts category paths and account balances before charts without losing keyb
   expect(violations).toEqual([]);
 });
 
+test("keeps budget decisions ahead of closed method information across perspectives", async ({ page }, testInfo) => {
+  await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
+  const controls = page.getByRole("group", { name: "Marco del presupuesto" });
+  await controls.getByLabel("Periodo").selectOption("MONTH:2026:7");
+  const tree = page.getByRole("list", { name: "Asignaciones jerárquicas del presupuesto" });
+  const infoSummary = page.locator("summary").filter({ hasText: "Información del presupuesto" });
+  const info = infoSummary.locator("..");
+  const reference = page.locator("summary").filter({ hasText: /^(Referencias ·|Sin referencias$)/ });
+  const measurements: Array<{ scope: string; kpiTop: number; treeTop: number; informationTop: number }> = [];
+
+  const checkPerspective = async (scope: string) => {
+    await page.getByRole("region", { name: "Filtros globales" })
+      .getByRole("group", { name: "Ámbito de las estadísticas" }).locator(`input[value="${scope}"]`).check();
+    await expect(page.getByText(/Consumo consultado:/)).toBeVisible();
+    await expect(tree.getByText("Referencia").first()).toBeVisible();
+    await expect(tree.getByText("Media").first()).toBeVisible();
+    await expect(info).not.toHaveAttribute("open");
+    const boxes = await Promise.all([
+      page.getByRole("article", { name: "Asignado global" }).boundingBox(),
+      tree.boundingBox(), infoSummary.boundingBox(),
+    ]);
+    expect(boxes.every(Boolean)).toBe(true);
+    expect(boxes[0]!.y).toBeLessThan(boxes[1]!.y);
+    expect(boxes[1]!.y).toBeLessThan(boxes[2]!.y);
+    return { scope, kpiTop: boxes[0]!.y, treeTop: boxes[1]!.y, informationTop: boxes[2]!.y };
+  };
+  for (const scope of ["realCashFlow", "all", "debtsOnly"]) {
+    // oxlint-disable-next-line no-await-in-loop -- Perspectives share one unlocked synthetic browser session.
+    measurements.push(await checkPerspective(scope));
+  }
+  await writeFile(testInfo.outputPath("budget-hierarchy-measurements.json"), JSON.stringify(measurements, null, 2));
+
+  const summaryBox = await infoSummary.boundingBox();
+  expect(summaryBox!.height).toBeGreaterThanOrEqual(44);
+  await reference.press("Enter");
+  await expect(info).not.toHaveAttribute("open");
+  await reference.press("Space");
+  await expect(reference.locator("..")).not.toHaveAttribute("open");
+  await infoSummary.press("Enter");
+  await expect(info).toHaveAttribute("open");
+  await expect(info.getByText("Asignaciones categorizadas")).toBeVisible();
+  await expect(infoSummary).toBeFocused();
+  expect(await infoSummary.evaluate((element) => getComputedStyle(element).outlineStyle)).toBe("solid");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: testInfo.outputPath("budget-information-open.png"), fullPage: true, animations: "disabled" });
+  await info.screenshot({ path: testInfo.outputPath("budget-information-content.png"), animations: "disabled" });
+  await infoSummary.press("Space");
+  await expect(info).not.toHaveAttribute("open");
+
+  const row = tree.locator(":scope > li > div").first();
+  await row.getByRole("button", { name: "Detalles de Expense" }).click();
+  await expect(info).not.toHaveAttribute("open");
+  await row.getByRole("button", { name: /^Ver apuntes consumidos de Expense:/ }).click();
+  await expect(page.getByRole("dialog", { name: "Expense · apuntes" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(info).not.toHaveAttribute("open");
+  await row.getByRole("button", { name: "Detalles de Expense" }).click();
+  await expectNoDocumentOverflow(page);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: testInfo.outputPath("budget-information-hierarchy.png"), fullPage: true, animations: "disabled" });
+  await tree.screenshot({ path: testInfo.outputPath("budget-decision-tree.png"), animations: "disabled" });
+});
+
 test("keeps current, reference and mean visible in compact rows without coupling disclosures", async ({ page }, testInfo) => {
   await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
   await page.getByRole("group", { name: "Marco del presupuesto" }).getByLabel("Periodo").selectOption("MONTH:2026:7");
@@ -1397,7 +1460,11 @@ test("keeps debt selection next to balance and preserves budget action names", a
   await expect(action).toBeVisible();
   expect(await action.getAttribute("aria-label")).toContain((await action.textContent())!.trim());
   await expect(page.getByText("Asignado global")).toBeVisible();
+  const information = page.locator("summary").filter({ hasText: "Información del presupuesto" });
+  await expect(information.locator("..")).not.toHaveAttribute("open");
+  await information.press("Enter");
   await expect(page.getByText("Arrastre recibido")).toBeVisible();
+  await information.press("Space");
   await expectNoDocumentOverflow(page);
   await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
   const violations = await page.evaluate(async () => {
