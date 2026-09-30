@@ -450,3 +450,18 @@ Synthetic-only fixture import/build/encryption stays inside isolated temporary
 inputs; no private data, real vault, workspace build/full Node suite or manual
 screen-reader audit. Protected user edits are unchanged. All feature tasks are
 verified; final commit/assessment/main push and delivery bookkeeping follow.
+
+### Delivery complete
+
+B4 commit `98dc56dedabfa051f9917e8dab929b2423bd2466` was fast-forwarded
+and pushed to main; the actual remote ref matched. Index/commit tree matched
+`910b509ebf1045e3b0c949a06cda98e2ed4f9743`; no hook mutation. Assessment of
+the combined B3a/B4 pending slice from `a37eabc`: medium,6paths/363lines,
+review_due:false,under_budget. Do not claim another native approval or advance
+the reviewed boundary merely because delivery is complete. B3 approval remains
+closed; this small pending slice stays recoverable from `a37eabc`.
+
+All requested feature tasks are implemented and checked. Remaining: none within
+this feature's authorized scope. Future real-data validation/manual screen-reader
+audit is not part of the synthetic proof. Engram mirror remains pending runtime
+registration; preserve the local recovery document and protected user edits.
