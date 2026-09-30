@@ -75,13 +75,16 @@ export function useBudgetsPage(): BudgetsPageViewProps | null {
   const selectedRanges = selection?.ranges ?? defaultRanges;
   const selectedPrimary = selection?.primaryKey ?? selectedRanges[0]?.key ?? null;
   const today = isoDateInTimeZone(new Date(), analytics?.backup?.preferences.timeZone ?? "Europe/Madrid");
-  const result = useMemo(
-    () => analytics === null || filtered === null || analysis === null || analysis === undefined
-      ? null : analyzeBudgetPeriodComparison(analytics, analysis, filtered.filters, {
+  const result = useMemo(() => {
+    if (analytics === null || filtered === null || analysis === null || analysis === undefined) return null;
+    try {
+      return analyzeBudgetPeriodComparison(analytics, analysis, filtered.filters, {
         today, references: selectedRanges, primaryReferenceKey: selectedPrimary ?? undefined,
-      }),
-    [analytics, filtered, analysis, today, selectedRanges, selectedPrimary],
-  );
+      });
+    } catch {
+      return { status: "calculation-error" } as const;
+    }
+  }, [analytics, filtered, analysis, today, selectedRanges, selectedPrimary]);
   const initialSelection = useCallback((): ReferenceSelection => ({
     contextKey, ranges: defaultRanges, primaryKey: defaultRanges[0]?.key ?? null,
   }), [contextKey, defaultRanges]);
@@ -112,7 +115,8 @@ export function useBudgetsPage(): BudgetsPageViewProps | null {
   return base === null ? null : {
     ...base,
     comparison: result?.status === "ready" ? result.comparison : null,
-    comparisonError: result?.status === "unsupported" ? result.reason : null,
+    comparisonError: result?.status === "unsupported" ? result.reason :
+      result?.status === "calculation-error" ? "No se ha podido calcular la comparación con seguridad." : null,
     onReferenceAdd, onReferenceRemove, onPrimaryReferenceChange,
   };
 }

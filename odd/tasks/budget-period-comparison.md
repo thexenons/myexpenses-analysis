@@ -51,7 +51,7 @@ after each verified task. No pull requests, deployment or private-data access.
   rows. Keep primary reference and mean visible on mobile; show one relevant
   textual comparison signal and disclose additional periods/deltas/provenance.
   Verify reference changes, empty states, period changes and transaction access.
-- [ ] B3a — Preserve the current budget view when comparison arithmetic rejects
+- [x] B3a — Preserve the current budget view when comparison arithmetic rejects
   out-of-range history. Add observed RED/GREEN hook regressions for the error
   state and intact base model. Separate follow-up to native advisory R3-001;
   do not reopen the approved B3 candidate.
@@ -68,7 +68,7 @@ after each verified task. No pull requests, deployment or private-data access.
   GREEN and refactor. Runner: installed Vitest
   (`node node_modules/vitest/vitest.mjs run <focused test paths>`).
 - Branch: `feat/budget-period-comparison`; branch point: `e389b3c`.
-- Last reviewed boundary: `47907bf` (acknowledged B3 including pending B2a).
+- Last reviewed boundary: `a37eabc` (passive bookkeeping after acknowledged B3).
   RDD is on (global); assess each new work-unit commit and follow
   exact native transitions/consent when due. B2a routes delegated direct because
   financial arithmetic and regression tests need coordinated edits.
@@ -377,3 +377,42 @@ authored lines. Parent repeats a focused command; no new private-data access.
 B4 follows B3a: retain durable richer synthetic-history browser tests for reference
 controls, zero/missing history, mean and income, perspectives and responsive
 interaction; source-only snapshot final verification. No broader product scope.
+
+B3 and bookkeeping `a37eabc9a2de19297ecd37995edb30aa5367e854` were
+fast-forwarded and pushed to main; the actual remote ref matched. Bookkeeping
+assessment: passive, 38 lines, review not due. Returned to the feature branch;
+the three protected user edits remain untouched. B3a implementation follows.
+
+### B3a verification
+
+The hook now catches only the comparison invocation. Rejected historical
+arithmetic leaves the safe current analysis and inspection controls usable,
+exposes a neutral comparison error and recovers when filters remove the unsafe
+history. Returned unsupported reasons remain distinct; no technical detail leaks
+into the existing UI message. Current financial analysis and layout are unchanged.
+
+Strict TDD: actual domain/base-model history triggered a render failure before
+the source fix (1 failed, 2 passed), `/tmp/b3a-red.log`. Final focused35/35
+(parent repeated), full409/409, TypeScript node/app/browser, Oxlint zero
+warnings/errors and whitespace all passed. Writer: `/tmp/b3a-*-final2.log`;
+parent repeat: `/tmp/b3ap-1LYNsP/`. No browser rerun for this isolated hook error
+boundary; existing browser behavior receives final B4 integration checks.
+
+Rollback: hook plus hook/page tests, three source/test paths,124 authored lines.
+The real-history regression and visible error/recovery assertions belong with
+the guard; no financial/domain policy changes or private-data access. B3 native
+approval remains closed. Commit/assessment/main delivery are parent-owned.
+
+### B4 next task
+
+Capture the already verified richer synthetic-history flow in durable browser
+tests: multiple references and one primary, missing versus covered zero,
+zero-inclusive mean and separately scoped income, perspective persistence,
+target/budget resets, visible mobile metrics and independent transaction/details
+actions. Keep synthetic fixtures isolated from existing test oracles, freeze time
+where needed, and preserve all current financial behavior. Delegated direct:
+fixture/probe mapping and durable browser tests require coordinated reading and
+writing. Forecast200–350 authored lines (advisory); no artificial split/codegolf.
+Use source-only isolated harness, existing dependencies, sanitized environment,
+all1280/390/320viewports and Real/Yo/Deudas. Existing behavior may start GREEN;
+do not invent RED or break production solely to manufacture test evidence.

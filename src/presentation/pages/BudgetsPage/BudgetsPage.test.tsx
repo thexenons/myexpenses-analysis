@@ -160,6 +160,18 @@ const comparison: BudgetPeriodComparison = {
 };
 
 describe("BudgetsPageView", () => {
+  it("shows a neutral comparison failure without hiding the current budget or exposing the technical reason", () => {
+    render(<BudgetsPageView
+      analysis={analysis} comparisonError="Private calculation detail" dataset={EMPTY_DATASET}
+      budgetOptions={[]} periodOptions={[]} emptyDescription={null} emptyTitle={null}
+      onBudgetChange={vi.fn<(uuid: string) => void>()} onPeriodChange={vi.fn<(key: string) => void>()}
+      searchPending={false} selectedBudgetUuid="budget" selectedPeriodKey="MONTH:2026:7"
+    />);
+    expect(screen.getByText("No se ha podido calcular la comparación con los datos actuales.")).toBeVisible();
+    expect(screen.queryByText(/Private calculation detail/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ver apuntes consumidos de Gastos › Comida/ })).toBeVisible();
+  });
+
   it("shows primary and mean values at a glance, with other deltas and elapsed pace in details", async () => {
     const user = userEvent.setup();
     render(<BudgetsPageView
