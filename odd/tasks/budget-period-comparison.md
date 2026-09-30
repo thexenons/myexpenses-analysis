@@ -44,7 +44,7 @@ after each verified task. No pull requests, deployment or private-data access.
 - [x] B2 — Add a budget-scoped reference/mean model with synthetic regressions
   for period boundaries, available history, zero activity, refunds, VOID, each
   perspective, scope/currency, hierarchy and separate income totals.
-- [ ] B2a — Guard integer-baseline comparison deltas against unsafe minor-unit
+- [x] B2a — Guard integer-baseline comparison deltas against unsafe minor-unit
   subtraction, preserving fractional historical means. Add boundary regressions.
   Separate follow-up to non-blocking native advisory R3-001; never reopen B2.
 - [ ] B3 — Connect reference controls and mean context to the page and compact
@@ -64,8 +64,8 @@ after each verified task. No pull requests, deployment or private-data access.
   GREEN and refactor. Runner: installed Vitest
   (`node node_modules/vitest/vitest.mjs run <focused test paths>`).
 - Branch: `feat/budget-period-comparison`; branch point: `e389b3c`.
-- Last acknowledged review boundary: `4b5c18b` (B2). Passive bookkeeping may
-  advance it. RDD is on (global); assess each new work-unit commit and follow
+- Last reviewed boundary: `2afb7fc` (passive bookkeeping after acknowledged
+  `4b5c18b`, B2). RDD is on (global); assess each new work-unit commit and follow
   exact native transitions/consent when due. B2a routes delegated direct because
   financial arithmetic and regression tests need coordinated edits.
 - Delivery strategy: `auto-chain`, `stacked-to-main`; B1, B2, B3 and B4 are the
@@ -201,8 +201,10 @@ shared scope, calendar/reference/mean behavior and 14 regression cases form a
 single coherent domain model; no PR is being created and tests were not trimmed.
 B2 commit: `4b5c18be000f5099f75f35996330861552a9dd6f`; 790 authored lines
 including task-document updates. Staged and committed trees matched exactly:
-`27d8babff22121cccdc4cb1226ca6fc7d2e8167e`. Main/origin remain at `19e0b45`;
-B2 is not integrated/pushed yet.
+`27d8babff22121cccdc4cb1226ca6fc7d2e8167e`. B2 plus passive review
+bookkeeping `2afb7fcd8b160d435de5257150f0727b9582fa21` were fast-forwarded
+and pushed to main; the actual remote ref matched. Bookkeeping assessment was
+passive, 34 authored lines, review not due.
 
 Native assessment from `19e0b45`: medium, 4 paths/790 lines. The user granted
 review; the provider reliability reviewer inspected all four immutable patches.
@@ -213,7 +215,7 @@ opposite signs. The reviewer did not run tests. Exact acknowledgement succeeded:
 `sha256:19c46b95a340368622884818bfa37c934da1a51639384b30b09a5f1faf0740c5`,
 authority burned. No correction transition exists; this review is closed.
 
-B2 is ready for authorized integration/push. Address R3-001 as separate B2a
+B2 delivery is complete. Address R3-001 as separate B2a
 before UI wiring, using observed RED/GREEN. Arithmetic guard is within approved
 comparison correctness scope, not a change to financial meaning. Retain
 fractional mean deltas and valid integer results; match existing out-of-range
@@ -221,5 +223,23 @@ amount policy, not silent rounding. Strict TDD remains enabled by AGENTS.
 B2a focused runner: installed Vitest on `budget-period-comparison.test.ts` and
 `budgets.test.ts`; full UI/domain, three TypeScript projects, Oxlint and
 whitespace at closure. Runtime browser is N/A for this pure arithmetic boundary.
-Next: deliver B2, finish B2a, then B3 controls/row wiring and B4 final integration.
+## B2a verification and next step
+
+Integer current/reference deltas now use the existing `safeAdd` guard; fractional
+historical means keep their fractional arithmetic path. Ordinary signs, null/zero
+baselines and percentages are unchanged. Rollback: comparison model and its test.
+Source/test delta: 47 authored lines in two files.
+
+Strict-TDD RED: two unsafe-direction regressions failed before the source edit.
+Final checks: focused 50/50 (parent repeated), full UI/domain 397/397, TypeScript
+node/app/browser, Oxlint with zero warnings/errors and whitespace all passed.
+Boundary regressions cover both unsafe directions, both valid safe-integer
+boundaries, and unchanged fractional expense/income means.
+Evidence: `/tmp/b2a-CvLmBW/` (`focused-red.log`, `focused-green.log`,
+`ui-full.log`, `tsc-*.log`, `oxlint.log`, `diff-check.log`); parent repeat:
+`/tmp/b2ap-Idflo2/`. No browser/runtime boundary for this pure arithmetic task;
+full Node suite and build intentionally not run. No changes to B3/UI yet.
+
+B2a commit/assessment/delivery pending. The B2 approval remains closed; this is a
+new work unit, not a correction transaction. Next: deliver B2a and implement B3.
 Engram mirror remains prohibited pending runtime registration.

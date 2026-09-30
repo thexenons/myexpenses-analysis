@@ -115,7 +115,10 @@ function addBucket(target: Bucket, source: Bucket): void {
 }
 
 function comparison(current: number, baseline: number | null) {
-  const deltaMinor = baseline === null ? null : current - baseline;
+  const deltaMinor = baseline === null ? null :
+    Number.isSafeInteger(current) && Number.isSafeInteger(baseline)
+      ? safeAdd(current, -baseline)
+      : current - baseline;
   return {
     deltaMinor,
     percentChange: baseline === null || baseline === 0 ? null : deltaMinor! / Math.abs(baseline) * 100,

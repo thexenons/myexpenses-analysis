@@ -294,4 +294,46 @@ describe("budget period comparison", () => {
     ] }, "NONE:all:all");
     expect(withRange.comparison.references[0]).toMatchObject({ status: "complete", consumedMinor: 500 });
   });
+
+  it.each([1, -1] as const)("rejects unsafe %s-direction integer comparison deltas", (direction) => {
+    const large = Number.MAX_SAFE_INTEGER - 10_000;
+    const currentConsumed = direction * large;
+    const referenceConsumed = -direction * 20_000;
+    const rows = [
+      coverage("2026-07-01"), coverage("2026-08-31"),
+      posting("reference", "2026-07-12", -referenceConsumed, ["Expense", "Food"]),
+      posting("current", "2026-08-12", -currentConsumed, ["Expense", "Food"]),
+    ];
+    expect(() => compare(dataset(rows))).toThrow("Budget comparison exceeds safe minor units");
+  });
+
+  it.each([1, -1] as const)("preserves safe %s-direction integer boundary deltas", (direction) => {
+    const large = Number.MAX_SAFE_INTEGER - 10_000;
+    const currentConsumed = direction === 1 ? large : -10_000;
+    const referenceConsumed = direction === 1 ? -10_000 : large;
+    const rows = [
+      coverage("2026-07-01"), coverage("2026-08-31"),
+      posting("reference", "2026-07-12", -referenceConsumed, ["Expense", "Food"]),
+      posting("current", "2026-08-12", -currentConsumed, ["Expense", "Food"]),
+    ];
+    const { comparison } = compare(dataset(rows));
+    expect(comparison.references[0]?.deltaMinor).toBe(direction * Number.MAX_SAFE_INTEGER);
+    expect(comparison.categories.find((item) => item.categoryUuid === "child")?.references[0]?.deltaMinor)
+      .toBe(direction * Number.MAX_SAFE_INTEGER);
+  });
+
+  it("preserves fractional historical means and their expense and income deltas", () => {
+    const rows = [
+      coverage("2026-06-01"), coverage("2026-08-31"),
+      posting("july-expense", "2026-07-12", -1, ["Expense", "Food"]),
+      posting("august-expense", "2026-08-12", -2, ["Expense", "Food"]),
+      posting("july-income", "2026-07-12", 3, ["Income"], { bucket: "income", categoryType: "INCOME" }),
+      posting("august-income", "2026-08-12", 2, ["Income"], { bucket: "income", categoryType: "INCOME" }),
+    ];
+    const { comparison } = compare(dataset(rows));
+    expect(comparison.mean).toMatchObject({ periodCount: 2, consumedAverageMinor: 0.5, incomeAverageMinor: 1.5 });
+    expect(comparison.categories.find((item) => item.categoryUuid === "child")?.mean)
+      .toMatchObject({ averageMinor: 0.5, deltaMinor: 1.5, percentChange: 300 });
+    expect(comparison.income.mean).toMatchObject({ averageMinor: 1.5, deltaMinor: 0.5, percentChange: 0.5 / 1.5 * 100 });
+  });
 });
