@@ -13,7 +13,7 @@ import type {
   IsoDate,
   NormalizedPosting,
 } from "./types.ts";
-import { monthPeriodForLabel } from "./periods.ts";
+import { monthPeriodForDate, monthPeriodForLabel, weekPeriodForDate } from "./periods.ts";
 import { postingDate } from "./filters.ts";
 import { resolvePostingAccounts } from "./transfer-relations.ts";
 
@@ -76,6 +76,14 @@ export interface BudgetContribution {
   readonly posting: NormalizedPosting;
   /** Signed contribution in the budget currency's minor units; refunds are negative. */
   readonly amountMinor: number;
+}
+
+export interface BudgetScopedActivity {
+  readonly currency: string;
+  readonly fractionDigits: number;
+  readonly consumption: readonly BudgetContribution[];
+  /** Signed income-category postings, not expense mirrors or budget consumption. */
+  readonly income: readonly BudgetContribution[];
 }
 
 export interface BudgetAnalysis {
@@ -324,6 +332,35 @@ function periodFromParts(
   }
 }
 
+/** Resolves calendar periods independently of allocation-backed selector entries. */
+export function budgetPeriodForDate(
+  grouping: BackupBudgetGrouping,
+  date: IsoDate,
+  preferences: BackupDatasetPreferencesV1,
+): BudgetPeriod | null {
+  const year = Number(date.slice(0, 4));
+  switch (grouping) {
+    case "DAY": {
+      const first = utcDate(year, 0, 1);
+      const second = Math.round((dateFromIso(date)!.getTime() - first.getTime()) / 86_400_000) + 1;
+      return dayPeriod(year, second);
+    }
+    case "WEEK": {
+      const calendar = weekPeriodForDate(date, preferences.weekStart);
+      const weekYear = Number(calendar.key.slice(0, 4));
+      return weekPeriod(weekYear, Number(calendar.key.slice(6)), preferences.weekStart);
+    }
+    case "MONTH": {
+      const calendar = monthPeriodForDate(date, preferences.monthStart);
+      return monthPeriod(Number(calendar.key.slice(0, 4)), Number(calendar.key.slice(5)) - 1, preferences.monthStart);
+    }
+    case "YEAR":
+      return yearPeriod(year);
+    case "NONE":
+      return null;
+  }
+}
+
 export function resolveBudgetPeriods(
   budget: BackupBudgetV1,
   preferences: BackupDatasetPreferencesV1,
@@ -563,23 +600,42 @@ export function budgetContributionsForPath(
   return contributions.filter(({ posting }) => pathsStartWith(posting.categoryPath, path));
 }
 
-function scopedExpensePostings(
+function collectScopedActivity(
   filtered: FilteredAnalyticsDataset,
-  period: BudgetPeriod,
   scope: BudgetScope,
   budget: BackupBudgetV1,
   categoryByUuid: ReadonlyMap<string, BackupCategoryV1>,
-): readonly NormalizedPosting[] {
-  return filtered.postings.filter(
-    (posting) =>
-      !posting.isVoid &&
-      (posting.bucket === "expense" ||
-        (budget.aggregateNeutral && posting.categoryType === "NEUTRAL")) &&
-      postingDate(posting, filtered.filters) >= period.startDate &&
-      postingDate(posting, filtered.filters) <= period.endDate &&
-      postingInBudgetScope(posting, scope) &&
-      matchesBudgetFilter(budget.filter, posting, categoryByUuid),
+): Pick<BudgetScopedActivity, "consumption" | "income"> {
+  const consumption: BudgetContribution[] = [];
+  const income: BudgetContribution[] = [];
+  for (const posting of filtered.activePostings) {
+    if (!postingInBudgetScope(posting, scope) ||
+      !matchesBudgetFilter(budget.filter, posting, categoryByUuid)) continue;
+    if (posting.bucket === "expense" ||
+      (budget.aggregateNeutral && posting.categoryType === "NEUTRAL")) {
+      consumption.push({ posting, amountMinor: postingSpend(posting, scope, filtered) });
+    } else if (posting.bucket === "income" && posting.categoryType === "INCOME") {
+      income.push({ posting, amountMinor: postingAmountForBudget(posting, scope) });
+    }
+  }
+  return { consumption, income };
+}
+
+export function collectBudgetScopedActivity(
+  analytics: AnalyticsDataset,
+  filtered: FilteredAnalyticsDataset,
+  budget: BackupBudgetV1,
+): BudgetScopedActivity | { readonly reason: string } {
+  const scope = resolveBudgetScope(analytics, budget);
+  if (typeof scope === "string") return { reason: scope };
+  const categoryByUuid = new Map(
+    analytics.backup?.categories.map((category) => [category.uuid, category]) ?? [],
   );
+  return {
+    currency: scope.currency,
+    fractionDigits: scope.fractionDigits,
+    ...collectScopedActivity(filtered, scope, budget, categoryByUuid),
+  };
 }
 
 function matchesBudgetFilter(
@@ -844,17 +900,11 @@ export function analyzeBudgetPeriod(
     ensureAllocationNode(category, categoryByPath, roots).directAllocation = resolved;
   }
 
-  const postings = scopedExpensePostings(
-    filtered,
-    period,
-    scope,
-    budget,
-    categoryByUuid,
-  );
-  const contributions = postings.map((posting) => ({
-    posting,
-    amountMinor: postingSpend(posting, scope, filtered),
-  }));
+  const contributions = collectScopedActivity(filtered, scope, budget, categoryByUuid)
+    .consumption.filter(({ posting }) =>
+      postingDate(posting, filtered.filters) >= period.startDate &&
+      postingDate(posting, filtered.filters) <= period.endDate
+    );
   const allocationNodes = [...roots.values()]
     .map((node) => finalizeAllocationNode(node, contributions, 0))
     .sort((left, right) => left.name.localeCompare(right.name, "es"));
@@ -920,7 +970,7 @@ export function analyzeBudgetPeriod(
         -categorizedConsumedMinor,
         "Unallocated budget consumption",
       ),
-      filteredPostingCount: postings.length,
+      filteredPostingCount: contributions.length,
       ownFilterApplied: budget.filter !== null,
       aggregateNeutral: budget.aggregateNeutral,
       filterSummary: summarizeBudgetFilter(budget.filter),
