@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
+import { flushSync } from "react-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import type { DatasetRepository } from "../../../application/ports/dataset-repository.ts";
@@ -45,7 +46,7 @@ const EMPTY_ANALYTICS: AnalyticsDataset = {
 function FilteredAnalyticsProbe() {
   const { filtered, filters, granularity, searchPending } = useFilteredAnalytics();
   return (
-    <output data-testid="probe" data-count={filtered?.postings.length} data-source-count={filtered?.source.postings.length} data-statuses={filters.statuses.join(",")} data-budget-statuses={filtered?.filters.statuses.join(",")}>
+    <output data-testid="probe" data-count={filtered?.postings.length} data-source-count={filtered?.source.postings.length} data-source-max-date={filtered?.source.maxDate} data-statuses={filters.statuses.join(",")} data-budget-statuses={filtered?.filters.statuses.join(",")}>
       {searchPending ? "pending" : "ready"}:{filtered?.filters.search ?? "missing"}:
       {granularity}
     </output>
@@ -53,6 +54,61 @@ function FilteredAnalyticsProbe() {
 }
 
 describe("useFilteredAnalytics", () => {
+  it("shares the same derivation across consumers and invalidates changed effective filters", () => {
+    const store = createAppStore({ load: vi.fn<DatasetRepository["load"]>() }, window.localStorage);
+    store.setState({ analytics: EMPTY_ANALYTICS, loadPhase: "ready" });
+    applyFiltersSpy.mockClear();
+
+    render(<AppStoreProvider store={store}><FilteredAnalyticsProbe /><FilteredAnalyticsProbe /></AppStoreProvider>);
+    expect(applyFiltersSpy).toHaveBeenCalledOnce();
+
+    act(() => store.getState().actions.patchFilters({ scope: "debtsOnly" }));
+    expect(applyFiltersSpy).toHaveBeenCalledTimes(2);
+    expect(applyFiltersSpy.mock.lastCall?.[1].scope).toBe("debtsOnly");
+
+    act(() => store.getState().actions.setStatuses(["VOID"]));
+    expect(applyFiltersSpy).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByTestId("probe")[0]).toHaveAttribute("data-budget-statuses", "");
+  });
+
+  it("does not reuse a derivation for a new dataset after locking", () => {
+    const store = createAppStore({ load: vi.fn<DatasetRepository["load"]>() }, window.localStorage);
+    store.setState({ analytics: EMPTY_ANALYTICS, loadPhase: "ready" });
+    applyFiltersSpy.mockClear();
+
+    render(<AppStoreProvider store={store}><FilteredAnalyticsProbe /><FilteredAnalyticsProbe /></AppStoreProvider>);
+    expect(applyFiltersSpy).toHaveBeenCalledOnce();
+
+    act(() => store.getState().actions.lock());
+    expect(screen.getAllByTestId("probe")[0]).toHaveTextContent("missing");
+    expect(applyFiltersSpy).toHaveBeenCalledOnce();
+
+    const nextAnalytics: AnalyticsDataset = { ...EMPTY_ANALYTICS, maxDate: "2026-09-01" };
+    act(() => store.setState({ analytics: nextAnalytics, loadPhase: "ready" }));
+    expect(applyFiltersSpy).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByTestId("probe")[0]).toHaveAttribute("data-source-max-date", "2026-09-01");
+  });
+
+  it("shares deferred search derivations without applying urgent search values", async () => {
+    const store = createAppStore({ load: vi.fn<DatasetRepository["load"]>() }, window.localStorage);
+    store.setState({ analytics: EMPTY_ANALYTICS, loadPhase: "ready" });
+    render(<AppStoreProvider store={store}><FilteredAnalyticsProbe /><FilteredAnalyticsProbe /></AppStoreProvider>);
+    applyFiltersSpy.mockClear();
+
+    act(() => {
+      flushSync(() => store.getState().actions.patchFilters({
+        search: "mercado", commentSearch: "note", referenceSearch: "ref",
+      }));
+      expect(screen.getAllByTestId("probe")[0]).toHaveTextContent("pending::");
+      expect(applyFiltersSpy).not.toHaveBeenCalled();
+    });
+    await waitFor(() => expect(screen.getAllByTestId("probe")[0]).toHaveTextContent("ready:mercado"));
+    expect(applyFiltersSpy).toHaveBeenCalledOnce();
+    expect(applyFiltersSpy.mock.calls[0]?.[1]).toMatchObject({
+      search: "mercado", commentSearch: "note", referenceSearch: "ref",
+    });
+  });
+
   it("projects only active rows and ignores stale status selections without mutating the source", () => {
     const store = createAppStore({ load: vi.fn<DatasetRepository["load"]>() }, window.localStorage);
     const initial = normalizeDataset({

@@ -3,9 +3,34 @@ import { useDeferredValue, useMemo } from "react";
 import { resolveTimeGranularity } from "../../../domain/analytics/date-periods.ts";
 import { datasetDateBounds } from "../../../domain/analytics/date-bounds.ts";
 import { applyFilters } from "../../../domain/analytics/filters.ts";
+import type { AnalyticsDataset, FilterState, FilteredAnalyticsDataset } from "../../../domain/analytics/types.ts";
 import { useAppStore } from "../../providers/AppStoreProvider/index.ts";
 
 const PRESENTATION_STATUSES: [] = [];
+const MAX_SHARED_DERIVATIONS = 2;
+const sharedDerivations = new WeakMap<AnalyticsDataset, Array<{
+  filters: FilterState;
+  result: FilteredAnalyticsDataset;
+}>>();
+
+function filtersMatch(left: FilterState, right: FilterState): boolean {
+  return Object.keys(left).every(
+    (key) => left[key as keyof FilterState] === right[key as keyof FilterState],
+  );
+}
+
+function deriveFilteredAnalytics(dataset: AnalyticsDataset, filters: FilterState): FilteredAnalyticsDataset {
+  const entries = sharedDerivations.get(dataset) ?? [];
+  const cached = entries.find((entry) => filtersMatch(entry.filters, filters));
+  if (cached) return cached.result;
+
+  const result = applyFilters(dataset, filters);
+  const projected = { ...result, postings: result.activePostings };
+  entries.unshift({ filters, result: projected });
+  entries.length = Math.min(entries.length, MAX_SHARED_DERIVATIONS);
+  sharedDerivations.set(dataset, entries);
+  return projected;
+}
 
 export function useFilteredAnalytics() {
   const analytics = useAppStore((state) => state.analytics);
@@ -64,11 +89,7 @@ export function useFilteredAnalytics() {
     ],
   );
   const filtered = useMemo(
-    () => {
-      if (analytics === null) return null;
-      const result = applyFilters(analytics, deferredFilters);
-      return { ...result, postings: result.activePostings };
-    },
+    () => analytics === null ? null : deriveFilteredAnalytics(analytics, deferredFilters),
     [analytics, deferredFilters],
   );
   const effectiveFilters = useMemo(
