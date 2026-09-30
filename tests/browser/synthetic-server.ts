@@ -51,6 +51,9 @@ async function main(): Promise<void> {
     const transactionArchivePath = join(temporary, "u6-transactions-backup.zip");
     const transactionDatasetPath = join(temporary, "u6-transactions-dataset.json");
     const transactionVaultPath = join(temporary, "u6-transactions.vault.json");
+    const historyArchivePath = join(temporary, "u7-budget-history-backup.zip");
+    const historyDatasetPath = join(temporary, "u7-budget-history-dataset.json");
+    const historyVaultPath = join(temporary, "u7-budget-history.vault.json");
   const distPath = join(temporary, "dist");
   let server: ReturnType<typeof createServer> | undefined;
   let closing = false;
@@ -135,6 +138,34 @@ async function main(): Promise<void> {
     });
     await encryptDataset({ inputPath: transactionDatasetPath, outputPath: transactionVaultPath, passphrase: PASSPHRASE });
     await copyFile(transactionVaultPath, join(distPath, "data", "u6-transactions.vault.json"));
+    // Dedicated covered May–August history; existing browser fixture oracles stay unchanged.
+    const historyDatabase = await createImportDatabaseFixture({ extraSql: [
+      ...baseExtraSql,
+      "INSERT INTO transactions (_id, uuid, comment, date, value_date, amount, cat_id, account_id, parent_id, status, cr_status) VALUES (100, '10000000-0000-4000-8000-000000000100', 'History coverage start', 1777636800, 1777636800, 0, 13, 1, NULL, 0, 'RECONCILED')",
+      "INSERT INTO transactions (_id, uuid, comment, date, value_date, amount, cat_id, account_id, parent_id, status, cr_status) VALUES (101, '10000000-0000-4000-8000-000000000101', 'May food', 1778414400, 1778414400, -1000, 14, 1, NULL, 0, 'RECONCILED')",
+      "INSERT INTO transactions (_id, uuid, comment, date, value_date, amount, cat_id, account_id, parent_id, status, cr_status) VALUES (102, '10000000-0000-4000-8000-000000000102', 'May income', 1778414400, 1778414400, 100000, 11, 1, NULL, 0, 'RECONCILED')",
+      "INSERT INTO transactions (_id, uuid, comment, date, value_date, amount, cat_id, account_id, parent_id, status, cr_status) VALUES (103, '10000000-0000-4000-8000-000000000103', 'July food A', 1783684800, 1783684800, -2000, 14, 1, NULL, 0, 'RECONCILED')",
+      "INSERT INTO transactions (_id, uuid, comment, date, value_date, amount, cat_id, account_id, parent_id, status, cr_status) VALUES (104, '10000000-0000-4000-8000-000000000104', 'July food B', 1784548800, 1784548800, -3000, 14, 1, NULL, 0, 'RECONCILED')",
+      "INSERT INTO transactions (_id, uuid, comment, date, value_date, amount, cat_id, account_id, parent_id, status, cr_status) VALUES (105, '10000000-0000-4000-8000-000000000105', 'July income A', 1783684800, 1783684800, 80000, 11, 1, NULL, 0, 'RECONCILED')",
+      "INSERT INTO transactions (_id, uuid, comment, date, value_date, amount, cat_id, account_id, parent_id, status, cr_status) VALUES (106, '10000000-0000-4000-8000-000000000106', 'July income B', 1784980800, 1784980800, 120000, 11, 1, NULL, 0, 'RECONCILED')",
+      "INSERT INTO transactions (_id, uuid, comment, date, value_date, amount, cat_id, account_id, parent_id, status, cr_status) VALUES (107, '10000000-0000-4000-8000-000000000107', 'History coverage end', 1788177600, 1788177600, 0, 13, 1, NULL, 0, 'RECONCILED')",
+      "INSERT INTO budget_allocations (budget_id, cat_id, year, second, budget, rollOverPrevious, rollOverNext, oneTime) VALUES (1, 10, 2026, 6, 100, 0, 0, 0)",
+      "INSERT INTO budget_allocations (budget_id, cat_id, year, second, budget, rollOverPrevious, rollOverNext, oneTime) VALUES (1, 14, 2026, 6, 20, 0, 0, 0)",
+      "INSERT INTO budgets (_id, uuid, title, description, grouping, account_id, currency, start, end, is_default) VALUES (2, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'Alternate monthly', '', 'MONTH', 1, '___', NULL, NULL, 0)",
+      "INSERT INTO budget_allocations (budget_id, cat_id, year, second, budget, rollOverPrevious, rollOverNext, oneTime) VALUES (2, 0, 2026, 7, 500, 0, 0, 0)",
+      "INSERT INTO budget_allocations (budget_id, cat_id, year, second, budget, rollOverPrevious, rollOverNext, oneTime) VALUES (2, 10, 2026, 7, 100, 0, 0, 0)",
+      "INSERT INTO budget_allocations (budget_id, cat_id, year, second, budget, rollOverPrevious, rollOverNext, oneTime) VALUES (2, 14, 2026, 7, 20, 0, 0, 0)",
+    ] });
+    await writeFile(historyArchivePath, await createBackupZipFixture({ database: historyDatabase }), { mode: 0o600 });
+    await importBackup({
+      inputPath: historyArchivePath, outputPath: historyDatasetPath, timeZone: "Europe/Madrid",
+      backupFilenameTimestamp: "20260822210453", importedAt: "2026-08-23T10:00:00.000Z",
+    });
+    await encryptDataset({ inputPath: historyDatasetPath, outputPath: historyVaultPath, passphrase: PASSPHRASE });
+    await copyFile(historyVaultPath, join(distPath, "data", "u7-budget-history.vault.json"));
+    await rm(historyArchivePath);
+    await rm(historyDatasetPath);
+    await rm(historyVaultPath);
     await rm(transactionArchivePath);
     await rm(transactionDatasetPath);
     await rm(transactionVaultPath);
@@ -150,11 +181,11 @@ async function main(): Promise<void> {
         if (/(?:\.\.|%2e)/iu.test(request.url ?? "")) { response.writeHead(400).end(); return; }
         const pathname = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
         if (!pathname.startsWith("/assets/") &&
-            pathname !== "/data/app-dataset.vault.json" && pathname !== "/data/legacy.vault.json" && pathname !== "/data/u3-budget.vault.json" && pathname !== "/data/u6-transactions.vault.json" &&
+            pathname !== "/data/app-dataset.vault.json" && pathname !== "/data/legacy.vault.json" && pathname !== "/data/u3-budget.vault.json" && pathname !== "/data/u6-transactions.vault.json" && pathname !== "/data/u7-budget-history.vault.json" &&
             pathname !== "/index.html" && !APP_ROUTES.has(pathname)) {
           response.writeHead(404).end(); return;
         }
-        const file = pathname.startsWith("/assets/") || pathname === "/data/app-dataset.vault.json" || pathname === "/data/legacy.vault.json" || pathname === "/data/u3-budget.vault.json" || pathname === "/data/u6-transactions.vault.json"
+        const file = pathname.startsWith("/assets/") || pathname === "/data/app-dataset.vault.json" || pathname === "/data/legacy.vault.json" || pathname === "/data/u3-budget.vault.json" || pathname === "/data/u6-transactions.vault.json" || pathname === "/data/u7-budget-history.vault.json"
           ? join(distReal, decodeURIComponent(pathname))
           : join(distReal, "index.html");
         const fileReal = await realpath(file);

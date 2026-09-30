@@ -55,7 +55,7 @@ after each verified task. No pull requests, deployment or private-data access.
   out-of-range history. Add observed RED/GREEN hook regressions for the error
   state and intact base model. Separate follow-up to native advisory R3-001;
   do not reopen the approved B3 candidate.
-- [ ] B4 — Add/execute isolated responsive and interaction regressions at
+- [x] B4 — Add/execute isolated responsive and interaction regressions at
   desktop, 390px and 320px across Real/Yo/Deudas. Verify useful readable amounts,
   nested categories, details, keyboard focus, no overflow and no runtime errors.
 
@@ -416,3 +416,37 @@ writing. Forecast200–350 authored lines (advisory); no artificial split/codego
 Use source-only isolated harness, existing dependencies, sanitized environment,
 all1280/390/320viewports and Real/Yo/Deudas. Existing behavior may start GREEN;
 do not invent RED or break production solely to manufacture test evidence.
+
+B3a commit `45935a7543fdcf37e0d0e9d688aa0b94d78b1887` was pushed to main;
+the actual remote ref matched. Staged/committed tree:
+`1b72007f85b583556c9dea4a8e2328a9b0720de1`. Assessment from `a37eabc`:
+medium,4paths/167lines,review_due:false,under_budget. No new native approval is
+claimed; keep `a37eabc` as the reviewed boundary for the pending B3a/B4 slice.
+
+### B4 final verification
+
+Dedicated generated May–August history is now a durable synthetic vault fixture;
+existing fixture oracles are unchanged. Nine browser cases cover Real/Yo/Deudas
+at 1280/390/320px: reference add/remove/primary/empty/reset/persistence,
+covered-zero June versus unavailable April, zero-inclusive three-month mean,
+separate income, exact current/reference/category figures, independent tree,
+Details and ordinary-pointer dialog/focus. Existing compactness, non-overlap and
+intermediate-width cases remain. No product code changed for this test delivery.
+
+Final isolated budget browser24/24: `/tmp/b4-browser-final-screenshots.log`;
+command: installed tsx `tests/browser/run-isolated.ts --grep
+'current, reference|budget|presupuesto' --output /tmp/b4-history-final-results`.
+All nine history snapshots use Playwright-managed output paths and show the
+budget tree. Parent inspected final desktop/390 snapshots and the prior unchanged
+320px product-layout evidence. Full Vitest409/409 (parent repeated), all three
+TypeScript projects, Oxlint zero warnings/errors and whitespace passed. Parent
+evidence: `/tmp/b4p-oe99WE/` and final browser-type spot check `/tmp/b4pt-PiPqPo/`.
+Initial history failures were test-helper disclosure handling, not production
+regressions; no production RED is claimed for capturing existing tested behavior.
+
+Rollback: only the dedicated history fixture/test additions in
+`tests/browser/synthetic-server.ts` and `financial-explainability.spec.ts`.
+Synthetic-only fixture import/build/encryption stays inside isolated temporary
+inputs; no private data, real vault, workspace build/full Node suite or manual
+screen-reader audit. Protected user edits are unchanged. All feature tasks are
+verified; final commit/assessment/main push and delivery bookkeeping follow.

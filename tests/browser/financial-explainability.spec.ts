@@ -1482,3 +1482,128 @@ test("keeps the no-limit budget honest and moves focus into the final 27-item ba
   await expect(dialog).toHaveCount(0);
   await expect(trigger).toBeFocused();
 });
+
+const budgetHistoryMoney = new Intl.NumberFormat("es-ES", {
+  currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2, style: "currency",
+});
+const historyAmount = (minor: number) => budgetHistoryMoney.format(minor / 100);
+
+for (const { scope, current, reference: expectedReference, mean, incomeCurrent, incomeReference, incomeMean, postingCount } of [
+  { scope: "realCashFlow", current: -95, reference: 5_010, mean: 6_010 / 3,
+    incomeCurrent: 177, incomeReference: 200_000, incomeMean: 100_000, postingCount: 4 },
+  { scope: "all", current: -95, reference: 5_010, mean: 6_010 / 3,
+    incomeCurrent: 177, incomeReference: 200_000, incomeMean: 100_000, postingCount: 4 },
+  { scope: "debtsOnly", current: 0, reference: 0, mean: 0,
+    incomeCurrent: 0, incomeReference: 0, incomeMean: 0, postingCount: 0 },
+] as const) {
+  test(`keeps synthetic budget history, reference controls and scoped income coherent in ${scope}`, async ({ page }, testInfo) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.clock.setFixedTime(new Date("2026-08-15T12:00:00.000Z"));
+    await page.route("**/data/app-dataset.vault.json", async (route) => {
+      const variant = await route.fetch({ url: `${BASE}/data/u7-budget-history.vault.json` });
+      await route.fulfill({ response: variant });
+    });
+    await page.reload();
+    await page.getByLabel("Frase de desbloqueo").fill(PASSPHRASE);
+    await page.getByRole("button", { name: "Abrir bóveda" }).click();
+    await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
+    const controls = page.getByRole("group", { name: "Marco del presupuesto" });
+    await controls.getByRole("combobox", { name: "Presupuesto", exact: true }).selectOption({ label: "Monthly" });
+    await controls.getByRole("combobox", { name: "Periodo", exact: true }).selectOption("MONTH:2026:7");
+    const selectScope = (value: string) => page.getByRole("region", { name: "Filtros globales" })
+      .getByRole("group", { name: "Ámbito de las estadísticas" }).locator(`input[value="${value}"]`).check();
+    await selectScope(scope);
+
+    const tree = page.getByRole("list", { name: "Asignaciones jerárquicas del presupuesto" });
+    const root = tree.locator(":scope > li > div").first();
+    const child = tree.locator(":scope > li > ul > li > div").first();
+    const reference = (row: Locator) => row.locator("dl[class*=referenceMetric] dd");
+    const meanValue = (row: Locator) => row.locator("dl[class*=meanMetric] dd");
+    const consumed = root.getByRole("button", { name: /^Ver apuntes consumidos de Expense:/ });
+    await expect(consumed).toHaveText(historyAmount(current));
+    await expect(child.getByRole("button", { name: /^Ver apuntes consumidos de Expense › Food:/ })).toHaveText(historyAmount(scope === "debtsOnly" ? 0 : 25));
+    await expect(reference(root)).toHaveText(historyAmount(expectedReference));
+    await expect(reference(child)).toHaveText(historyAmount(scope === "debtsOnly" ? 0 : 5_000));
+    await expect(meanValue(root)).toHaveText(historyAmount(mean));
+    await expect(meanValue(child)).toHaveText(historyAmount(scope === "debtsOnly" ? 0 : 2_000));
+    await expect(page.getByText(/3 meses completos/)).toHaveCount(1);
+
+    const income = page.getByRole("region", { name: "Ingresos en el mismo ámbito" });
+    const incomeMetric = (label: string) => income.getByText(label, { exact: true }).locator("xpath=following-sibling::dd");
+    await expect(income).toContainText("no reducen el consumo del presupuesto");
+    await expect(incomeMetric("Actual")).toHaveText(historyAmount(incomeCurrent));
+    await expect(incomeMetric("Referencia completa")).toHaveText(historyAmount(incomeReference));
+    await expect(incomeMetric("Media")).toHaveText(historyAmount(incomeMean));
+    const rows = await tree.locator("li > div").evaluateAll((elements) => elements.map((element) => ({
+      scrollWidth: element.scrollWidth, clientWidth: element.clientWidth,
+    })));
+    for (const row of rows) expect(row.scrollWidth).toBeLessThanOrEqual(row.clientWidth);
+    await expectNoDocumentOverflow(page);
+    await tree.screenshot({ path: testInfo.outputPath(`budget-history-${scope}.png`), animations: "disabled" });
+
+    const details = root.getByRole("button", { name: "Detalles de Expense" });
+    await details.press("Enter");
+    await expect(details).toHaveAttribute("aria-expanded", "true");
+    await expect(root.getByText("Mismo tramo transcurrido")).toBeVisible();
+    const treeToggle = root.getByRole("button", { name: "Contraer Expense" });
+    await treeToggle.press("Enter");
+    await expect(details).toHaveAttribute("aria-expanded", "true");
+    await expect(child).toHaveCount(0);
+    await page.getByRole("button", { name: "Desplegar Expense" }).press("Enter");
+    await details.press("Space");
+    await consumed.click();
+    const dialog = page.getByRole("dialog", { name: "Expense · apuntes" });
+    await expect(dialog.locator("ol > li")).toHaveCount(postingCount);
+    if (postingCount > 0) {
+      const ids = await dialog.getByText(/^ID: /).allTextContents();
+      expect(ids.toSorted()).toEqual([1, 8, 15, 17].map((id) =>
+        `ID: 11111111-1111-4111-8111-111111111111:10000000-0000-4000-8000-${String(id).padStart(12, "0")}`,
+      ).toSorted());
+    }
+    await page.keyboard.press("Escape");
+    await expect(consumed).toBeFocused();
+
+    const summary = page.locator("summary").filter({ hasText: /^(Referencias ·|Sin referencias$)/ });
+    await summary.press("Enter");
+    const panel = summary.locator("..");
+    const primary = panel.getByLabel("Referencia principal");
+    const addPeriod = async (date: string) => {
+      if (await panel.getAttribute("open") === null) await summary.press("Enter");
+      await panel.getByLabel("Fecha del periodo de referencia").fill(date);
+      await panel.getByRole("button", { name: "Añadir periodo" }).click();
+    };
+    await expect(primary).toHaveValue("MONTH:2026:6");
+    await addPeriod("2026-06-15");
+    await primary.selectOption("MONTH:2026:5");
+    await expect(reference(root)).toHaveText(historyAmount(0));
+    await expect(meanValue(root)).toHaveText(historyAmount(mean));
+    const otherScope = scope === "debtsOnly" ? "realCashFlow" : "debtsOnly";
+    await selectScope(otherScope);
+    await expect(primary).toHaveValue("MONTH:2026:5");
+    await expect(primary.locator("option")).toHaveCount(2);
+    await selectScope(scope);
+    await addPeriod("2026-04-15");
+    await primary.selectOption("MONTH:2026:3");
+    await expect(reference(root)).toHaveText("Sin datos");
+    await expect(meanValue(root)).toHaveText(historyAmount(mean));
+    for (const label of ["Julio de 2026", "Junio de 2026", "Abril de 2026"]) {
+      // oxlint-disable-next-line no-await-in-loop -- Remove each selected calendar reference through its own control.
+      await panel.getByRole("button", { name: `Quitar referencia ${label}` }).press("Enter");
+    }
+    await expect(summary).toHaveText("Sin referencias");
+    await expect(reference(root)).toHaveText("Sin referencia");
+    await expect(meanValue(root)).toHaveText(historyAmount(mean));
+    await addPeriod("2026-05-15");
+    await controls.getByRole("combobox", { name: "Periodo", exact: true }).selectOption("MONTH:2026:6");
+    await expect(primary).toHaveValue("MONTH:2026:5");
+    await expect(reference(root)).toHaveText(historyAmount(0));
+    await controls.getByRole("combobox", { name: "Periodo", exact: true }).selectOption("MONTH:2026:7");
+    await expect(primary).toHaveValue("MONTH:2026:6");
+    await addPeriod("2026-05-15");
+    await controls.getByRole("combobox", { name: "Presupuesto", exact: true }).selectOption({ label: "Alternate monthly" });
+    await expect(primary).toHaveValue("MONTH:2026:6");
+    await expect(primary.locator("option")).toHaveCount(1);
+    expect(errors).toEqual([]);
+  });
+}
