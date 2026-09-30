@@ -36,6 +36,10 @@ No dependency upgrades, deployments or remote operations are part of this iterat
   Acceptance: an in-place, equal-length overwrite with restored modification time
   returns newly validated bytes; unchanged files can reuse the cache; invalid new
   content never returns an earlier valid cached response.
+- [x] T3 — Use the environment-aware Testing Library `act` wrapper in AppShell
+  tests and guard against the reproduced environment warnings. Preserve all lock,
+  timer and expired-session behavior assertions; never silence console errors.
+  Route: delegated direct (regression design and test edit); strict TDD applies.
 
 ## Verification
 
@@ -83,7 +87,38 @@ Independent final verification against T1 plus staged T2:
   and `logs/`; source-manifest SHA-256
   `d3e63d807feeb2ece28f5404ce3b05c4e77f1700424e1626cf1b15b155c48333`.
 
-Both implementation tasks are complete and committed locally. No main merge,
+T1 and T2 are complete and committed locally. No main merge,
 push, deployment or external service operation was performed. Further technical
 iterations should use new evidence rather than speculative refactors. Memory
 mirror synchronization remains pending runtime registration.
+
+## Continued iteration
+
+The user requested another technical pass. Read-only checks of CSV export safety,
+formatting/date boundaries, navigation/accessibility states and malformed CLI input
+confirmed no new product defect (12 focused UI tests and 11 CLI tests passed).
+The AppShell test file reproduced 44 environment warnings while passing 7 tests:
+direct React `act` bypasses Testing Library's scoped environment setup. Synchronous
+lock handlers and awaited assertions showed no evidence of premature completion.
+T3 addresses this specific test-quality defect, not application locking behavior.
+Acceptance: a regression fails on the warning before the import correction; focused
+and full UI suites pass without those warnings afterward, with type/lint checks.
+Forecast: approximately 40–70 further authored lines including tracking; below the
+delivery threshold when combined with the current 245-line branch diff. Existing
+`ask-on-risk` delivery policy and reviewed boundary `e65a364` remain unchanged.
+T3 changes only `AppShell.test.tsx`: the Testing Library wrapper replaces direct
+React `act`, with a call-through `console.error` guard and explicit spy cleanup.
+RED: focused suite 6/7, with 11 captured warnings in the guarded test and 44 runtime
+warnings overall. GREEN: focused 7/7, full UI 368/368 across 84 files, zero warnings;
+all three TypeScript projects, Oxlint and diff check passed. Parent repeated 7/7.
+Commands: `node node_modules/vitest/vitest.mjs run` (full and focused AppShell),
+`node node_modules/typescript/bin/tsc -p <tsconfig> --noEmit` for node/app/browser,
+and `node node_modules/oxlint/bin/oxlint --jsx-a11y-plugin --vitest-plugin --deny-warnings`.
+Evidence: `/tmp/appshell-t3-red-f9ODWT/focused-red.log`,
+`/tmp/appshell-t3-green-h3GngI/focused-green.log`,
+`/tmp/appshell-t3-full-ui-vTc87p/full-ui.log`,
+`/tmp/appshell-t3-checks-1aInjT/checks.log`.
+Node/browser suites were not rerun for this test-only change; their previous
+verification remains historical, not a new result. No app behavior was modified.
+Rollback boundary: the AppShell test file. Source/test delta: 9 additions and
+3 deletions. Next: commit and assess T3. Engram task mirror remains pending.

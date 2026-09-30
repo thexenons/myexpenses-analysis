@@ -2,8 +2,7 @@ import {
   createMemoryHistory,
   RouterContextProvider,
 } from "@tanstack/react-router"
-import { render, screen, waitFor, within } from "@testing-library/react"
-import { act } from "react"
+import { act, render, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { appStore } from "../../../../composition/app-store.ts"
@@ -19,7 +18,10 @@ function resetAppStore() {
 
 describe("AppShell", () => {
   beforeEach(resetAppStore)
-  afterEach(() => vi.useRealTimers())
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
 
   it("composes navigation, global filters, drawer and a skippable main region", () => {
     const history = createMemoryHistory({ initialEntries: ["/resumen"] })
@@ -64,6 +66,7 @@ describe("AppShell", () => {
 
   it("locks after 15 minutes without activity and resets the deadline on activity", () => {
     vi.useFakeTimers()
+    const errorSpy = vi.spyOn(console, "error")
     const history = createMemoryHistory({ initialEntries: ["/resumen"] })
     const router = createAppRouter({ history })
     const { unmount } = render(
@@ -98,6 +101,9 @@ describe("AppShell", () => {
     expect(appStore.getState().loadPhase).toBe("locked")
 
     unmount()
+    expect(errorSpy.mock.calls.filter(([message]) =>
+      String(message).includes("The current testing environment is not configured to support act(...)"),
+    )).toEqual([])
   })
 
   it("does not lock merely because the tab is hidden briefly", () => {
