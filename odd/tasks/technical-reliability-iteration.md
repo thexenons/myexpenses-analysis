@@ -10,7 +10,8 @@ this is not a claim of exhaustive application coverage.
 Preserve financial semantics, VOID exclusion, budget availability, vault security,
 existing UI and unrelated local edits. Use synthetic data only; do not read private
 data, environment files, credentials or contact the user's localhost:5173 service.
-No dependency upgrades, deployments or remote operations are part of this iteration.
+No dependency upgrades or deployments are part of this iteration. The user later
+authorized small successive deliveries to `main`, pushing after every task.
 
 ## Execution and delivery
 
@@ -20,7 +21,9 @@ No dependency upgrades, deployments or remote operations are part of this iterat
 - Route: delegated direct for both tasks (analysis and changes across implementation
   and regression tests). One writer at a time; parent owns tracking and commits.
 - Forecast: approximately 250–350 authored changed lines including tests/tracking.
-- Delivery strategy: `ask-on-risk`; work-unit commits, no PR or push authorized here.
+- Delivery strategy: `auto-chain`; user-selected chain: `stacked-to-main`.
+  Integrate and push each completed task to the configured `origin/main` in order.
+  Direct-main delivery is authorized; no pull requests are requested.
 - RDD: on (global). Initial reviewed boundary: `e65a364`. Assess each work unit.
 - Engram mirror: pending; runtime session registration is unavailable, so memory
   writes are prohibited. Repository-relative recovery locator is this document.
@@ -40,6 +43,9 @@ No dependency upgrades, deployments or remote operations are part of this iterat
   tests and guard against the reproduced environment warnings. Preserve all lock,
   timer and expired-session behavior assertions; never silence console errors.
   Route: delegated direct (regression design and test edit); strict TDD applies.
+- [x] T4 — Explain empty payee/payment-method facet search results accessibly.
+  Keep matching options and pinned selected options unchanged; clearing a search
+  restores available choices. Route: delegated direct (UI and regression tests).
 
 ## Verification
 
@@ -126,3 +132,48 @@ Assessment from `e65a364`: medium, 292 accumulated changed lines,
 `review_due: false`, `under_budget`. Native review remains deferred with no
 approval claimed; the reviewed boundary is unchanged. T3 is complete locally,
 without main integration or push. Engram task mirror remains pending.
+
+## Facet empty-state iteration
+
+Another bounded audit checked keyboard/focus controls, date boundaries, filter
+facets, persisted preferences and route inputs. Synthetic measurements did not
+justify formatter/aggregation optimization. The confirmed UI gap is a blank facet
+list when payee or payment-method search yields no visible options.
+T4 uses existing Spanish UI/style conventions and a concise accessible empty state,
+without changing filtering, selection, focus, financial semantics or dependencies.
+Acceptance: reproduce the missing feedback with failing tests for both facets;
+verify no-match/empty options, clearing search and selected-option preservation.
+Checks: focused and full UI, types, lint, isolated browser coverage and visual
+readback at desktop/mobile widths. No private-data or live deployment checks.
+Forecast: 60–90 further authored lines, including tracking, on the current 296-line
+branch diff; retain `ask-on-risk` and assess actual size before committing.
+T4 implementation and verification are complete; delivery is pending. Valid RED: 17/19 focused
+tests passed, with two missing-status failures; final GREEN: focused 20/20,
+full UI 371/371, all three TypeScript checks, lint and diff checks passed.
+Parent repeated focused 20/20. A test-fixture issue and two lint diagnostics were
+corrected during implementation; final runs are clean. No full Node rerun.
+Independent browser suite: 90 passed, 3 intentional viewport skips; detached
+facet probes: 6/6 across 1280x800, 390x844 and 320x700. Verified semantic status,
+focus retention, clearing, pinned selections and horizontal containment; all
+12 screenshots inspected, plus parent desktop/narrow spot checks. No runtime
+errors, private-data access or source/index/protected-file changes during checks.
+Screen-reader announcements were not manually tested. Initial temporary-harness
+startup issues were resolved outside the repository before successful reruns.
+Evidence: `/tmp/facet-t4-final-ui-MXH2Cf/full-ui.log`,
+`/tmp/facet-t4-final-checks-4RJ7EF/checks.log`, and `/tmp/t4v-jac_2k2f/`
+(`result.json`, `commands.json`, `measurements/`, `screenshots/`).
+Rollback boundary: FilterDrawer view and test; source/test delta: 89 authored lines.
+The accumulated candidate exceeds 400 authored changed lines. The user explicitly
+selected `stacked-to-main` and push after every task. Delivery slices (no history
+rewrite or new PRs): T1 `e65a364..d7f5494`; T2 `d7f5494..9d5d949` (includes
+`6207976` plus its verification record); T3 `9d5d949..b5638d7` (includes
+`cb44f45` plus its record); T4 starts at `b5638d7`. Each slice keeps tests and
+tracking with its behavior. Candidate-specific native review consent remains
+separate from delivery authorization.
+
+T1, T2 and T3 were fast-forwarded and pushed separately to `origin/main`, ending
+at `d7f5494`, `9d5d949` and `b5638d7` respectively; each push succeeded. Remote
+`main` was verified at `b5638d7`. A temporary clean Git worktree kept unrelated
+user edits and the pending T4 candidate untouched during delivery.
+Next: commit and assess T4, then finish its required review and delivery.
+Engram mirror remains pending authoritative runtime registration.

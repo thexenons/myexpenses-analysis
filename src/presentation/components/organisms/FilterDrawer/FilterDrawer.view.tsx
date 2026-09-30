@@ -335,23 +335,30 @@ export function FilterDrawerView({
             <p>Los criterios se combinan entre sí. Dentro de cada lista, basta con coincidir con una selección.</p>
             <div className={styles.additionalBody}>
               {([
-                { title: "Beneficiarios", options: payeeOptions, selected: filters.payeeKeys ?? [], query: payeeQuery, setQuery: setPayeeQuery, toggle: onPayeeToggle },
-                { title: "Métodos de pago", options: methodOptions, selected: filters.paymentMethodKeys ?? [], query: methodQuery, setQuery: setMethodQuery, toggle: onMethodToggle },
-              ] as const).map(({ title, options, selected, query, setQuery, toggle }) => (
-                <fieldset className={styles.choiceGroup} key={title}>
-                  <legend>{title}</legend>
-                  <p>{selected.length === 0 ? "Sin limitar" : `${selected.length} seleccionados`}</p>
-                  <SearchField label={`Buscar ${title.toLowerCase()}`} onValueChange={setQuery} value={query} />
-                  <div className={styles.choiceList}>
-                    {options.filter((option) => option.label.toLocaleLowerCase("es").includes(query.toLocaleLowerCase("es")) || selected.includes(option.key)).map((option) => (
-                      <label className={styles.choice} key={option.key}>
-                        <input checked={selected.includes(option.key)} onChange={() => toggle(option.key)} type="checkbox" />
-                        <span>{option.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-              ))}
+                { title: "Beneficiarios", emptyMessage: "No hay beneficiarios disponibles.", options: payeeOptions, selected: filters.payeeKeys ?? [], query: payeeQuery, setQuery: setPayeeQuery, toggle: onPayeeToggle },
+                { title: "Métodos de pago", emptyMessage: "No hay métodos de pago disponibles.", options: methodOptions, selected: filters.paymentMethodKeys ?? [], query: methodQuery, setQuery: setMethodQuery, toggle: onMethodToggle },
+              ] as const).map(({ title, emptyMessage, options, selected, query, setQuery, toggle }) => {
+                const visibleOptions = options.filter((option) => option.label.toLocaleLowerCase("es").includes(query.toLocaleLowerCase("es")) || selected.includes(option.key))
+                return (
+                  <fieldset className={styles.choiceGroup} key={title}>
+                    <legend>{title}</legend>
+                    <p>{selected.length === 0 ? "Sin limitar" : `${selected.length} seleccionados`}</p>
+                    <SearchField label={`Buscar ${title.toLowerCase()}`} onValueChange={setQuery} value={query} />
+                    {visibleOptions.length > 0 ? (
+                      <div className={styles.choiceList}>
+                        {visibleOptions.map((option) => (
+                          <label className={styles.choice} key={option.key}>
+                            <input checked={selected.includes(option.key)} onChange={() => toggle(option.key)} type="checkbox" />
+                            <span>{option.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className={styles.empty}><output>{query.length > 0 ? "No hay coincidencias." : emptyMessage}</output></p>
+                    )}
+                  </fieldset>
+                )
+              })}
               <fieldset className={styles.choiceGroup}>
                 <legend>Tipo de movimiento</legend>
                 <div className={styles.compactChoices}>

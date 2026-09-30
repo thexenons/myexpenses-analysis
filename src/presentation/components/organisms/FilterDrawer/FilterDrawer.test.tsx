@@ -334,6 +334,54 @@ describe("FilterDrawer", () => {
     expect(payees.getByRole("checkbox", { name: "Duplicado (ID 20)" })).toBeVisible()
   })
 
+  it("explains when neither identity facet has available options", async () => {
+    appStore.setState({ filterDrawerOpen: true })
+    render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
+    await userEvent.setup().click(screen.getByText("Criterios adicionales"))
+
+    const payees = within(screen.getByRole("group", { name: "Beneficiarios" }))
+    const methods = within(screen.getByRole("group", { name: "Métodos de pago" }))
+    expect(payees.getByRole("status")).toHaveTextContent("No hay beneficiarios disponibles.")
+    expect(methods.getByRole("status")).toHaveTextContent("No hay métodos de pago disponibles.")
+    expect(payees.queryByRole("checkbox")).not.toBeInTheDocument()
+    expect(methods.queryByRole("checkbox")).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ["Beneficiarios", "Buscar beneficiarios", "Alice", "Bob"],
+    ["Métodos de pago", "Buscar métodos de pago", "Card", "Cash"],
+  ])("explains unmatched %s searches while retaining selected options and restoring choices on clear", async (group, searchLabel, selectedLabel, otherLabel) => {
+    const user = userEvent.setup()
+    const analytics = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+      categories: { Food: { categoryType: "EXPENSE" } },
+      parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "one", date: "2026-01-01", amount: -2, category: ["Food"], sourceTransactionUuid: "one", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+        { uuid: "two", date: "2026-01-02", amount: -3, category: ["Food"], sourceTransactionUuid: "two", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+      ] }],
+    })
+    Object.assign(analytics.postings[0]!, { payee: "Alice", payeeSourceId: 1, paymentMethod: "Card", paymentMethodSourceId: 1 })
+    Object.assign(analytics.postings[1]!, { payee: "Bob", payeeSourceId: 2, paymentMethod: "Cash", paymentMethodSourceId: 2 })
+    appStore.setState({ analytics, filterDrawerOpen: true })
+    render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
+    await user.click(screen.getByText("Criterios adicionales"))
+
+    const facet = within(screen.getByRole("group", { name: group }))
+    const search = facet.getByRole("searchbox", { name: searchLabel })
+    await user.type(search, "zz")
+    expect(facet.getByRole("status")).toHaveTextContent("No hay coincidencias.")
+    expect(facet.queryByRole("checkbox")).not.toBeInTheDocument()
+
+    await user.clear(search)
+    expect(facet.queryByRole("status")).not.toBeInTheDocument()
+    expect(facet.getByRole("checkbox", { name: otherLabel })).toBeVisible()
+    await user.click(facet.getByRole("checkbox", { name: selectedLabel }))
+    await user.type(search, "zz")
+    expect(facet.getByRole("checkbox", { name: selectedLabel })).toBeChecked()
+    expect(facet.queryByRole("checkbox", { name: otherLabel })).not.toBeInTheDocument()
+    expect(facet.queryByRole("status")).not.toBeInTheDocument()
+  })
+
   it("keeps invalid and intermediate EUR amount edits visible but unapplied, then syncs external reset", async () => {
     const user = userEvent.setup()
     appStore.setState({ filterDrawerOpen: true })
