@@ -1314,6 +1314,70 @@ test("puts category paths and account balances before charts without losing keyb
   expect(violations).toEqual([]);
 });
 
+test("keeps category amounts inside their rows and panel at intermediate widths", async ({ page }, testInfo) => {
+  await page.getByRole("link", { name: "Categorías" }).click();
+  const tree = page.getByRole("region", { name: "Explorador jerárquico" });
+  const widths = testInfo.project.name === "desktop" ? [900, 768, 1024, 1280] : [page.viewportSize()!.width];
+  const measurements = [];
+
+  /* oxlint-disable no-await-in-loop -- Layout and perspective checks must observe each sequential browser state. */
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 800 });
+    for (const scope of ["realCashFlow", "all", "debtsOnly"]) {
+      await page.getByRole("region", { name: "Filtros globales" })
+        .getByRole("group", { name: "Ámbito de las estadísticas" }).locator(`input[value="${scope}"]`).check();
+      const geometry = await tree.evaluate((element) => {
+        const panel = element.closest("section")!.getBoundingClientRect();
+        const rows = [...element.querySelectorAll("li > div")].flatMap((row) => {
+          const selection = row.querySelector<HTMLButtonElement>('button[aria-label^="Filtrar:"]');
+          if (selection === null) return [];
+          const amount = row.lastElementChild!;
+          const disclosure = row.querySelector<HTMLButtonElement>("button[aria-expanded]");
+          const rect = row.getBoundingClientRect();
+          const value = amount.firstElementChild!.getBoundingClientRect();
+          const average = amount.lastElementChild!.getBoundingClientRect();
+          return [{
+            name: selection.getAttribute("aria-label"),
+            row: { left: rect.left, right: rect.right, client: row.clientWidth, scroll: row.scrollWidth },
+            amount: { left: amount.getBoundingClientRect().left, right: amount.getBoundingClientRect().right, client: amount.clientWidth, scroll: amount.scrollWidth },
+            value: { left: value.left, right: value.right, client: amount.firstElementChild!.clientWidth, scroll: amount.firstElementChild!.scrollWidth },
+            valueText: amount.firstElementChild!.textContent?.replaceAll("\u00a0", " ").trim(),
+            average: { left: average.left, right: average.right, client: amount.lastElementChild!.clientWidth, scroll: amount.lastElementChild!.scrollWidth },
+            selectionHeight: selection.getBoundingClientRect().height,
+            disclosureHeight: disclosure?.getBoundingClientRect().height ?? null,
+          }];
+        });
+        return { panel: { left: panel.left, right: panel.right }, rows };
+      });
+      expect(geometry.rows.length).toBeGreaterThanOrEqual(1);
+      if (scope === "realCashFlow") expect(geometry.rows.some(({ name }) => name?.includes("Expense › Food"))).toBe(true);
+      if (width === 900 && scope === "realCashFlow") {
+        expect(geometry.rows.find(({ name }) => name === "Filtrar: Expense")?.valueText).toBe("0,85 €");
+        expect(geometry.rows.find(({ name }) => name === "Filtrar: Expense › Food")?.valueText).toBe("-0,25 €");
+      }
+      for (const row of geometry.rows) {
+        expect(row.row.scroll, `${width}/${scope}/${row.name} row`).toBeLessThanOrEqual(row.row.client);
+        expect(row.selectionHeight, `${width}/${scope}/${row.name} selection`).toBeGreaterThanOrEqual(44);
+        if (row.disclosureHeight !== null) expect(row.disclosureHeight, `${width}/${scope}/${row.name} disclosure`).toBeGreaterThanOrEqual(44);
+        for (const part of [row.amount, row.value, row.average]) {
+          expect(part.left, `${width}/${scope}/${row.name} left`).toBeGreaterThanOrEqual(row.row.left);
+          expect(part.right, `${width}/${scope}/${row.name} right`).toBeLessThanOrEqual(row.row.right);
+          expect(part.right, `${width}/${scope}/${row.name} panel`).toBeLessThanOrEqual(geometry.panel.right);
+          expect(part.scroll, `${width}/${scope}/${row.name} text`).toBeLessThanOrEqual(part.client);
+        }
+      }
+      measurements.push({ width, scope, ...geometry });
+      if (scope === "realCashFlow") {
+        await tree.screenshot({ path: testInfo.outputPath(`categories-${width}-contained.png`), animations: "disabled" });
+      }
+    }
+  }
+  /* oxlint-enable no-await-in-loop */
+
+  await writeFile(testInfo.outputPath("category-row-containment.json"), JSON.stringify(measurements, null, 2));
+  await expectNoDocumentOverflow(page);
+});
+
 test("keeps budget decisions ahead of closed method information across perspectives", async ({ page }, testInfo) => {
   await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
   const controls = page.getByRole("group", { name: "Marco del presupuesto" });

@@ -178,7 +178,7 @@ export function CategoriesPageView({
             title="No hay categorías con actividad"
           />
         ) : (
-          <AccordionTree>
+          <AccordionTree className={styles.categoryTree}>
             {categoryTree.map((category) => (
               <CategoryTreeNode
                 category={category}

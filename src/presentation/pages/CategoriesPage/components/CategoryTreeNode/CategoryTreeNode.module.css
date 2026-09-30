@@ -1,10 +1,17 @@
 .row {
-  grid-template-columns: 2.25rem minmax(9rem, 1fr) auto auto;
+  grid-template-columns: 2.75rem minmax(9rem, 1fr) auto auto;
+  min-width: 0;
+}
+
+.row > button:first-child {
+  width: 2.75rem;
+  height: 2.75rem;
 }
 
 .selection {
   display: grid;
   min-width: 0;
+  min-height: 2.75rem;
   padding: 0.35rem 0.5rem;
   color: var(--ink);
   text-align: left;
@@ -48,6 +55,8 @@
   display: flex;
   gap: 0.45rem;
   align-items: center;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .counts,
@@ -65,9 +74,12 @@
 .amount {
   display: grid;
   gap: 0.2rem;
+  min-width: 0;
   text-align: right;
   color: var(--ink-soft);
   font-size: 0.82rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .average {
@@ -75,23 +87,53 @@
   font-size: 0.72rem;
 }
 
-@media (max-width: 760px) {
+/* Nested lists have their own container, so depth and sidebar width both count. */
+@container category-tree (max-width: 50rem) {
   .row {
-    grid-template-columns: 2.25rem minmax(0, 1fr);
+    grid-template-columns: 2.75rem repeat(2, minmax(0, 1fr));
+  }
+
+  .selection {
+    grid-column: 2 / -1;
+  }
+
+  .name,
+  .path {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .details {
     grid-column: 2;
-    flex-wrap: wrap;
+    grid-row: 2;
   }
 
   .amount {
-    grid-column: 2;
-    text-align: left;
+    grid-column: 3;
+    grid-row: 2;
   }
 
   .average {
     white-space: normal;
+  }
+}
+
+@container category-tree (max-width: 34rem) {
+  .row {
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+  }
+
+  .selection,
+  .details,
+  .amount {
+    grid-column: 2;
+    grid-row: auto;
+  }
+
+  .amount {
+    text-align: left;
   }
 }
 

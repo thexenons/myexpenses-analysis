@@ -2,6 +2,11 @@
   min-height: 26rem;
 }
 
+.categoryTree,
+.categoryTree ul {
+  container: category-tree / inline-size;
+}
+
 .help {
   color: var(--muted);
   font-size: 0.75rem;
