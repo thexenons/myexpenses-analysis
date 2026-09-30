@@ -853,8 +853,10 @@ test("combines additional filter controls, exposes chips and rejects invalid EUR
   await expect(toolbar.getByRole("button", { name: "Quitar filtro Moneda: EUR" })).toBeVisible();
   await expect(toolbar.getByRole("button", { name: /Quitar filtro Importe absoluto ≥ 20,00 EUR/ })).toBeVisible();
   expect(page.url()).not.toContain("Synthetic food");
-  expect(await page.evaluate(() => Object.values(localStorage).join(" "))).not.toContain("Synthetic food");
-  expect(await page.evaluate(() => Object.values(localStorage).join(" "))).not.toContain("ABC");
+  const preferences = await page.evaluate(() => localStorage.getItem("myexpenses-analysis:filters:v1"));
+  expect(preferences).toContain("Synthetic food");
+  expect(preferences).toContain("ABC");
+  expect(preferences).not.toMatch(/synthetic-browser-only-passphrase|"postings"|"analytics"/u);
   await expectNoDocumentOverflow(page);
   await opener.click();
   await drawer.getByRole("button", { name: "Restablecer" }).click();
@@ -900,7 +902,7 @@ test("drills from exact Patterns identities without dropping other facets", asyn
   await expect(toolbar.getByRole("button", { name: /Quitar filtro Moneda: EUR/ })).toBeVisible();
   await expect(toolbar.getByRole("button", { name: /Quitar filtro Beneficiario:/ })).toBeVisible();
   expect(page.url()).not.toContain("Synthetic food");
-  expect(await page.evaluate(() => Object.values(localStorage).join(" "))).not.toContain("Synthetic food");
+  expect(await page.evaluate(() => localStorage.getItem("myexpenses-analysis:filters:v1"))).toContain("Synthetic food");
   await expectNoDocumentOverflow(page);
 
   await page.getByRole("link", { name: "Patrones" }).click();
