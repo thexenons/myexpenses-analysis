@@ -6,6 +6,18 @@ import { getAxeViolations } from "../../../../../tests/setup/axe.ts";
 import { UnlockScreen } from "./UnlockScreen.tsx";
 
 describe("UnlockScreen", () => {
+  it("offers an unchecked opt-in with a concise trusted-browser warning", async () => {
+    const user = userEvent.setup();
+    const onUnlock = vi.fn<(passphrase: string, remember?: boolean) => Promise<void>>();
+    render(<UnlockScreen blockedReason={null} error={null} onUnlock={onUnlock} phase="locked" />);
+    const remember = screen.getByRole("checkbox", { name: "Recordar en este dispositivo" });
+    expect(remember).not.toBeChecked();
+    expect(screen.getByText(/quien use este navegador podrá abrir la bóveda/iu)).toBeVisible();
+    await user.click(remember);
+    await user.type(screen.getByLabelText("Frase de desbloqueo"), "frase secreta");
+    await user.click(screen.getByRole("button", { name: "Abrir bóveda" }));
+    expect(onUnlock).toHaveBeenCalledWith("frase secreta", true);
+  });
   it("submits the phrase only to the handler and clears the input immediately", async () => {
     const user = userEvent.setup();
     let finish: (() => void) | undefined;

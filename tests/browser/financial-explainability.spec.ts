@@ -246,6 +246,10 @@ test("keeps the lock screen minimal and unlocks by keyboard after a generic fail
   await page.keyboard.press("Space");
   await expect(input).toHaveAttribute("type", "text");
   await page.keyboard.press("Tab");
+  const remember = page.getByRole("checkbox", { name: "Recordar en este dispositivo" });
+  await expect(remember).toBeFocused();
+  await expect(remember).not.toBeChecked();
+  await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Abrir bóveda", exact: true })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("alert")).toHaveText("No se pudo abrir la bóveda.");

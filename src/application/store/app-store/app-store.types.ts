@@ -19,10 +19,24 @@ export interface AppStoreStorage {
   setItem(name: string, value: string): void | Promise<void>;
 }
 
+export interface RememberedVaultStorage {
+  generation(): number;
+  isCurrent(generation: number): boolean;
+  captureFence(generation: number): Promise<{ readonly token: string | null } | null>;
+  read(generation: number): Promise<{
+    readonly digest: string;
+    readonly key: CryptoKey;
+    readonly fence: string | null;
+  } | null>;
+  save(generation: number, digest: string, key: CryptoKey, fence: string | null): Promise<boolean>;
+  revoke(): Promise<boolean>;
+}
+
 export interface AppStoreActions {
   clearFilters(): void;
   closeFilterDrawer(): void;
-  lock(): void;
+  lock(): Promise<boolean>;
+  receiveRevocation(): void;
   openFilterDrawer(): void;
   patchFilters(patch: Partial<FilterState>): void;
   reloadVault(): void;
@@ -32,13 +46,15 @@ export interface AppStoreActions {
   setGranularity(granularity: TimeGranularitySetting): void;
   setStatuses(statuses: FilterState["statuses"]): void;
   setTags(tags: readonly string[]): void;
-  unlock(passphrase: string): Promise<void>;
+  restoreRemembered(): Promise<void>;
+  unlock(passphrase: string, remember?: boolean): Promise<void>;
 }
 
 export interface AppStoreState {
   actions: AppStoreActions;
   analytics: AnalyticsDataset | null;
   error: string | null;
+  notice: string | null;
   filterDrawerOpen: boolean;
   /** In-memory signal for explicit filter resets; never persisted. */
   filterResetRevision: number;

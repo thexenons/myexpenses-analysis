@@ -3,16 +3,21 @@ import { isVaultDecryptionKey } from "../../domain/security/static-vault.ts";
 const DATABASE_NAME = "myexpenses-remembered-vault";
 const STORE_NAME = "key";
 const RECORD_ID = "current";
-const RECORD_VERSION = 1;
+const RECORD_VERSION = 2;
 const DEFAULT_TIMEOUT_MS = 1_500;
 
 export interface RememberedVaultKey {
   readonly digest: string;
   readonly key: CryptoKey;
+  readonly fence: string | null;
 }
 
 interface StoredKey extends RememberedVaultKey {
   readonly version: number;
+}
+
+interface FenceSnapshot {
+  readonly token: string | null;
 }
 
 function validDigest(value: unknown): value is string {
@@ -23,12 +28,32 @@ function validRecord(value: unknown): value is StoredKey {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Partial<StoredKey>;
   return candidate.version === RECORD_VERSION &&
-    validDigest(candidate.digest) && isVaultDecryptionKey(candidate.key);
+    validFence(candidate.fence) && validDigest(candidate.digest) &&
+    isVaultDecryptionKey(candidate.key);
+}
+
+function validFence(value: unknown): value is string | null {
+  return value === null || (typeof value === "string" && /^[a-f0-9-]{36}$/.test(value));
+}
+
+function fenceSnapshot(value: unknown): FenceSnapshot | null {
+  if (value === undefined) return { token: null };
+  if (typeof value !== "object" || value === null) return null;
+  const candidate = value as { version?: unknown; fence?: unknown };
+  if (candidate.version === 1) return { token: null };
+  return candidate.version === RECORD_VERSION && validFence(candidate.fence)
+    ? { token: candidate.fence }
+    : null;
+}
+
+function browserFactory(): IDBFactory | undefined {
+  try { return globalThis.indexedDB; }
+  catch { return undefined; }
 }
 
 /**
  * Origin-local best-effort storage. Capture a generation before async unlock;
- * revocation invalidates it synchronously and serializes deletion after writes.
+ * revocation invalidates it synchronously and serializes a keyless fence after writes.
  * Callers must await revoke before reporting a completed lock/navigation.
  */
 export class RememberedVaultKeyStorage {
@@ -37,7 +62,7 @@ export class RememberedVaultKeyStorage {
   private epoch = 0;
   private pending: Promise<void> = Promise.resolve();
 
-  constructor(factory: IDBFactory | undefined = globalThis.indexedDB, timeoutMs = DEFAULT_TIMEOUT_MS) {
+  constructor(factory: IDBFactory | undefined = browserFactory(), timeoutMs = DEFAULT_TIMEOUT_MS) {
     this.factory = factory;
     this.timeoutMs = timeoutMs;
   }
@@ -59,13 +84,26 @@ export class RememberedVaultKeyStorage {
         return this.completed(transaction, () => request.result as unknown);
       });
       return this.isCurrent(generation) && validRecord(value)
-        ? { digest: value.digest, key: value.key }
+        ? { digest: value.digest, key: value.key, fence: value.fence }
         : null;
     });
   }
 
-  async save(generation: number, digest: string, key: CryptoKey): Promise<boolean> {
+  async captureFence(generation: number): Promise<FenceSnapshot | null> {
+    return this.serialized(async () => {
+      if (!this.isCurrent(generation)) return null;
+      const value = await this.withDatabase(async (db) => {
+        const transaction = db.transaction(STORE_NAME, "readonly");
+        const request = transaction.objectStore(STORE_NAME).get(RECORD_ID);
+        return this.completed(transaction, () => request.result as unknown);
+      });
+      return this.isCurrent(generation) ? fenceSnapshot(value) : null;
+    });
+  }
+
+  async save(generation: number, digest: string, key: CryptoKey, fence: string | null = null): Promise<boolean> {
     if (!validDigest(digest) || !isVaultDecryptionKey(key)) return false;
+    if (!validFence(fence)) return false;
     return this.serialized(async () => {
       if (!this.isCurrent(generation)) return false;
       const saved = await this.withDatabase(async (db) => {
@@ -75,13 +113,13 @@ export class RememberedVaultKeyStorage {
         let permitted = true;
         existing.onsuccess = () => {
           try {
-            const value = existing.result as { version?: unknown } | undefined;
-            if (value && value.version !== RECORD_VERSION && value.version !== undefined) {
-              permitted = false; // Do not overwrite an unknown future schema.
+            const snapshot = fenceSnapshot(existing.result);
+            if (snapshot === null || snapshot.token !== fence) {
+              permitted = false; // A later lock or unknown schema fences this save.
               return;
             }
             if (!this.isCurrent(generation)) return;
-            store.put({ version: RECORD_VERSION, digest, key } satisfies StoredKey, RECORD_ID);
+            store.put({ version: RECORD_VERSION, digest, key, fence } satisfies StoredKey, RECORD_ID);
           } catch {
             permitted = false;
           }
@@ -98,7 +136,10 @@ export class RememberedVaultKeyStorage {
     return this.serialized(async () => {
       const deleted = await this.withDatabase(async (db) => {
         const transaction = db.transaction(STORE_NAME, "readwrite");
-        transaction.objectStore(STORE_NAME).delete(RECORD_ID);
+        transaction.objectStore(STORE_NAME).put(
+          { version: RECORD_VERSION, fence: crypto.randomUUID() },
+          RECORD_ID,
+        );
         await this.completed(transaction, () => undefined);
         return true;
       });

@@ -145,18 +145,18 @@ async function readVaultEnvelopeText(
 
 async function decryptVaultResponse(
   envelope: StaticVaultEnvelopeV1,
-  passphrase: string,
+  credential: string | CryptoKey,
   cryptoProvider: StaticVaultCrypto,
   security: StaticVaultModule,
   signal?: AbortSignal,
 ) {
   abortIfNeeded(signal);
-  const compressed = await security.decryptCompressedDataset(
-    envelope,
-    passphrase,
-    cryptoProvider,
-    { allowEmptyPassphraseForDevelopment: import.meta.env.DEV },
-  );
+  const compressed = typeof credential === "string"
+    ? await security.decryptCompressedDataset(
+      envelope, credential, cryptoProvider,
+      { allowEmptyPassphraseForDevelopment: import.meta.env.DEV },
+    )
+    : await security.decryptCompressedDatasetWithKey(envelope, credential, cryptoProvider);
   try {
     abortIfNeeded(signal);
     const json = await readDecompressedText(compressed, signal);
@@ -179,12 +179,7 @@ export function createEncryptedHttpDatasetRepository(
   let cachedEnvelope: StaticVaultEnvelopeV1 | undefined;
   let cacheGeneration = 0;
 
-  return {
-    invalidateCachedVault() {
-      cacheGeneration += 1;
-      cachedEnvelope = undefined;
-    },
-    async load(passphrase, signal) {
+  async function readEnvelope(signal?: AbortSignal, fresh = false) {
       abortIfNeeded(signal);
       const generation = cacheGeneration;
       const fetcher = runtime.fetch ?? globalThis.fetch;
@@ -208,20 +203,9 @@ export function createEncryptedHttpDatasetRepository(
           );
         },
       );
-      if (cachedEnvelope !== undefined) {
+      if (!fresh && cachedEnvelope !== undefined) {
         const security = await securityPromise;
-        const dataset = await decryptVaultResponse(
-          cachedEnvelope,
-          passphrase,
-          cryptoProvider,
-          security,
-          signal,
-        );
-        abortIfNeeded(signal);
-        if (generation !== cacheGeneration) {
-          throw new DOMException("The vault source was invalidated", "AbortError");
-        }
-        return dataset;
+        return { envelope: cachedEnvelope, security, cryptoProvider, generation };
       }
       const responsePromise = fetcher(runtime.endpointUrl ?? endpointUrl(), {
         cache: "no-store",
@@ -273,17 +257,45 @@ export function createEncryptedHttpDatasetRepository(
         // response too, so retries do not leave unused downloads open.
         await response.body?.cancel().catch(() => undefined);
       }
-      const dataset = await decryptVaultResponse(
-        cachedEnvelope,
-        passphrase,
-        cryptoProvider,
-        security,
-        signal,
-      );
+      return { envelope: cachedEnvelope!, security, cryptoProvider, generation };
+  }
+
+  function assertCurrent(generation: number, signal?: AbortSignal) {
       abortIfNeeded(signal);
       if (generation !== cacheGeneration) {
         throw new DOMException("The vault source was invalidated", "AbortError");
       }
+  }
+
+  return {
+    invalidateCachedVault() {
+      cacheGeneration += 1;
+      cachedEnvelope = undefined;
+    },
+    async load(passphrase, signal) {
+      const { envelope, security, cryptoProvider, generation } = await readEnvelope(signal);
+      const dataset = await decryptVaultResponse(envelope, passphrase, cryptoProvider, security, signal);
+      assertCurrent(generation, signal);
+      return dataset;
+    },
+    async loadForRemembering(passphrase, signal) {
+      const { envelope, security, cryptoProvider, generation } = await readEnvelope(signal);
+      const key = await security.deriveVaultDecryptionKey(
+        envelope, passphrase, cryptoProvider,
+        { allowEmptyPassphraseForDevelopment: import.meta.env.DEV },
+      );
+      const dataset = await decryptVaultResponse(envelope, key, cryptoProvider, security, signal);
+      const digest = await security.staticVaultEnvelopeDigest(envelope, cryptoProvider);
+      assertCurrent(generation, signal);
+      return { dataset, digest, key };
+    },
+    async loadRemembered(key, digest, signal) {
+      const { envelope, security, cryptoProvider, generation } = await readEnvelope(signal, true);
+      const currentDigest = await security.staticVaultEnvelopeDigest(envelope, cryptoProvider);
+      assertCurrent(generation, signal);
+      if (currentDigest !== digest) return null;
+      const dataset = await decryptVaultResponse(envelope, key, cryptoProvider, security, signal);
+      assertCurrent(generation, signal);
       return dataset;
     },
   };

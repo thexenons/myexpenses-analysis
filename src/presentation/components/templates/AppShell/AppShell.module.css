@@ -16,6 +16,17 @@
     margin-inline: auto;
   }
 
+  .notice {
+    display: block;
+    padding: 0.7rem 1rem;
+    margin: 0.75rem clamp(1rem, 2.1vw, 2rem) 0;
+    color: var(--expense);
+    background: var(--surface-bright);
+    border: 1px solid var(--line-dark);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+  }
+
   .skipLink {
     position: fixed;
     top: 0.65rem;

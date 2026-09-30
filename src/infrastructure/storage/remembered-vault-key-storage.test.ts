@@ -52,13 +52,29 @@ async function decryptionKey(): Promise<CryptoKey> {
 }
 
 describe("remembered vault key storage", () => {
+  it("does not read a blocked IndexedDB getter while constructing the app", async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "indexedDB");
+    Object.defineProperty(globalThis, "indexedDB", {
+      configurable: true,
+      get: () => { throw new DOMException("Blocked IndexedDB", "SecurityError"); },
+    });
+    try {
+      const storage = new RememberedVaultKeyStorage();
+      expect(await storage.read(storage.generation())).toBeNull();
+      expect(await storage.revoke()).toBe(false);
+    } finally {
+      if (descriptor) Object.defineProperty(globalThis, "indexedDB", descriptor);
+      else Reflect.deleteProperty(globalThis, "indexedDB");
+    }
+  });
+
   it("stores one decrypt-only key and exact digest, then revokes it", async () => {
     const fake = fakeDatabase();
     const storage = new RememberedVaultKeyStorage(fake.factory);
     const generation = storage.generation();
     const storedKey = await decryptionKey();
     expect(await storage.save(generation, digest, storedKey)).toBe(true);
-    expect(await storage.read(generation)).toEqual({ digest, key: storedKey });
+    expect(await storage.read(generation)).toEqual({ digest, key: storedKey, fence: null });
     expect(fake.records.size).toBe(1);
     expect(await storage.revoke()).toBe(true);
     expect(await storage.read(storage.generation())).toBeNull();
@@ -73,16 +89,17 @@ describe("remembered vault key storage", () => {
     expect(await saving).toBe(false);
     expect(await revoking).toBe(true);
     expect(await storage.read(generation)).toBeNull();
-    expect(fake.records.size).toBe(0);
+    expect(fake.records.size).toBe(1);
+    expect(fake.records.get("current")).not.toHaveProperty("key");
   });
 
   it("rejects invalid/future records and leaves future records untouched", async () => {
     const fake = fakeDatabase();
     const storage = new RememberedVaultKeyStorage(fake.factory);
-    fake.records.set("current", { version: 2, digest, key: await decryptionKey() });
+    fake.records.set("current", { version: 3, digest, key: await decryptionKey() });
     expect(await storage.read(storage.generation())).toBeNull();
     expect(await storage.save(storage.generation(), digest, await decryptionKey())).toBe(false);
-    expect((fake.records.get("current") as { version: number }).version).toBe(2);
+    expect((fake.records.get("current") as { version: number }).version).toBe(3);
     fake.records.set("current", { version: 1, digest, key: "not a key" });
     expect(await storage.read(storage.generation())).toBeNull();
     fake.records.set("current", {
@@ -100,6 +117,18 @@ describe("remembered vault key storage", () => {
     expect(await storage.read(storage.generation())).toBeNull();
     expect(await storage.save(storage.generation(), digest, await decryptionKey())).toBe(false);
     expect(await storage.revoke()).toBe(false);
+  });
+
+  it("fences a pending save from another tab after a completed revocation", async () => {
+    const fake = fakeDatabase();
+    const firstTab = new RememberedVaultKeyStorage(fake.factory);
+    const secondTab = new RememberedVaultKeyStorage(fake.factory);
+    const staleFence = await secondTab.captureFence(secondTab.generation());
+    expect(staleFence).toEqual({ token: null });
+    expect(await firstTab.revoke()).toBe(true);
+    expect(await secondTab.save(secondTab.generation(), digest, await decryptionKey(), staleFence!.token)).toBe(false);
+    expect(await firstTab.read(firstTab.generation())).toBeNull();
+    expect(await secondTab.captureFence(secondTab.generation())).not.toEqual(staleFence);
   });
 
   it("bounds a stalled open and closes a database that arrives after timeout", async () => {

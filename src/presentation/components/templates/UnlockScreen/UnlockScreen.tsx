@@ -8,13 +8,14 @@ export function UnlockScreen({
   allowEmptyPassphrase = false,
   blockedReason,
   error,
+  notice,
   onUnlock,
   onReloadVault,
   phase,
 }: UnlockScreenProps) {
   const errorId = useId();
   const inputId = useId();
-  const { inputRef, showPassphrase, submit, togglePassphrase } =
+  const { inputRef, remember, setRemember, showPassphrase, submit, togglePassphrase } =
     useUnlockScreen(onUnlock, phase, allowEmptyPassphrase);
   const pending = phase === "unlocking";
   const blocked = blockedReason !== null;
@@ -40,6 +41,8 @@ export function UnlockScreen({
               ) : null}
             </div>
           ) : null}
+
+          {notice ? <p className={styles.error} role="alert">{notice}</p> : null}
 
           <form className={styles.form} onSubmit={submit}>
             <div className={styles.field}>
@@ -70,6 +73,16 @@ export function UnlockScreen({
                 </button>
               </span>
             </div>
+            <label className={styles.remember}>
+              <input
+                checked={remember}
+                disabled={pending || blocked}
+                onChange={(event) => setRemember(event.currentTarget.checked)}
+                type="checkbox"
+              />
+              <span>Recordar en este dispositivo</span>
+            </label>
+            <p className={styles.rememberNote}>Quien use este navegador podrá abrir la bóveda sin la frase.</p>
             <button className={styles.submit} disabled={pending || blocked} type="submit">
               <span aria-hidden="true" className={styles.submitMark} />
               {pending ? "Desbloqueando…" : "Abrir bóveda"}

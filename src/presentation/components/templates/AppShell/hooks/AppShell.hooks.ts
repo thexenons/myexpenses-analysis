@@ -69,11 +69,12 @@ function useAutomaticLock(onLock: () => void): void {
 export function useAppShell() {
   const mainRef = useRef<HTMLElement>(null)
   const onLock = useAppStore((state) => state.actions.lock)
+  const notice = useAppStore((state) => state.notice)
   useAutomaticLock(onLock)
 
   useEffect(() => {
     mainRef.current?.focus({ preventScroll: true })
   }, [])
 
-  return { mainRef }
+  return { mainRef, notice }
 }

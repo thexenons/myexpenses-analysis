@@ -71,7 +71,7 @@ describe("useFilteredAnalytics", () => {
     expect(screen.getAllByTestId("probe")[0]).toHaveAttribute("data-budget-statuses", "");
   });
 
-  it("does not reuse a derivation for a new dataset after locking", () => {
+  it("does not reuse a derivation for a new dataset after locking", async () => {
     const store = createAppStore({ load: vi.fn<DatasetRepository["load"]>() }, window.localStorage);
     store.setState({ analytics: EMPTY_ANALYTICS, loadPhase: "ready" });
     applyFiltersSpy.mockClear();
@@ -79,7 +79,7 @@ describe("useFilteredAnalytics", () => {
     render(<AppStoreProvider store={store}><FilteredAnalyticsProbe /><FilteredAnalyticsProbe /></AppStoreProvider>);
     expect(applyFiltersSpy).toHaveBeenCalledOnce();
 
-    act(() => store.getState().actions.lock());
+    await act(async () => { await store.getState().actions.lock(); });
     expect(screen.getAllByTestId("probe")[0]).toHaveTextContent("missing");
     expect(applyFiltersSpy).toHaveBeenCalledOnce();
 

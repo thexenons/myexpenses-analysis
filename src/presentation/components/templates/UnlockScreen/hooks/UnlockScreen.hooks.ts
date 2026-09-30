@@ -10,6 +10,7 @@ export function useUnlockScreen(
 ) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showPassphrase, setShowPassphrase] = useState(false);
+  const [remember, setRemember] = useState(false);
 
   useEffect(() => {
     if (phase === "locked" || phase === "error") {
@@ -35,7 +36,8 @@ export function useUnlockScreen(
     // The phrase leaves the DOM immediately and only survives in this handler.
     input.value = "";
     try {
-      await onUnlock(passphrase);
+      if (remember) await onUnlock(passphrase, true);
+      else await onUnlock(passphrase);
     } finally {
       if (inputRef.current !== null) {
         inputRef.current.value = "";
@@ -46,6 +48,8 @@ export function useUnlockScreen(
 
   return {
     inputRef,
+    remember,
+    setRemember,
     showPassphrase,
     submit,
     togglePassphrase,

@@ -11,6 +11,11 @@ import type { AppStorePersistedState } from "./app-store.types.ts";
 import type { AppStoreEnvironment } from "./app-store.types.ts";
 
 export const APP_STORE_STORAGE_NAME = "myexpenses-analysis:ui:v1";
+export const REMEMBERED_LOCK_MARKER = "myexpenses-analysis:remembered-lock:v1";
+export const REMEMBERED_LOCK_CHANNEL = "myexpenses-analysis:remembered-lock";
+/** Non-secret per-tab identifier to ignore this tab's own BroadcastChannel echo. */
+export const REMEMBERED_LOCK_SENDER = globalThis.crypto?.randomUUID?.() ??
+  `${Date.now()}-${Math.random()}`;
 export const APP_STORE_STORAGE_VERSION = 5;
 export const DEFAULT_APP_SCOPE: AnalyticsScope = "realCashFlow";
 export const VAULT_UNLOCK_ERROR_MESSAGE =

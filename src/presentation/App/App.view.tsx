@@ -9,6 +9,7 @@ import type { AppViewProps } from "./App.types.ts";
 export function AppView({
   allowEmptyPassphrase,
   error,
+  notice,
   loadPhase,
   onUnlock,
   onReloadVault,
@@ -20,6 +21,7 @@ export function AppView({
         allowEmptyPassphrase={allowEmptyPassphrase}
         blockedReason={unlockBlockedReason}
         error={error}
+        notice={notice}
         onUnlock={onUnlock}
         onReloadVault={onReloadVault}
         phase={loadPhase}

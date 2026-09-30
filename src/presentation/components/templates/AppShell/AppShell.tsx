@@ -6,7 +6,7 @@ import styles from "./AppShell.module.css"
 import type { AppShellProps } from "./AppShell.types"
 
 export function AppShell({ children }: AppShellProps) {
-  const { mainRef } = useAppShell()
+  const { mainRef, notice } = useAppShell()
 
   return (
     <div className={styles.shell}>
@@ -16,6 +16,7 @@ export function AppShell({ children }: AppShellProps) {
       <Sidebar />
       <div className={styles.workspace}>
         <GlobalFilters />
+        {notice ? <output className={styles.notice}>{notice}</output> : null}
         <main
           className={styles.main}
           id="main-content"

@@ -99,6 +99,24 @@ beforeAll(async () => {
 });
 
 describe("encryptedHttpDatasetRepository", () => {
+  it("derives only a decrypt key after validating the dataset and binds restore to the fetched envelope", async () => {
+    const changed = await encryptCompressedDataset(
+      await gzip(JSON.stringify(datasetFixture())),
+      PASSPHRASE,
+      globalThis.crypto,
+    );
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(envelopeResponse())
+      .mockResolvedValueOnce(envelopeResponse(changed));
+    const repository = createEncryptedHttpDatasetRepository({ crypto: globalThis.crypto, fetch: fetchMock });
+    const remembered = await repository.loadForRemembering!(PASSPHRASE);
+    expect(remembered.dataset.version).toBe(1);
+    expect(remembered.key.extractable).toBe(false);
+    expect(remembered.key.usages).toEqual(["decrypt"]);
+    repository.invalidateCachedVault?.();
+    await expect(repository.loadRemembered!(remembered.key, remembered.digest)).resolves.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
   it("fetches only the static vault and returns a strictly validated dataset", async () => {
     const fetchMock = vi.fn<typeof fetch>(
       async (_input: string | URL | Request, _init?: RequestInit) =>

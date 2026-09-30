@@ -13,7 +13,7 @@ import {
   VAULT_UNLOCK_ERROR_MESSAGE,
 } from "./app-store.helpers.ts";
 import { createAppStore } from "./app-store.ts";
-import type { AppStoreStorage } from "./app-store.types.ts";
+import type { AppStoreStorage, RememberedVaultStorage } from "./app-store.types.ts";
 
 const SECURE_ENVIRONMENT = {
   hostname: "finanzas.example",
@@ -175,6 +175,190 @@ function createSecureStore(repository: DatasetRepository) {
 
 describe("AppStore", () => {
   beforeEach(() => window.localStorage.clear());
+
+  it("remembers only an opted-in validated unlock and restores it on a fresh store", async () => {
+    const key = await crypto.subtle.importKey("raw", new Uint8Array(32), "AES-GCM", false, ["decrypt"]);
+    const digest = "c".repeat(64);
+    let stored: { digest: string; key: CryptoKey; fence: string | null } | null = null;
+    const remembered = {
+      generation: () => 0,
+      isCurrent: () => true,
+      captureFence: async () => ({ token: null }),
+      read: async () => stored,
+      save: vi.fn<RememberedVaultStorage["save"]>(async (_generation, value, vaultKey) => {
+        stored = { digest: value, key: vaultKey, fence: null };
+        return true;
+      }),
+      revoke: vi.fn<RememberedVaultStorage["revoke"]>(async () => { stored = null; return true; }),
+    };
+    const repository: DatasetRepository = {
+      load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetFixture()),
+      loadForRemembering: vi.fn<NonNullable<DatasetRepository["loadForRemembering"]>>(async () => ({ dataset: datasetFixture(), digest, key })),
+      loadRemembered: vi.fn<NonNullable<DatasetRepository["loadRemembered"]>>(async () => datasetFixture()),
+    };
+    const first = createAppStore(repository, window.localStorage, SECURE_ENVIRONMENT, remembered);
+    await first.getState().actions.unlock("correct phrase", true);
+    expect(first.getState().loadPhase).toBe("ready");
+    expect(remembered.save).toHaveBeenCalledWith(0, digest, key, null);
+    const second = createAppStore(repository, window.localStorage, SECURE_ENVIRONMENT, remembered);
+    await second.getState().actions.restoreRemembered();
+    expect(second.getState().loadPhase).toBe("ready");
+    expect(repository.loadRemembered).toHaveBeenCalledWith(key, digest, expect.any(AbortSignal));
+    await second.getState().actions.lock();
+    expect(second.getState().analytics).toBeNull();
+    expect(remembered.revoke).toHaveBeenCalledOnce();
+  });
+
+  it("keeps default unlock manual and never saves a key after a failed password", async () => {
+    const remembered = {
+      generation: () => 0, isCurrent: () => true,
+      captureFence: vi.fn<RememberedVaultStorage["captureFence"]>(async () => ({ token: null })),
+      read: vi.fn<RememberedVaultStorage["read"]>(async () => null),
+      save: vi.fn<RememberedVaultStorage["save"]>(async () => true), revoke: vi.fn<RememberedVaultStorage["revoke"]>(async () => true),
+    };
+    const repository: DatasetRepository = {
+      load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetFixture()),
+      loadForRemembering: vi.fn<NonNullable<DatasetRepository["loadForRemembering"]>>(async () => {
+        throw new Error("wrong password");
+      }),
+      loadRemembered: vi.fn<NonNullable<DatasetRepository["loadRemembered"]>>(async () => datasetFixture()),
+    };
+    const store = createAppStore(repository, window.localStorage, SECURE_ENVIRONMENT, remembered);
+    await store.getState().actions.restoreRemembered();
+    expect(repository.loadRemembered).not.toHaveBeenCalled();
+    await store.getState().actions.unlock("manual phrase");
+    expect(store.getState().loadPhase).toBe("ready");
+    expect(remembered.save).not.toHaveBeenCalled();
+    await store.getState().actions.unlock("wrong phrase", true);
+    expect(store.getState().loadPhase).toBe("error");
+    expect(remembered.save).not.toHaveBeenCalled();
+  });
+
+  it("keeps analytics usable but reports an unavailable remember store", async () => {
+    const key = await crypto.subtle.importKey("raw", new Uint8Array(32), "AES-GCM", false, ["decrypt"]);
+    const remembered = {
+      generation: () => 0, isCurrent: () => true,
+      captureFence: vi.fn<RememberedVaultStorage["captureFence"]>(async () => null), read: vi.fn<RememberedVaultStorage["read"]>(async () => null),
+      save: vi.fn<RememberedVaultStorage["save"]>(async () => true), revoke: vi.fn<RememberedVaultStorage["revoke"]>(async () => true),
+    };
+    const repository: DatasetRepository = {
+      load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetFixture()),
+      loadForRemembering: vi.fn<NonNullable<DatasetRepository["loadForRemembering"]>>(async () => ({ dataset: datasetFixture(), digest: "a".repeat(64), key })),
+    };
+    const store = createAppStore(repository, window.localStorage, SECURE_ENVIRONMENT, remembered);
+    await store.getState().actions.unlock("valid phrase", true);
+    expect(store.getState().loadPhase).toBe("ready");
+    expect(store.getState().analytics).not.toBeNull();
+    expect(store.getState().notice).toMatch(/no se pudo recordar/iu);
+    expect(remembered.save).not.toHaveBeenCalled();
+  });
+
+  it("keeps a validated manual session when remembered storage rejects", async () => {
+    const key = await crypto.subtle.importKey("raw", new Uint8Array(32), "AES-GCM", false, ["decrypt"]);
+    const remembered: RememberedVaultStorage = {
+      generation: () => 0, isCurrent: () => true,
+      captureFence: async () => ({ token: null }), read: async () => null,
+      save: async () => { throw new Error("storage failed"); },
+      revoke: async () => true,
+    };
+    const repository: DatasetRepository = {
+      load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetFixture()),
+      loadForRemembering: async () => ({ dataset: datasetFixture(), digest: "a".repeat(64), key }),
+    };
+    const store = createAppStore(repository, window.localStorage, SECURE_ENVIRONMENT, remembered);
+    await store.getState().actions.unlock("valid phrase", true);
+    expect(store.getState().loadPhase).toBe("ready");
+    expect(store.getState().analytics).not.toBeNull();
+    expect(store.getState().notice).toMatch(/no se pudo recordar/iu);
+  });
+
+  it("fails closed on a changed vault and cannot reopen after a failed revoke", async () => {
+    const key = await crypto.subtle.importKey("raw", new Uint8Array(32), "AES-GCM", false, ["decrypt"]);
+    const remembered = {
+      generation: () => 0, isCurrent: () => true,
+      captureFence: vi.fn<RememberedVaultStorage["captureFence"]>(async () => ({ token: null })),
+      read: vi.fn<RememberedVaultStorage["read"]>(async () => ({ digest: "a".repeat(64), key, fence: null })),
+      save: vi.fn<RememberedVaultStorage["save"]>(async () => true), revoke: vi.fn<RememberedVaultStorage["revoke"]>(async () => false),
+    };
+    const repository: DatasetRepository = {
+      load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetFixture()),
+      loadRemembered: vi.fn<NonNullable<DatasetRepository["loadRemembered"]>>(async () => null),
+    };
+    const store = createAppStore(repository, window.localStorage, SECURE_ENVIRONMENT, remembered);
+    await store.getState().actions.restoreRemembered();
+    expect(store.getState().loadPhase).toBe("locked");
+    expect(store.getState().analytics).toBeNull();
+    expect(repository.loadRemembered).toHaveBeenCalledOnce();
+    expect(await store.getState().actions.lock()).toBe(false);
+    expect(store.getState().notice).toMatch(/no se pudo confirmar/iu);
+    const next = createAppStore(repository, window.localStorage, SECURE_ENVIRONMENT, remembered);
+    await next.getState().actions.restoreRemembered();
+    expect(repository.loadRemembered).toHaveBeenCalledOnce();
+    expect(next.getState().loadPhase).toBe("locked");
+  });
+
+  it("cannot commit a remembered restore after lock aborts it", async () => {
+    const key = await crypto.subtle.importKey("raw", new Uint8Array(32), "AES-GCM", false, ["decrypt"]);
+    let finish: ((dataset: BackupDatasetV1) => void) | undefined;
+    const remembered = {
+      generation: () => 0, isCurrent: () => true,
+      captureFence: vi.fn<RememberedVaultStorage["captureFence"]>(async () => ({ token: null })),
+      read: vi.fn<RememberedVaultStorage["read"]>(async () => ({ digest: "a".repeat(64), key, fence: null })),
+      save: vi.fn<RememberedVaultStorage["save"]>(async () => true), revoke: vi.fn<RememberedVaultStorage["revoke"]>(async () => true),
+    };
+    const repository: DatasetRepository = {
+      load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetFixture()),
+      loadRemembered: vi.fn<NonNullable<DatasetRepository["loadRemembered"]>>(async () => await new Promise<BackupDatasetV1>((resolve) => { finish = resolve; })),
+    };
+    const store = createAppStore(repository, window.localStorage, SECURE_ENVIRONMENT, remembered);
+    const restoring = store.getState().actions.restoreRemembered();
+    await vi.waitFor(() => expect(repository.loadRemembered).toHaveBeenCalledOnce());
+    const locking = store.getState().actions.lock();
+    expect(store.getState().analytics).toBeNull();
+    finish?.(datasetFixture());
+    await Promise.all([restoring, locking]);
+    expect(store.getState().loadPhase).toBe("locked");
+    expect(store.getState().analytics).toBeNull();
+  });
+
+  it("does not publish a remembered restore revoked while filter preferences hydrate", async () => {
+    const key = await crypto.subtle.importKey("raw", new Uint8Array(32), "AES-GCM", false, ["decrypt"]);
+    let fence: string | null = null;
+    let hasKey = true;
+    const remembered = (): RememberedVaultStorage => ({
+      generation: () => 0,
+      isCurrent: () => true,
+      captureFence: async () => ({ token: fence }),
+      read: async () => hasKey ? { digest: "a".repeat(64), key, fence } : null,
+      save: async () => true,
+      revoke: async () => { hasKey = false; fence = crypto.randomUUID(); return true; },
+    });
+    let reached!: () => void;
+    let release!: (value: string | null) => void;
+    const readingPreferences = new Promise<void>((resolve) => { reached = resolve; });
+    const pendingPreferences = new Promise<string | null>((resolve) => { release = resolve; });
+    const delayedStorage: AppStoreStorage = {
+      getItem: (name) => name === FILTER_PREFERENCES_NAME
+        ? (reached(), pendingPreferences)
+        : window.localStorage.getItem(name),
+      setItem: (name, value) => window.localStorage.setItem(name, value),
+      removeItem: (name) => window.localStorage.removeItem(name),
+    };
+    const repository: DatasetRepository = {
+      load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetFixture()),
+      loadRemembered: vi.fn<NonNullable<DatasetRepository["loadRemembered"]>>().mockResolvedValue(datasetFixture()),
+    };
+    const peer = createAppStore(repository, window.localStorage, SECURE_ENVIRONMENT, remembered());
+    const restoring = createAppStore(repository, delayedStorage, SECURE_ENVIRONMENT, remembered());
+    const pendingRestore = restoring.getState().actions.restoreRemembered();
+    await readingPreferences;
+    expect(restoring.getState().loadPhase).toBe("unlocking");
+    expect(await peer.getState().actions.lock()).toBe(true);
+    release(null);
+    await pendingRestore;
+    expect(restoring.getState().loadPhase).toBe("locked");
+    expect(restoring.getState().analytics).toBeNull();
+  });
 
   it("starts locked and does not request data before an explicit unlock", async () => {
     const repository: DatasetRepository = {
