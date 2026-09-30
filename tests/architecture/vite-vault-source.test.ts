@@ -4,13 +4,16 @@ import {
   mkdtemp,
   open,
   rm,
+  stat,
   symlink,
+  utimes,
   writeFile,
 } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { setTimeout as delay } from "node:timers/promises";
 
 import {
   encryptCompressedDataset,
@@ -67,6 +70,67 @@ test("Vite validates and caches only a bounded regular vault file", async () => 
       readValidatedVaultFile(oversizedPath),
       /vault is invalid/iu,
     );
+  } finally {
+    await rm(directory, { force: true, recursive: true });
+  }
+});
+
+test("Vite reloads an in-place vault replacement despite preserved size and modification time", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "vite-vault-replacement-test-"));
+  const vaultPath = join(directory, "vault.json");
+  const mtime = new Date("2020-01-01T00:00:00.000Z");
+  try {
+    const original = structuralVaultFixture();
+    const replacement = original.replace('"ciphertext":"A', '"ciphertext":"B');
+    assert.equal(replacement.length, original.length);
+    await writeFile(vaultPath, original, "utf8");
+    await utimes(vaultPath, mtime, mtime);
+    const first = await readValidatedVaultFile(vaultPath);
+    assert.equal(await readValidatedVaultFile(vaultPath), first);
+    const before = await stat(vaultPath);
+
+    await delay(20);
+    await writeFile(vaultPath, replacement, "utf8");
+    await utimes(vaultPath, mtime, mtime);
+    const after = await stat(vaultPath);
+    assert.deepEqual(
+      [after.dev, after.ino, after.mtimeMs, after.size],
+      [before.dev, before.ino, before.mtimeMs, before.size],
+    );
+    assert.notEqual(after.ctimeMs, before.ctimeMs);
+
+    const second = await readValidatedVaultFile(vaultPath);
+    assert.notEqual(second, first);
+    assert.equal(second.toString("utf8"), replacement);
+  } finally {
+    await rm(directory, { force: true, recursive: true });
+  }
+});
+
+test("Vite rejects an invalid in-place vault replacement instead of serving cached bytes", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "vite-vault-invalid-replacement-test-"));
+  const vaultPath = join(directory, "vault.json");
+  const mtime = new Date("2020-01-01T00:00:00.000Z");
+  try {
+    const original = structuralVaultFixture();
+    const invalid = original.replace('"version":1', '"version":2');
+    assert.equal(invalid.length, original.length);
+    await writeFile(vaultPath, original, "utf8");
+    await utimes(vaultPath, mtime, mtime);
+    await readValidatedVaultFile(vaultPath);
+    const before = await stat(vaultPath);
+
+    await delay(20);
+    await writeFile(vaultPath, invalid, "utf8");
+    await utimes(vaultPath, mtime, mtime);
+    const after = await stat(vaultPath);
+    assert.deepEqual(
+      [after.dev, after.ino, after.mtimeMs, after.size],
+      [before.dev, before.ino, before.mtimeMs, before.size],
+    );
+    assert.notEqual(after.ctimeMs, before.ctimeMs);
+
+    await assert.rejects(readValidatedVaultFile(vaultPath), /vault is invalid/iu);
   } finally {
     await rm(directory, { force: true, recursive: true });
   }

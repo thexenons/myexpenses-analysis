@@ -32,6 +32,7 @@ const dataFileByRoute = new Map<string, DataFile>(
 );
 
 interface CachedVaultSource {
+  readonly changedAt: number;
   readonly device: number;
   readonly inode: number;
   readonly modifiedAt: number;
@@ -71,6 +72,7 @@ export async function readValidatedVaultFile(
     cachedVaultSource !== undefined &&
     cachedVaultSource.device === pathStat.dev &&
     cachedVaultSource.inode === pathStat.ino &&
+    cachedVaultSource.changedAt === pathStat.ctimeMs &&
     cachedVaultSource.modifiedAt === pathStat.mtimeMs &&
     cachedVaultSource.size === pathStat.size
   ) {
@@ -109,6 +111,7 @@ export async function readValidatedVaultFile(
     const json = new TextDecoder("utf-8", { fatal: true }).decode(source);
     parseStaticVaultEnvelopeJson(json);
     cachedVaultSource = {
+      changedAt: fileStat.ctimeMs,
       device: fileStat.dev,
       inode: fileStat.ino,
       modifiedAt: fileStat.mtimeMs,

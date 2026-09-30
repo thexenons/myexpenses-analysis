@@ -32,7 +32,7 @@ No dependency upgrades, deployments or remote operations are part of this iterat
   Acceptance: equivalent consumers calculate once; changed inputs recalculate;
   locked/new datasets never reuse the previous dataset's result; existing outputs
   and presentation-only VOID handling remain unchanged.
-- [ ] T2 — Include change time in the validated development vault cache identity.
+- [x] T2 — Include change time in the validated development vault cache identity.
   Acceptance: an in-place, equal-length overwrite with restored modification time
   returns newly validated bytes; unchanged files can reuse the cache; invalid new
   content never returns an earlier valid cached response.
@@ -57,5 +57,26 @@ Observed RED: three added hook regressions failed from duplicate computations.
 GREEN: focused Vitest 8/8, full UI 368/368 (84 files), all three TypeScript configs,
 Oxlint (zero diagnostics), and diff check passed. Full UI emitted AppShell `act`
 warnings without failing. Parent independently repeated focused Vitest: 8/8.
-Implementation/test delta: 83 additions, 6 deletions; commit assessment pending.
-Next: commit and assess T1, then implement T2 and run isolated final verification.
+T1 commit: `d7f5494` (150 authored changed lines including this document).
+Assessment from `e65a364`: medium, `review_due: false`, `under_budget`; boundary
+remains `e65a364`. No native approval is claimed.
+
+T2 adds `ctimeMs` to the existing cache identity. Its two new regressions first
+failed (stale response and missing invalid-file rejection), then passed with the
+fix. Focused Node suite: 5/5; parent repeated 5/5. All three TypeScript configs,
+Oxlint and diff checks passed. Source/test delta: 67 additions; commit pending.
+
+Independent final verification against T1 plus staged T2:
+- Full UI: 368 passed across 84 files; 44 AppShell `act` environment warnings.
+- Full Node: 283 passed; 3 optional private-data reference checks skipped.
+- Full browser: 90 passed; 3 intentional viewport-specific skips.
+- Three TypeScript projects, lint (zero diagnostics), staged/unstaged diff checks
+  passed. No standalone deployment or real-data verification was run.
+- UI/Node/type/lint ran in a 552-file source-only snapshot; browser used the
+  existing 551-file isolated harness. Source hashes/modes, index and unrelated
+  user edits were confirmed unchanged before/after verification.
+- Evidence: `/tmp/technical-reliability-verify-0y1x4a76/commands.json`, `result.json`
+  and `logs/`; source-manifest SHA-256
+  `d3e63d807feeb2ece28f5404ce3b05c4e77f1700424e1626cf1b15b155c48333`.
+
+Next: commit and assess T2, record the outcome, then hand off the local iteration.
