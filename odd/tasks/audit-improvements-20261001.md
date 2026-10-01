@@ -4,6 +4,10 @@ Implement the accepted 2026-10-01 audit in small independently verified units.
 Fix misleading budget subset interpretation first, then improve budget pacing,
 operational resilience and the visibility of useful financial statistics.
 
+Status: A1–A10 are complete. All implementation commits are published on main,
+through `cadde6a`; the final recovery notes are a passive documentation unit.
+The completion record below supersedes earlier pending-state snapshots.
+
 ## Authority and constraints
 
 - User authorized all proposed audit improvements, with linear budget-to-date.
@@ -556,9 +560,30 @@ checks trigger the mandatory writer/verification routing rules.
   browser matrix and deployment CSS-order/cache regression (four files, 81
   additions against `67fcb8c`). Financial arithmetic and dataset files unchanged.
 
+## Completion
+
+- A10 work-unit commit: `cadde6a`, 159 authored changed lines across five files
+  including this document. Native committed-only assessment against `67fcb8c`
+  was high/due because the deployment regression starts a process.
+- User granted this exact A10 candidate. All four native lenses (risk,
+  resilience, readability and reliability) found no findings in the immutable
+  patches. They did not independently execute the recorded functional commands.
+  Lineage `review-0bc1e19c124702f4` was approved and exactly acknowledged;
+  the acknowledgement reported authority burned for target
+  `sha256:bd6971501b77d14bea262cc8405e4754f0e3441afe4476dbbe385f98dc036261`,
+  consumed revision
+  `sha256:96320a28254000b4b2413d0dd9264993e94160ce06af92db5112e89ce8437e5f`.
+- Fast-forward push confirmed origin/main, local main and feature HEAD all at
+  `cadde6a154b28a7c326795cee3d629c9b21e5c58`. No history rewrite, user-file
+  overwrite, live deployment or private-data operation occurred.
+  The last reviewed source boundary is `cadde6a`; no executable slice is pending.
+- Final documentation closure is direct inline: one already-understood recovery
+  file, with structural readback and scoped whitespace checks. No source or
+  functional behavior changes; no additional functional suite is required.
+
 ## Next step
 
-Commit, assess and push the verified A10 unit. A1–A9 are already on main.
+No implementation tasks remain. Publish the final passive recovery notes.
 Do not infer capture time from pCloud modification metadata or invent a default
 expected backup cadence. Runtime registration must be restored before memory
 attribution resumes; the local task document preserves all pending progress.
