@@ -28,7 +28,7 @@ Focused domain/UI tests during RED/GREEN, then `pnpm type-check`, `pnpm lint`, `
 - Feature branch: `feat/annual-savings-projection`; branch point / first review boundary: `c86d1c4`.
 - Initial authored-line forecast: approximately 300–400; revised T01 source/test size: 473 lines because cutoff, signed-income, coverage, and overflow regressions require durable proof. Keep coherent units and tests; do not code-golf to fit a planning heuristic.
 - Delivery strategy: `ask-on-risk`; no PR requested. Push/merge are explicitly authorized, once target/session scope is resolved.
-- Running authored lines: 521 in T01 (473 source/test, 48 recovery document). Review boundary advanced from `c86d1c4` to `3f8b4b3` after the native acknowledgement. T02 is a separate work-unit slice, not a combined branch review.
+- Running authored lines: 877 through T02 (521 in T01; 356 in T02 including recovery updates). Review boundary advanced from `c86d1c4` to `3f8b4b3` after the native acknowledgement. T02 is a separate work-unit slice, not a combined branch review.
 - Rollback boundary: new annual projection module/tests plus isolated Plans wiring/chart; preserve all other financial calculations.
 
 ## Progress and evidence
@@ -55,7 +55,8 @@ Exploration completed read-only. Imported data has no scheduled income; user app
 - Environmental outcomes preserved: initial 300s timeout; pretest EADDRINUSE from its orphan server (owned process removed); fresh-shell missing libnspr4.so. Corrected supported runtime-library environment yielded full browser success in 10m02s. No assertion failures occurred in those environmental attempts.
 - Browser command: `MYEXPENSES_BROWSER_RUNTIME_LIB_DIR=/tmp/saracastello-browser-libs.hDbDUm/root/usr/lib/x86_64-linux-gnu timeout --signal=TERM --kill-after=15s 900s pnpm test:browser`. Evidence log: `/tmp/annual-projection-verify.vFhzu5.log`; screenshots: `/tmp/myexpenses-annual-projection-{desktop,mobile-390,narrow-320}.png`. These are temporary, synthetic artifacts, not committed data.
 - Source/test diff: 335 authored lines. Rollback: remove the new AnnualProjection component and isolated BudgetsPage wiring/tests plus the new synthetic fixture/scenario; T01 domain logic remains independently valid.
+- Implementation commit: `ba11ffaf03cc161343ef537dc36e036ca7f79813`. Native assessment of its exact range against `3f8b4b3`: medium, 356 lines, `review_due: false`, reason `under_budget`. No review was started or approval fabricated for that range; functional verification is complete and the native slice remains pending under its threshold policy.
 - Remote delivery is still pending explicit origin/session scope. No remote probing, fetch, push, PR, or deployment performed.
 
 ## Next step
-Commit the verified T02 work unit, assess only its range against `3f8b4b3`, record the returned review outcome, then obtain exact origin/session authorization before synchronization and main delivery. Keep T02 unchecked until delivery is observed. Engram mirror remains pending runtime identity restoration.
+Ask for exact authorization to synchronize and push these commits to `origin/main` using the repository's configured Git authentication/session. Do not inspect or probe authentication until authorized. Then synchronize safely, fast-forward local main if possible without altering user edits, push without force, observe remote result, and record delivery. Keep T02 unchecked until delivery is observed. Engram mirror remains pending runtime identity restoration.
