@@ -35,6 +35,42 @@
   font-weight: 600;
 }
 
+.pacePanel {
+  min-width: 0;
+  padding: 0.75rem 1rem;
+  background: var(--surface-bright);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.paceHeading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.8rem;
+  align-items: baseline;
+  font-size: 0.82rem;
+}
+
+.paceHeading span,
+.paceUnavailable {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.paceSummary {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.paceUnavailable { margin: 0.4rem 0 0; }
+
+.paceDetails { margin-top: 0.3rem; font-size: 0.75rem; line-height: 1.5; }
+.paceDetails summary { width: fit-content; min-height: 2.5rem; padding: 0.55rem 0; color: var(--transfer); cursor: pointer; }
+.paceDetails summary:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.paceDetails p { max-width: 70rem; margin: 0.3rem 0; color: var(--muted); }
+
 .informationBody {
   display: grid;
   gap: 0.7rem;

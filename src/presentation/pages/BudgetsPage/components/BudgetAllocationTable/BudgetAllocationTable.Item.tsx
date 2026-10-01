@@ -2,9 +2,10 @@ import { useId, useState } from "react";
 
 import type { BudgetAllocationNode } from "../../../../../domain/analytics/budgets.ts";
 import type { BudgetCategoryComparison, BudgetPeriodComparison } from "../../../../../domain/analytics/budget-period-comparison.ts";
+import type { BudgetPaceAmount } from "../../../../../domain/analytics/budget-pace.ts";
 import { Badge } from "../../../../components/atoms/Badge/Badge.tsx";
 import { AccordionTreeItem } from "../../../../components/organisms/AccordionTree/index.ts";
-import { formatBudgetComparisonDelta, formatBudgetMinor } from "../../BudgetsPage.helpers.ts";
+import { formatBudgetComparisonDelta, formatBudgetMinor, formatPaceDifference } from "../../BudgetsPage.helpers.ts";
 import { formatDate } from "../../../../utils/format.ts";
 import { BudgetUtilization } from "../BudgetUtilization/BudgetUtilization.tsx";
 import { HEALTH_LABELS, HEALTH_TONES, SOURCE_LABELS } from "./BudgetAllocationTable.helpers.tsx";
@@ -14,6 +15,7 @@ export function BudgetAllocationItem({
   allocation,
   comparison,
   categoryComparisons,
+  categoryPaces,
   currency,
   fractionDigits,
   isFilteredComparison,
@@ -23,6 +25,7 @@ export function BudgetAllocationItem({
   readonly allocation: BudgetAllocationNode;
   readonly comparison: BudgetPeriodComparison | null;
   readonly categoryComparisons: ReadonlyMap<string, BudgetCategoryComparison>;
+  readonly categoryPaces: ReadonlyMap<string, BudgetPaceAmount>;
   readonly currency: string;
   readonly fractionDigits: number;
   readonly isFilteredComparison: boolean;
@@ -34,6 +37,7 @@ export function BudgetAllocationItem({
   const detailsId = useId();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const categoryComparison = categoryComparisons.get(allocation.categoryUuid);
+  const categoryPace = categoryPaces.get(allocation.categoryUuid);
   const primary = categoryComparison?.references.find((reference) => reference.referenceKey === comparison?.primaryReferenceKey);
   const primaryAmount = primary?.consumedMinor ?? null;
   const referenceDelta = primary?.deltaMinor ?? null;
@@ -91,6 +95,9 @@ export function BudgetAllocationItem({
               <strong className={styles.categoryName}>{allocation.name}</strong>
               {!isFilteredComparison && allocation.health === "exceeded" ? (
                 <Badge tone="negative">Excedido</Badge>
+              ) : null}
+              {categoryPace?.status === "ready" ? (
+                <span className={styles.paceSignal}>Referencia lineal: {formatPaceDifference(categoryPace, currency, fractionDigits)}</span>
               ) : null}
             </div>
             {comparison === null ? <>{amountMetric}{utilizationMetric}</> : (
@@ -162,6 +169,14 @@ export function BudgetAllocationItem({
                 </Badge>
               </dd>
             </div>
+            {categoryPace === undefined ? null : (
+              <div className={`${styles.metric} ${styles.wideMetric}`}>
+                <dt>Referencia lineal hasta la fecha</dt>
+                <dd>{categoryPace.status === "ready" ? (
+                  <>Asignado {formatBudgetMinor(categoryPace.assignedMinor, currency, fractionDigits)} (base {formatBudgetMinor(allocation.baseMinor, currency, fractionDigits)} + arrastre recibido {formatBudgetMinor(allocation.rolloverPreviousMinor, currency, fractionDigits)}). Referencia {formatBudgetMinor(categoryPace.expectedMinor, currency, fractionDigits)}; consumo neto registrado {formatBudgetMinor(categoryPace.actualToDateMinor, currency, fractionDigits)}: {formatPaceDifference(categoryPace, currency, fractionDigits)}. Esta categoría incluye sus descendientes; no se suma de nuevo.</>
+                ) : "Sin límite positivo para calcular la referencia lineal."}</dd>
+              </div>
+            )}
             {comparison === null ? null : (
               <>
                 <div className={`${styles.metric} ${styles.wideMetric}`}>
@@ -210,6 +225,7 @@ export function BudgetAllocationItem({
           allocation={child}
           comparison={comparison}
           categoryComparisons={categoryComparisons}
+          categoryPaces={categoryPaces}
           currency={currency}
           depth={depth + 1}
           fractionDigits={fractionDigits}

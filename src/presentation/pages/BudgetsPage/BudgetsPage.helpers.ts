@@ -1,4 +1,5 @@
 import { analyzeBudgetPeriod } from "../../../domain/analytics/budgets.ts";
+import type { BudgetPaceAmount, BudgetPaceBasis, BudgetPaceUnavailableReason } from "../../../domain/analytics/budget-pace.ts";
 import type {
   AnalyticsDataset,
   FilteredAnalyticsDataset,
@@ -105,6 +106,28 @@ export function budgetMinorToMajor(
   fractionDigits: number,
 ): number {
   return amountMinor / 10 ** fractionDigits;
+}
+
+export function formatPaceDifference(amount: Extract<BudgetPaceAmount, { status: "ready" }>, currency: string, fractionDigits: number): string {
+  const difference = amount.differenceMinor;
+  if (Math.abs(difference) < 0.5) return "igual a la referencia";
+  return `${formatBudgetMinor(Math.abs(difference), currency, fractionDigits)} ${difference > 0 ? "por debajo" : "por encima"} de la referencia`;
+}
+
+export function paceUnavailableLabel(reason: BudgetPaceUnavailableReason): string {
+  if (reason === "filtered-comparison") return "Referencia lineal no disponible: el corte no cubre desde el inicio hasta hoy o incluye filtros de subconjunto.";
+  if (reason === "future-period") return "Referencia lineal no disponible: el periodo aún no ha comenzado.";
+  return "Referencia lineal no disponible: este periodo no tiene una unidad mensual o anual comparable.";
+}
+
+export function paceBasisLabel(basis: BudgetPaceBasis): string {
+  if (basis.grouping === "MONTH") return `${basis.elapsedUnits} días de ${basis.totalUnits} días, contando el día de corte.`;
+  const month = Number(basis.cutoffDate.slice(5, 7));
+  const year = Number(basis.cutoffDate.slice(0, 4));
+  const day = Number(basis.cutoffDate.slice(8, 10));
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const monthLabel = new Intl.DateTimeFormat("es-ES", { month: "long", timeZone: "UTC" }).format(new Date(Date.UTC(year, month - 1, 1)));
+  return `${month - 1} meses completos más ${day}/${daysInMonth} de ${monthLabel}, sobre 12 meses.`;
 }
 
 export function formatBudgetMinor(

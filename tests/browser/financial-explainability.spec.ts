@@ -1447,6 +1447,35 @@ test("keeps budget decisions ahead of closed method information across perspecti
   await tree.screenshot({ path: testInfo.outputPath("budget-decision-tree.png"), animations: "disabled" });
 });
 
+test("explains linear budget allowance by keyboard without overflowing the budget tree", async ({ page }, testInfo) => {
+  await page.clock.setFixedTime(new Date("2026-08-23T12:00:00.000Z"));
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  await toolbar.getByRole("combobox", { name: "Tipo de periodo" }).selectOption("month");
+  await toolbar.getByLabel("Mes seleccionado").fill("2026-08");
+  await toolbar.getByRole("group", { name: "Ámbito de las estadísticas" }).locator('input[value="all"]').check();
+  await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
+  await page.getByRole("group", { name: "Marco del presupuesto" }).getByLabel("Periodo").selectOption("MONTH:2026:7");
+  await expect(page.getByText(/Consumo consultado:/)).toContainText("Consumo consultado: 01 ago 2026 – 23 ago 2026");
+  const pace = page.getByRole("region", { name: "Referencia lineal hasta la fecha" });
+  await expect(pace).toBeVisible();
+  await expect(pace).toContainText("Al 23 ago 2026");
+  await expect(pace).toContainText("consumo registrado");
+  const explanation = pace.getByText("Cómo se calcula");
+  await explanation.focus();
+  await page.keyboard.press("Enter");
+  await expect(pace).toContainText("23 días de 31 días");
+  await expect(pace).toContainText(/No garantiza que el historial esté completo/);
+  await expect(explanation).toBeFocused();
+  const row = page.getByRole("list", { name: "Asignaciones jerárquicas del presupuesto" }).locator(":scope > li > div").first();
+  const toggle = row.getByRole("button", { name: "Detalles de Expense" });
+  await toggle.focus();
+  await page.keyboard.press("Space");
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(row.getByText("Referencia lineal hasta la fecha")).toBeVisible();
+  await expectNoDocumentOverflow(page);
+  await page.screenshot({ path: `/tmp/myexpenses-a3-synthetic-${testInfo.project.name}.png`, fullPage: true, animations: "disabled" });
+});
+
 test("keeps current, reference and mean visible in compact rows without coupling disclosures", async ({ page }, testInfo) => {
   await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
   await page.getByRole("group", { name: "Marco del presupuesto" }).getByLabel("Periodo").selectOption("MONTH:2026:7");

@@ -54,7 +54,7 @@ checks trigger the mandatory writer/verification routing rules.
   Checks: budget domain and page regressions, typecheck, lint, relevant UI suite.
 - [x] A2 Implement tested linear budget-to-date domain calculations.
   Checks: calendar/rollover/refund/filter/currency edge cases and full budget tests.
-- [ ] A3 Present compact pace guidance globally and per budget category.
+- [x] A3 Present compact pace guidance globally and per budget category.
   Checks: UI tests and synthetic desktop/mobile keyboard/browser scenarios.
 - [ ] A4 Add repository CI for existing checks and isolated browser smoke.
   Checks: workflow validation and local equivalents; disclose hosted-run limits.
@@ -95,7 +95,8 @@ checks trigger the mandatory writer/verification routing rules.
   Initial broad worktree
   assessment was unavailable due to explicit untracked-file scope; delivery
   assessment will use the committed-only unit, excluding unrelated user edits.
-- Running authored count: 166 committed lines. First review boundary: `f45c7e6`.
+- Running authored count: 507 across A1/A2 commits (net slice 495).
+  Last reviewed boundary: `6d0f934`; original base: `f45c7e6`.
 - A2: new pure `analyzeBudgetPace(analysis, today)` calculates the global and
   inclusive per-category allowance and signed consumption through cutoff.
   Difference is allowance minus consumption; positive means below allowance.
@@ -113,10 +114,31 @@ checks trigger the mandatory writer/verification routing rules.
   Browser is N/A for this pure domain unit; UI integration remains A3.
   Loaded postings do not establish historical completeness: A3 must say
   recorded consumption, not promise complete or future spending.
-  A2 commit and native slice assessment pending in this snapshot.
+- A2 commit `6d0f934`. A1+A2 slice assessed medium, slice budget reached.
+  User granted candidate review; reliability reviewer found no findings.
+  Native lineage `review-9dc0d63c74ae2cc9` approved and acknowledged; authority
+  burned. A1/A2 merged fast-forward and pushed to origin/main at `6d0f934`.
+  Source checks above preceded review; no candidate changes after freeze.
 - Each task records commands, results, commit, review and independent rollback
   boundary here. Tests/docs ship with behavior; never stage unrelated files.
+- A3 adds a compact linear-reference panel and category allowance deltas, with
+  date/basis/rollover explanations in native disclosures and explicit neutral
+  unavailable states. No financial totals or existing comparisons change.
+  Full financial scope is required: the default realCashFlow perspective is a
+  non-date subset and intentionally unavailable. An aligned month-to-date date
+  prefix in the full scope is eligible and tested in the browser.
+- A3 TDD: three missing-region regressions failed before implementation; final
+  UI suite 465/465, three TypeScript projects, Oxlint and diff check passed.
+  Parent repeated budget page tests 18/18. Synthetic browser pace scenario
+  desktop/mobile-390 passed 2/2 and adjacent budget scenarios passed 4/4.
+  Keyboard disclosure and no horizontal overflow assertions passed. Parent
+  inspected synthetic desktop/mobile full-page screenshots; screenshot capture
+  of sticky controls is not a physical-device interaction audit.
+- A3 artifacts: /tmp/myexpenses-a3-synthetic-desktop.png and
+  /tmp/myexpenses-a3-synthetic-mobile-390.png. Rollback is the budget page subtree
+  changes plus financial-explainability browser scenario; A1/A2 remain intact.
+  Commit and committed-only assessment pending at this snapshot.
 
 ## Next step
 
-Commit and assess A2 with A1's pending slice, then implement A3 presentation.
+Commit and assess A3, then A4–A10 in order; memory mirror remains pending.

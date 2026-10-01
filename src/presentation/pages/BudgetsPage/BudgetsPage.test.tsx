@@ -8,7 +8,8 @@ import type {
 } from "../../../domain/analytics/budgets.ts";
 import type { BackupBudgetV1 } from "../../../domain/analytics/backup-dataset.types.ts";
 import type { BudgetPeriodComparison, BudgetReferenceRange } from "../../../domain/analytics/budget-period-comparison.ts";
-import type { AnalyticsDataset, NormalizedPosting } from "../../../domain/analytics/types.ts";
+import type { AnalyticsDataset, IsoDate, NormalizedPosting } from "../../../domain/analytics/types.ts";
+import { analyzeBudgetPace } from "../../../domain/analytics/budget-pace.ts";
 import { BudgetsPageView } from "./BudgetsPage.view.tsx";
 
 const EMPTY_DATASET: AnalyticsDataset = {
@@ -160,6 +161,103 @@ const comparison: BudgetPeriodComparison = {
 };
 
 describe("BudgetsPageView", () => {
+  it("shows signed monthly allowance and recorded refunds without calling it a forecast", async () => {
+    const user = userEvent.setup();
+    const posting = (id: string, date: IsoDate): NormalizedPosting => ({
+      id, transactionId: id, sourceTransactionId: id, accountId: "account", accountLabel: "Cuenta",
+      accountType: "DEFAULT", currency: "EUR", fractionDigits: 2, date,
+      amountNativeMinor: -1_000, amountEurMinor: -1_000, exchangeRateToEur: 1,
+      exchangeRateSource: "identity", categoryPath: ["Gastos", "Comida"], categoryType: "EXPENSE",
+      bucket: "expense", status: "RECONCILED", isVoid: false, linked: false,
+      tags: [], splitIndex: null, splitCount: null, payee: id,
+    });
+    const paced = { ...analysis, global: { ...analysis.global, baseMinor: 3_000, rolloverPreviousMinor: 100, assignedMinor: 3_100 },
+      allocations: [{ ...allocation, baseMinor: 3_100, assignedMinor: 3_100 }],
+      contributions: [
+        { posting: posting("expense", "2026-08-02"), amountMinor: 2_500 },
+        { posting: posting("refund", "2026-08-10"), amountMinor: -500 },
+        { posting: posting("future", "2026-08-20"), amountMinor: 1_000 },
+      ] } satisfies BudgetAnalysis;
+    render(<BudgetsPageView analysis={paced} pace={analyzeBudgetPace(paced, "2026-08-15")}
+      dataset={EMPTY_DATASET} budgetOptions={[]} periodOptions={[]}
+      emptyDescription={null} emptyTitle={null} onBudgetChange={vi.fn<(uuid: string) => void>()} onPeriodChange={vi.fn<(key: string) => void>()}
+      searchPending={false} selectedBudgetUuid="budget" selectedPeriodKey="MONTH:2026:7" />);
+    const pace = screen.getByRole("region", { name: "Referencia lineal hasta la fecha" });
+    expect(pace).toHaveTextContent("15,00");
+    expect(pace).toHaveTextContent("Al 15 ago 2026");
+    expect(pace).toHaveTextContent("por encima de la referencia");
+    await user.click(within(pace).getByText("Cómo se calcula"));
+    expect(pace).toHaveTextContent("31 días");
+    expect(pace).toHaveTextContent("15 días");
+    expect(pace).toHaveTextContent("base");
+    expect(pace).toHaveTextContent("arrastre recibido");
+    expect(pace).toHaveTextContent("apuntes registrados");
+    expect(pace).toHaveTextContent("No garantiza que el historial esté completo");
+    expect(pace).not.toHaveTextContent("previsión de gasto final");
+    const toggle = screen.getByRole("button", { name: "Detalles de Gastos › Comida" });
+    toggle.focus();
+    await user.keyboard("{Enter}");
+    const details = document.getElementById(toggle.getAttribute("aria-controls")!);
+    expect(details).toHaveTextContent("Referencia lineal");
+    expect(details).toHaveTextContent("por encima de la referencia");
+  });
+
+  it("explains annual partial-month pacing and preserves complete-period availability", () => {
+    const annual = { ...analysis, period: { ...analysis.period, grouping: "YEAR" as const,
+      startDate: "2026-01-01", endDate: "2026-12-31" },
+      global: { ...analysis.global, baseMinor: 11_000, assignedMinor: 12_000 } } satisfies BudgetAnalysis;
+    render(<BudgetsPageView analysis={annual} pace={analyzeBudgetPace(annual, "2026-03-15")}
+      dataset={EMPTY_DATASET} budgetOptions={[]} periodOptions={[]}
+      emptyDescription={null} emptyTitle={null} onBudgetChange={vi.fn<(uuid: string) => void>()} onPeriodChange={vi.fn<(key: string) => void>()}
+      searchPending={false} selectedBudgetUuid="budget" selectedPeriodKey="YEAR:2026" />);
+    expect(screen.getByRole("region", { name: "Referencia lineal hasta la fecha" })).toHaveTextContent("por debajo de la referencia");
+    expect(screen.getByRole("article", { name: "Disponible" })).toBeVisible();
+    expect(screen.getByText("Cómo se calcula").closest("details")).toHaveTextContent("2 meses completos más 15/31 de marzo");
+  });
+
+  it("does not make pace claims for missing limits or incomplete filtered scopes", () => {
+    const unavailable = { ...analysis, isFilteredComparison: true, hasNonDateSubsetFilters: true,
+      consumptionDateRange: { from: "2026-08-10", to: "2026-08-15" } } satisfies BudgetAnalysis;
+    const { rerender } = render(<BudgetsPageView analysis={unavailable} pace={analyzeBudgetPace(unavailable, "2026-08-15")}
+      dataset={EMPTY_DATASET} budgetOptions={[]} periodOptions={[]}
+      emptyDescription={null} emptyTitle={null} onBudgetChange={vi.fn<(uuid: string) => void>()} onPeriodChange={vi.fn<(key: string) => void>()}
+      searchPending={false} selectedBudgetUuid="budget" selectedPeriodKey="MONTH:2026:7" />);
+    expect(screen.getByRole("region", { name: "Referencia lineal hasta la fecha" })).toHaveTextContent("no disponible");
+    expect(screen.getByRole("article", { name: "Asignado menos corte" })).toBeVisible();
+    expect(screen.queryByText(/por debajo de la referencia/)).not.toBeInTheDocument();
+    const zero = { ...analysis, global: { ...analysis.global, assignedMinor: 0 } } satisfies BudgetAnalysis;
+    rerender(<BudgetsPageView analysis={zero} pace={analyzeBudgetPace(zero, "2026-08-15")}
+      dataset={EMPTY_DATASET} budgetOptions={[]} periodOptions={[]}
+      emptyDescription={null} emptyTitle={null} onBudgetChange={vi.fn<(uuid: string) => void>()} onPeriodChange={vi.fn<(key: string) => void>()}
+      searchPending={false} selectedBudgetUuid="budget" selectedPeriodKey="MONTH:2026:7" />);
+    expect(screen.getByRole("region", { name: "Referencia lineal hasta la fecha" })).toHaveTextContent("Sin límite total positivo");
+  });
+
+  it("allows a date-only prefix through today while keeping the full-budget warning", () => {
+    const prefix = { ...analysis, isFilteredComparison: true, hasNonDateSubsetFilters: false,
+      consumptionDateRange: { from: "2026-08-01" as const, to: "2026-08-15" as const } } satisfies BudgetAnalysis;
+    render(<BudgetsPageView analysis={prefix} pace={analyzeBudgetPace(prefix, "2026-08-15")}
+      dataset={EMPTY_DATASET} budgetOptions={[]} periodOptions={[]}
+      emptyDescription={null} emptyTitle={null} onBudgetChange={vi.fn<(uuid: string) => void>()} onPeriodChange={vi.fn<(key: string) => void>()}
+      searchPending={false} selectedBudgetUuid="budget" selectedPeriodKey="MONTH:2026:7" />);
+    expect(screen.getByRole("region", { name: "Referencia lineal hasta la fecha" })).toHaveTextContent("Al 15 ago 2026");
+    expect(screen.getByRole("article", { name: "Asignado menos corte" })).toBeVisible();
+    expect(screen.getByText(/no indican la disponibilidad real del presupuesto completo/)).toBeVisible();
+    expect(screen.getByText("Cómo se calcula").closest("details")).toHaveTextContent("El corte solo abarca las fechas desde el inicio hasta hoy");
+  });
+
+  it("gives neutral reasons for future or unsupported pace periods", () => {
+    const props = { dataset: EMPTY_DATASET, budgetOptions: [], periodOptions: [],
+      emptyDescription: null, emptyTitle: null, onBudgetChange: vi.fn<(uuid: string) => void>(),
+      onPeriodChange: vi.fn<(key: string) => void>(), searchPending: false,
+      selectedBudgetUuid: "budget", selectedPeriodKey: "MONTH:2026:7" };
+    const { rerender } = render(<BudgetsPageView {...props} analysis={analysis} pace={analyzeBudgetPace(analysis, "2026-07-31")} />);
+    expect(screen.getByRole("region", { name: "Referencia lineal hasta la fecha" })).toHaveTextContent("el periodo aún no ha comenzado");
+    expect(screen.queryByText(/por debajo de la referencia/)).not.toBeInTheDocument();
+    const unsupported = { ...analysis, period: { ...analysis.period, grouping: "WEEK" as const } };
+    rerender(<BudgetsPageView {...props} analysis={unsupported} pace={analyzeBudgetPace(unsupported, "2026-08-15")} />);
+    expect(screen.getByRole("region", { name: "Referencia lineal hasta la fecha" })).toHaveTextContent("no tiene una unidad mensual o anual comparable");
+  });
   it("places budget comparisons before secondary ledger and method information", async () => {
     const user = userEvent.setup();
     render(<BudgetsPageView

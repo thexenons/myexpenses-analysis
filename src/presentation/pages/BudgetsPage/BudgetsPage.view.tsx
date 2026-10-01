@@ -12,6 +12,9 @@ import {
   budgetAmountFormatter,
   budgetMinorToMajor,
   formatBudgetMinor,
+  formatPaceDifference,
+  paceBasisLabel,
+  paceUnavailableLabel,
 } from "./BudgetsPage.helpers.ts";
 import type { BudgetsPageViewProps } from "./BudgetsPage.types.ts";
 import { BudgetAllocationTable } from "./components/BudgetAllocationTable/BudgetAllocationTable.tsx";
@@ -55,6 +58,7 @@ export function BudgetsPageView({
   analysis,
   comparison = null,
   comparisonError = null,
+  pace = null,
   budgetOptions,
   dataset,
   emptyDescription,
@@ -213,6 +217,35 @@ export function BudgetsPageView({
         )}
       </div>
 
+      {pace === null ? null : (
+        <section aria-label="Referencia lineal hasta la fecha" className={styles.pacePanel}>
+          <div className={styles.paceHeading}>
+            <strong>Referencia lineal hasta la fecha</strong>
+            <span>No es una previsión de gasto.</span>
+          </div>
+          {pace.status === "unavailable" ? (
+            <p className={styles.paceUnavailable}>{paceUnavailableLabel(pace.reason)}</p>
+          ) : pace.global.status === "unavailable" ? (
+            <p className={styles.paceUnavailable}>Sin límite total positivo: referencia lineal no disponible.</p>
+          ) : (
+            <>
+              <p className={styles.paceSummary}>
+                Al {formatDate(pace.basis.cutoffDate)}: referencia {formatBudgetMinor(pace.global.expectedMinor, currency, fractionDigits)};
+                {" "}consumo registrado {formatBudgetMinor(pace.global.actualToDateMinor, currency, fractionDigits)}.
+                {" "}<strong>{formatPaceDifference(pace.global, currency, fractionDigits)}</strong>.
+              </p>
+              <details className={styles.paceDetails}>
+                <summary>Cómo se calcula</summary>
+                <p>Asignado del periodo = base {formatBudgetMinor(global.baseMinor, currency, fractionDigits)} + arrastre recibido {formatBudgetMinor(global.rolloverPreviousMinor, currency, fractionDigits)}. El arrastre siguiente no se resta aquí.</p>
+                <p>{paceBasisLabel(pace.basis)} Se reparte linealmente el asignado entre {formatDate(pace.basis.periodStartDate)} y {formatDate(pace.basis.periodEndDate)}.</p>
+                <p>El consumo neto suma gastos y devoluciones de los apuntes registrados hasta {formatDate(pace.basis.cutoffDate)}, según fecha de {pace.basis.dateBasis === "value" ? "valor (operación si falta)" : "operación"}. No garantiza que el historial esté completo ni anticipa gastos futuros.</p>
+                {analysis.isFilteredComparison ? <p>El corte solo abarca las fechas desde el inicio hasta hoy; las cifras de disponibilidad del presupuesto completo siguen sin ser comparables con este corte.</p> : null}
+              </details>
+            </>
+          )}
+        </section>
+      )}
+
       <Panel
         className={styles.allocationsPanel}
         description="Los hijos detallan el total del padre; no se suman de nuevo."
@@ -269,6 +302,7 @@ export function BudgetsPageView({
           currency={currency}
           isFilteredComparison={analysis.isFilteredComparison}
           fractionDigits={fractionDigits}
+          pace={pace}
           onInspectConsumption={(path, title, trigger) => setDetail({ title, path, trigger })}
         />
       </Panel>
