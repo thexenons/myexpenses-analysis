@@ -56,7 +56,7 @@ checks trigger the mandatory writer/verification routing rules.
   Checks: calendar/rollover/refund/filter/currency edge cases and full budget tests.
 - [x] A3 Present compact pace guidance globally and per budget category.
   Checks: UI tests and synthetic desktop/mobile keyboard/browser scenarios.
-- [ ] A4 Add repository CI for existing checks and isolated browser smoke.
+- [x] A4 Add repository CI for existing checks and isolated browser smoke.
   Checks: workflow validation and local equivalents; disclose hosted-run limits.
 - [ ] A5 Add bounded release retention with protected active/rollback releases.
   Checks: synthetic filesystem, leases, symlink/failure and rollback regressions.
@@ -137,8 +137,32 @@ checks trigger the mandatory writer/verification routing rules.
 - A3 artifacts: /tmp/myexpenses-a3-synthetic-desktop.png and
   /tmp/myexpenses-a3-synthetic-mobile-390.png. Rollback is the budget page subtree
   changes plus financial-explainability browser scenario; A1/A2 remain intact.
-  Commit and committed-only assessment pending at this snapshot.
+  Commit `5d440d3` (294 authored lines) assessed medium, `under_budget` against
+  `6d0f934`; no new review was due. Merged and pushed to origin/main.
+  Last reviewed boundary remains `6d0f934`; A3 stays in the pending review slice.
+- A4 adds two read-only-permission GitHub Actions jobs: locked lint/types/Node/
+  UI/synthetic deployment checks, and isolated synthetic desktop/mobile smoke.
+  Official checkout and pnpm/setup action commits are pinned; setup runtime
+  is Node 24 and require-lockfile enables frozen installation. No secrets,
+  private vaults or real deployment are used. Browser installs headless Chromium.
+- A4 TDD: workflow contract failed ENOENT, then passed. Full Node run exposed
+  a pre-existing missing-index failure verified on base `5d440d3`; authorized
+  readiness fix adds only named-export barrels to InformationDisclosure and
+  BudgetReferenceControls, preserving the existing architecture test.
+- A4 final verification: Node 287 passed, 3 optional private-data skips;
+  UI 465/465; synthetic deployment 1/1; browser smoke 6/6; all three tsc
+  projects, Oxlint, YAML parsing and diff check passed. Parent repeated CI and
+  component-structure tests 8/8. Checks used sanitized local Node 24 binaries.
+  The hosted runner, fresh pnpm installation and browser-library setup have
+  NOT run here; first GitHub-hosted execution remains validation outstanding.
+- Official sources: https://github.com/pnpm/setup/blob/v3.0.0/README.md,
+  https://github.com/actions/checkout/commit/3d3c42e5aac5ba805825da76410c181273ba90b1,
+  https://playwright.dev/docs/browsers. Parent verified setup's automatic frozen
+  installation and runtime input against official docs.
+- A4 rollback: workflow, CI contract test, browser-testing docs paragraph and
+  two export-only barrels. No production runtime behavior changed.
+  Commit and native review assessment pending in this snapshot.
 
 ## Next step
 
-Commit and assess A3, then A4–A10 in order; memory mirror remains pending.
+Commit and assess A4; then A5 retention, A6 freshness and A7–A10.

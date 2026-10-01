@@ -1,0 +1,49 @@
+name: CI
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          runtime: node@24
+          require-lockfile: true
+      - name: Lint
+        run: pnpm lint
+      - name: Type-check all projects
+        run: pnpm type-check
+      - name: Node tests
+        run: pnpm test:node
+      - name: UI tests
+        run: pnpm test:ui
+      - name: Synthetic deployment pipeline
+        run: pnpm test:deployment
+
+  browser-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          runtime: node@24
+          require-lockfile: true
+      - name: Install Chromium headless shell and system libraries
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+      - name: Synthetic vault, VOID and budget pace on desktop and mobile
+        run: pnpm exec tsx tests/browser/run-isolated.ts --project=desktop --project=mobile-390 --grep="unlocks a synthetic vault|keeps VOID out of scoped transaction counts|explains linear budget allowance"
