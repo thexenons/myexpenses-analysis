@@ -549,6 +549,58 @@ test("uncategorized movements reconcile and retain an exact, serializable select
   assert.equal(applyFilters(dataset, { ...restored, categoryPrefixes: [[], ["Sin categoría"]] }).postings.length, 2);
 });
 
+test("category expense detail partitions direct and descendants without double counting refunds or VOID", () => {
+  const normalized = normalizeDataset({
+    accounts: { version: 2, accounts: {
+      cash: { label: "Banco", type: "DEFAULT" },
+      usd: { label: "Dólares", type: "DEFAULT", exchangeRateMode: "STATIC", exchangeRateToEur: 0.5 },
+    } },
+    categories: {
+      Gastos: { categoryType: "EXPENSE", children: { Comida: { categoryType: "EXPENSE" } } },
+      Ingresos: { categoryType: "INCOME" },
+    },
+    parsedData: [
+      { uuid: "cash", label: "Banco", currency: "EUR", openingBalance: 0, transactions: [
+        direct("root", "2025-03-01", -5, ["Gastos"]),
+        direct("child", "2025-03-02", -10, ["Gastos", "Comida"]),
+        direct("refund", "2025-03-03", 20, ["Gastos", "Comida"]),
+        direct("void", "2025-03-04", -100, ["Gastos"], { status: "VOID" }),
+        direct("income", "2025-03-05", 50, ["Ingresos"]),
+      ] },
+      { uuid: "usd", label: "Dólares", currency: "USD", openingBalance: 0, transactions: [
+        direct("foreign", "2025-03-02", -4, ["Gastos", "Comida"]),
+      ] },
+    ],
+  });
+  const source: AnalyticsDataset = { ...normalized, postings: normalized.postings.map((posting) => posting.transactionId === "child"
+    ? Object.assign({}, posting, { valueDate: "2025-04-02" as const }) : posting) };
+  const all = applyFilters(source, createDefaultFilterState());
+  const roots = aggregateCategoryBreakdown(all);
+  const root = roots.find((item) => item.name === "Gastos")!;
+  const child = root.children[0]!;
+  assert.deepEqual(root.expenseComposition, {
+    grossExpensesEurMinor: 1700, expenseRefundsEurMinor: 2000,
+    debtExpenseAdjustmentsEurMinor: 0, netExpenseConsumptionEurMinor: -300,
+  });
+  assert.equal(root.directExpenseComposition.grossExpensesEurMinor, 500);
+  assert.equal(child.expenseComposition.grossExpensesEurMinor, 1200);
+  assert.equal(child.expenseComposition.expenseRefundsEurMinor, 2000);
+  assert.deepEqual(child.directExpenseComposition, child.expenseComposition);
+  assert.equal(roots.find((item) => item.name === "Ingresos")?.expenseComposition.netExpenseConsumptionEurMinor, 0);
+  assert.equal(roots.reduce((sum, item) => sum + item.expenseComposition.netExpenseConsumptionEurMinor, 0),
+    -aggregateKpis(all).expensesEurMinor, "sum disjoint roots, not root plus descendant");
+  const selected = aggregateCategoryBreakdown(applyFilters(source, {
+    ...createDefaultFilterState(), currencies: ["USD"], dateBasis: "value",
+    dateRange: { from: "2025-03-01", to: "2025-03-31" },
+  }))[0]!;
+  assert.equal(selected.expenseComposition.grossExpensesEurMinor, 200);
+  assert.equal(selected.expenseComposition.expenseRefundsEurMinor, 0);
+  const valueDate = aggregateCategoryBreakdown(applyFilters(source, {
+    ...createDefaultFilterState(), dateBasis: "value", dateRange: { from: "2025-03-01", to: "2025-03-31" },
+  })).find((item) => item.name === "Gastos")!;
+  assert.equal(valueDate.expenseComposition.grossExpensesEurMinor, 700, "value-date cut excludes the moved EUR charge");
+});
+
 test("child-account postings retain provenance without extending analytics date coverage", () => {
   const initial = normalizeDataset(fixtureSource());
   const dataset: AnalyticsDataset = {

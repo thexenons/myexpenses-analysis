@@ -1416,6 +1416,46 @@ test("puts category paths and account balances before charts without losing keyb
   expect(violations).toEqual([]);
 });
 
+test("shows category expense composition on demand without changing tree filters or overflow", async ({ page }, testInfo) => {
+  await page.getByRole("link", { name: "Categorías" }).click();
+  const tree = page.getByRole("region", { name: "Explorador jerárquico" });
+  const rootRow = tree.getByRole("button", { name: "Filtrar: Expense", exact: true }).locator("xpath=..");
+  const rootDetail = rootRow.locator("details");
+  const summary = rootDetail.locator("summary");
+  await expect(summary).toHaveText("Desglose del gasto");
+  await expect(rootDetail).not.toHaveAttribute("open");
+  const affordance = await summary.evaluate((element) => ({
+    display: getComputedStyle(element).display,
+    height: element.getBoundingClientRect().height,
+  }));
+  expect(affordance.display).toBe("list-item");
+  expect(affordance.height).toBeGreaterThanOrEqual(44);
+  const balance = await rootRow.locator("span[class*='amount'] > span").first().textContent();
+  await summary.focus();
+  await page.keyboard.press("Enter");
+  await expect(rootDetail).toHaveAttribute("open", "");
+  await Promise.all(["Gasto bruto", "Devoluciones", "Gasto neto seleccionado"]
+    .map((label) => expect(rootDetail.getByText(label, { exact: true })).toBeVisible()));
+  await expect(rootDetail.locator("dl > div").nth(0)).toContainText("1,35");
+  await expect(rootDetail.locator("dl > div").nth(1)).toContainText("2,20");
+  await expect(rootDetail.locator("dl > div").nth(2)).toContainText("-0,85");
+  await rootRow.screenshot({ path: `/tmp/a8-category-detail-${testInfo.project.name}.png`, animations: "disabled" });
+  await expect(rootRow.locator("span[class*='amount'] > span").first()).toHaveText(balance!);
+  const childRow = tree.getByRole("button", { name: "Filtrar: Expense › Food" }).locator("xpath=..");
+  const childDetail = childRow.locator("details");
+  await expect(childDetail).not.toHaveAttribute("open");
+  await childDetail.locator("summary").click();
+  await expect(childDetail).toHaveAttribute("open", "");
+  await tree.getByRole("button", { name: "Contraer Expense" }).click();
+  await expect(rootDetail).toHaveAttribute("open", "");
+  await expect(childRow).toHaveCount(0);
+  await tree.getByRole("button", { name: "Desplegar Expense" }).click();
+  await expect(tree.getByRole("button", { name: "Filtrar: Expense › Food" })).toBeVisible();
+  await tree.getByRole("button", { name: "Filtrar: Expense", exact: true }).click();
+  await expect(tree.getByRole("button", { name: "Quitar filtro: Expense", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expectNoDocumentOverflow(page);
+});
+
 test("keeps category amounts inside their rows and panel at intermediate widths", async ({ page }, testInfo) => {
   await page.getByRole("link", { name: "Categorías" }).click();
   const tree = page.getByRole("region", { name: "Explorador jerárquico" });

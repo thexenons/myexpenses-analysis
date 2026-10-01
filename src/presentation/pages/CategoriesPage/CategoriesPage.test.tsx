@@ -26,6 +26,8 @@ const category: CategoryBreakdownNode = {
   categoryType: "EXPENSE",
   children: [],
   directSummary: summary,
+  directExpenseComposition: { grossExpensesEurMinor: 2_500, expenseRefundsEurMinor: 0, debtExpenseAdjustmentsEurMinor: 0, netExpenseConsumptionEurMinor: 2_500 },
+  expenseComposition: { grossExpensesEurMinor: 2_500, expenseRefundsEurMinor: 0, debtExpenseAdjustmentsEurMinor: 0, netExpenseConsumptionEurMinor: 2_500 },
   id: "Gastos",
   name: "Gastos",
   path: ["Gastos"],

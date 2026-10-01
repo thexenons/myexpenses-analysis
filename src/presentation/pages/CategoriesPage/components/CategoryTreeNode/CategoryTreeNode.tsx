@@ -30,6 +30,8 @@ export function CategoryTreeNode({
   const averageEurMinor = completedPeriodCount === 0
     ? null
     : averageEurMinorByCategoryId.get(category.id) ?? 0;
+  const expense = category.expenseComposition;
+  const hasExpenseActivity = expense.grossExpensesEurMinor !== 0 || expense.expenseRefundsEurMinor !== 0 || expense.debtExpenseAdjustmentsEurMinor !== 0;
 
   return (
     <AccordionTreeItem
@@ -46,16 +48,37 @@ export function CategoryTreeNode({
             <span className={styles.path}>{pathLabel}</span>
           </button>
 
-          <span className={styles.details}>
-            <Badge tone={categoryTypeTone(category.categoryType)}>
-              {CATEGORY_TYPE_LABELS[category.categoryType]}
-            </Badge>
-            <span className={styles.counts}>
-              {countFormatter.format(category.directSummary.postingCount)} dir.
-              {" / "}
-              {countFormatter.format(category.summary.postingCount)} total
-            </span>
-          </span>
+          <div className={styles.details}>
+            <div className={styles.metadata}>
+              <Badge tone={categoryTypeTone(category.categoryType)}>
+                {CATEGORY_TYPE_LABELS[category.categoryType]}
+              </Badge>
+              <span className={styles.counts}>
+                {countFormatter.format(category.directSummary.postingCount)} dir.
+                {" / "}
+                {countFormatter.format(category.summary.postingCount)} total
+              </span>
+            </div>
+            {hasExpenseActivity ? (
+              <details className={styles.composition}>
+                <summary className={styles.compositionSummary}>Desglose del gasto</summary>
+                <div className={styles.compositionPanel}>
+                  <p className={styles.compositionScope}>Importes de la selección{category.children.length > 0 ? ", incluidas las subcategorías" : ""}. El gasto neto conserva el signo de la perspectiva seleccionada.</p>
+                  <dl className={styles.compositionValues}>
+                    <div><dt>Gasto bruto</dt><dd>{formatEuroMinor(expense.grossExpensesEurMinor)}</dd></div>
+                    <div><dt>Devoluciones</dt><dd>{formatEuroMinor(expense.expenseRefundsEurMinor)}</dd></div>
+                    {expense.debtExpenseAdjustmentsEurMinor !== 0 ? (
+                      <div><dt>Ajuste por deuda</dt><dd>{formatEuroMinor(expense.debtExpenseAdjustmentsEurMinor)}</dd></div>
+                    ) : null}
+                    <div className={styles.compositionTotal}><dt>Gasto neto seleccionado</dt><dd>{formatEuroMinor(expense.netExpenseConsumptionEurMinor)}</dd></div>
+                  </dl>
+                  {expense.debtExpenseAdjustmentsEurMinor !== 0 ? (
+                    <p className={styles.compositionScope}>El ajuste por deuda corresponde a una contrapartida verificada; no es una devolución. Gasto bruto − devoluciones − ajuste = gasto neto seleccionado.</p>
+                  ) : null}
+                </div>
+              </details>
+            ) : null}
+          </div>
 
           <span className={styles.amount}>
             <span>{formatEuroMinor(category.summary.netEurMinor)}</span>

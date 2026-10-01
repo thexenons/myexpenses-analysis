@@ -351,7 +351,20 @@ export interface CategoryBreakdownNode {
   readonly summary: AmountSummary;
   /** Includes postings assigned exactly to this category path. */
   readonly directSummary: AmountSummary;
+  /** Expense composition includes this category and every descendant. */
+  readonly expenseComposition: CategoryExpenseComposition;
+  /** Expense composition assigned exactly to this category path. */
+  readonly directExpenseComposition: CategoryExpenseComposition;
   readonly children: readonly CategoryBreakdownNode[];
+}
+
+export interface CategoryExpenseComposition {
+  readonly grossExpensesEurMinor: number;
+  readonly expenseRefundsEurMinor: number;
+  /** Signed attribution from verified debt counterparties, not a cash refund. */
+  readonly debtExpenseAdjustmentsEurMinor: number;
+  /** Positive consumption or negative net refunds in the selected perspective. */
+  readonly netExpenseConsumptionEurMinor: number;
 }
 
 export interface AccountBreakdownItem extends AmountSummary {

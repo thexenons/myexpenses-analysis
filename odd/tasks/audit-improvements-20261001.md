@@ -98,7 +98,7 @@ checks trigger the mandatory writer/verification routing rules.
     retain all statistics on demand and keep interpretation warnings visible.
   - [x] A7C Add a declared-metric current/reference cumulative recorded-activity
     chart inside the same comparison context, calculated only on demand.
-- [ ] A8 Expose category gross expenses, refunds and net in detail.
+- [x] A8 Expose category gross expenses, refunds and net in detail.
   Checks: existing accounting identities, no duplicate hierarchy totals.
 - [ ] A9 Add eligible completed-period savings-rate trend.
   Checks: income denominator, transfer/debt/scope rules and incomplete periods.
@@ -346,6 +346,16 @@ checks trigger the mandatory writer/verification routing rules.
   and other browser engines were not tested. Rollback: new comparison-cumulative
   helper, local curve component, PeriodComparison integration/style/tests and
   comparison domain/browser regressions. Engram mirror remains pending.
+  Parent also repeated final UI 5/5. Commit `e285be2` includes 422 authored
+  changed lines with recovery notes; A7H+A7C slice against `7decdbb` assessed
+  medium, 611 net authored lines, review due at the slice budget. A7C is not
+  pushed yet; candidate review consent is separate from prior consumed grants.
+- User granted A7 candidate review; native reliability lens found no findings.
+  Lineage `review-4c73f0a73a92d74e` was approved and exactly acknowledged,
+  authority burned. Pushed the identical reviewed commit to origin/main at
+  `e285be2`, then advanced local main with an ancestor-checked compare-and-swap
+  ref update because switching branches would overwrite parent-owned recovery
+  notes. No stash, reset or user-file rewrite. Reviewed boundary is `e285be2`.
 - A8/A9 mapping corrected two assumptions: category-level summaries currently
   have net expenses but not the global gross/refund split; extend aggregation
   using the existing debt-aware classification, never label debt adjustments
@@ -363,10 +373,32 @@ checks trigger the mandatory writer/verification routing rules.
   from cash available or net worth. The earlier Real-scope suggestion was
   rejected before implementation based on this evidence. A9 remains pending.
 
+- A8 adds native on-demand category expense composition for parents and leaves;
+  gross minus refunds minus signed verified debt adjustment equals selected net
+  consumption. Inclusive and direct summaries reconcile without double counting.
+  Existing balances, counts, averages and filter/child toggles remain unchanged.
+- A8 TDD: domain RED 2 then 30 passed/1 optional skip; UI RED 1 then 16/16.
+  Full UI 470/470 and Node 310 passed/3 optional skips; all three TypeScript
+  projects, Oxlint and scoped diff check passed. Browser composition and adjacent
+  category checks passed 4/4 on desktop/mobile-390 using synthetic fixtures.
+  Screenshots: `/tmp/a8-category-detail-{desktop,mobile-390}.png`.
+- Parent readback caught inaccurate negative-net copy when refunds are zero but
+  debt adjustments are positive. UI regression RED 1/4 preceded neutral copy;
+  final focused UI 17/17, app types, lint and diff check passed. Parent repeated
+  both category UI files: 17/17. Full suites/browser were not repeated after this
+  copy-only correction; final A10 acceptance will cover the resulting candidate.
+  Browser debt classification is covered by domain/UI rather than its fixture.
+- A8 rollback: aggregation/types, CategoryTreeNode source/style/tests,
+  CategoriesPage test and analytics/debt/browser regressions (nine files).
+  No private deployment or physical-device/cross-engine proof is claimed.
+- A10 mapping identifies one remaining route × scope coverage gap; add bounded
+  synthetic navigation/layout acceptance for all nine routes and three scopes.
+  Final Node checks must run in a source-only snapshot including `.github`,
+  excluding `data`, `.env` and backups so three optional private tests skip.
+
 ## Next step
 
-Close the A7C work-unit commit and due review/delivery, then proceed to A8–A10.
-A3F, A6 and A7H are pushed; A7C implementation and checks are complete.
+Close A8 delivery, then implement A9 and run A10. A1–A7 are pushed to main.
 Do not infer capture time from pCloud modification metadata or invent a default
 expected backup cadence. Runtime registration must be restored before memory
 attribution resumes; the local task document preserves all pending progress.

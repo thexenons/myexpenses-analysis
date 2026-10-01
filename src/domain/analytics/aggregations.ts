@@ -9,6 +9,7 @@ import type {
   AccountBreakdownItem,
   AmountSummary,
   CategoryBreakdownNode,
+  CategoryExpenseComposition,
   CategoryType,
   DebtBreakdownItem,
   FilteredAnalyticsDataset,
@@ -71,6 +72,8 @@ interface MutableCategoryNode {
   readonly categoryType: CategoryType;
   readonly summary: MutableAmountSummary;
   readonly directSummary: MutableAmountSummary;
+  readonly expenseComposition: MutableFlowComposition;
+  readonly directExpenseComposition: MutableFlowComposition;
   readonly children: Map<string, MutableCategoryNode>;
   activityEurMinor: number;
 }
@@ -179,6 +182,24 @@ function createMutableComposition(): MutableFlowComposition {
     transferInflowsEurMinor: 0,
     transferOutflowsEurMinor: 0,
     netTransfersEurMinor: 0,
+  };
+}
+
+function finalizeCategoryExpenseComposition(
+  composition: MutableFlowComposition,
+  summary: MutableAmountSummary,
+): CategoryExpenseComposition {
+  const netExpenseConsumptionEurMinor = addMinor(0, -composition.netExpensesEurMinor, "Category net expense consumption");
+  const grossLessRefunds = addMinor(composition.grossExpensesEurMinor, -composition.expenseRefundsEurMinor, "Category gross less refunds");
+  const reconciled = addMinor(grossLessRefunds, -composition.debtExpenseAdjustmentsEurMinor, "Category debt-adjusted expenses");
+  if (reconciled !== netExpenseConsumptionEurMinor || composition.netExpensesEurMinor !== summary.expensesEurMinor) {
+    throw new Error("Category expense composition does not reconcile with its summary");
+  }
+  return {
+    grossExpensesEurMinor: composition.grossExpensesEurMinor,
+    expenseRefundsEurMinor: composition.expenseRefundsEurMinor,
+    debtExpenseAdjustmentsEurMinor: composition.debtExpenseAdjustmentsEurMinor,
+    netExpenseConsumptionEurMinor,
   };
 }
 
@@ -428,6 +449,8 @@ function createCategoryNode(
     categoryType,
     summary: createMutableSummary(),
     directSummary: createMutableSummary(),
+    expenseComposition: createMutableComposition(),
+    directExpenseComposition: createMutableComposition(),
     children: new Map(),
     activityEurMinor: 0,
   };
@@ -448,6 +471,8 @@ function finalizeCategoryNode(node: MutableCategoryNode): CategoryBreakdownNode 
     categoryType: node.categoryType,
     summary: finalizeSummary(node.summary),
     directSummary: finalizeSummary(node.directSummary),
+    expenseComposition: finalizeCategoryExpenseComposition(node.expenseComposition, node.summary),
+    directExpenseComposition: finalizeCategoryExpenseComposition(node.directExpenseComposition, node.directSummary),
     children,
   };
 }
@@ -457,6 +482,7 @@ export function aggregateCategoryBreakdown(
 ): readonly CategoryBreakdownNode[] {
   const roots = new Map<string, MutableCategoryNode>();
   for (const posting of metricPostings(filtered)) {
+    const isDebtTransfer = debtTransferPeer(posting, filtered) !== undefined;
     if (posting.categoryPath.length === 0) {
       let uncategorized = roots.get("");
       if (uncategorized === undefined) {
@@ -465,6 +491,8 @@ export function aggregateCategoryBreakdown(
       }
       addPostingToSummary(uncategorized.summary, posting);
       addPostingToSummary(uncategorized.directSummary, posting);
+      addPostingToComposition(uncategorized.expenseComposition, posting, isDebtTransfer);
+      addPostingToComposition(uncategorized.directExpenseComposition, posting, isDebtTransfer);
       uncategorized.activityEurMinor = addMinor(
         uncategorized.activityEurMinor,
         Math.abs(posting.amountEurMinor),
@@ -483,6 +511,7 @@ export function aggregateCategoryBreakdown(
         level.set(name, current);
       }
       addPostingToSummary(current.summary, posting);
+      addPostingToComposition(current.expenseComposition, posting, isDebtTransfer);
       current.activityEurMinor = addMinor(
         current.activityEurMinor,
         Math.abs(posting.amountEurMinor),
@@ -492,6 +521,7 @@ export function aggregateCategoryBreakdown(
     }
     if (current !== undefined) {
       addPostingToSummary(current.directSummary, posting);
+      addPostingToComposition(current.directExpenseComposition, posting, isDebtTransfer);
     }
   }
 

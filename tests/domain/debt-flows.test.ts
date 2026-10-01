@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  aggregateCategoryBreakdown,
   aggregateDebtBreakdown,
   aggregateFlowComposition,
   aggregateKpis,
@@ -114,6 +115,35 @@ test("a categorized shared split records cash paid, own cost and financed share 
   assert.equal(partner?.grossDebtExpensesEurMinor, 500);
   assert.equal(partner?.debtExpenseRefundsEurMinor, 0);
   assert.equal(partner?.periodClosingBalanceEurMinor, 500);
+});
+
+test("category expense composition separates verified debt counterparties across selected perspectives", () => {
+  const source = dataset([
+    ...sharedPurchase(),
+    posting("refund-cash", "cash", 200, { linked: true, transferPeerPostingId: "refund-partner" }),
+    posting("refund-partner", "partner", -200, { linked: true, transferPeerPostingId: "refund-cash" }),
+    posting("card-charge", "card", -300),
+    posting("card-refund", "card", 100),
+  ]);
+  for (const scope of ["all", "realCashFlow", "debtsOnly"] as const) {
+    const filtered = applyFilters(source, { ...createDefaultFilterState(), scope });
+    const category = aggregateCategoryBreakdown(filtered).find((item) => item.name === "Supermercado");
+    assert.ok(category);
+    const detail = category.expenseComposition;
+    const global = aggregateFlowComposition(filtered);
+    assert.equal(detail.grossExpensesEurMinor, global.grossExpensesEurMinor, scope);
+    assert.equal(detail.expenseRefundsEurMinor, global.expenseRefundsEurMinor, scope);
+    assert.equal(detail.debtExpenseAdjustmentsEurMinor, global.debtExpenseAdjustmentsEurMinor, scope);
+    assert.equal(detail.netExpenseConsumptionEurMinor, -global.netExpensesEurMinor, scope);
+    assert.equal(detail.grossExpensesEurMinor - detail.expenseRefundsEurMinor - detail.debtExpenseAdjustmentsEurMinor,
+      detail.netExpenseConsumptionEurMinor, scope);
+    assert.deepEqual(category.directExpenseComposition, detail, "leaf direct and inclusive amounts match");
+  }
+  const debtOnly = aggregateCategoryBreakdown(applyFilters(source, { ...createDefaultFilterState(), scope: "debtsOnly" }))[0]!;
+  assert.equal(debtOnly.expenseComposition.grossExpensesEurMinor, 300);
+  assert.equal(debtOnly.expenseComposition.expenseRefundsEurMinor, 100);
+  assert.equal(debtOnly.expenseComposition.debtExpenseAdjustmentsEurMinor, 300);
+  assert.equal(debtOnly.expenseComposition.netExpenseConsumptionEurMinor, -100);
 });
 
 test("debt-only and origin/destination filters retain the actual funding counterpart", () => {
