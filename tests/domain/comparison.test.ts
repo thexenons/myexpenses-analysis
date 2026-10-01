@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildPeriodComparison, comparisonCurrentRange, type PeriodComparisonMetric } from "../../src/domain/analytics/comparison.ts";
+import { buildCumulativeComparison } from "../../src/domain/analytics/comparison-cumulative.ts";
 import { applyFilters, createDefaultFilterState } from "../../src/domain/analytics/filters.ts";
 import { normalizeDataset } from "../../src/domain/analytics/normalize.ts";
 import type { FilterState, IsoDate, ParsedDirectTransaction } from "../../src/domain/analytics/types.ts";
@@ -121,4 +122,119 @@ test("compares sent money, attributed expenses and full closing balances for the
   assert.equal(result.metrics.find((row) => row.key === "debtClosing")?.referenceEurMinor, 300);
   assert.equal(result.metrics.find((row) => row.key === "expenseRefunds")?.currentEurMinor, 0);
   assert.equal(result.metrics.find((row) => row.key === "debtExpenseAdjustments")?.currentEurMinor, 500);
+});
+
+test("cumulative comparison aligns calendar-day offsets, preserves unequal endpoints and exact selected amounts", () => {
+  const filtered = fixture({ periodMode: "custom", dateRange: { from: "2025-03-01", to: "2025-03-03" } });
+  const comparison = buildPeriodComparison(filtered, { mode: "custom", dateRange: { from: "2025-02-01", to: "2025-02-02" } });
+  assert.ok(comparison);
+  const curve = buildCumulativeComparison(filtered, comparison, "expenses");
+  assert.ok(curve);
+  assert.deepEqual(curve.current.map(({ day, date, eurMinor }) => [day, date, eurMinor]), [
+    [1, "2025-03-01", 0], [2, "2025-03-02", 3000], [3, "2025-03-03", 3000],
+  ]);
+  assert.deepEqual(curve.reference.map(({ day, date, eurMinor }) => [day, date, eurMinor]), [
+    [1, "2025-02-01", 0], [2, "2025-02-02", 2000],
+  ]);
+  assert.equal(curve.sampled, false);
+});
+
+test("cumulative comparison retains signed refunds, net transfers, VOID exclusion and every metric endpoint", () => {
+  const initial = fixture();
+  const source = { ...initial.source, postings: [
+    ...initial.source.postings,
+    { ...initial.source.postings[0]!, id: "refund", date: "2025-03-03" as IsoDate, amountEurMinor: 5000, isVoid: false },
+    { ...initial.source.postings[0]!, id: "void", date: "2025-03-04" as IsoDate, amountEurMinor: -9000, isVoid: true },
+    { ...initial.source.postings[0]!, id: "transfer", date: "2025-03-05" as IsoDate, amountEurMinor: -700, bucket: "transfer" as const, isVoid: false },
+  ] };
+  const filtered = applyFilters(source, { ...initial.filters, dateRange: { from: "2025-03-01", to: "2025-03-05" } });
+  const comparison = buildPeriodComparison(filtered, { mode: "previousPeriod" });
+  assert.ok(comparison);
+  for (const key of ["expenses", "income", "net"] as const) {
+    const curve = buildCumulativeComparison(filtered, comparison, key);
+    const metric: PeriodComparisonMetric = comparison.metrics.find((row) => row.key === key)!;
+    assert.equal(curve?.current.at(-1)?.eurMinor, metric.currentEurMinor, key);
+    assert.equal(curve?.reference.at(-1)?.eurMinor, metric.referenceEurMinor, key);
+  }
+  assert.equal(buildCumulativeComparison(filtered, comparison, "expenses")?.current.at(-1)?.eurMinor, -2000);
+});
+
+test("cumulative comparison samples very long ranges without losing endpoints or recorded movements", () => {
+  const filtered = fixture({ periodMode: "custom", dateRange: { from: "0001-01-01", to: "9999-12-31" } });
+  const comparison = buildPeriodComparison(filtered, { mode: "custom", dateRange: { from: "2025-03-02", to: "2025-03-02" } });
+  assert.ok(comparison);
+  const curve = buildCumulativeComparison(filtered, comparison, "net");
+  assert.ok(curve);
+  assert.equal(curve.sampled, true);
+  assert.ok(curve.current.length <= 120);
+  assert.deepEqual([curve.current[0]?.date, curve.current.at(-1)?.date], ["0001-01-01", "9999-12-31"]);
+  assert.equal(curve.current.at(-1)?.eurMinor, comparison.metrics.find((row) => row.key === "net")?.currentEurMinor);
+  assert.deepEqual(curve.reference.map((row) => [row.day, row.date]), [[1, "2025-03-02"]]);
+});
+
+test("cumulative comparison preserves leap-day and single-day reference identities", () => {
+  const filtered = fixture({ periodMode: "custom", dateRange: { from: "2024-02-01", to: "2024-02-29" } });
+  const comparison = buildPeriodComparison(filtered, { mode: "previousYear" });
+  assert.ok(comparison);
+  const curve = buildCumulativeComparison(filtered, comparison, "expenses");
+  assert.deepEqual([curve?.current.at(-1)?.day, curve?.current.at(-1)?.date], [29, "2024-02-29"]);
+  assert.deepEqual([curve?.reference.at(-1)?.day, curve?.reference.at(-1)?.date], [28, "2023-02-28"]);
+  const oneDay = buildPeriodComparison(filtered, { mode: "custom", dateRange: { from: "2024-02-02", to: "2024-02-02" } });
+  assert.ok(oneDay);
+  assert.deepEqual(buildCumulativeComparison(filtered, oneDay, "expenses")?.reference.map((point) => point.day), [1]);
+});
+
+test("cumulative endpoints equal comparison metrics across all account scopes and value-date subsets", () => {
+  const normalized = normalizeDataset({
+    accounts: { version: 2, accounts: { cash: { label: "Banco", type: "DEFAULT" }, debt: { label: "Pareja", type: "DEBT" } } },
+    categories: { Hogar: { categoryType: "EXPENSE" } },
+    parsedData: [
+      { uuid: "cash", label: "Banco", currency: "EUR", openingBalance: 0, transactions: [expense("old", "2025-02-02", -3), expense("now", "2025-03-02", -5)] },
+      { uuid: "debt", label: "Pareja", currency: "EUR", openingBalance: 0, transactions: [expense("old", "2025-02-02", 3), expense("now", "2025-03-02", 5)] },
+    ],
+  });
+  const source = { ...normalized, postings: normalized.postings.map((posting) => Object.assign({}, posting, {
+    linked: true,
+    transferPeerPostingId: normalized.postings.find((peer) => peer.transactionId === posting.transactionId && peer.accountId !== posting.accountId)!.id,
+    valueDate: posting.transactionId === "now" ? "2025-03-04" as IsoDate : posting.valueDate,
+  })) };
+  for (const scope of ["all", "realCashFlow", "debtsOnly"] as const) {
+    const filtered = applyFilters(source, {
+      ...createDefaultFilterState(), scope, dateBasis: "value", periodMode: "custom",
+      dateRange: { from: "2025-03-01", to: "2025-03-04" }, categoryPrefixes: [["Hogar"]],
+    });
+    const comparison = buildPeriodComparison(filtered, { mode: "custom", dateRange: { from: "2025-02-01", to: "2025-02-04" } });
+    assert.ok(comparison);
+    for (const key of ["expenses", "income", "net"] as const) {
+      const curve = buildCumulativeComparison(filtered, comparison, key);
+      const metric: PeriodComparisonMetric = comparison.metrics.find((row) => row.key === key)!;
+      assert.equal(curve?.current.at(-1)?.eurMinor, metric.currentEurMinor, `${scope} ${key} current`);
+      assert.equal(curve?.reference.at(-1)?.eurMinor, metric.referenceEurMinor, `${scope} ${key} reference`);
+      assert.equal(curve?.current[2]?.eurMinor, 0, "value-date activity remains flat before the posted value date");
+    }
+    assert.equal(buildCumulativeComparison(filtered, comparison, "expenses")?.current.at(-1)?.eurMinor,
+      scope === "debtsOnly" ? -500 : scope === "realCashFlow" ? 500 : 0,
+      "verified debt counterparties retain their signed selected-expense semantics");
+  }
+});
+
+test("cumulative comparison uses already converted EUR postings under currency and status filters", () => {
+  const source = normalizeDataset({
+    accounts: { version: 2, accounts: { usd: { label: "Dólares", type: "DEFAULT", exchangeRateMode: "STATIC", exchangeRateToEur: 0.5 } } },
+    categories: { Hogar: { categoryType: "EXPENSE" } },
+    parsedData: [{ uuid: "usd", label: "Dólares", currency: "USD", openingBalance: 0, transactions: [
+      expense("old", "2025-02-02", -8), expense("now", "2025-03-02", -10),
+      { ...expense("void", "2025-03-03", -100), sourceStatus: "VOID" },
+    ] }],
+  });
+  const filtered = applyFilters(source, {
+    ...createDefaultFilterState(), periodMode: "month", dateRange: { from: "2025-03-01", to: "2025-03-31" },
+    currencies: ["USD"], statuses: ["RECONCILED"],
+  });
+  const comparison = buildPeriodComparison(filtered, { mode: "previousPeriod" });
+  assert.ok(comparison);
+  const curve = buildCumulativeComparison(filtered, comparison, "expenses");
+  assert.equal(curve?.current.at(-1)?.eurMinor, 500);
+  assert.equal(curve?.reference.at(-1)?.eurMinor, 400);
+  assert.equal(curve?.current.at(-1)?.eurMinor, comparison.metrics.find((item) => item.key === "expenses")?.currentEurMinor);
 });

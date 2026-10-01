@@ -77,4 +77,54 @@ describe("PeriodComparison", () => {
     expect(screen.getByLabelText("Referencia desde")).toHaveAttribute("type", "date");
     expect(screen.getByLabelText("Referencia hasta")).toHaveAttribute("type", "date");
   });
+
+  it("only renders the cumulative recorded-activity chart on expansion and updates its exact table", async () => {
+    const user = userEvent.setup();
+    render(<PeriodComparison filtered={fixture()} />);
+    await user.click(screen.getByText("Comparar periodos"));
+    await user.selectOptions(screen.getByLabelText("Comparar con"), "previousPeriod");
+    const disclosure = screen.getByText("Actividad registrada acumulada", { selector: "summary" });
+    expect(disclosure.closest("details")).not.toHaveAttribute("open");
+    expect(screen.queryByRole("img", { name: /Actividad registrada acumulada/ })).not.toBeInTheDocument();
+    await user.click(screen.getByText("Actividad registrada acumulada", { selector: "summary" }));
+    expect(screen.getByRole("img", { name: /Actividad registrada acumulada/ })).toBeVisible();
+    expect(screen.getByText(/historial completo/)).toBeVisible();
+    await user.click(screen.getByText("Ver datos exactos"));
+    const exact = screen.getByRole("table", { name: "Datos exactos de Actividad registrada acumulada" });
+    expect(within(exact).getByText("Día 31")).toBeVisible();
+    expect(within(exact).getAllByText(/30,00/).length).toBeGreaterThan(0);
+    await user.selectOptions(screen.getByLabelText("Estadística de la curva"), "income");
+    expect(within(exact).queryByText(/30,00/)).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Comparar con"), "custom");
+    expect(screen.queryByRole("img", { name: /Actividad registrada acumulada/ })).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText("Referencia desde"), "2024-01-01");
+    await user.type(screen.getByLabelText("Referencia hasta"), "2025-03-31");
+    expect(screen.getByText("Actividad registrada acumulada", { selector: "summary" }).closest("details")).toHaveAttribute("open");
+    expect(screen.getByText(/hitos muestreados/)).toBeVisible();
+    await user.click(screen.getByText("Actividad registrada acumulada", { selector: "summary" }));
+    expect(screen.queryByRole("img", { name: /Actividad registrada acumulada/ })).not.toBeInTheDocument();
+  });
+
+  it("unmounts the expanded curve while the outer comparison is closed and refreshes it on reopening", async () => {
+    const user = userEvent.setup();
+    const initial = fixture();
+    const { container, rerender } = render(<PeriodComparison filtered={initial} />);
+    await user.click(screen.getByText("Comparar periodos", { selector: "summary" }));
+    await user.selectOptions(screen.getByLabelText("Comparar con"), "previousPeriod");
+    await user.click(screen.getByText("Actividad registrada acumulada", { selector: "summary" }));
+    expect(container.querySelector('svg[role="img"]')).not.toBeNull();
+    await user.click(screen.getByText(/Comparar periodos/, { selector: "summary" }));
+    expect(container.querySelector('svg[role="img"]')).toBeNull();
+    expect(container.querySelector('option[value="expenses"]')).toBeNull();
+    const filtered = applyFilters(initial.source, { ...initial.filters, categoryPrefixes: [["Sin coincidencias"]] });
+    rerender(<PeriodComparison filtered={filtered} />);
+    expect(container.querySelector('svg[role="img"]')).toBeNull();
+    await user.click(screen.getByText(/Comparar periodos/, { selector: "summary" }));
+    expect(screen.getByRole("img", { name: /Actividad registrada acumulada/ })).toBeVisible();
+    expect(screen.getByText("Actividad registrada acumulada", { selector: "summary" }).closest("details")).toHaveAttribute("open");
+    await user.click(screen.getByText("Ver datos exactos"));
+    const table = screen.getByRole("table", { name: "Datos exactos de Actividad registrada acumulada" });
+    const endpoint = within(table).getByRole("row", { name: /Día 31/ });
+    expect(within(endpoint).getAllByRole("cell")[0]).toHaveTextContent("0,00");
+  });
 });

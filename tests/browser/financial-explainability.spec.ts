@@ -100,6 +100,59 @@ test("prioritizes selected period highlights while keeping warnings and full sta
   await expectNoDocumentOverflow(page);
 });
 
+test("compares cumulative recorded activity on demand with inspectable endpoints and bounded long ranges", async ({ page }, testInfo) => {
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  await toolbar.getByRole("combobox", { name: "Tipo de periodo" }).selectOption("month");
+  await toolbar.getByLabel("Mes seleccionado").fill("2026-08");
+  await page.getByText("Comparar periodos", { exact: true }).click();
+  const comparison = page.getByRole("region", { name: "Comparación de periodos" });
+  await comparison.getByRole("combobox", { name: "Comparar con" }).selectOption("previousPeriod");
+  const curveSummary = comparison.locator("summary").filter({ hasText: "Actividad registrada acumulada" });
+  await expect(comparison.getByRole("img", { name: "Actividad registrada acumulada" })).toHaveCount(0);
+  const affordance = await curveSummary.evaluate((summary) => ({
+    height: summary.getBoundingClientRect().height,
+    display: getComputedStyle(summary).display,
+    marker: getComputedStyle(summary).listStyleType,
+  }));
+  expect(affordance).toMatchObject({ display: "list-item", marker: "disclosure-closed" });
+  expect(affordance.height).toBeGreaterThanOrEqual(44);
+  await curveSummary.focus();
+  await page.keyboard.press("Enter");
+  await expect(comparison.getByRole("img", { name: "Actividad registrada acumulada" })).toBeVisible();
+  await expect(comparison.getByText(/no saldo disponible ni garantía de historial completo/)).toBeVisible();
+  await curveSummary.locator("..").screenshot({ path: `/tmp/a7c-chart-${testInfo.project.name}.png`, animations: "disabled" });
+  await comparison.getByText("Ver datos exactos", { exact: true }).click();
+  const table = comparison.getByRole("table", { name: "Datos exactos de Actividad registrada acumulada" });
+  const last = table.getByRole("row", { name: /Día 31/ });
+  await expect(last).toBeVisible();
+  const metric = comparison.getByRole("region", { name: "Indicadores destacados" }).getByRole("heading", { name: "Gasto neto seleccionado" }).locator("..");
+  expect((await last.getByRole("cell").first().textContent())?.trim()).toBe((await metric.locator("dd").first().textContent())?.trim());
+  await comparison.getByRole("combobox", { name: "Estadística de la curva" }).selectOption("net");
+  await expect(comparison.getByRole("combobox", { name: "Estadística de la curva" })).toHaveValue("net");
+  const netMetric = comparison.getByRole("region", { name: "Indicadores destacados" }).getByRole("heading", { name: "Neto seleccionado", exact: true }).locator("..");
+  await comparison.getByText("Consultar un punto").click();
+  await comparison.getByRole("combobox", { name: "Punto de Actividad registrada acumulada" }).selectOption("Día 31");
+  await expect(last.getByRole("cell").first()).toHaveText((await netMetric.locator("dd").first().textContent())!.trim());
+  await expect(comparison.getByRole("region", { name: "Valores de Actividad registrada acumulada" })).toContainText("31 ago 2026");
+  await comparison.getByRole("combobox", { name: "Comparar con" }).selectOption("custom");
+  await comparison.getByLabel("Referencia desde").fill("2024-01-01");
+  await comparison.getByLabel("Referencia hasta").fill("2026-08-31");
+  await expect(comparison.getByText(/hitos muestreados/)).toBeVisible();
+  expect(await table.getByRole("row").count()).toBeLessThanOrEqual(121);
+  await expectNoDocumentOverflow(page);
+  const outerSummary = page.locator("summary").filter({ hasText: /^Comparar periodos/ });
+  const outerDetails = outerSummary.locator("..");
+  await outerSummary.focus();
+  await page.keyboard.press("Space");
+  await expect(outerDetails.locator('svg[role="img"]')).toHaveCount(0);
+  await outerSummary.focus();
+  await page.keyboard.press("Enter");
+  await expect(comparison.getByRole("img", { name: "Actividad registrada acumulada" })).toBeVisible();
+  await curveSummary.focus();
+  await page.keyboard.press("Space");
+  await expect(comparison.getByRole("img", { name: "Actividad registrada acumulada" })).toHaveCount(0);
+});
+
 test("wraps long filter category names without hiding selection or removal", async ({ page }) => {
   await page.getByRole("button", { name: /Abrir todos los filtros/ }).click();
   const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });

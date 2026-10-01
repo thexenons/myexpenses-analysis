@@ -9,6 +9,7 @@ import type { IsoDate } from "../../../../domain/analytics/types.ts";
 import { formatDate, formatEuroMinor } from "../../../utils/format.ts";
 import { DataTable } from "../DataTable/index.ts";
 import type { DataTableColumn } from "../DataTable/index.ts";
+import { CumulativeCurve } from "./PeriodComparison.curve.tsx";
 import styles from "./PeriodComparison.module.css";
 import type { PeriodComparisonProps } from "./PeriodComparison.types.ts";
 
@@ -25,9 +26,11 @@ const columns: readonly DataTableColumn<PeriodComparisonMetric>[] = [
 ];
 
 export function PeriodComparison({ filtered }: PeriodComparisonProps) {
+  const [outerOpen, setOuterOpen] = useState(false);
   const [mode, setMode] = useState<ComparisonMode>("none");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [curveOpen, setCurveOpen] = useState(false);
   const invalidRange = mode === "custom" && from !== "" && to !== "" && from > to;
   const comparison = useMemo(() => {
     if (invalidRange) return null;
@@ -44,7 +47,7 @@ export function PeriodComparison({ filtered }: PeriodComparisonProps) {
   });
 
   return (
-    <details className={styles.root}>
+    <details className={styles.root} onToggle={(event) => setOuterOpen(event.currentTarget.open)} open={outerOpen}>
       <summary className={styles.summary}>Comparar periodos{mode === "none" ? "" : " · Comparación activa"}</summary>
       <section aria-label="Comparación de periodos" className={styles.content}>
       <div className={styles.controls}>
@@ -93,6 +96,10 @@ export function PeriodComparison({ filtered }: PeriodComparisonProps) {
             ))}
           </ul>
         </section>
+        <details className={styles.curveDisclosure} onToggle={(event) => setCurveOpen(event.currentTarget.open)} open={curveOpen}>
+          <summary className={styles.curveSummary}>Actividad registrada acumulada</summary>
+          {outerOpen && curveOpen ? <CumulativeCurve comparison={comparison} filtered={filtered} /> : null}
+        </details>
         <details className={styles.allStatistics}>
           <summary className={styles.allStatisticsSummary}>Todas las estadísticas</summary>
           <div className={styles.allStatisticsContent}>

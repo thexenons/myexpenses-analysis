@@ -92,11 +92,11 @@ checks trigger the mandatory writer/verification routing rules.
   Checks: synthetic filesystem, leases, symlink/failure and rollback regressions.
 - [x] A6 Add sync freshness observability separate from service readiness.
   Checks: fresh/stale/failing/no-new-backup worker scenarios; operational docs.
-- [ ] A7 Surface existing comparison highlights and on-demand cumulative chart.
+- [x] A7 Surface existing comparison highlights and on-demand cumulative chart.
   Checks: consistent scopes, partial/history gaps, accessible compact layouts.
   - [x] A7H Show selected net income/expense/net highlights from existing metrics;
     retain all statistics on demand and keep interpretation warnings visible.
-  - [ ] A7C Add a declared-metric current/reference cumulative recorded-activity
+  - [x] A7C Add a declared-metric current/reference cumulative recorded-activity
     chart inside the same comparison context, calculated only on demand.
 - [ ] A8 Expose category gross expenses, refunds and net in detail.
   Checks: existing accounting identities, no duplicate hierarchy totals.
@@ -315,16 +315,58 @@ checks trigger the mandatory writer/verification routing rules.
 - A7H rollback: PeriodComparison source/style/tests and browser regression.
   No full Node/deployment suite repeated for this presentation-only unit;
   domain financial comparison checks were run. Engram mirror remains pending.
+  Commit `507a7c0`, 193 authored changed lines, medium `under_budget` against
+  `7decdbb`; no review due. Fast-forwarded/pushed main. The reviewed boundary
+  remains `7decdbb`; A7H is in the pending review slice.
+- A7C uses an explicitly selected net-expense (default), income or selected-net
+  metric, within the existing comparison disclosure. Align elapsed day offsets,
+  retain both true endpoints and never extend a shorter period beyond its end.
+  Long ranges may sample displayed milestones, not omit underlying movements;
+  bound chart points and label that sampling. Exact dates stay inspectable.
+  Compute/render only on user expansion and preserve all scope/date/refund/debt
+  semantics; final points must equal the matching existing comparison metrics.
+- A7C reuses daily recorded aggregation and LineChart, aligns shared day offsets,
+  preserves unequal/leap-day endpoints and limits long ranges to 120 displayed
+  milestones without losing movements. Its endpoint guard declines a curve if
+  it disagrees with the established comparison metric. Selected metric is
+  explicit; actual dates and signed amounts are inspectable in the existing
+  chart inspector/table. No underlying financial totals or scope rules change.
+- A7C TDD: missing domain-helper RED and missing-chart UI RED preceded source
+  implementation; initial domain 15/15, UI 4/4 and browser 2/2 passed. Browser
+  caught an open-state remount defect on incomplete custom ranges, fixed with
+  controlled native disclosure state. Parent found outer-closed content still
+  mounted; a further UI RED (4/5) preceded gating chart work on both disclosures.
+  Final UI 5/5 and full UI 468/468; domain 15/15; synthetic desktop/mobile
+  A7H+A7C browser 4/4; three TypeScript projects, Oxlint and diff check passed.
+  Full Node 308 passed, 3 optional skips before the UI-only lazy-work correction;
+  not repeated after that correction. No synthetic deployment/live service check
+  was needed or run for this analytics/presentation unit.
+- A7C parent spot check repeated domain 15/15 and inspected synthetic desktop/
+  mobile screenshots `/tmp/a7c-chart-{desktop,mobile-390}.png`; physical devices
+  and other browser engines were not tested. Rollback: new comparison-cumulative
+  helper, local curve component, PeriodComparison integration/style/tests and
+  comparison domain/browser regressions. Engram mirror remains pending.
 - A8/A9 mapping corrected two assumptions: category-level summaries currently
   have net expenses but not the global gross/refund split; extend aggregation
   using the existing debt-aware classification, never label debt adjustments
   as cash refunds. UI Yo is scope `all`, not all DEFAULT accounts; savings-rate
   eligibility must name its actual scope. Observed full-month date bounds are
   not a verified completeness certificate. Both later units remain pending.
+- A9 scoped accounting challenge verified `filters.ts`, aggregateKpis and
+  `tests/domain/debt-flows.test.ts`: the eligible accounting result is Yo /
+  `scope: all`, not Real. Categorized DEFAULT/debt mirrored expense amounts
+  cancel in Yo, whereas Real omits the debt side and can count an advance as
+  personal spending. Income mirrors and ordinary debt-account charges keep
+  their existing meanings; transfers are excluded from income+expense result.
+  Use `(net income + signed net expenses) / positive net income`, with no
+  account/content subsets, and explicitly distinguish this accounting rate
+  from cash available or net worth. The earlier Real-scope suggestion was
+  rejected before implementation based on this evidence. A9 remains pending.
 
 ## Next step
 
-Proceed to A7–A10. A3F spacing and A6 diagnostics are verified and pushed.
+Close the A7C work-unit commit and due review/delivery, then proceed to A8–A10.
+A3F, A6 and A7H are pushed; A7C implementation and checks are complete.
 Do not infer capture time from pCloud modification metadata or invent a default
 expected backup cadence. Runtime registration must be restored before memory
 attribution resumes; the local task document preserves all pending progress.
