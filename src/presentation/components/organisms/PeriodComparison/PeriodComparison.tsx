@@ -13,12 +13,15 @@ import styles from "./PeriodComparison.module.css";
 import type { PeriodComparisonProps } from "./PeriodComparison.types.ts";
 
 const percentFormatter = new Intl.NumberFormat("es-ES", { maximumFractionDigits: 1, signDisplay: "exceptZero" });
+const highlightedKeys = ["income", "expenses", "net"] as const;
+const formatDelta = (amount: number) => `${amount > 0 ? "+" : ""}${formatEuroMinor(amount)}`;
+const formatVariation = (percent: number | null) => percent === null ? "Sin base" : `${percentFormatter.format(percent)} %`;
 const columns: readonly DataTableColumn<PeriodComparisonMetric>[] = [
   { key: "metric", header: "Estadística", cell: (metric) => <span className={styles.metricLabel}>{metric.label}</span>, rowHeader: true },
   { key: "current", header: "Actual", cell: (metric) => formatEuroMinor(metric.currentEurMinor), align: "end" },
   { key: "reference", header: "Referencia", cell: (metric) => formatEuroMinor(metric.referenceEurMinor), align: "end" },
-  { key: "delta", header: "Diferencia", cell: (metric) => `${metric.deltaEurMinor > 0 ? "+" : ""}${formatEuroMinor(metric.deltaEurMinor)}`, align: "end" },
-  { key: "percent", header: "Variación", cell: (metric) => metric.deltaPercent === null ? "Sin base" : `${percentFormatter.format(metric.deltaPercent)} %`, align: "end" },
+  { key: "delta", header: "Diferencia", cell: (metric) => formatDelta(metric.deltaEurMinor), align: "end" },
+  { key: "percent", header: "Variación", cell: (metric) => formatVariation(metric.deltaPercent), align: "end" },
 ];
 
 export function PeriodComparison({ filtered }: PeriodComparisonProps) {
@@ -35,6 +38,10 @@ export function PeriodComparison({ filtered }: PeriodComparisonProps) {
         : {}),
     });
   }, [filtered, from, invalidRange, mode, to]);
+  const highlighted = comparison === null ? [] : highlightedKeys.flatMap((key) => {
+    const metric = comparison.metrics.find((candidate) => candidate.key === key);
+    return metric === undefined ? [] : [metric];
+  });
 
   return (
     <details className={styles.root}>
@@ -67,20 +74,40 @@ export function PeriodComparison({ filtered }: PeriodComparisonProps) {
           Actual: {formatDate(comparison.currentRange.from)} – {formatDate(comparison.currentRange.to)} · Referencia: {formatDate(comparison.referenceRange.from)} – {formatDate(comparison.referenceRange.to)}.
           {" "}Mismos filtros y fecha de {filtered.filters.dateBasis === "value" ? "valor (operación si falta)" : "operación"}.
         </p>
-        <DataTable caption="Importes del periodo actual frente a la referencia" columns={columns} rowKey={(metric) => metric.key} rows={comparison.metrics} />
-        <p className={styles.description}>
-          Diferencia = actual − referencia. El porcentaje usa el valor absoluto de referencia; con base cero no se calcula.
-          {" "}Las entradas y salidas incluyen transferencias entre las cuentas seleccionadas; no son ingresos ni gastos por sí solas.
-        </p>
-        <p className={styles.description}>
-          Las estadísticas de deuda usan las cuentas de deuda incluidas en el ámbito y la selección.
-          {" "}El saldo final completo se mide al final de cada rango y conserva todo el historial de esas cuentas, aunque filtres categorías, origen, destino, estados, etiquetas o búsqueda.
-          {" "}Las contrapartidas muestran ajustes contables de transferencias verificadas; no son devoluciones cobradas.
-        </p>
         {comparison.referenceOutsideHistory ? <p className={styles.description}>
           La referencia se extiende fuera de las fechas con movimientos del archivo. Los ceros no garantizan que el historial esté completo.
         </p> : null}
         {comparison.referencePostingCount === 0 ? <p className={styles.description}>No hay movimientos no anulados en la referencia con estos filtros.</p> : null}
+        <section aria-label="Indicadores destacados" className={styles.highlightSection}>
+          <ul className={styles.highlights}>
+            {highlighted.map((metric) => (
+              <li className={styles.highlight} key={metric.key}>
+                <h3 className={styles.highlightTitle}>{metric.label}</h3>
+                <dl className={styles.highlightValues}>
+                  <div><dt>Actual</dt><dd>{formatEuroMinor(metric.currentEurMinor)}</dd></div>
+                  <div><dt>Referencia</dt><dd>{formatEuroMinor(metric.referenceEurMinor)}</dd></div>
+                  <div><dt>Diferencia</dt><dd>{formatDelta(metric.deltaEurMinor)}</dd></div>
+                  <div><dt>Variación</dt><dd>{formatVariation(metric.deltaPercent)}</dd></div>
+                </dl>
+              </li>
+            ))}
+          </ul>
+        </section>
+        <details className={styles.allStatistics}>
+          <summary className={styles.allStatisticsSummary}>Todas las estadísticas</summary>
+          <div className={styles.allStatisticsContent}>
+            <DataTable caption="Importes del periodo actual frente a la referencia" columns={columns} rowKey={(metric) => metric.key} rows={comparison.metrics} />
+            <p className={styles.description}>
+              Diferencia = actual − referencia. El porcentaje usa el valor absoluto de referencia; con base cero no se calcula.
+              {" "}Las entradas y salidas incluyen transferencias entre las cuentas seleccionadas; no son ingresos ni gastos por sí solas.
+            </p>
+            <p className={styles.description}>
+              Las estadísticas de deuda usan las cuentas de deuda incluidas en el ámbito y la selección.
+              {" "}El saldo final completo se mide al final de cada rango y conserva todo el historial de esas cuentas, aunque filtres categorías, origen, destino, estados, etiquetas o búsqueda.
+              {" "}Las contrapartidas muestran ajustes contables de transferencias verificadas; no son devoluciones cobradas.
+            </p>
+          </div>
+        </details>
       </> : mode !== "none" && !invalidRange ? <p className={styles.description}>
         {mode === "custom" ? "Completa las dos fechas de referencia." : "Selecciona un periodo con fechas para comparar."}
       </p> : null}

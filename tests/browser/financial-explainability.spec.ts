@@ -57,6 +57,49 @@ test.afterEach(async ({ page }) => {
   expect(outboundByPage.get(page)).toEqual([]);
 });
 
+test("prioritizes selected period highlights while keeping warnings and full statistics keyboard-accessible", async ({ page }, testInfo) => {
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  await toolbar.getByRole("combobox", { name: "Tipo de periodo" }).selectOption("month");
+  await toolbar.getByLabel("Mes seleccionado").fill("2026-08");
+  const disclosure = page.getByText("Comparar periodos", { exact: true });
+  await disclosure.focus();
+  await page.keyboard.press("Enter");
+  const comparison = page.getByRole("region", { name: "Comparación de periodos" });
+  await comparison.getByRole("combobox", { name: "Comparar con" }).selectOption("previousPeriod");
+  await comparison.screenshot({ path: `/tmp/a7h-after-${testInfo.project.name}.png`, animations: "disabled" });
+  const highlights = comparison.getByRole("region", { name: "Indicadores destacados" });
+  await expect(highlights.getByRole("heading")).toHaveCount(3);
+  await expect(highlights.getByRole("heading", { name: "Ingreso neto seleccionado" })).toBeVisible();
+  await expect(highlights.getByRole("heading", { name: "Gasto neto seleccionado" })).toBeVisible();
+  await expect(highlights.getByRole("heading", { name: "Neto seleccionado", exact: true })).toBeVisible();
+  await expect(comparison.getByRole("table")).not.toBeVisible();
+  await highlights.screenshot({ path: `/tmp/a7h-highlights-${testInfo.project.name}.png`, animations: "disabled" });
+  const allStatistics = comparison.getByText("Todas las estadísticas", { exact: true });
+  await allStatistics.screenshot({ path: `/tmp/a7h-disclosure-after-${testInfo.project.name}.png`, animations: "disabled" });
+  const affordance = await allStatistics.evaluate((summary) => {
+    const style = getComputedStyle(summary);
+    return { display: style.display, marker: style.listStyleType, height: summary.getBoundingClientRect().height };
+  });
+  expect(affordance.display).toBe("list-item");
+  expect(affordance.marker).toBe("disclosure-closed");
+  expect(affordance.height).toBeGreaterThanOrEqual(44);
+
+  await comparison.getByRole("combobox", { name: "Comparar con" }).selectOption("custom");
+  await comparison.getByLabel("Referencia desde").fill("2024-01-01");
+  await comparison.getByLabel("Referencia hasta").fill("2024-01-31");
+  const warning = comparison.getByText(/Los ceros no garantizan que el historial esté completo/);
+  await expect(warning).toBeVisible();
+  await expect(comparison.getByText(/No hay movimientos no anulados en la referencia/)).toBeVisible();
+  expect(await warning.evaluate((element, next) => Boolean(element.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING), await highlights.elementHandle())).toBe(true);
+  await allStatistics.focus();
+  await page.keyboard.press("Space");
+  await expect(allStatistics.locator("..")).toHaveAttribute("open", "");
+  expect(await allStatistics.evaluate((summary) => getComputedStyle(summary).listStyleType)).toBe("disclosure-open");
+  await expect(comparison.getByRole("table")).toBeVisible();
+  await expect(comparison.getByRole("row")).toHaveCount(18);
+  await expectNoDocumentOverflow(page);
+});
+
 test("wraps long filter category names without hiding selection or removal", async ({ page }) => {
   await page.getByRole("button", { name: /Abrir todos los filtros/ }).click();
   const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });

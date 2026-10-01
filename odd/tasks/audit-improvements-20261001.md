@@ -94,6 +94,10 @@ checks trigger the mandatory writer/verification routing rules.
   Checks: fresh/stale/failing/no-new-backup worker scenarios; operational docs.
 - [ ] A7 Surface existing comparison highlights and on-demand cumulative chart.
   Checks: consistent scopes, partial/history gaps, accessible compact layouts.
+  - [x] A7H Show selected net income/expense/net highlights from existing metrics;
+    retain all statistics on demand and keep interpretation warnings visible.
+  - [ ] A7C Add a declared-metric current/reference cumulative recorded-activity
+    chart inside the same comparison context, calculated only on demand.
 - [ ] A8 Expose category gross expenses, refunds and net in detail.
   Checks: existing accounting identities, no duplicate hierarchy totals.
 - [ ] A9 Add eligible completed-period savings-rate trend.
@@ -279,11 +283,48 @@ checks trigger the mandatory writer/verification routing rules.
   metadata/test and deployment-guide paragraph. About 449 authored lines are
   cohesive safety coverage and diagnostics; do not split or omit tests solely
   to fit the advisory 400-line unit estimate. Engram mirror remains pending.
+- A6 commit `7decdbb` includes 493 authored changed lines with recovery notes.
+  The pending A3F+A6 slice against `7ade54a` assessed medium, 684 net authored
+  lines; review was due at the slice budget. User explicitly granted this
+  candidate. Reliability review found no findings; native lineage
+  `review-bfa3f6575488e802` was approved and exactly acknowledged, authority
+  burned. Main fast-forwarded and pushed at `7decdbb`; reviewed boundary is
+  now `7decdbb`. Native review inspected immutable patches, not rerun tests.
+- A7 read-only mapping: `PeriodComparison` already owns exact current/reference
+  ranges and seventeen metrics, shared through GlobalFilters. Its disclosure is
+  the appropriate location; no second comparison engine or budget-row expansion.
+  First deliver compact highlights directly from existing income/expense/net
+  metrics, with full statistics on demand. Preserve source history warnings
+  near the highlights. Then add the optional cumulative recorded-activity view
+  using those same ranges/filters, retaining currency, date-basis, refund and
+  debt semantics. Observed date bounds do not prove historical completeness.
+  A7H/A7C are separate delegated work units with their own checks and commits.
+- A7H shows three neutral selected-net metric cards (income, expense, net),
+  using existing amounts/deltas/zero-base percentage behavior. All seventeen
+  statistics and technical definitions remain in a native nested disclosure.
+  Current/reference ranges, date basis, outside-history and empty-reference
+  warnings remain visible above highlights. No financial calculation changes.
+- A7H TDD: UI RED 2 failures then focused 3/3; synthetic browser RED 2 failures
+  then desktop/mobile 2/2. Full UI passed 466/466; domain comparison 9/9;
+  all three TypeScript checks, Oxlint and diff check passed. Parent spot check
+  passed 3/3 and inspected highlight crops. Before commit, a bounded browser
+  RED→GREEN correction restores the nested summary's native marker rather
+  than suppress it with flex; retains a 44px target. Final focused/browser/
+  types/lint checks reran successfully. Evidence: `/tmp/a7h-*` synthetic crops.
+  Chromium/emulated mobile only, not physical-device or cross-engine coverage.
+- A7H rollback: PeriodComparison source/style/tests and browser regression.
+  No full Node/deployment suite repeated for this presentation-only unit;
+  domain financial comparison checks were run. Engram mirror remains pending.
+- A8/A9 mapping corrected two assumptions: category-level summaries currently
+  have net expenses but not the global gross/refund split; extend aggregation
+  using the existing debt-aware classification, never label debt adjustments
+  as cash refunds. UI Yo is scope `all`, not all DEFAULT accounts; savings-rate
+  eligibility must name its actual scope. Observed full-month date bounds are
+  not a verified completeness certificate. Both later units remain pending.
 
 ## Next step
 
-Close the A6 work-unit commit and due review/delivery, then proceed to A7–A10.
-A3F spacing is pushed; A6 implementation and functional checks are complete.
+Proceed to A7–A10. A3F spacing and A6 diagnostics are verified and pushed.
 Do not infer capture time from pCloud modification metadata or invent a default
 expected backup cadence. Runtime registration must be restored before memory
 attribution resumes; the local task document preserves all pending progress.
