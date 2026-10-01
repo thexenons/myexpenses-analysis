@@ -17,8 +17,10 @@ operational resilience and the visibility of useful financial statistics.
   explicit request for successive small deliveries to main. No PR requested.
   Initial branch/base: `feat/audit-improvements-20261001` / `f45c7e6`.
 - RDD is on (global). Candidate consent is separate; prior grants are consumed.
-- Engram mirror `odd/audit-improvements-20261001/tasks` is PENDING: the runtime
-  prohibits agent-attributed memory tools until session registration returns.
+- Engram mirror: `odd/audit-improvements-20261001/tasks`. Earlier runtime
+  restrictions left it pending; the current memory protocol permits calls with
+  no session_id when no authoritative identity is supplied. No ID is invented
+  or recovered from observations. Mirror synchronization resumed after A5.
 
 ## Decisions and acceptance
 
@@ -67,6 +69,9 @@ checks trigger the mandatory writer/verification routing rules.
   Checks: calendar/rollover/refund/filter/currency edge cases and full budget tests.
 - [x] A3 Present compact pace guidance globally and per budget category.
   Checks: UI tests and synthetic desktop/mobile keyboard/browser scenarios.
+- [x] A3F Align the budget category disclosure icon with the category title.
+  User reported vertical mismatch after A3. Checks: browser geometry on desktop
+  and mobile, wrapped names, details open/closed, and keyboard behavior.
 - [x] A4 Add repository CI for existing checks and isolated browser smoke.
   Checks: workflow validation and local equivalents; disclose hosted-run limits.
 - [x] A5 Add bounded release retention with protected active/rollback releases.
@@ -107,7 +112,7 @@ checks trigger the mandatory writer/verification routing rules.
   assessment was unavailable due to explicit untracked-file scope; delivery
   assessment will use the committed-only unit, excluding unrelated user edits.
 - Running authored count: 507 across A1/A2 commits (net slice 495).
-  Last reviewed boundary: `bd9092f`; original base: `f45c7e6`.
+  Last reviewed boundary: `7ade54a`; original base: `f45c7e6`.
 - A2: new pure `analyzeBudgetPace(analysis, today)` calculates the global and
   inclusive per-category allowance and signed consumption through cutoff.
   Difference is allowance minus consumption; positive means below allowance.
@@ -192,8 +197,29 @@ checks trigger the mandatory writer/verification routing rules.
   Existing state-write durability behavior is unchanged. The lease protects
   cooperating workers, not a malicious/non-cooperating same-user filesystem
   writer. Keeping old release directories does not serve their asset URLs.
-  Commit and review assessment pending at this snapshot.
+  Commit `7ade54a`, medium committed-only assessment, 411 authored changed lines.
+  User granted review; native reliability lens found no defects. Lineage
+  `review-66cc92f770d0f502` approved and acknowledged; authority burned.
+  Fast-forwarded and pushed to origin/main at `7ade54a`.
+- A3F reproduced the reported mismatch: first-line/glyph center difference
+  16.45px desktop without pace, 10.50px mobile with pace. Budget-local CSS now
+  starts summary cells consistently and offsets the first title line relative
+  to its line height and the existing 44px disclosure target. Shared tree
+  styles and all financial behavior remain unchanged.
+- A3F strict TDD: geometry regression failed on both viewports before the fix;
+  final desktop/mobile browser checks 6/6, measured states within 0.50px,
+  including pace/no-pace, details and child toggles, wrapped titles and keyboard
+  targets. Relevant Vitest 28/28, three TypeScript projects, Oxlint and diff
+  check passed. Parent repeated page tests 18/18 and inspected cropped rows.
+  Full UI suite not repeated for this local CSS change; browser is Chromium,
+  not a physical-device or cross-engine audit. Evidence: /tmp/a3f-before-*,
+  /tmp/a3f-after-* (synthetic). Rollback: budget table CSS and browser regression.
+  Commit and native assessment pending at this snapshot.
 
 ## Next step
 
-Commit and assess A5 retention; then A6 freshness and A7–A10.
+Commit/assess A3F alignment correction, then A6 freshness and A7–A10.
+A6 exploration is complete: status belongs in a private worker-owned
+file, successful no-op checks advance poll freshness but not publication time,
+and availability remains independent. Do not infer capture time from pCloud
+file modification metadata or invent a default expected backup cadence.

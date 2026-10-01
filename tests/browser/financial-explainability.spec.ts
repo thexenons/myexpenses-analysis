@@ -1476,6 +1476,77 @@ test("explains linear budget allowance by keyboard without overflowing the budge
   await page.screenshot({ path: `/tmp/myexpenses-a3-synthetic-${testInfo.project.name}.png`, fullPage: true, animations: "disabled" });
 });
 
+test("aligns budget disclosure glyph with the first category title line", async ({ page }, testInfo) => {
+  await page.clock.setFixedTime(new Date("2026-08-23T12:00:00.000Z"));
+  await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
+  await page.getByRole("group", { name: "Marco del presupuesto" }).getByLabel("Periodo").selectOption("MONTH:2026:7");
+
+  const row = page.getByRole("list", { name: "Asignaciones jerárquicas del presupuesto" }).locator(":scope > li > div").first();
+  const disclosure = row.locator(":scope > button");
+  const details = row.getByRole("button", { name: "Detalles de Expense" });
+  const title = row.locator("strong").first();
+  const measure = async (scenario: string) => {
+    const geometry = await row.evaluate((element) => {
+      const button = element.querySelector(":scope > button");
+      const glyph = button?.querySelector("svg");
+      const name = element.querySelector("strong");
+      if (!button || !glyph || !name) throw new Error("Budget category geometry is unavailable");
+      const range = document.createRange();
+      range.selectNodeContents(name);
+      const lines = [...range.getClientRects()];
+      const iconRect = glyph.getBoundingClientRect();
+      const targetRect = button.getBoundingClientRect();
+      return {
+        glyphCenterY: iconRect.top + iconRect.height / 2,
+        firstLineCenterY: lines[0]!.top + lines[0]!.height / 2,
+        lineCount: lines.length,
+        targetWidth: targetRect.width,
+        targetHeight: targetRect.height,
+      };
+    });
+    const delta = Math.abs(geometry.glyphCenterY - geometry.firstLineCenterY);
+    console.info(`A3F ${testInfo.project.name} ${scenario}: delta=${delta.toFixed(2)}px lines=${geometry.lineCount}`);
+    expect(geometry.targetWidth, `${scenario} disclosure hit target width`).toBeGreaterThanOrEqual(44);
+    expect(geometry.targetHeight, `${scenario} disclosure hit target height`).toBeGreaterThanOrEqual(44);
+    expect(delta, `${scenario} glyph must align with first title line`).toBeLessThanOrEqual(5);
+    return geometry;
+  };
+
+  await row.screenshot({ path: `/tmp/a3f-after-${testInfo.project.name}.png`, animations: "disabled" });
+  await measure("pace absent, children open, details closed");
+  await disclosure.focus();
+  await page.keyboard.press("Space");
+  await expect(disclosure).toHaveAttribute("aria-expanded", "false");
+  await measure("pace absent, children closed");
+  await details.focus();
+  await page.keyboard.press("Space");
+  await expect(details).toHaveAttribute("aria-expanded", "true");
+  await measure("pace absent, details open");
+
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  await toolbar.getByRole("combobox", { name: "Tipo de periodo" }).selectOption("month");
+  await toolbar.getByLabel("Mes seleccionado").fill("2026-08");
+  await toolbar.getByRole("group", { name: "Ámbito de las estadísticas" }).locator('input[value="all"]').check();
+  await expect(row.getByText(/Referencia lineal:/)).toBeVisible();
+  await expect(details).toHaveAttribute("aria-expanded", "true");
+  await measure("pace present, details open");
+  await details.focus();
+  await page.keyboard.press("Space");
+  await expect(details).toHaveAttribute("aria-expanded", "false");
+  await disclosure.focus();
+  await page.keyboard.press("Space");
+  await expect(disclosure).toHaveAttribute("aria-expanded", "true");
+  await measure("pace present, children open, single-line title");
+
+  await title.evaluate((element) => {
+    element.textContent = "Mantenimiento del hogar";
+  });
+  const wrapped = await measure("pace present, wrapped title");
+  expect(wrapped.lineCount).toBeGreaterThan(1);
+  await row.screenshot({ path: `/tmp/a3f-after-wrapped-${testInfo.project.name}.png`, animations: "disabled" });
+  await expectNoDocumentOverflow(page);
+});
+
 test("keeps current, reference and mean visible in compact rows without coupling disclosures", async ({ page }, testInfo) => {
   await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
   await page.getByRole("group", { name: "Marco del presupuesto" }).getByLabel("Periodo").selectOption("MONTH:2026:7");

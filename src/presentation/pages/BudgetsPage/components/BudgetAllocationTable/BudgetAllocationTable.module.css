@@ -1,12 +1,14 @@
 .itemRow {
+  --budget-disclosure-size: 2.75rem;
+
   align-items: start;
-  grid-template-columns: 2.75rem minmax(0, 1fr);
+  grid-template-columns: var(--budget-disclosure-size) minmax(0, 1fr);
   padding-block: 0.25rem;
 }
 
 .itemRow > button {
-  width: 2.75rem;
-  height: 2.75rem;
+  width: var(--budget-disclosure-size);
+  height: var(--budget-disclosure-size);
 }
 
 .content {
@@ -21,7 +23,7 @@
   grid-template-areas: "category amount utilization details";
   grid-template-columns: minmax(7rem, 1fr) minmax(11rem, 1.1fr) minmax(8rem, 0.9fr) auto;
   gap: 0.3rem 0.65rem;
-  align-items: center;
+  align-items: start;
   min-width: 0;
 }
 
@@ -62,6 +64,7 @@
 }
 
 .categoryName {
+  padding-block-start: calc((var(--budget-disclosure-size) - 1lh) / 2);
   overflow-wrap: anywhere;
 }
 
