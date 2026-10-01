@@ -14,6 +14,7 @@ import {
   restoreFilterState,
 } from "../../src/domain/analytics/filters.ts";
 import { resolvePostingAccounts } from "../../src/domain/analytics/transfer-relations.ts";
+import { analyzeMonthlySavingsRate } from "../../src/domain/analytics/savings-rate.ts";
 import type {
   AnalyticsDataset,
   NormalizedAccount,
@@ -100,6 +101,30 @@ function sharedPurchase(): readonly NormalizedPosting[] {
     }),
   ];
 }
+
+test("completed Yo savings months use accounting income and expenses after debt mirrors, not transfers", () => {
+  const source = dataset([
+    posting("jan-edge", "cash", 0, { date: "2024-01-15" }),
+    ...sharedPurchase().map((item) => Object.assign({}, item, { date: "2024-02-15" as const })),
+    posting("salary", "cash", 2_000, { bucket: "income", date: "2024-02-15" }),
+    posting("income-mirror-cash", "cash", 300, { bucket: "income", date: "2024-02-15", linked: true, transferPeerPostingId: "income-mirror-debt" }),
+    posting("income-mirror-debt", "partner", -300, { bucket: "income", date: "2024-02-15", linked: true, transferPeerPostingId: "income-mirror-cash" }),
+    posting("card-charge", "card", -100, { date: "2024-02-15" }),
+    posting("repayment", "cash", -50, { bucket: "transfer", date: "2024-02-15" }),
+    posting("mar-edge", "cash", 0, { date: "2024-03-15" }),
+  ]);
+  const filtered = applyFilters(source, createDefaultFilterState());
+  const result = analyzeMonthlySavingsRate(filtered, "2024-04-01");
+  assert.equal(result.status, "available");
+  if (result.status !== "available") return;
+  const month = result.months[0]!;
+  assert.equal(month.incomeEurMinor, 2_000);
+  assert.equal(month.expensesEurMinor, -600);
+  assert.equal(month.resultEurMinor, 1_400);
+  assert.equal(month.ratePercent, 70);
+  assert.equal(month.resultEurMinor, month.incomeEurMinor + month.expensesEurMinor);
+  assert.equal(analyzeMonthlySavingsRate(applyFilters(source, { ...createDefaultFilterState(), scope: "realCashFlow" }), "2024-04-01").status, "unavailable");
+});
 
 test("a categorized shared split records cash paid, own cost and financed share without a fictitious refund", () => {
   const filtered = applyFilters(dataset(sharedPurchase()), createDefaultFilterState());

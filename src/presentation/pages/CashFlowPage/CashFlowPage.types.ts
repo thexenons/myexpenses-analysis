@@ -3,6 +3,7 @@ import type { ChartSeries } from "../../components/organisms/LineChart/index.ts"
 import type {
   CategoryBreakdownNode,
   FlowComposition,
+  FilteredAnalyticsDataset,
   KpiSummary,
 } from "../../../domain/analytics/types.ts";
 
@@ -12,5 +13,6 @@ export interface CashFlowPageViewProps {
   readonly lineSeries: readonly ChartSeries[];
   readonly periodBars: readonly DivergingBarDatum[];
   readonly savingsEurMinor: number;
+  readonly trendFiltered: FilteredAnalyticsDataset;
   readonly kpis: KpiSummary;
 }

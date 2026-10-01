@@ -393,8 +393,10 @@ export function aggregateTimeSeries(
   }
   const groups = new Map<string, { period: Period; summary: MutableAmountSummary }>();
   const periodByDate = new Map<IsoDate, Period>();
-  const preferences =
-    filtered.source.backup?.preferences ?? DEFAULT_PERIOD_PREFERENCES;
+  const preferences = {
+    monthStart: options.monthStart ?? filtered.source.backup?.preferences.monthStart ?? DEFAULT_PERIOD_PREFERENCES.monthStart,
+    weekStart: filtered.source.backup?.preferences.weekStart ?? DEFAULT_PERIOD_PREFERENCES.weekStart,
+  };
   for (const posting of metricPostings(filtered)) {
     const date = postingDate(posting, filtered.filters);
     let period = periodByDate.get(date);

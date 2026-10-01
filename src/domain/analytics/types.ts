@@ -340,6 +340,8 @@ export interface TimeSeriesPoint extends AmountSummary {
 export interface TimeSeriesOptions {
   /** Fill the selected range, or the observed range when unbounded. Defaults to true. */
   readonly fillGaps?: boolean;
+  /** Override the imported accounting month start for calendar-month analyses. */
+  readonly monthStart?: number;
 }
 
 export interface CategoryBreakdownNode {

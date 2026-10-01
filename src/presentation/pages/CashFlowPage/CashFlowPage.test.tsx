@@ -29,11 +29,70 @@ const kpis: KpiSummary = {
   transferOutflowsEurMinor: 0,
   transfersEurMinor: 0,
 };
+const emptyTrendFiltered = applyFilters(normalizeDataset({
+  accounts: { version: 2, accounts: { cash: { label: "Bank", type: "DEFAULT" } } },
+  categories: {},
+  parsedData: [],
+}), createDefaultFilterState());
 
 describe("CashFlowPageView", () => {
+  it("reveals an eligible monthly accounting savings trend only while its disclosure is open", async () => {
+    const source = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Bank", type: "DEFAULT" } } },
+      categories: { Income: { categoryType: "INCOME" }, Expense: { categoryType: "EXPENSE" } },
+      parsedData: [{ uuid: "cash", label: "Bank", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "jan", date: "2024-01-15", amount: -1, category: ["Expense"], sourceTransactionUuid: "jan", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+        { uuid: "income", date: "2024-02-10", amount: 100, category: ["Income"], sourceTransactionUuid: "income", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+        { uuid: "expense", date: "2024-02-11", amount: -25, category: ["Expense"], sourceTransactionUuid: "expense", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+        { uuid: "refund", date: "2024-02-12", amount: 5, category: ["Expense"], sourceTransactionUuid: "refund", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+        { uuid: "mar", date: "2024-03-10", amount: 1, category: ["Income"], sourceTransactionUuid: "mar", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+      ] }],
+    });
+    const filtered = applyFilters(source, createDefaultFilterState());
+    const user = userEvent.setup();
+    render(<CashFlowPageView {...createCashFlowPageModel(filtered, "month")} />);
+    const summary = screen.getByText("Tendencia mensual de ahorro contable");
+    const disclosure = summary.closest("details");
+    expect(disclosure).not.toHaveAttribute("open");
+    expect(screen.queryByRole("heading", { name: "Tasa mensual de ahorro contable" })).toBeNull();
+    expect(screen.queryByRole("table", { name: "Detalle mensual del ahorro contable" })).toBeNull();
+    await user.click(summary);
+    expect(disclosure).toHaveAttribute("open");
+    expect(screen.getByRole("heading", { name: "Tasa mensual de ahorro contable" })).toBeVisible();
+    const table = screen.getByRole("table", { name: "Detalle mensual del ahorro contable" });
+    expect(within(table).getByText(/80\s*%/)).toBeVisible();
+    expect(within(table).getByText(/100,00\s*€/)).toBeVisible();
+    expect(within(table).getByText(/-20,00\s*€/)).toBeVisible();
+    await user.click(summary);
+    expect(disclosure).not.toHaveAttribute("open");
+    expect(screen.queryByRole("heading", { name: "Tasa mensual de ahorro contable" })).toBeNull();
+  });
+
+  it.each([
+    ["realCashFlow" as const, "No disponible con esta perspectiva"],
+    ["debtsOnly" as const, "No disponible con esta perspectiva"],
+    ["all" as const, "No hay meses calendario completos"],
+  ])("explains unavailable trend for %s", async (scope, reason) => {
+    const user = userEvent.setup();
+    const filtered = applyFilters(emptyTrendFiltered.source, { ...createDefaultFilterState(), scope });
+    render(<CashFlowPageView {...createCashFlowPageModel(filtered, "month")} />);
+    await user.click(screen.getByText("Tendencia mensual de ahorro contable"));
+    expect(screen.getByText(new RegExp(reason))).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Tasa mensual de ahorro contable" })).toBeNull();
+    expect(screen.getByText(/Las fechas observadas no garantizan/)).toBeVisible();
+  });
+
+  it("suppresses the trend when requested status filters are present even though chart metrics ignore status", async () => {
+    const user = userEvent.setup();
+    render(<CashFlowPageView {...createCashFlowPageModel(emptyTrendFiltered, "month", ["RECONCILED"])} />);
+    await user.click(screen.getByText("Tendencia mensual de ahorro contable"));
+    expect(screen.getByText(/No disponible con esta perspectiva/)).toBeVisible();
+  });
+
   it("distinguishes signed real flow and shows active debt adjustments beside the composition", async () => {
     render(
       <CashFlowPageView
+        trendFiltered={emptyTrendFiltered}
         composition={{
           expenseRefundsEurMinor: 250,
           debtExpenseAdjustmentsEurMinor: 125,
@@ -77,6 +136,7 @@ describe("CashFlowPageView", () => {
   it("shows cash-flow KPIs and both period comparisons", () => {
     render(
       <CashFlowPageView
+        trendFiltered={emptyTrendFiltered}
         composition={{
           expenseRefundsEurMinor: 250,
           grossExpensesEurMinor: 4_000,

@@ -7,6 +7,7 @@ import {
 import type {
   FilteredAnalyticsDataset,
   TimeGranularity,
+  TransactionStatus,
 } from "../../../domain/analytics/types.ts";
 import { euroFromMinor } from "../../utils/format.ts";
 import type { CashFlowPageViewProps } from "./CashFlowPage.types.ts";
@@ -14,6 +15,7 @@ import type { CashFlowPageViewProps } from "./CashFlowPage.types.ts";
 export function createCashFlowPageModel(
   filtered: FilteredAnalyticsDataset,
   granularity: TimeGranularity,
+  selectedStatuses: readonly TransactionStatus[] = [],
 ): CashFlowPageViewProps {
   const kpis = aggregateKpis(filtered);
   const composition = aggregateFlowComposition(filtered);
@@ -57,5 +59,8 @@ export function createCashFlowPageModel(
       rightValue: euroFromMinor(inflows.get(point.key) ?? 0),
     })),
     savingsEurMinor: kpis.incomesEurMinor + kpis.expensesEurMinor,
+    trendFiltered: selectedStatuses.length > 0
+      ? { ...filtered, filters: { ...filtered.filters, statuses: selectedStatuses } }
+      : filtered,
   };
 }

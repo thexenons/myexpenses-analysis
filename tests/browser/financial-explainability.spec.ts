@@ -659,6 +659,70 @@ test("keeps cash-flow scope and available-cash warning ahead of methods", async 
   await expectNoDocumentOverflow(page);
 });
 
+test("reveals only eligible completed-month accounting savings rates on demand", async ({ page }, testInfo) => {
+  await page.route("**/data/app-dataset.vault.json", async (route) => {
+    const variant = await route.fetch({ url: `${BASE}/data/u7-budget-history.vault.json` });
+    await route.fulfill({ response: variant });
+  });
+  await page.reload();
+  await page.getByLabel("Frase de desbloqueo").fill(PASSPHRASE);
+  await page.getByRole("button", { name: "Abrir bóveda" }).click();
+  await page.locator('a[href="/flujo-de-caja"]').click();
+  const summary = page.getByText("Tendencia mensual de ahorro contable", { exact: true });
+  const disclosure = summary.locator("xpath=..");
+  await expect(disclosure).not.toHaveAttribute("open");
+  await expect(page.getByRole("heading", { name: "Tasa mensual de ahorro contable" })).toHaveCount(0);
+  const affordance = await summary.evaluate((element) => ({
+    display: getComputedStyle(element).display,
+    height: element.getBoundingClientRect().height,
+  }));
+  expect(affordance.display).toBe("list-item");
+  expect(affordance.height).toBeGreaterThanOrEqual(44);
+  await summary.focus();
+  await page.keyboard.press("Enter");
+  await expect(disclosure).toHaveAttribute("open", "");
+  await expect(disclosure.getByText(/No disponible con esta perspectiva/)).toBeVisible();
+  const scope = page.getByRole("region", { name: "Filtros globales" })
+    .getByRole("group", { name: "Ámbito de las estadísticas" });
+  await scope.locator('input[value="all"]').check();
+  await expect(disclosure.getByRole("heading", { name: "Tasa mensual de ahorro contable" })).toBeVisible();
+  const table = disclosure.getByRole("table", { name: "Detalle mensual del ahorro contable" });
+  await expect(table.locator("tbody tr")).toHaveCount(4);
+  await expect(disclosure.getByText(/no representa efectivo disponible ni patrimonio/)).toBeVisible();
+  await expect(disclosure.locator("p").filter({ hasText: /no representa los meses intermedios sin base/ })).toBeVisible();
+  await disclosure.screenshot({ path: `/tmp/a9-savings-${testInfo.project.name}.png`, animations: "disabled" });
+  await table.screenshot({ path: `/tmp/a9-savings-table-${testInfo.project.name}.png`, animations: "disabled" });
+  if (page.viewportSize()!.width <= 390) {
+    const scrollRegion = table.locator("xpath=..");
+    await scrollRegion.focus();
+    await page.keyboard.press("ArrowRight");
+    await expect.poll(() => scrollRegion.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    await scrollRegion.evaluate((element) => { element.scrollLeft = element.scrollWidth; });
+    await table.evaluate((element) => { element.scrollIntoView({ block: "start", inline: "nearest" }); });
+    const rateHeader = table.getByRole("columnheader", { name: "Tasa" });
+    const horizontalGeometry = await rateHeader.evaluate((element) => {
+      const header = element.getBoundingClientRect();
+      const region = element.closest("section")!.getBoundingClientRect();
+      return { headerLeft: header.left, headerRight: header.right, regionLeft: region.left, regionRight: region.right };
+    });
+    expect(horizontalGeometry.headerLeft).toBeGreaterThanOrEqual(horizontalGeometry.regionLeft - 1);
+    expect(horizontalGeometry.headerRight).toBeLessThanOrEqual(horizontalGeometry.regionRight + 1);
+    await page.evaluate(() => window.scrollBy(0, -250));
+    await page.screenshot({ path: `/tmp/a9-savings-mobile-right-page.png`, animations: "disabled" });
+  }
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  await toolbar.getByRole("combobox", { name: "Tipo de periodo" }).selectOption("month");
+  await toolbar.getByLabel("Mes seleccionado").fill("2026-08");
+  await expect(table.locator("tbody tr")).toHaveCount(1);
+  await toolbar.getByLabel("Mes seleccionado").fill("2026-09");
+  await expect(disclosure.getByText(/No hay meses calendario completos/)).toBeVisible();
+  await summary.focus();
+  await page.keyboard.press("Space");
+  await expect(disclosure).not.toHaveAttribute("open");
+  await expect(disclosure.getByRole("heading", { name: "Tasa mensual de ahorro contable" })).toHaveCount(0);
+  await expectNoDocumentOverflow(page);
+});
+
 test("keeps comparison reconciliation and hierarchy caveats before methods", async ({ page }, testInfo) => {
   await page.locator('a[href="/comparativa"]').click();
   const summary = page.locator("summary").filter({ hasText: "Información de la comparativa" });

@@ -100,7 +100,11 @@ checks trigger the mandatory writer/verification routing rules.
     chart inside the same comparison context, calculated only on demand.
 - [x] A8 Expose category gross expenses, refunds and net in detail.
   Checks: existing accounting identities, no duplicate hierarchy totals.
-- [ ] A9 Add eligible completed-period savings-rate trend.
+- [x] A9 Add eligible completed-period savings-rate trend.
+  Route: delegated sole writer (domain + CashFlow UI + regressions).
+  Eligible Yo/all with no account/content subsets; use completed calendar months
+  within observed date bounds, not verified backup completeness. Native optional
+  disclosure next to the accounting result; no cash/net-worth claims or clamping.
   Checks: income denominator, transfer/debt/scope rules and incomplete periods.
 - [ ] A10 Run final cross-screen functional and responsive acceptance.
   Checks: applicable full suites, synthetic desktop/mobile and navigation checks.
@@ -396,9 +400,53 @@ checks trigger the mandatory writer/verification routing rules.
   Final Node checks must run in a source-only snapshot including `.github`,
   excluding `data`, `.env` and backups so three optional private tests skip.
 
+- A8 commit `b6d9381` contains 411 authored changed lines including recovery
+  notes. Native committed-only assessment against `e285be2` is medium,
+  `slice_budget_reached`; the exact START returned candidate consent required.
+  Lineage `review-1cc0fe7647d4e230`, target
+  `sha256:cf97f2acc2df82c741b10a741a4558cacf2e3c1484d71ea54354ababd68f2b21`.
+  No grant, review receipt or push is claimed. Main remains `e285be2`.
+  A9/A10 execution waits for this candidate choice; no work is discarded.
+
+- User granted A8 review. Native reliability inspection of immutable patches
+  found no findings (it did not rerun tests); exact acknowledgement consumed
+  `review-1cc0fe7647d4e230` and burned authority. Source bytes did not change.
+  Fast-forward pushed `b6d9381` to origin/main and advanced local main safely.
+  Last reviewed boundary is `b6d9381`; pending review slice is empty.
+
+- A9 adds a native optional monthly accounting savings-rate disclosure beside
+  the CashFlow consolidated result. It computes and mounts chart/table only
+  when open. Eligible Yo/all months are complete calendar months within selected
+  and observed bounds, before today; account/content subsets are unavailable.
+  Positive net income is required for a rate; transfers do not enter the result.
+  Signed refunds and debt mirrors preserve existing accounting identities;
+  negative and above-100% rates are not clamped. Missing income is "Sin base".
+- A9 reuses monthly aggregation with an explicit calendar month-start override;
+  the default imported accounting-month behavior remains unchanged. Requested
+  status subsets suppress the trend even when the shared metric hook ignores
+  statuses. Copy distinguishes recorded date bounds from verified completeness,
+  and accounting result from cash available or net worth. Gaps without income
+  remain inspectable in the exact table and are excluded from the plotted line.
+- A9 TDD: missing-helper domain RED and missing-disclosure UI RED preceded source.
+  Final focused domain/debt 26/26, CashFlow UI 9/9, full UI 476/476, source-only
+  Node 319 passed/3 optional skips, all three TypeScript projects, Oxlint and
+  scoped diff check passed. Parent independently repeated domain/debt 26/26.
+  The initial source snapshot omitted `compose.yaml`, causing the deployment
+  contract test to fail; copying that tracked nonprivate manifest resolved it.
+- Synthetic A9 browser desktop/mobile-390 passed 2/2; adjacent CashFlow tests
+  passed 3 with 1 expected mobile hover skip. Keyboard disclosure/scroll-region
+  geometry and document overflow passed. Parent inspected `/tmp/a9-savings-*`.
+  An initial whole-viewport table assertion was invalid under sticky controls;
+  final assertion checks the focusable table scroller, not viewport occlusion.
+  No physical devices, other engines, hosted CI or production vaults were tested.
+- A9 rollback: savings-rate helper/tests, explicit TimeSeriesOptions month-start
+  override, CashFlow model/hook/view/style/lazy trend/tests and debt/browser
+  regressions (13 files). No underlying balance/budget/debt identities change.
+  Final full-browser route × perspective acceptance and deployment remain A10.
+
 ## Next step
 
-Close A8 delivery, then implement A9 and run A10. A1–A7 are pushed to main.
+Close A9 delivery, then run A10. A1–A8 are pushed to main.
 Do not infer capture time from pCloud modification metadata or invent a default
 expected backup cadence. Runtime registration must be restored before memory
 attribution resumes; the local task document preserves all pending progress.

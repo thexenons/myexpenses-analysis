@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { Icon } from "../../components/atoms/Icon/index.ts";
 import { FinancialFactList } from "../../components/molecules/FinancialFactList/index.ts";
 import { InformationDisclosure } from "../../components/molecules/InformationDisclosure/InformationDisclosure.tsx";
@@ -15,6 +17,7 @@ import {
   formatPeriodLabel,
 } from "../../utils/format.ts";
 import styles from "./CashFlowPage.module.css";
+import { MonthlySavingsTrend } from "./CashFlowPage.savings-trend.tsx";
 import type { CashFlowPageViewProps } from "./CashFlowPage.types.ts";
 
 export function CashFlowPageView({
@@ -24,7 +27,9 @@ export function CashFlowPageView({
   lineSeries,
   periodBars,
   savingsEurMinor,
+  trendFiltered,
 }: CashFlowPageViewProps) {
+  const [trendOpen, setTrendOpen] = useState(false);
   return (
     <AnalyticsPage
       description="Entradas, salidas y resultado del periodo seleccionado."
@@ -67,6 +72,11 @@ export function CashFlowPageView({
         }]} />
         <p>Ingresos netos menos gastos netos; no equivale al efectivo disponible.</p>
       </div>
+
+      <details className={styles.details} onToggle={(event) => setTrendOpen(event.currentTarget.open)} open={trendOpen}>
+        <summary>Tendencia mensual de ahorro contable</summary>
+        {trendOpen ? <MonthlySavingsTrend filtered={trendFiltered} /> : null}
+      </details>
 
       <AnalyticsPageGrid variant="two">
         <Panel className={styles.chartPanel}>
