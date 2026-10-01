@@ -27,8 +27,11 @@ Monthly pace uses inclusive elapsed calendar days divided by period days.
 Annual pace uses elapsed months plus the elapsed fraction of the current month,
 avoiding a jump only at month-end. Show the basis explicitly in details.
 Use assigned budget including incoming rollover, not outgoing rollover; never
-change underlying totals. Suppress full-budget pace conclusions for filtered
-subsets, missing/invalid limits or unsupported periods. Test dates, leap years,
+change underlying totals. Suppress pace conclusions for non-date subsets,
+date cuts missing part of budget-start-through-today, missing/invalid limits
+or unsupported periods. A complete date-only prefix through today is eligible
+even though full-period availability still needs A1's filtered warning.
+Test dates, leap years,
 future postings and refunds. A linear allowance is a reference, not a promise.
 
 Operational changes must preserve current release and rollback safety. Never
@@ -49,7 +52,7 @@ checks trigger the mandatory writer/verification routing rules.
 
 - [x] A1 Fix all budget subset filters and rename static consumption label.
   Checks: budget domain and page regressions, typecheck, lint, relevant UI suite.
-- [ ] A2 Implement tested linear budget-to-date domain calculations.
+- [x] A2 Implement tested linear budget-to-date domain calculations.
   Checks: calendar/rollover/refund/filter/currency edge cases and full budget tests.
 - [ ] A3 Present compact pace guidance globally and per budget category.
   Checks: UI tests and synthetic desktop/mobile keyboard/browser scenarios.
@@ -86,13 +89,34 @@ checks trigger the mandatory writer/verification routing rules.
 - A1 browser check not run (domain + rendered component regression coverage);
   final responsive/browser acceptance remains A10. Rollback A1 independently
   via its budget domain/page source and accompanying tests (four files).
-- A1 commit/review pending at this document snapshot. Initial broad worktree
+- A1 commit: `78effc6` (166 authored changed lines including this recovery doc).
+  Native committed-only assessment: medium, `under_budget`; review is pending
+  for the slice from `f45c7e6`. No review grant or receipt is claimed.
+  Initial broad worktree
   assessment was unavailable due to explicit untracked-file scope; delivery
   assessment will use the committed-only unit, excluding unrelated user edits.
-- Running authored count: 0 committed lines. First review boundary: `f45c7e6`.
+- Running authored count: 166 committed lines. First review boundary: `f45c7e6`.
+- A2: new pure `analyzeBudgetPace(analysis, today)` calculates the global and
+  inclusive per-category allowance and signed consumption through cutoff.
+  Difference is allowance minus consumption; positive means below allowance.
+  MONTH uses the resolved period length (including custom month starts).
+  YEAR uses twelve calendar months with a fractional current month.
+  No underlying totals change; future postings are excluded only from pace.
+- A2 TDD: missing-helper RED followed by GREEN; parent found default current
+  month/year filters cap at today, prompting a failing regression and safe
+  date-prefix support. One shared non-date subset predicate preserves A1.
+  Focused budget domain/comparison 72/72 and full UI 460/460 passed; three tsc
+  projects, Oxlint and diff check passed using installed local binaries.
+  Parent independently repeated focused domain/comparison checks: 72/72.
+- A2 rollback: new `budget-pace.ts`, its tests in `budgets.test.ts`, and added
+  subset metadata in `budgets.ts`; A1 financial warning remains unchanged.
+  Browser is N/A for this pure domain unit; UI integration remains A3.
+  Loaded postings do not establish historical completeness: A3 must say
+  recorded consumption, not promise complete or future spending.
+  A2 commit and native slice assessment pending in this snapshot.
 - Each task records commands, results, commit, review and independent rollback
   boundary here. Tests/docs ship with behavior; never stage unrelated files.
 
 ## Next step
 
-Commit and assess A1, then proceed to A2 linear budget-to-date calculations.
+Commit and assess A2 with A1's pending slice, then implement A3 presentation.

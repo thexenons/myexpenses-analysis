@@ -11,6 +11,8 @@ import {
   resolveBudgetAllocation,
   resolveBudgetPeriods,
 } from "./budgets.ts";
+import { analyzeBudgetPace } from "./budget-pace.ts";
+import { dateRangeForPeriod } from "./date-periods.ts";
 import { applyFilters, createDefaultFilterState } from "./filters.ts";
 import type {
   AnalyticsDataset,
@@ -297,6 +299,171 @@ function debtAnalyticsFixture(): AnalyticsDataset {
     },
   };
 }
+
+function paceAnalysis(
+  analytics: AnalyticsDataset,
+  filters: FilterState = createDefaultFilterState(),
+  periodKey = "MONTH:2026:7",
+) {
+  const result = analyzeBudgetPeriod(analytics, applyFilters(analytics, filters), analytics.backup!.budgets[0]!, periodKey);
+  if (result.status !== "ready") throw new Error(result.reason);
+  return result.analysis;
+}
+
+describe("linear budget pace", () => {
+  it("uses inclusive calendar days and assigned incoming rollover without changing totals", () => {
+    const analytics = analyticsFixture();
+    const analysis = paceAnalysis(analytics);
+    const original = structuredClone(analysis);
+    const pace = analyzeBudgetPace(analysis, "2026-08-04");
+    if (pace.status !== "ready") throw new Error(pace.reason);
+    expect(pace).toMatchObject({
+      status: "ready", currency: "EUR", fractionDigits: 2,
+      basis: { grouping: "MONTH", periodStartDate: "2026-08-01", periodEndDate: "2026-08-31",
+        cutoffDate: "2026-08-04", elapsedUnits: 4, totalUnits: 31, fraction: 4 / 31 },
+      global: { status: "ready", assignedMinor: 11_000, actualToDateMinor: 3_500,
+        expectedMinor: 11_000 * 4 / 31, differenceMinor: 11_000 * 4 / 31 - 3_500 },
+    });
+    const root = pace.categories.find((item) => item.categoryUuid === "root");
+    const child = pace.categories.find((item) => item.categoryUuid === "child");
+    expect(root).toMatchObject({ status: "ready", assignedMinor: 9_000, actualToDateMinor: 3_500 });
+    expect(child).toMatchObject({ status: "ready", assignedMinor: 3_000, actualToDateMinor: 3_500 });
+    expect(analysis).toEqual(original);
+    const withOutgoing = budgetFixture({ allocations: budgetFixture().allocations.map((entry, index) =>
+      Object.assign({}, entry, { rolloverNextMinor: index === 0 ? 5_000 : entry.rolloverNextMinor })) });
+    const outgoingData = { ...analytics, backup: { ...analytics.backup!, budgets: [withOutgoing] } };
+    expect(analyzeBudgetPace(paceAnalysis(outgoingData), "2026-08-04")).toMatchObject({
+      status: "ready", global: { assignedMinor: 11_000, expectedMinor: 11_000 * 4 / 31 },
+    });
+  });
+
+  it("includes first and last days, but never counts future postings in actual-to-date", () => {
+    const analytics = analyticsFixture();
+    expect(analyzeBudgetPace(paceAnalysis(analytics), "2026-08-01")).toMatchObject({
+      status: "ready", basis: { elapsedUnits: 1, totalUnits: 31 },
+      global: { actualToDateMinor: 0 },
+    });
+    expect(analyzeBudgetPace(paceAnalysis(analytics), "2026-08-31")).toMatchObject({
+      status: "ready", basis: { fraction: 1 }, global: { actualToDateMinor: 6_500, expectedMinor: 11_000 },
+    });
+    expect(analyzeBudgetPace(paceAnalysis(analytics), "2026-09-01")).toMatchObject({
+      status: "ready", basis: { cutoffDate: "2026-08-31", fraction: 1 },
+    });
+    expect(analyzeBudgetPace(paceAnalysis(analytics), "2026-07-31")).toMatchObject({ status: "unavailable", reason: "future-period" });
+  });
+
+  it("uses 29 leap-February days and fractional annual months", () => {
+    const monthly = budgetFixture({ allocations: [{ ...budgetFixture().allocations[0]!, year: 2024, period: 1, amountMinor: 2_900 }] });
+    const base = analyticsFixture();
+    const february = { ...base, backup: { ...base.backup!, budgets: [monthly] } };
+    expect(analyzeBudgetPace(paceAnalysis(february, createDefaultFilterState(), "MONTH:2024:1"), "2024-02-15")).toMatchObject({
+      status: "ready", basis: { elapsedUnits: 15, totalUnits: 29, fraction: 15 / 29 },
+      global: { expectedMinor: 1_500 },
+    });
+    const yearly = budgetFixture({ grouping: "YEAR", allocations: [{ ...monthly.allocations[0]!, year: 2024, period: 0, amountMinor: 12_000 }] });
+    const annualData = { ...base, backup: { ...base.backup!, budgets: [yearly] } };
+    expect(analyzeBudgetPace(paceAnalysis(annualData, createDefaultFilterState(), "YEAR:2024:0"), "2024-02-15")).toMatchObject({
+      status: "ready", basis: { elapsedUnits: 1 + 15 / 29, totalUnits: 12, fraction: (1 + 15 / 29) / 12 },
+      global: { expectedMinor: 1_000 * (1 + 15 / 29) },
+    });
+    expect(analyzeBudgetPace(paceAnalysis(annualData, createDefaultFilterState(), "YEAR:2024:0"), "2024-01-01"))
+      .toMatchObject({ status: "ready", basis: { elapsedUnits: 1 / 31 } });
+    expect(analyzeBudgetPace(paceAnalysis(annualData, createDefaultFilterState(), "YEAR:2024:0"), "2024-12-31"))
+      .toMatchObject({ status: "ready", basis: { elapsedUnits: 12, fraction: 1 }, global: { expectedMinor: 12_000 } });
+    const shifted = { ...february, backup: { ...february.backup!, preferences: { ...preferences, monthStart: 15 } } };
+    expect(analyzeBudgetPace(paceAnalysis(shifted, createDefaultFilterState(), "MONTH:2024:1"), "2024-02-29"))
+      .toMatchObject({ status: "ready", basis: { periodStartDate: "2024-02-15", periodEndDate: "2024-03-14",
+        elapsedUnits: 15, totalUnits: 29 } });
+  });
+
+  it("uses selected value-date basis and budget-native currency contribution signs", () => {
+    const base = analyticsFixture();
+    const budget = budgetFixture({ currency: "GBP", accountUuid: "account" });
+    const rows = [
+      { ...posting("charge", "2026-08-10", -100, ["Gastos", "Comida"]), valueDate: "2026-08-03" as const,
+        currency: "GBP" as const, amountNativeMinor: -600 },
+      { ...posting("refund", "2026-08-11", 20, ["Gastos", "Comida"]), valueDate: "2026-08-04" as const,
+        currency: "GBP" as const, amountNativeMinor: 200 },
+      { ...posting("future", "2026-08-12", -50, ["Gastos", "Comida"]), valueDate: "2026-08-20" as const,
+        currency: "GBP" as const, amountNativeMinor: -300 },
+    ];
+    const analytics = { ...base, postings: rows, backup: { ...base.backup!,
+      currencies: [...base.backup!.currencies, { ...base.backup!.currencies[0]!, code: "GBP" as const }],
+      accounts: base.backup!.accounts.map((account) => Object.assign({}, account, { currency: "GBP" as const })), budgets: [budget] } };
+    const analysis = paceAnalysis(analytics, { ...createDefaultFilterState(), dateBasis: "value" });
+    expect(analyzeBudgetPace(analysis, "2026-08-04")).toMatchObject({
+      status: "ready", currency: "GBP", basis: { dateBasis: "value" },
+      global: { actualToDateMinor: 400 },
+      categories: expect.arrayContaining([expect.objectContaining({ categoryUuid: "child", actualToDateMinor: 400 })]),
+    });
+  });
+
+  it("suppresses filtered comparisons and zero/negative limits instead of implying full-budget pace", () => {
+    const base = analyticsFixture();
+    const filtered = paceAnalysis(base, { ...createDefaultFilterState(), minAmountEurMinor: 0 });
+    expect(analyzeBudgetPace(filtered, "2026-08-04")).toMatchObject({ status: "unavailable", reason: "filtered-comparison" });
+    for (const amountMinor of [0, -1]) {
+      const budget = budgetFixture({ allocations: [{ ...budgetFixture().allocations[0]!, year: 2026, period: 7, amountMinor }] });
+      const analytics = { ...base, backup: { ...base.backup!, budgets: [budget] } };
+      expect(analyzeBudgetPace(paceAnalysis(analytics), "2026-08-04")).toMatchObject({
+        status: "ready", global: { status: "unavailable", reason: "non-positive-limit" },
+      });
+    }
+    const categoryBudget = budgetFixture({ allocations: budgetFixture().allocations.map((entry) =>
+      entry.categoryUuid === "root" && entry.period === 7
+        ? Object.assign({}, entry, { amountMinor: 0, rolloverPreviousMinor: 0 }) : entry) });
+    const categoryData = { ...base, backup: { ...base.backup!, budgets: [categoryBudget] } };
+    expect(analyzeBudgetPace(paceAnalysis(categoryData), "2026-08-04")).toMatchObject({
+      status: "ready", global: { status: "ready" },
+      categories: expect.arrayContaining([expect.objectContaining({ categoryUuid: "root", status: "unavailable", reason: "non-positive-limit" })]),
+    });
+  });
+
+  it("allows only a complete period-to-today date prefix, not a truncated date cut", () => {
+    const analytics = analyticsFixture();
+    const today = "2026-08-04";
+    const monthToDate = paceAnalysis(analytics, { ...createDefaultFilterState(), periodMode: "month",
+      dateRange: dateRangeForPeriod("month", today, today) });
+    expect(monthToDate.isFilteredComparison).toBe(true);
+    expect(analyzeBudgetPace(monthToDate, today)).toMatchObject({
+      status: "ready", global: { actualToDateMinor: 3_500, expectedMinor: 11_000 * 4 / 31 },
+    });
+    const throughTomorrow = paceAnalysis(analytics, { ...createDefaultFilterState(),
+      dateRange: { from: "2026-08-01", to: "2026-08-05" } });
+    expect(analyzeBudgetPace(throughTomorrow, today)).toMatchObject({
+      status: "ready", global: { actualToDateMinor: 3_500 },
+    });
+    const missingStart = paceAnalysis(analytics, { ...createDefaultFilterState(),
+      dateRange: { from: "2026-08-02", to: today } });
+    expect(analyzeBudgetPace(missingStart, today)).toMatchObject({ status: "unavailable", reason: "filtered-comparison" });
+    const earlyEnd = paceAnalysis(analytics, { ...createDefaultFilterState(),
+      dateRange: { from: "2026-08-01", to: "2026-08-03" } });
+    expect(analyzeBudgetPace(earlyEnd, today)).toMatchObject({ status: "unavailable", reason: "filtered-comparison" });
+    const tagged = paceAnalysis(analytics, { ...createDefaultFilterState(), tags: ["keep"],
+      dateRange: { from: "2026-08-01", to: today } });
+    expect(analyzeBudgetPace(tagged, today)).toMatchObject({ status: "unavailable", reason: "filtered-comparison" });
+  });
+
+  it("uses the already reconciled debt-mirror contribution signs", () => {
+    const analysis = paceAnalysis(debtAnalyticsFixture());
+    expect(analysis.global.consumedMinor).toBe(1_400);
+    expect(analyzeBudgetPace(analysis, "2026-08-04")).toMatchObject({
+      status: "ready", global: { actualToDateMinor: 500 },
+      categories: expect.arrayContaining([
+        expect.objectContaining({ categoryUuid: "root", actualToDateMinor: 500 }),
+        expect.objectContaining({ categoryUuid: "child", actualToDateMinor: 0 }),
+      ]),
+    });
+  });
+
+  it("explicitly rejects day/week/custom period pacing", () => {
+    const analysis = paceAnalysis(analyticsFixture());
+    for (const grouping of ["DAY", "WEEK", "NONE"] as const) {
+      expect(analyzeBudgetPace({ ...analysis, period: { ...analysis.period, grouping } }, "2026-08-04"))
+        .toMatchObject({ status: "unavailable", reason: "unsupported-grouping" });
+    }
+  });
+});
 
 describe("budget debt contributions", () => {
   it.each([

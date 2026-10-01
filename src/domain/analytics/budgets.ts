@@ -91,6 +91,8 @@ export interface BudgetAnalysis {
   /** Intersection of the global query and the budget period; null means no overlap. */
   readonly consumptionDateRange?: { readonly from: IsoDate; readonly to: IsoDate } | null;
   readonly isFilteredComparison?: boolean;
+  /** Content filters reduce the budget comparison independently of the date window. */
+  readonly hasNonDateSubsetFilters?: boolean;
   readonly budget: BackupBudgetV1;
   readonly period: BudgetPeriod;
   readonly periods: readonly BudgetPeriod[];
@@ -943,8 +945,7 @@ export function analyzeBudgetPeriod(
     ? filters.dateRange.from : period.startDate;
   const to = filters.dateRange.to !== null && filters.dateRange.to < period.endDate
     ? filters.dateRange.to : period.endDate;
-  const isFilteredComparison = from !== period.startDate || to !== period.endDate ||
-    filters.scope !== "all" || filters.accountIds.length > 0 ||
+  const hasNonDateSubsetFilters = filters.scope !== "all" || filters.accountIds.length > 0 ||
     (filters.originAccountIds?.length ?? 0) > 0 || (filters.destinationAccountIds?.length ?? 0) > 0 ||
     filters.categoryPrefixes.length > 0 || filters.statuses.length > 0 || filters.tags.length > 0 ||
     filters.search !== "" || filters.linked !== "all" ||
@@ -952,6 +953,7 @@ export function analyzeBudgetPeriod(
     (filters.categoryTypes?.length ?? 0) > 0 || (filters.currencies?.length ?? 0) > 0 ||
     filters.minAmountEurMinor != null || filters.maxAmountEurMinor != null ||
     (filters.commentSearch ?? "") !== "" || (filters.referenceSearch ?? "") !== "";
+  const isFilteredComparison = from !== period.startDate || to !== period.endDate || hasNonDateSubsetFilters;
 
   return {
     status: "ready",
@@ -959,6 +961,7 @@ export function analyzeBudgetPeriod(
       dateBasis: filters.dateBasis ?? "operation",
       consumptionDateRange: from <= to ? { from, to } : null,
       isFilteredComparison,
+      hasNonDateSubsetFilters,
       budget,
       period,
       periods: periodResult.periods,
