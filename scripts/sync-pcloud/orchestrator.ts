@@ -142,12 +142,14 @@ export type PCloudSyncResult =
           readonly status: "noop";
           readonly fileId: string;
           readonly releaseId: string;
+          readonly modifiedEpochSeconds: number;
       }
     | {
           readonly status: "published";
           readonly fileId: string;
           readonly releaseId: string;
           readonly sha256: string;
+          readonly modifiedEpochSeconds: number;
       };
 
 export class PCloudSyncError extends Error {
@@ -868,6 +870,7 @@ export async function runPCloudSync(
                 status: "noop",
                 fileId: file.fileId,
                 releaseId: state.releaseId,
+                modifiedEpochSeconds: file.modifiedEpochSeconds,
             };
         }
 
@@ -981,6 +984,7 @@ export async function runPCloudSync(
                 fileId: file.fileId,
                 releaseId,
                 sha256: download.sha256,
+                modifiedEpochSeconds: file.modifiedEpochSeconds,
             };
         } finally {
             await rm(workspacePath, { force: true, recursive: true });

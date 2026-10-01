@@ -366,6 +366,7 @@ test("publishes atomically, then no-ops by checksum identity", async () => {
             status: "noop",
             fileId: "100",
             releaseId,
+            modifiedEpochSeconds: 1_787_425_493,
         });
         assert.equal(count.value, 1);
         assert.equal(

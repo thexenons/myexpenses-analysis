@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, chmod, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -29,6 +29,224 @@ async function fixture() {
 }
 
 const exists = async (path: string) => access(path).then(() => true, () => false);
+const statusPath = (deployRoot: string) => join(deployRoot, ".sync-status.json");
+const readStatus = async (deployRoot: string) => JSON.parse(
+    await readFile(statusPath(deployRoot), "utf8"),
+) as Record<string, number | null>;
+
+test("published bootstrap and unchanged poll record distinct freshness evidence", { timeout: 5_000 }, async () => {
+    const value = await fixture();
+    const controller = new AbortController();
+    let calls = 0;
+    let first!: Record<string, number | null>;
+    try {
+        await runSyncPCloudWorker(value.environment, {
+            intervalMs: 10, readinessPath: value.readyPath, signal: controller.signal,
+            sync: async () => {
+                calls++;
+                if (calls === 1) return {
+                    status: "published" as const, fileId: "123", releaseId: "release-a",
+                    sha256: "secret", modifiedEpochSeconds: 1_700_000_000,
+                };
+                first = await readStatus(value.deployRoot);
+                controller.abort();
+                return {
+                    status: "noop" as const, fileId: "123", releaseId: "release-a",
+                    modifiedEpochSeconds: 1_700_000_000,
+                };
+            },
+        });
+        const last = await readStatus(value.deployRoot);
+        assert.equal(last.version, 1);
+        assert.ok(typeof first!.lastAttemptEpochMs === "number");
+        assert.ok(typeof first!.lastSuccessfulCheckEpochMs === "number");
+        assert.ok(typeof first!.lastPublicationConfirmedEpochMs === "number");
+        assert.equal(first!.consecutiveFailures, 0);
+        assert.ok(last.lastSuccessfulCheckEpochMs! > first!.lastSuccessfulCheckEpochMs!);
+        assert.equal(last.lastPublicationConfirmedEpochMs, first!.lastPublicationConfirmedEpochMs);
+        assert.equal(last.lastObservedSourceModifiedEpochSeconds, 1_700_000_000);
+        assert.equal(last.consecutiveFailures, 0);
+        assert.doesNotMatch(JSON.stringify(last), /secret|fileId|releaseId/iu);
+        assert.equal((await lstat(statusPath(value.deployRoot))).mode & 0o777, 0o600);
+    } finally {
+        controller.abort();
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("failed poll preserves availability and verified history; restart preserves that history", { timeout: 5_000 }, async () => {
+    const value = await fixture();
+    const controller = new AbortController();
+    let calls = 0;
+    try {
+        await runSyncPCloudWorker(value.environment, {
+            intervalMs: 10, readinessPath: value.readyPath, signal: controller.signal,
+            sync: async () => {
+                calls++;
+                if (calls === 1) return {
+                    status: "published" as const, fileId: "1", releaseId: "release-a",
+                    sha256: "secret", modifiedEpochSeconds: 1_600_000_000,
+                };
+                if (calls === 2) throw new Error("private token path");
+                assert.equal(await exists(value.readyPath), true);
+                const failed = await readStatus(value.deployRoot);
+                assert.equal(failed.consecutiveFailures, 1);
+                assert.equal(failed.lastObservedSourceModifiedEpochSeconds, 1_600_000_000);
+                assert.ok(typeof failed.lastPublicationConfirmedEpochMs === "number");
+                controller.abort();
+                return {
+                    status: "noop" as const, fileId: "1", releaseId: "release-a",
+                    modifiedEpochSeconds: 1_600_000_000,
+                };
+            },
+        });
+        const restarted = new AbortController();
+        const before = await readStatus(value.deployRoot);
+        assert.equal(before.consecutiveFailures, 0);
+        await runSyncPCloudWorker(value.environment, {
+            readinessPath: value.readyPath, signal: restarted.signal,
+            sync: async () => { restarted.abort(); },
+        });
+        const after = await readStatus(value.deployRoot);
+        assert.equal(after.lastPublicationConfirmedEpochMs, before.lastPublicationConfirmedEpochMs);
+        assert.equal(after.lastObservedSourceModifiedEpochSeconds, before.lastObservedSourceModifiedEpochSeconds);
+        assert.equal(after.consecutiveFailures, 0);
+    } finally {
+        controller.abort();
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("failed bootstrap records failure without readiness or secret-bearing status", async () => {
+    const value = await fixture();
+    try {
+        await assert.rejects(runSyncPCloudWorker(value.environment, {
+            readinessPath: value.readyPath,
+            sync: async () => { throw new Error("private token path"); },
+        }), /bootstrap failed/iu);
+        const status = await readStatus(value.deployRoot);
+        assert.equal(status.consecutiveFailures, 1);
+        assert.equal(status.lastSuccessfulCheckEpochMs, null);
+        assert.equal(status.lastPublicationConfirmedEpochMs, null);
+        assert.equal(await exists(value.readyPath), false);
+        assert.doesNotMatch(JSON.stringify(status), /private|token|path/iu);
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("malformed private status recovers, but a symlink cannot be replaced", async () => {
+    const value = await fixture();
+    const controller = new AbortController();
+    const messages: string[] = [];
+    try {
+        await mkdir(value.deployRoot);
+        await writeFile(statusPath(value.deployRoot), "{broken", { mode: 0o600 });
+        await runSyncPCloudWorker(value.environment, {
+            readinessPath: value.readyPath, signal: controller.signal,
+            logger: { info: (message) => messages.push(message) },
+            sync: async () => { controller.abort(); },
+        });
+        assert.equal((await readStatus(value.deployRoot)).consecutiveFailures, 0);
+        await rm(statusPath(value.deployRoot));
+        const target = join(value.root, "target");
+        await writeFile(target, "sentinel");
+        await symlink(target, statusPath(value.deployRoot));
+        const second = new AbortController();
+        let readyWhileStatusUnsafe = false;
+        await runSyncPCloudWorker(value.environment, {
+            readinessPath: value.readyPath, signal: second.signal,
+            logger: { info: (message) => messages.push(message) },
+            sync: async () => {
+                void (async () => {
+                    for (let attempt = 0; attempt < 100; attempt++) {
+                        // oxlint-disable-next-line no-await-in-loop -- readiness is created after bootstrap returns.
+                        if (await exists(value.readyPath)) {
+                            readyWhileStatusUnsafe = true;
+                            break;
+                        }
+                        // oxlint-disable-next-line no-await-in-loop -- bounded readiness probe in a test.
+                        await new Promise((resolve) => setTimeout(resolve, 5));
+                    }
+                    second.abort();
+                })();
+            },
+        });
+        assert.equal(readyWhileStatusUnsafe, true);
+        assert.equal(await readFile(target, "utf8"), "sentinel");
+        assert.equal((await lstat(statusPath(value.deployRoot))).isSymbolicLink(), true);
+        assert.ok(messages.some((message) => message.includes("status")));
+        assert.doesNotMatch(messages.join(" "), /target|broken|sentinel/iu);
+    } finally {
+        controller.abort();
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("unsafe status permissions are not trusted or overwritten", async () => {
+    const value = await fixture();
+    const controller = new AbortController();
+    try {
+        await mkdir(value.deployRoot);
+        await writeFile(statusPath(value.deployRoot), "{}", { mode: 0o600 });
+        await chmod(statusPath(value.deployRoot), 0o644);
+        await runSyncPCloudWorker(value.environment, {
+            readinessPath: value.readyPath, signal: controller.signal,
+            sync: async () => { controller.abort(); },
+        });
+        assert.equal(await readFile(statusPath(value.deployRoot), "utf8"), "{}");
+    } finally {
+        controller.abort();
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("unrecognized status fields cannot import forged history or leak into replacement", async () => {
+    const value = await fixture();
+    const controller = new AbortController();
+    try {
+        await mkdir(value.deployRoot);
+        await writeFile(statusPath(value.deployRoot), JSON.stringify({
+            version: 1, lastAttemptEpochMs: 11, lastSuccessfulCheckEpochMs: 11,
+            lastPublicationConfirmedEpochMs: 11, consecutiveFailures: 0,
+            lastObservedSourceModifiedEpochSeconds: 11, secret: "private-token",
+        }), { mode: 0o600 });
+        await runSyncPCloudWorker(value.environment, {
+            readinessPath: value.readyPath, signal: controller.signal,
+            sync: async () => { controller.abort(); },
+        });
+        const status = await readStatus(value.deployRoot);
+        assert.equal(status.lastPublicationConfirmedEpochMs, null);
+        assert.equal(status.lastObservedSourceModifiedEpochSeconds, null);
+        assert.doesNotMatch(JSON.stringify(status), /secret|private-token/iu);
+    } finally {
+        controller.abort();
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("shutdown cancellation is not a failed sync cycle", { timeout: 5_000 }, async () => {
+    const value = await fixture();
+    const controller = new AbortController();
+    let checkedAt: number | null = null;
+    try {
+        await runSyncPCloudWorker(value.environment, {
+            intervalMs: 10, readinessPath: value.readyPath, signal: controller.signal,
+            sync: async (force, signal) => {
+                if (force) return;
+                checkedAt = (await readStatus(value.deployRoot)).lastSuccessfulCheckEpochMs ?? null;
+                controller.abort();
+                signal.throwIfAborted();
+            },
+        });
+        const status = await readStatus(value.deployRoot);
+        assert.equal(status.consecutiveFailures, 0);
+        assert.equal(status.lastSuccessfulCheckEpochMs, checkedAt);
+    } finally {
+        controller.abort();
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
 
 test("bootstrap is forced once; readiness follows success; periodic work is serial", { timeout: 5_000 }, async () => {
     const value = await fixture();
@@ -225,6 +443,7 @@ test("cycle timeout waits for abort cleanup before failing bootstrap", async () 
         }), /bootstrap failed/iu);
         assert.equal(cleanupFinished, true);
         assert.equal(await exists(value.readyPath), false);
+        assert.equal((await readStatus(value.deployRoot)).consecutiveFailures, 1);
     } finally {
         await rm(value.root, { force: true, recursive: true });
     }

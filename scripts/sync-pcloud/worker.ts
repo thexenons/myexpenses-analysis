@@ -8,10 +8,12 @@ import {
     peekPendingNotification,
     prepareSyncLayout,
     runPCloudSync,
+    type PCloudSyncResult,
 } from "./orchestrator.ts";
 import { sendBackupNotification, type NotificationSettings } from "./notification-mail.ts";
 import { processBackupForStaticRelease } from "./process-backup.ts";
 import { loadSyncPCloudRuntimeConfig } from "./runtime-config.ts";
+import { emptySyncStatus, readSyncStatus, writeSyncStatus, type SyncStatus } from "./sync-status.ts";
 
 const DEFAULT_INTERVAL_SECONDS = 3_600;
 const DEFAULT_TIMEOUT_SECONDS = 1_800;
@@ -25,7 +27,7 @@ export interface SyncWorkerOptions {
     readonly intervalMs?: number;
     readonly readinessPath?: string;
     readonly signal?: AbortSignal;
-    readonly sync?: (force: boolean, signal: AbortSignal) => Promise<void>;
+    readonly sync?: (force: boolean, signal: AbortSignal) => Promise<void | PCloudSyncResult>;
     readonly timeoutMs?: number;
     readonly logger?: { readonly info: (message: string) => void };
     readonly sendNotification?: (
@@ -85,8 +87,26 @@ export async function runSyncPCloudWorker(
     const signal = options.signal ?? new AbortController().signal;
     await prepareSyncLayout(runtime.config);
     const lease = await acquireSyncLease(runtime.config.deployRoot);
+    const logStatusFailure = () => {
+        try { options.logger?.info("Private sync status unavailable; continuing."); }
+        catch { /* Diagnostics must not affect synchronization. */ }
+    };
+    let status: SyncStatus = emptySyncStatus;
+    try {
+        status = (await readSyncStatus(runtime.config.deployRoot)) ?? emptySyncStatus;
+    } catch {
+        logStatusFailure();
+    }
+    const recordStatus = async (next: SyncStatus): Promise<void> => {
+        status = next;
+        try {
+            await writeSyncStatus(runtime.config.deployRoot, status);
+        } catch {
+            logStatusFailure();
+        }
+    };
     const sync = options.sync ?? (async (force: boolean, cycleSignal: AbortSignal) => {
-        await runPCloudSync(runtime.config, {
+        return runPCloudSync(runtime.config, {
             loadSecrets: async () => runtime.secrets,
             logger: options.logger,
             processBackup: processBackupForStaticRelease,
@@ -116,9 +136,35 @@ export async function runSyncPCloudWorker(
         const timeout = new AbortController();
         const timer = setTimeout(() => timeout.abort(), timeoutMs);
         const cycleSignal = AbortSignal.any([signal, timeout.signal]);
+        await recordStatus({ ...status, lastAttemptEpochMs: Date.now() });
         try {
-            await sync(force, cycleSignal);
-            if (timeout.signal.aborted) throw new SyncWorkerError("Sync cycle timed out");
+            const result = await sync(force, cycleSignal);
+            if (timeout.signal.aborted && !signal.aborted) {
+                throw new SyncWorkerError("Sync cycle timed out");
+            }
+            const observedModified = result &&
+                (result.status === "noop" || result.status === "published") &&
+                Number.isSafeInteger(result.modifiedEpochSeconds) &&
+                result.modifiedEpochSeconds >= 0
+                ? result.modifiedEpochSeconds
+                : status.lastObservedSourceModifiedEpochSeconds;
+            const checkedAt = Date.now();
+            await recordStatus({
+                ...status,
+                lastSuccessfulCheckEpochMs: checkedAt,
+                lastPublicationConfirmedEpochMs: result?.status === "published"
+                    ? checkedAt : status.lastPublicationConfirmedEpochMs,
+                lastObservedSourceModifiedEpochSeconds: observedModified,
+                consecutiveFailures: 0,
+            });
+        } catch (error) {
+            if (!signal.aborted) {
+                await recordStatus({
+                    ...status,
+                    consecutiveFailures: Math.min(status.consecutiveFailures + 1, Number.MAX_SAFE_INTEGER),
+                });
+            }
+            throw error;
         } finally {
             clearTimeout(timer);
         }

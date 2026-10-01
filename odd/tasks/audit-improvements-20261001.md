@@ -90,7 +90,7 @@ checks trigger the mandatory writer/verification routing rules.
   Checks: workflow validation and local equivalents; disclose hosted-run limits.
 - [x] A5 Add bounded release retention with protected active/rollback releases.
   Checks: synthetic filesystem, leases, symlink/failure and rollback regressions.
-- [ ] A6 Add sync freshness observability separate from service readiness.
+- [x] A6 Add sync freshness observability separate from service readiness.
   Checks: fresh/stale/failing/no-new-backup worker scenarios; operational docs.
 - [ ] A7 Surface existing comparison highlights and on-demand cumulative chart.
   Checks: consistent scopes, partial/history gaps, accessible compact layouts.
@@ -250,14 +250,40 @@ checks trigger the mandatory writer/verification routing rules.
   were excluded. Full UI/Node suites were not repeated for this CSS-only fix.
   Rollback remains the budget-local CSS and accompanying browser regression.
   Engram mirror is pending due to the runtime session-registration restriction.
+- Parent repeated budget page checks 18/18 and inspected paired mobile crops.
+  Follow-up commit `8c89fe7` contains 101 authored changed lines. Combined
+  A3F slice against `7ade54a` assessed medium, 207 net authored lines,
+  `under_budget`; no new review was due. Fast-forwarded and pushed main at
+  `8c89fe7`. Reviewed boundary remains `7ade54a`; the slice stays pending.
+- A6 adds private versioned `.sync-status.json` with last attempt, successful
+  check (including no-op), confirmed publication, consecutive failures and
+  last observed served source modification time. The worker preserves valid
+  history across restarts. Readiness, notification flow and local download CLI
+  are unchanged. Status I/O failures are generic and nonfatal; shutdown aborts
+  do not count as failures, while independent cycle timeouts do.
+- Status persistence checks root/file ownership, modes, links, schema and
+  bounded content; writes use a private synced temporary file and atomic
+  rename under the existing worker lease. Invalid private regular content may
+  recover, but unsafe permissions or symlinks are not trusted or overwritten.
+  No identities, checksums, errors, paths or credentials enter the schema.
+  Documentation distinguishes observations from backup capture time and from
+  actual state after an ambiguous publication failure; no cadence alarm exists.
+- A6 strict TDD: focused worker RED preceded implementation, then final worker
+  and orchestrator checks passed 47/47. Full Node suite passed 302 with 3
+  optional private-data skips; synthetic deployment 1/1; all three TypeScript
+  projects, Oxlint and diff check passed. An intermediate timing-sensitive
+  readiness assertion was replaced with a bounded probe, then full checks
+  reran successfully. Parent independently repeated worker checks 18/18.
+  No browser/UI suite or live deployment was run for this backend-only unit.
+- A6 rollback: `sync-status.ts`, worker source/tests, orchestrator result
+  metadata/test and deployment-guide paragraph. About 449 authored lines are
+  cohesive safety coverage and diagnostics; do not split or omit tests solely
+  to fit the advisory 400-line unit estimate. Engram mirror remains pending.
 
 ## Next step
 
-Resume A6, then A7–A10; the A3F Categories-equivalent spacing fix is verified.
-A6 is interrupted: only `scripts/sync-pcloud/worker.test.ts` contains five new
-observability tests. RED has NOT run; no production/status/docs changes exist.
-Preserve this partial file and resume A6 with its focused RED command later.
-A6 exploration is complete: status belongs in a private worker-owned
-file, successful no-op checks advance poll freshness but not publication time,
-and availability remains independent. Do not infer capture time from pCloud
-file modification metadata or invent a default expected backup cadence.
+Close the A6 work-unit commit and due review/delivery, then proceed to A7–A10.
+A3F spacing is pushed; A6 implementation and functional checks are complete.
+Do not infer capture time from pCloud modification metadata or invent a default
+expected backup cadence. Runtime registration must be restored before memory
+attribution resumes; the local task document preserves all pending progress.

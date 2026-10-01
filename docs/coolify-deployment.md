@@ -144,7 +144,25 @@ Compose y validaciones conjuntamente.
    readlink /srv/myexpenses/current
    stat -c '%u:%g %a %n' /srv/myexpenses /srv/myexpenses/.work /srv/myexpenses/releases
    node -e "const s=require('/srv/myexpenses/.sync-state.json'); console.log({fileId:s.fileId,releaseId:s.releaseId,modifiedEpochSeconds:s.modifiedEpochSeconds})"
+   cat /srv/myexpenses/.sync-status.json
    ```
+
+   `.sync-status.json` es un diagnóstico privado del worker (modo `0600`), no
+   un endpoint de la web ni una comprobación de disponibilidad. Sus tiempos
+   `lastAttemptEpochMs`, `lastSuccessfulCheckEpochMs` y
+   `lastPublicationConfirmedEpochMs` son milisegundos Unix: distinguen un
+   worker que dejó de consultar pCloud, consultas correctas sin cambios y la
+   última publicación confirmada. `consecutiveFailures` cuenta los ciclos
+   fallidos desde la última consulta correcta; `null` significa que todavía
+   no hay evidencia de ese hito. `lastObservedSourceModifiedEpochSeconds` es
+   la fecha de modificación que pCloud comunicó para la última copia cuya
+   publicación o consulta sin cambios confirmó el worker, en **segundos Unix**:
+   no demuestra cuándo se capturaron los datos ni el estado actual tras un
+   fallo de publicación ambiguo. Una fecha antigua puede ser legítima si las
+   consultas recientes no encontraron una
+   copia nueva. Interpreta la edad según la cadencia real de tus copias; no
+   hay una alarma predeterminada. Un error al guardar este diagnóstico no
+   retira la release ni cambia el estado de `ready`.
 
    En la terminal **de web**: `curl -fsSI --max-time 3
    http://127.0.0.1:8080/data/app-dataset.vault.json`. Para Docker Compose,
