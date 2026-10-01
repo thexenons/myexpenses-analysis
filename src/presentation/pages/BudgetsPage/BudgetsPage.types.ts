@@ -1,6 +1,7 @@
 import type { BudgetAnalysis } from "../../../domain/analytics/budgets.ts";
 import type { BudgetPeriodComparison, BudgetReferenceRange } from "../../../domain/analytics/budget-period-comparison.ts";
 import type { BudgetPaceResult } from "../../../domain/analytics/budget-pace.ts";
+import type { AnnualProjectionResult } from "../../../domain/analytics/annual-projection.ts";
 import type { AnalyticsDataset } from "../../../domain/analytics/types.ts";
 
 export interface BudgetSelectOption {
@@ -18,6 +19,8 @@ export interface BudgetsPageViewProps {
   readonly comparison?: BudgetPeriodComparison | null;
   readonly comparisonError?: string | null;
   readonly pace?: BudgetPaceResult | null;
+  readonly annualProjection?: AnnualProjectionResult | null;
+  readonly annualProjectionError?: "calculation-error" | null;
   readonly dataset: AnalyticsDataset;
   readonly budgetOptions: readonly BudgetSelectOption[];
   readonly emptyDescription: string | null;

@@ -8,6 +8,7 @@ import type {
 } from "../../../domain/analytics/budgets.ts";
 import type { BackupBudgetV1 } from "../../../domain/analytics/backup-dataset.types.ts";
 import type { BudgetPeriodComparison, BudgetReferenceRange } from "../../../domain/analytics/budget-period-comparison.ts";
+import type { AnnualProjectionResult } from "../../../domain/analytics/annual-projection.ts";
 import type { AnalyticsDataset, IsoDate, NormalizedPosting } from "../../../domain/analytics/types.ts";
 import { analyzeBudgetPace } from "../../../domain/analytics/budget-pace.ts";
 import { BudgetsPageView } from "./BudgetsPage.view.tsx";
@@ -161,6 +162,61 @@ const comparison: BudgetPeriodComparison = {
 };
 
 describe("BudgetsPageView", () => {
+  it("shows a cumulative Jan–Dec trajectory with real/estimated evidence and December total", async () => {
+    const user = userEvent.setup();
+    const points = Array.from({ length: 12 }, (_, index) => ({
+      key: `2026-${String(index + 1).padStart(2, "0")}`, month: index + 1,
+      startDate: `2026-${String(index + 1).padStart(2, "0")}-01` as IsoDate,
+      endDate: `2026-${String(index + 1).padStart(2, "0")}-28` as IsoDate,
+      kind: index < 2 ? "actual" as const : "estimated" as const,
+      incomeMinor: 900, observedIncomeEurMinor: index === 2 ? 100 : 0,
+      budgetMinor: 500, monthlyContributionEurMinor: index === 1 ? -100 : 200,
+      cumulativeEurMinor: index === 0 ? 200 : index === 1 ? 100 : 100 + (index - 1) * 200,
+    }));
+    const annualProjection = {
+      status: "ready", year: 2026, currency: "EUR", fractionDigits: 2,
+      dateScope: "full-budget-calendar-year", dateBasis: "operation",
+      coverage: { from: "2026-01-01", to: "2026-02-28" },
+      income: { basis: "same-year-complete-month-mean", completeMonthCount: 2,
+        completeMonthKeys: ["2026-01", "2026-02"], totalMinor: 1_800, expectedMonthlyMinor: 900 },
+      budget: { grouping: "MONTH", distribution: "per-calendar-month-label", annualBudgetMinor: 6_000 },
+      points,
+    } satisfies AnnualProjectionResult;
+    render(<BudgetsPageView analysis={analysis} annualProjection={annualProjection}
+      dataset={EMPTY_DATASET} budgetOptions={[]} periodOptions={[]}
+      emptyDescription={null} emptyTitle={null} onBudgetChange={vi.fn<(uuid: string) => void>()} onPeriodChange={vi.fn<(key: string) => void>()}
+      searchPending={false} selectedBudgetUuid="budget" selectedPeriodKey="MONTH:2026:7" />);
+    const projection = screen.getByRole("region", { name: "Proyección anual de ahorro" });
+    expect(within(projection).getByRole("img", { name: "Ahorro acumulado en 2026" })).toBeVisible();
+    expect(projection).toHaveTextContent("Diciembre: 21,00");
+    expect(projection).toHaveTextContent("2 meses completos");
+    expect(projection).toHaveTextContent("no se suma dos veces");
+    expect(projection).toHaveTextContent("mes natural");
+    expect(projection).toHaveTextContent("no es saldo inicial");
+    await user.click(within(projection).getByText("Ver datos exactos"));
+    const chartTable = within(projection).getByRole("table", { name: "Datos exactos de Ahorro acumulado en 2026" });
+    expect(within(chartTable).getAllByRole("row")).toHaveLength(13);
+    expect(within(chartTable).getByRole("row", { name: /2026-03/ })).toHaveTextContent("3,00");
+    await user.click(within(projection).getByText("Desglose mensual"));
+    const detail = within(projection).getByRole("table", { name: "Aportes y acumulado por mes" });
+    expect(within(detail).getByRole("row", { name: /2026-02/ })).toHaveTextContent("Real");
+    expect(within(detail).getByRole("row", { name: /2026-03/ })).toHaveTextContent("Estimado");
+    expect(within(detail).getByRole("row", { name: /2026-03/ })).toHaveTextContent("2,00");
+  });
+
+  it("explains unavailable projection reasons without showing a fabricated chart", () => {
+    const props = { analysis, dataset: EMPTY_DATASET, budgetOptions: [], periodOptions: [],
+      emptyDescription: null, emptyTitle: null, onBudgetChange: vi.fn<(uuid: string) => void>(), onPeriodChange: vi.fn<(key: string) => void>(),
+      searchPending: false, selectedBudgetUuid: "budget", selectedPeriodKey: "MONTH:2026:7" };
+    const { rerender } = render(<BudgetsPageView {...props} annualProjection={{ status: "unavailable", reason: "no-complete-months" }} />);
+    const projection = screen.getByRole("region", { name: "Proyección anual de ahorro" });
+    expect(projection).toHaveTextContent("ningún mes completo");
+    expect(within(projection).queryByRole("img", { name: /Ahorro acumulado/ })).not.toBeInTheDocument();
+    rerender(<BudgetsPageView {...props} annualProjection={{ status: "unavailable", reason: "filtered-scope" }} />);
+    expect(projection).toHaveTextContent("filtros de contenido");
+    rerender(<BudgetsPageView {...props} annualProjectionError="calculation-error" />);
+    expect(projection).toHaveTextContent("No se ha podido calcular");
+  });
   it("shows signed monthly allowance and recorded refunds without calling it a forecast", async () => {
     const user = userEvent.setup();
     const posting = (id: string, date: IsoDate): NormalizedPosting => ({

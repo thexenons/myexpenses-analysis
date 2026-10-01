@@ -1,0 +1,32 @@
+.panel { min-width: 0; }
+
+.content { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.8rem; min-width: 0; }
+
+.total { margin: 0; font-size: 0.9rem; }
+.total strong { font-family: var(--mono); font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+
+.subtitle,
+.assumptions,
+.unavailable {
+  max-width: 70rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.assumptions { display: grid; gap: 0.35rem; }
+.assumptions p { margin: 0; }
+
+.details { font-size: 0.78rem; }
+.details summary { width: fit-content; min-height: 2.75rem; padding: 0.6rem 0; color: var(--transfer); cursor: pointer; }
+.details summary:focus-visible,
+.scroller:focus-visible { outline: 2px solid var(--transfer); outline-offset: 2px; }
+
+.scroller { max-width: 100%; overflow-x: auto; }
+.table { width: 100%; min-width: 30rem; border-collapse: collapse; font-size: 0.76rem; }
+.table caption { padding: 0.35rem 0; text-align: left; color: var(--muted); }
+.table th,
+.table td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.table td:nth-child(n+3) { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.table thead { background: var(--surface-bright); }

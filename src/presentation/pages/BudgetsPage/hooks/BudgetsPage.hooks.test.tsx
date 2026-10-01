@@ -6,10 +6,11 @@ import type { BackupBudgetV1 } from "../../../../domain/analytics/backup-dataset
 import type { AnalyticsDataset, FilterState, NormalizedPosting } from "../../../../domain/analytics/types.ts";
 import { useBudgetsPage } from "./BudgetsPage.hooks.ts";
 
-const { filteredState, compareSpy, modelSpy } = vi.hoisted(() => ({
+const { filteredState, compareSpy, modelSpy, projectionSpy } = vi.hoisted(() => ({
   filteredState: { current: null as unknown },
   compareSpy: vi.fn<(...args: unknown[]) => unknown>(),
   modelSpy: vi.fn<(...args: unknown[]) => unknown>(),
+  projectionSpy: vi.fn<(...args: unknown[]) => unknown>(() => ({ status: "unavailable", reason: "no-complete-months" })),
 }));
 
 vi.mock("../../../hooks/filtered-analytics/filtered-analytics.hooks.ts", () => ({
@@ -17,6 +18,9 @@ vi.mock("../../../hooks/filtered-analytics/filtered-analytics.hooks.ts", () => (
 }));
 vi.mock("../../../../domain/analytics/budget-period-comparison.ts", () => ({
   analyzeBudgetPeriodComparison: (...args: unknown[]) => compareSpy(...args),
+}));
+vi.mock("../../../../domain/analytics/annual-projection.ts", () => ({
+  analyzeAnnualSavingsProjection: (...args: unknown[]) => projectionSpy(...args),
 }));
 vi.mock("../BudgetsPage.helpers.ts", () => ({
   createBudgetsPageModel: (...args: unknown[]) => modelSpy(...args),
@@ -76,6 +80,38 @@ function historicalDataset(): AnalyticsDataset {
 }
 
 describe("useBudgetsPage references", () => {
+  it("projects the selected budget year from the unchanged global filters", async () => {
+    const pageModule = await vi.importActual<typeof import("../BudgetsPage.helpers.ts")>("../BudgetsPage.helpers.ts");
+    modelSpy.mockImplementation((...args) => pageModule.createBudgetsPageModel(
+      ...(args as Parameters<typeof pageModule.createBudgetsPageModel>),
+    ));
+    compareSpy.mockReturnValue({ status: "unsupported", reason: "No reference" });
+    const analytics = historicalDataset();
+    const filters = createDefaultFilterState();
+    filteredState.current = { analytics, filtered: applyFilters(analytics, filters), searchPending: false };
+    projectionSpy.mockReturnValue({ status: "unavailable", reason: "no-complete-months" });
+    const { result } = renderHook(() => useBudgetsPage());
+    expect(projectionSpy).toHaveBeenCalledWith(analytics, result.current?.analysis, expect.objectContaining(filters),
+      expect.objectContaining({ today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) }));
+    expect(result.current?.annualProjection).toEqual({ status: "unavailable", reason: "no-complete-months" });
+    expect(result.current?.annualProjectionError).toBeNull();
+  });
+
+  it("keeps projection arithmetic failures distinct from unavailable data and existing comparisons", () => {
+    const analytics = { backup: { preferences: {
+      homeCurrency: "EUR", timeZone: "Europe/Madrid", monthStart: 1, weekStart: 1, includeTransfers: true,
+    } } };
+    filteredState.current = { analytics, filtered: { filters: createDefaultFilterState() }, searchPending: false };
+    modelSpy.mockReturnValue({ analysis: { budget: { uuid: "budget" }, period: {
+      key: "MONTH:2026:7", grouping: "MONTH", startDate: "2026-08-01", endDate: "2026-08-31",
+    } } });
+    compareSpy.mockReturnValue({ status: "unsupported", reason: "Reference unavailable" });
+    projectionSpy.mockImplementation(() => { throw new Error("Unsafe projection amount"); });
+    const { result } = renderHook(() => useBudgetsPage());
+    expect(result.current?.comparisonError).toBe("Reference unavailable");
+    expect(result.current?.annualProjection).toBeNull();
+    expect(result.current?.annualProjectionError).toBe("calculation-error");
+  });
   it("keeps a safe current budget available when a real historical delta exceeds safe minor units, then recovers", async () => {
     const comparisonModule = await vi.importActual<typeof import("../../../../domain/analytics/budget-period-comparison.ts")>(
       "../../../../domain/analytics/budget-period-comparison.ts",

@@ -180,6 +180,8 @@ async function main(): Promise<void> {
       "INSERT INTO budget_allocations (budget_id, cat_id, year, second, budget, rollOverPrevious, rollOverNext, oneTime) VALUES (2, 0, 2026, 7, 500, 0, 0, 0)",
       "INSERT INTO budget_allocations (budget_id, cat_id, year, second, budget, rollOverPrevious, rollOverNext, oneTime) VALUES (2, 10, 2026, 7, 100, 0, 0, 0)",
       "INSERT INTO budget_allocations (budget_id, cat_id, year, second, budget, rollOverPrevious, rollOverNext, oneTime) VALUES (2, 14, 2026, 7, 20, 0, 0, 0)",
+      "INSERT INTO budgets (_id, uuid, title, description, grouping, account_id, currency, start, end, is_default) VALUES (3, 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'Annual outlook', '', 'YEAR', NULL, 'EUR', NULL, NULL, 0)",
+      "INSERT INTO budget_allocations (budget_id, cat_id, year, second, budget, rollOverPrevious, rollOverNext, oneTime) VALUES (3, 0, 2026, 0, 120000, 0, 0, 0)",
     ] });
     await writeFile(historyArchivePath, await createBackupZipFixture({ database: historyDatabase }), { mode: 0o600 });
     await importBackup({

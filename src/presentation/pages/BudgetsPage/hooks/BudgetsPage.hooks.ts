@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 
 import { analyzeBudgetPeriodComparison, type BudgetReferenceRange } from "../../../../domain/analytics/budget-period-comparison.ts";
 import { analyzeBudgetPace } from "../../../../domain/analytics/budget-pace.ts";
+import { analyzeAnnualSavingsProjection } from "../../../../domain/analytics/annual-projection.ts";
 import { budgetPeriodForDate } from "../../../../domain/analytics/budgets.ts";
 import { isoDateInTimeZone } from "../../../../domain/analytics/date-periods.ts";
 import { addIsoDays } from "../../../../domain/analytics/periods.ts";
@@ -94,6 +95,14 @@ export function useBudgetsPage(): BudgetsPageViewProps | null {
       return { status: "calculation-error" } as const;
     }
   }, [analytics, filtered, analysis, today, selectedRanges, selectedPrimary]);
+  const projectionResult = useMemo(() => {
+    if (analytics === null || filtered === null || analysis == null) return null;
+    try {
+      return analyzeAnnualSavingsProjection(analytics, analysis, filtered.filters, { today });
+    } catch {
+      return { status: "calculation-error" } as const;
+    }
+  }, [analytics, filtered, analysis, today]);
   const initialSelection = useCallback((): ReferenceSelection => ({
     contextKey, ranges: defaultRanges, primaryKey: defaultRanges[0]?.key ?? null,
   }), [contextKey, defaultRanges]);
@@ -125,6 +134,8 @@ export function useBudgetsPage(): BudgetsPageViewProps | null {
     ...base,
     comparison: result?.status === "ready" ? result.comparison : null,
     pace,
+    annualProjection: projectionResult?.status === "ready" || projectionResult?.status === "unavailable" ? projectionResult : null,
+    annualProjectionError: projectionResult?.status === "calculation-error" ? "calculation-error" : null,
     comparisonError: result?.status === "unsupported" ? result.reason :
       result?.status === "calculation-error" ? "No se ha podido calcular la comparación con seguridad." : null,
     onReferenceAdd, onReferenceRemove, onPrimaryReferenceChange,

@@ -2270,3 +2270,37 @@ for (const { scope, current, reference: expectedReference, mean, incomeCurrent, 
     expect(errors).toEqual([]);
   });
 }
+
+test("shows an accessible annual savings trajectory on Plans at desktop and mobile widths", async ({ page }, testInfo) => {
+  await page.clock.setFixedTime(new Date("2026-08-15T12:00:00.000Z"));
+  await page.route("**/data/app-dataset.vault.json", async (route) => {
+    const variant = await route.fetch({ url: `${BASE}/data/u7-budget-history.vault.json` });
+    await route.fulfill({ response: variant });
+  });
+  await page.reload();
+  await page.getByLabel("Frase de desbloqueo").fill(PASSPHRASE);
+  await page.getByRole("button", { name: "Abrir bóveda" }).click();
+  await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
+  const controls = page.getByRole("group", { name: "Marco del presupuesto" });
+  await controls.getByRole("combobox", { name: "Presupuesto", exact: true }).selectOption({ label: "Annual outlook" });
+  const projection = page.getByRole("region", { name: "Proyección anual de ahorro" });
+  await expect(projection.getByRole("img", { name: "Ahorro acumulado en 2026" })).toBeVisible();
+  await expect(projection.getByText(/Diciembre:/)).toBeVisible();
+  await expect(projection.getByText(/Presupuesto anual:/)).toContainText("12 meses naturales");
+  await projection.locator("summary").filter({ hasText: "Desglose mensual" }).press("Enter");
+  const table = projection.getByRole("table", { name: "Aportes y acumulado por mes" });
+  await expect(table.getByRole("row")).toHaveCount(13);
+  await expect(table.getByRole("row", { name: /2026-05/ })).toContainText("Real");
+  await expect(table.getByRole("row", { name: /2026-08/ })).toContainText("Estimado");
+  await expectNoDocumentOverflow(page);
+  const paragraphsFit = await projection.locator("p").evaluateAll((elements) =>
+    elements.every((element) => element.scrollWidth <= element.clientWidth + 1));
+  expect(paragraphsFit, "projection explanations must wrap within the panel").toBe(true);
+  await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
+  const violations = await projection.evaluate(async (element) => {
+    const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
+    return (await axe.run(element, { runOnly: { type: "rule", values: ["color-contrast", "scrollable-region-focusable", "button-name"] } })).violations.map(({ id }) => id);
+  });
+  expect(violations).toEqual([]);
+  await projection.screenshot({ path: `/tmp/myexpenses-annual-projection-${testInfo.project.name}.png`, animations: "disabled" });
+});

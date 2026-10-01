@@ -18,7 +18,7 @@ The page has budget pacing and historical income comparisons, but no annual savi
 - Remote destination/session must be explicitly authorized before external operations; no SSH/auth discovery.
 
 ## Tasks
-- [ ] T01: Implement the pure annual projection and domain tests. Route: delegated; preparation and 2-file writer triggers. Cover same-year income mean, complete versus partial/future months, cumulative sums, annual/monthly budgets, zero/negative values, missing baseline and incompatible scope.
+- [x] T01: Implement the pure annual projection and domain tests. Route: delegated; preparation and 2-file writer triggers. Completed in `3f8b4b31bdb33dc0885be392494e7f9af29f9eb6` with 16 tests and independent verification.
 - [ ] T02: Integrate an accessible real-versus-estimated chart into Plans, add integration tests, verify and deliver. Route: delegated; multi-file writer trigger. Show month-end cumulative values, December total and concise income/budget assumptions; preserve existing budget controls and comparisons.
 
 ## Acceptance and verification
@@ -28,13 +28,13 @@ Focused domain/UI tests during RED/GREEN, then `pnpm type-check`, `pnpm lint`, `
 - Feature branch: `feat/annual-savings-projection`; branch point / first review boundary: `c86d1c4`.
 - Initial authored-line forecast: approximately 300–400; revised T01 source/test size: 473 lines because cutoff, signed-income, coverage, and overflow regressions require durable proof. Keep coherent units and tests; do not code-golf to fit a planning heuristic.
 - Delivery strategy: `ask-on-risk`; no PR requested. Push/merge are explicitly authorized, once target/session scope is resolved.
-- Running authored lines: 0. Review outcomes / slice boundaries: pending.
+- Running authored lines: 521 in T01 (473 source/test, 48 recovery document). Review boundary advanced from `c86d1c4` to `3f8b4b3` after the native acknowledgement. T02 is a separate work-unit slice, not a combined branch review.
 - Rollback boundary: new annual projection module/tests plus isolated Plans wiring/chart; preserve all other financial calculations.
 
 ## Progress and evidence
 Exploration completed read-only. Imported data has no scheduled income; user approved same-year complete-month mean. Local main and prior feature branch are both at the branch point. New feature branch created; unrelated edits preserved.
 
-### T01 functional evidence (commit pending)
+### T01 functional evidence
 - Pure domain module and 16 behavioral tests implemented.
 - Observed initial RED: 9 failing stub tests; initial GREEN: 11 passed.
 - Independent verification found today's receipts excluded and absent receipts clamping negative means. Regression RED: 3 failed / 12 passed; final GREEN: 16 passed, including value-date and overflow coverage.
@@ -42,7 +42,20 @@ Exploration completed read-only. Imported data has no scheduled income; user app
 - Parent spot check: focused Vitest 16/16 passed; `git diff --check` clean.
 - Earlier sandbox IPC failure is environmental and superseded by successful unrestricted runs. Build/browser are N/A for the pure-domain unit and pending T02.
 - Rollback: remove only `src/domain/analytics/annual-projection.ts` and `.test.ts`.
+- Native assessment: medium, review due `slice_budget_reached`; one provider-selected reliability review. Candidate consent granted under the user's explicit request for automatic grants. Review found no blocker; lineage `review-4ca32de600d1a275` closed by exact acknowledgement (no fabricated PASS).
 - Engram mirror pending: resume hook reported no authoritative registered identity; all agent-attributed memory writes are paused until runtime registration is restored. Local progress remains authoritative and must be mirrored later.
 
+### T02 implementation and verification (delivery pending)
+- Added the isolated AnnualProjection panel, full-year cumulative chart, December total, exact monthly contribution/cumulative table, real/estimated labels, assumptions, and distinct unavailable/calculation-error messages. Existing controls and comparisons are unchanged.
+- Hook and view integration, component/page/hook tests, and synthetic browser fixture/scenario implemented. UI neutral Spanish follows existing project copy.
+- Observed UI RED: 4 failed / 21 passed; final focused GREEN: 43 passed. Parent spot check independently passed 43/43.
+- Writer `pnpm type-check`, `pnpm lint`, and `pnpm test` passed (Node 324 passed, 3 skipped; UI 499 passed / 91 files).
+- Independent full browser matrix: 195 passed, 3 existing viewport-specific skips, exit 0. Production static build succeeded with isolated synthetic vault data through `runBuildStaticCli`; direct private-data `pnpm build` was deliberately not run.
+- New scenario passed at 1280px, 390px, and 320px with keyboard disclosure, scoped axe checks, and overflow assertions. Parent visually inspected the 320px screenshot; mobile grid uses `minmax(0, 1fr)` to avoid min-content overflow.
+- Environmental outcomes preserved: initial 300s timeout; pretest EADDRINUSE from its orphan server (owned process removed); fresh-shell missing libnspr4.so. Corrected supported runtime-library environment yielded full browser success in 10m02s. No assertion failures occurred in those environmental attempts.
+- Browser command: `MYEXPENSES_BROWSER_RUNTIME_LIB_DIR=/tmp/saracastello-browser-libs.hDbDUm/root/usr/lib/x86_64-linux-gnu timeout --signal=TERM --kill-after=15s 900s pnpm test:browser`. Evidence log: `/tmp/annual-projection-verify.vFhzu5.log`; screenshots: `/tmp/myexpenses-annual-projection-{desktop,mobile-390,narrow-320}.png`. These are temporary, synthetic artifacts, not committed data.
+- Source/test diff: 335 authored lines. Rollback: remove the new AnnualProjection component and isolated BudgetsPage wiring/tests plus the new synthetic fixture/scenario; T01 domain logic remains independently valid.
+- Remote delivery is still pending explicit origin/session scope. No remote probing, fetch, push, PR, or deployment performed.
+
 ## Next step
-Delegate T01, observe TDD and focused checks, read back changes, commit the work unit, then follow native assessment/review before integration.
+Commit the verified T02 work unit, assess only its range against `3f8b4b3`, record the returned review outcome, then obtain exact origin/session authorization before synchronization and main delivery. Keep T02 unchecked until delivery is observed. Engram mirror remains pending runtime identity restoration.

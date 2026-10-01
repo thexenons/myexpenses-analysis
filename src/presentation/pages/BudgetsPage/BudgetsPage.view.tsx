@@ -22,6 +22,7 @@ import { BudgetConsumptionDialog } from "./components/BudgetConsumptionDialog/Bu
 import { BudgetControls } from "./components/BudgetControls/BudgetControls.tsx";
 import { BudgetReferenceControls } from "./components/BudgetReferenceControls/BudgetReferenceControls.tsx";
 import { BudgetUtilization } from "./components/BudgetUtilization/BudgetUtilization.tsx";
+import { AnnualProjection } from "./components/AnnualProjection/index.ts";
 import styles from "./BudgetsPage.module.css";
 import { formatCount, formatDate } from "../../utils/format.ts";
 import { formatBudgetComparisonDelta } from "./BudgetsPage.helpers.ts";
@@ -59,6 +60,8 @@ export function BudgetsPageView({
   comparison = null,
   comparisonError = null,
   pace = null,
+  annualProjection = null,
+  annualProjectionError = null,
   budgetOptions,
   dataset,
   emptyDescription,
@@ -244,6 +247,10 @@ export function BudgetsPageView({
             </>
           )}
         </section>
+      )}
+
+      {annualProjection === null && annualProjectionError === null ? null : (
+        <AnnualProjection error={annualProjectionError} result={annualProjection} />
       )}
 
       <Panel
