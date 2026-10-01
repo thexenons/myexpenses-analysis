@@ -393,6 +393,19 @@ describe("BudgetsPageView", () => {
     expect(screen.getByText(/Consumo consultado:/)).toHaveTextContent("Consumo consultado: 10 ago 2026 – 12 ago 2026");
     expect(screen.getByText(/sin prorratear/)).toBeVisible();
     expect(screen.getByText(/no indican la disponibilidad real del presupuesto completo/)).toBeVisible();
+    expect(screen.getByRole("meter", { name: "Utilización del corte filtrado" })).toBeVisible();
+    expect(screen.queryByText("Dentro del límite total.")).not.toBeInTheDocument();
+  });
+
+  it("labels complete-budget consumption without implying a time-based pace", () => {
+    render(<BudgetsPageView
+      analysis={{ ...analysis, isFilteredComparison: false }} dataset={EMPTY_DATASET}
+      budgetOptions={[]} periodOptions={[]} emptyDescription={null} emptyTitle={null}
+      onBudgetChange={vi.fn<(uuid: string) => void>()} onPeriodChange={vi.fn<(key: string) => void>()}
+      searchPending={false} selectedBudgetUuid="budget" selectedPeriodKey="MONTH:2026:7"
+    />);
+    expect(screen.getByRole("meter", { name: "Consumo del presupuesto" })).toBeVisible();
+    expect(screen.queryByText("Ritmo de consumo total")).not.toBeInTheDocument();
   });
 
   it("does not describe a filtered slice as on track when the full budget is exceeded", async () => {

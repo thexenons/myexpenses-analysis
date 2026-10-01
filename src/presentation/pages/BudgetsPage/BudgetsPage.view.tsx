@@ -201,7 +201,7 @@ export function BudgetsPageView({
       <div className={styles.progressSummary}>
         <BudgetUtilization
           health={analysis.isFilteredComparison ? "unallocated" : global.health}
-          label={analysis.isFilteredComparison ? "Utilización del corte filtrado" : "Ritmo de consumo total"}
+          label={analysis.isFilteredComparison ? "Utilización del corte filtrado" : "Consumo del presupuesto"}
           utilization={global.utilization}
         />
         {analysis.isFilteredComparison ? null : (

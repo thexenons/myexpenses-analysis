@@ -14,6 +14,7 @@ import {
 import { applyFilters, createDefaultFilterState } from "./filters.ts";
 import type {
   AnalyticsDataset,
+  FilterState,
   IsoDate,
   NormalizedPosting,
 } from "./types.ts";
@@ -615,6 +616,52 @@ describe("budget analysis", () => {
     expect(result.analysis.consumptionDateRange).toBeNull();
     expect(result.analysis.isFilteredComparison).toBe(true);
     expect(result.analysis.contributions).toEqual([]);
+  });
+
+  it.each([
+    ["payee", { payeeKeys: ['["source",1]'] }, 4_000],
+    ["payment method", { paymentMethodKeys: ['["source",2]'] }, 4_000],
+    ["category type", { categoryTypes: ["INCOME"] }, 0],
+    ["currency", { currencies: ["USD"] }, 0],
+    ["minimum amount", { minAmountEurMinor: 3_000 }, 4_000],
+    ["maximum amount", { maxAmountEurMinor: 1_000 }, 500],
+    ["comment", { commentSearch: "receipt" }, 4_000],
+    ["reference", { referenceSearch: "invoice" }, 4_000],
+    ["zero minimum", { minAmountEurMinor: 0 }, 6_500],
+    ["zero maximum", { maxAmountEurMinor: 0 }, 0],
+  ] satisfies readonly (readonly [string, Partial<FilterState>, number])[])(
+    "marks %s as a partial budget comparison without changing the period allocation",
+    (_name, patch, consumedMinor) => {
+      const initial = analyticsFixture();
+      const analytics = {
+        ...initial,
+        postings: initial.postings.map((row) => row.id === "expense"
+          ? Object.assign({}, row, { payeeSourceId: 1, paymentMethodSourceId: 2, comment: "Receipt", referenceNumber: "Invoice" })
+          : row),
+      };
+      const filtered = applyFilters(analytics, { ...createDefaultFilterState(), ...patch });
+      const result = analyzeBudgetPeriod(analytics, filtered, analytics.backup!.budgets[0]!, "MONTH:2026:7");
+      if (result.status !== "ready") throw new Error(result.reason);
+      expect(result.analysis.isFilteredComparison).toBe(true);
+      expect(result.analysis.global).toMatchObject({
+        assignedMinor: 11_000,
+        consumedMinor,
+        availableMinor: 11_000 - consumedMinor,
+      });
+    },
+  );
+
+  it("keeps the complete budget comparison when no subset filter is active", () => {
+    const analytics = analyticsFixture();
+    const result = analyzeBudgetPeriod(
+      analytics,
+      applyFilters(analytics, createDefaultFilterState()),
+      analytics.backup!.budgets[0]!,
+      "MONTH:2026:7",
+    );
+    if (result.status !== "ready") throw new Error(result.reason);
+    expect(result.analysis.isFilteredComparison).toBe(false);
+    expect(result.analysis.global).toMatchObject({ assignedMinor: 11_000, consumedMinor: 6_500, availableMinor: 4_500 });
   });
 
   it("applies fallback, rollovers, refunds and avoids parent-child double counting", () => {
