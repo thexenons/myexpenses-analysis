@@ -3,7 +3,8 @@
 
   align-items: start;
   grid-template-columns: var(--budget-disclosure-size) minmax(0, 1fr);
-  padding-block: 0.25rem;
+  /* Match the Categories tree's visible disclosure inset, not its centered two-line header layout. */
+  padding-block-start: 0.75rem;
 }
 
 .itemRow > button {

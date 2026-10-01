@@ -17,10 +17,11 @@ operational resilience and the visibility of useful financial statistics.
   explicit request for successive small deliveries to main. No PR requested.
   Initial branch/base: `feat/audit-improvements-20261001` / `f45c7e6`.
 - RDD is on (global). Candidate consent is separate; prior grants are consumed.
-- Engram mirror: `odd/audit-improvements-20261001/tasks`. Earlier runtime
-  restrictions left it pending; the current memory protocol permits calls with
-  no session_id when no authoritative identity is supplied. No ID is invented
-  or recovered from observations. Mirror synchronization resumed after A5.
+- Engram mirror: `odd/audit-improvements-20261001/tasks`. Synchronization resumed
+  after A5, but the latest post-compaction runtime hook again reports no
+  authoritative registered session identity and forbids agent-attributed calls.
+  Mirror update is pending until registration is restored; retain local progress
+  and never invent or select an ID from observations.
 
 ## Decisions and acceptance
 
@@ -51,6 +52,16 @@ Cleanup failure is nonfatal to an otherwise successful publication. Do not
 change the local download CLI. Retention supports rollback, not stale asset URL
 availability: current Nginx resolves assets only through the active release.
 
+A6 records private worker diagnostics under the deployment root: last attempt,
+last successful check (including unchanged backups), confirmed publication,
+consecutive failures and the last observed served pCloud file modification
+timestamp. Preserve availability checks and never expose diagnostics publicly.
+No default backup-cadence alarm: source modification time is not verified data
+capture time, and unchanged backups can legitimately accompany successful polls.
+Persistence failures are nonfatal; cancellation is not a failed sync. Safe
+operator documentation must explain how to inspect the private status locally
+and distinguish stopped polling from old source data without credentials.
+
 Reuse existing historical means, elapsed comparisons, previous-year comparison
 and merchant-frequency metrics. Keep category rows compact; extra detail is
 disclosed on demand. Savings rates require an explicitly eligible scope and
@@ -72,6 +83,9 @@ checks trigger the mandatory writer/verification routing rules.
 - [x] A3F Align the budget category disclosure icon with the category title.
   User reported vertical mismatch after A3. Checks: browser geometry on desktop
   and mobile, wrapped names, details open/closed, and keyboard behavior.
+  Reopened after `8b7823c`: alignment passed but user reports the disclosure
+  is too close to the top. Match the actual Categories tree row spacing while
+  preserving first-line alignment and the 44px interactive target.
 - [x] A4 Add repository CI for existing checks and isolated browser smoke.
   Checks: workflow validation and local equivalents; disclose hosted-run limits.
 - [x] A5 Add bounded release retention with protected active/rollback releases.
@@ -214,11 +228,35 @@ checks trigger the mandatory writer/verification routing rules.
   Full UI suite not repeated for this local CSS change; browser is Chromium,
   not a physical-device or cross-engine audit. Evidence: /tmp/a3f-before-*,
   /tmp/a3f-after-* (synthetic). Rollback: budget table CSS and browser regression.
-  Commit and native assessment pending at this snapshot.
+  Commit `8b7823c`, medium assessment `under_budget`, 118 authored changed lines
+  against reviewed boundary `7ade54a`. Merged/pushed to origin/main; A3F remains
+  in the pending review slice. No new review receipt is claimed.
+- A3F spacing follow-up matches the actual Categories disclosure-to-border
+  inset, not only computed row padding. Categories centers its disclosure
+  within a taller header; the budget-local top inset now compensates while
+  preserving first-title-line alignment, shared horizontal/bottom padding
+  and the existing 44px interactive target. Categories itself is unchanged.
+- Spacing TDD: browser comparison failed on desktop/mobile before the fix.
+  Categories button/glyph top insets are 13.406/27.406px; Budget was 5/19px
+  and is now 13/27px. Alignment remains within 0.50px in all tested states.
+  Final synthetic Chromium checks passed 8/8; focused UI checks 29/29;
+  app/browser TypeScript, Oxlint and diff check passed. Paired screenshots
+  `/tmp/a3f-spacing-{before,after}-{categories,budget}-{desktop,mobile-390}.png`
+  were inspected. Mobile compact-height bound increased from 185 to 195px
+  to accommodate requested spacing without compressing financial content.
+- Direct Node TypeScript is blocked by unfinished, untouched A6 tests at
+  `worker.test.ts:45,83`. Browser verification therefore used an isolated
+  HEAD archive overlaid with only the two A3F files; private data and A6 WIP
+  were excluded. Full UI/Node suites were not repeated for this CSS-only fix.
+  Rollback remains the budget-local CSS and accompanying browser regression.
+  Engram mirror is pending due to the runtime session-registration restriction.
 
 ## Next step
 
-Commit/assess A3F alignment correction, then A6 freshness and A7–A10.
+Resume A6, then A7–A10; the A3F Categories-equivalent spacing fix is verified.
+A6 is interrupted: only `scripts/sync-pcloud/worker.test.ts` contains five new
+observability tests. RED has NOT run; no production/status/docs changes exist.
+Preserve this partial file and resume A6 with its focused RED command later.
 A6 exploration is complete: status belongs in a private worker-owned
 file, successful no-op checks advance poll freshness but not publication time,
 and availability remains independent. Do not infer capture time from pCloud

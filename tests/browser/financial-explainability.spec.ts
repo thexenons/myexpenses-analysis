@@ -1547,6 +1547,51 @@ test("aligns budget disclosure glyph with the first category title line", async 
   await expectNoDocumentOverflow(page);
 });
 
+test("matches category-tree disclosure spacing in budget rows", async ({ page }, testInfo) => {
+  const measure = async (row: Locator) => row.evaluate((element) => {
+    const button = element.querySelector(":scope > button");
+    const glyph = button?.querySelector("svg");
+    if (!button || !glyph) throw new Error("Tree disclosure is unavailable");
+    const rowRect = element.getBoundingClientRect();
+    const buttonRect = button.getBoundingClientRect();
+    const glyphRect = glyph.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return {
+      paddingTop: Number.parseFloat(style.paddingTop),
+      paddingLeft: Number.parseFloat(style.paddingLeft),
+      buttonTopInset: buttonRect.top - rowRect.top,
+      buttonLeftInset: buttonRect.left - rowRect.left,
+      glyphTopInset: glyphRect.top - rowRect.top,
+      targetWidth: buttonRect.width,
+      targetHeight: buttonRect.height,
+    };
+  });
+
+  await page.getByRole("link", { name: "Categorías" }).click();
+  const categoryRow = page.getByRole("region", { name: "Explorador jerárquico" })
+    .getByRole("button", { name: "Filtrar: Expense", exact: true }).locator("xpath=..");
+  await categoryRow.scrollIntoViewIfNeeded();
+  const categories = await measure(categoryRow);
+  await categoryRow.screenshot({ path: `/tmp/a3f-spacing-after-categories-${testInfo.project.name}.png`, animations: "disabled" });
+
+  await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
+  await page.getByRole("group", { name: "Marco del presupuesto" }).getByLabel("Periodo").selectOption("MONTH:2026:7");
+  const budgetRow = page.getByRole("list", { name: "Asignaciones jerárquicas del presupuesto" }).locator(":scope > li > div").first();
+  await budgetRow.scrollIntoViewIfNeeded();
+  const budget = await measure(budgetRow);
+  await budgetRow.screenshot({ path: `/tmp/a3f-spacing-after-budget-${testInfo.project.name}.png`, animations: "disabled" });
+
+  console.info(`A3F spacing ${testInfo.project.name}: categories=${JSON.stringify(categories)} budget=${JSON.stringify(budget)}`);
+  // Categories center the glyph against a two-line selection; Budget aligns it to one title line.
+  expect(budget.paddingTop, "budget top padding must provide at least the shared row spacing").toBeGreaterThanOrEqual(categories.paddingTop);
+  expect(budget.paddingLeft, "horizontal row padding must match Categories").toBeCloseTo(categories.paddingLeft, 1);
+  expect(Math.abs(budget.buttonTopInset - categories.buttonTopInset), "disclosure-to-border top spacing must match Categories").toBeLessThanOrEqual(1);
+  expect(budget.buttonLeftInset, "disclosure-to-border left spacing must match Categories").toBeCloseTo(categories.buttonLeftInset, 1);
+  expect(Math.abs(budget.glyphTopInset - categories.glyphTopInset), "glyph-to-border top spacing must match Categories").toBeLessThanOrEqual(1);
+  expect(budget.targetWidth).toBeGreaterThanOrEqual(44);
+  expect(budget.targetHeight).toBeGreaterThanOrEqual(44);
+});
+
 test("keeps current, reference and mean visible in compact rows without coupling disclosures", async ({ page }, testInfo) => {
   await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
   await page.getByRole("group", { name: "Marco del presupuesto" }).getByLabel("Periodo").selectOption("MONTH:2026:7");
@@ -1558,7 +1603,8 @@ test("keeps current, reference and mean visible in compact rows without coupling
   await expect(row.getByText("Media", { exact: true })).toBeVisible();
   const width = page.viewportSize()!.width;
   const height = (await row.boundingBox())!.height;
-  expect(height, `closed comparison row at ${width}px`).toBeLessThanOrEqual(width >= 900 ? 110 : 185);
+  // The mobile row retains a compact bound after matching Categories' disclosure top inset.
+  expect(height, `closed comparison row at ${width}px`).toBeLessThanOrEqual(width >= 900 ? 110 : 195);
   const current = await row.locator("dl").first().boundingBox();
   const utilization = await row.locator("meter").first().locator("xpath=../..").boundingBox();
   expect(current).not.toBeNull();
