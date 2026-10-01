@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { constants } from "node:fs";
 import {
     chmod,
     lstat,
@@ -35,8 +36,12 @@ const STATE_VERSION = 1 as const;
 const STATE_FILE = ".sync-state.json";
 const CURRENT_LINK = "current";
 const RELEASES_DIRECTORY = "releases";
+const RELEASE_MARKER = ".sync-release.json";
+const RELEASE_MARKER_VERSION = 1 as const;
+const RETAINED_RELEASES = 5;
 const WORK_DIRECTORY = ".work";
 const SAFE_RELEASE_ID = /^[a-z0-9][a-z0-9-]{0,159}$/;
+const GENERATED_RELEASE_ID = /^b\d{14}-f\d+-c[a-f0-9]{12}(?:-force-\d+-[a-f0-9]{8})?$/;
 const SAFE_WORKSPACE_NAME = /^sync-[A-Za-z0-9]{6}$/;
 const MAX_RELEASE_TREE_ENTRIES = 100_000;
 const FORBIDDEN_RELEASE_BASENAMES = new Set([
@@ -95,6 +100,8 @@ export interface PCloudSyncDependencies {
     readonly logger?: SyncLogger;
     readonly now?: () => number;
     readonly processBackup: ProcessBackup;
+    /** Failure injection for retention tests; production always removes validated paths. */
+    readonly removeReleaseDirectory?: (path: string) => Promise<void>;
     readonly withLock?: <T>(
         deployRoot: string,
         operation: () => Promise<T>,
@@ -184,7 +191,7 @@ async function readStablePrivateFile(
     ) {
         throw new PCloudSyncError(`${context} is unsafe`);
     }
-    const handle = await open(path, "r");
+    const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
     try {
         const opened = await handle.stat();
         if (
@@ -626,6 +633,138 @@ async function availableReleaseId(
     throw new PCloudSyncError("Could not allocate a unique release identifier");
 }
 
+async function writeReleaseMarker(
+    buildDirectory: string,
+    releaseId: string,
+    createdAt: number,
+): Promise<void> {
+    if (!GENERATED_RELEASE_ID.test(releaseId) ||
+        !Number.isSafeInteger(createdAt) || createdAt < 0) {
+        throw new PCloudSyncError("Release marker metadata is invalid");
+    }
+    const temporary = join(buildDirectory, `.${RELEASE_MARKER}.${randomUUID()}.tmp`);
+    let handle: Awaited<ReturnType<typeof open>> | undefined;
+    try {
+        handle = await open(temporary, "wx", 0o600);
+        await handle.writeFile(JSON.stringify({
+            version: RELEASE_MARKER_VERSION, releaseId, createdAt,
+        }), "utf8");
+        await handle.sync();
+        await handle.close();
+        handle = undefined;
+        await rename(temporary, join(buildDirectory, RELEASE_MARKER));
+    } finally {
+        await handle?.close().catch(() => undefined);
+        await rm(temporary, { force: true }).catch(() => undefined);
+    }
+}
+
+async function readReleaseMarker(path: string, releaseId: string): Promise<number | null> {
+    try {
+        const marker = await readStablePrivateFile(
+            join(path, RELEASE_MARKER), "Release marker", 1024,
+        );
+        try {
+            const value: unknown = JSON.parse(marker.bytes.toString("utf8"));
+            if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+            const object = value as Record<string, unknown>;
+            if (Object.keys(object).length !== 3 ||
+                object.version !== RELEASE_MARKER_VERSION ||
+                object.releaseId !== releaseId ||
+                !Number.isSafeInteger(object.createdAt) ||
+                (object.createdAt as number) < 0) return null;
+            return object.createdAt as number;
+        } finally {
+            marker.bytes.fill(0);
+        }
+    } catch {
+        return null;
+    }
+}
+
+async function releaseTreeIsSafe(root: string): Promise<boolean> {
+    const pending = [root];
+    let entries = 0;
+    while (pending.length > 0) {
+        const directory = pending.pop()!;
+        // oxlint-disable-next-line no-await-in-loop -- inspect one directory at a time without following links.
+        for (const entry of await readdir(directory, { withFileTypes: true })) {
+            if (++entries > MAX_RELEASE_TREE_ENTRIES) return false;
+            // oxlint-disable-next-line no-await-in-loop -- lstat catches entries replaced after readdir.
+            const metadata = await lstat(join(directory, entry.name));
+            if (metadata.isSymbolicLink()) return false;
+            if (metadata.isDirectory()) pending.push(join(directory, entry.name));
+            else if (!metadata.isFile()) return false;
+        }
+    }
+    return true;
+}
+
+/** Best-effort maintenance after commit; the caller still holds the worker lease. */
+async function pruneManagedReleases(
+    deployRoot: string,
+    currentId: string,
+    previousId: string | null,
+    state: PCloudSyncState,
+    removeRelease: (path: string) => Promise<void>,
+): Promise<void> {
+    await assertOwnedDeploymentDirectory(deployRoot, "Deployment root", false);
+    const releasesRoot = join(deployRoot, RELEASES_DIRECTORY);
+    await assertOwnedDeploymentDirectory(releasesRoot, "Releases directory", false);
+    const [committed, current] = await Promise.all([
+        readState(deployRoot), readCurrentRelease(deployRoot),
+    ]);
+    if (current !== currentId || committed?.releaseId !== currentId ||
+        JSON.stringify(committed) !== JSON.stringify(state)) return;
+
+    const realReleasesRoot = await realpath(releasesRoot);
+    const effectiveUserId = process.geteuid?.();
+    const managed: { id: string; path: string; createdAt: number }[] = [];
+    for (const entry of await readdir(releasesRoot, { withFileTypes: true })) {
+        if (!GENERATED_RELEASE_ID.test(entry.name) || !entry.isDirectory() || entry.isSymbolicLink()) continue;
+        const path = join(releasesRoot, entry.name);
+        // oxlint-disable-next-line no-await-in-loop -- inspect each candidate before treating it as app-owned.
+        const metadata = await lstat(path);
+        if (!metadata.isDirectory() || metadata.isSymbolicLink() ||
+            (metadata.mode & 0o022) !== 0 ||
+            (effectiveUserId !== undefined && metadata.uid !== effectiveUserId)) continue;
+        // oxlint-disable-next-line no-await-in-loop -- do not follow a replaced release directory.
+        const realRelease = await realpath(path);
+        if (!pathInside(realReleasesRoot, realRelease)) continue;
+        // oxlint-disable-next-line no-await-in-loop -- markers are small, sequential reads avoid unbounded I/O.
+        const createdAt = await readReleaseMarker(path, entry.name);
+        if (createdAt !== null) managed.push({ id: entry.name, path, createdAt });
+    }
+    const pinned = new Set([currentId, previousId]);
+    managed.sort((a, b) => b.createdAt - a.createdAt || b.id.localeCompare(a.id));
+    const kept = new Set(managed.filter(({ id }) => pinned.has(id)).map(({ id }) => id));
+    for (const release of managed) {
+        if (kept.size >= RETAINED_RELEASES) break;
+        kept.add(release.id);
+    }
+    for (const release of managed) {
+        if (kept.has(release.id)) continue;
+        // oxlint-disable-next-line no-await-in-loop -- a changed parent invalidates this deletion.
+        await assertOwnedDeploymentDirectory(releasesRoot, "Releases directory", false);
+        // oxlint-disable-next-line no-await-in-loop -- a replaced releases root must not redirect cleanup.
+        if (await realpath(releasesRoot) !== realReleasesRoot) return;
+        // oxlint-disable-next-line no-await-in-loop -- recheck each deletion target under the cooperative lease.
+        const metadata = await lstat(release.path);
+        if (!metadata.isDirectory() || metadata.isSymbolicLink() ||
+            (metadata.mode & 0o022) !== 0 ||
+            (effectiveUserId !== undefined && metadata.uid !== effectiveUserId)) continue;
+        // oxlint-disable-next-line no-await-in-loop -- reject paths whose ancestry changed since inventory.
+        const realRelease = await realpath(release.path);
+        if (!pathInside(realReleasesRoot, realRelease)) continue;
+        // oxlint-disable-next-line no-await-in-loop -- the marker must still identify the same generated release.
+        if (await readReleaseMarker(release.path, release.id) !== release.createdAt) continue;
+        // oxlint-disable-next-line no-await-in-loop -- preserve tampered trees rather than remove unknown links.
+        if (!(await releaseTreeIsSafe(release.path))) continue;
+        // oxlint-disable-next-line no-await-in-loop -- best-effort removals are serial and bounded to validated entries.
+        await removeRelease(release.path);
+    }
+}
+
 async function validateBuildDirectory(
     workspacePath: string,
     buildDirectory: string,
@@ -759,11 +898,15 @@ export async function runPCloudSync(
                 workspacePath,
                 processed.buildDirectory,
             );
+            const createdAt = (dependencies.now ?? Date.now)();
             const releaseId = await availableReleaseId(
                 config.deployRoot,
                 file,
                 options.force === true,
-                (dependencies.now ?? Date.now)(),
+                createdAt,
+            );
+            await writeReleaseMarker(
+                processed.buildDirectory, releaseId, createdAt,
             );
             const releasePath = join(
                 config.deployRoot,
@@ -820,6 +963,17 @@ export async function runPCloudSync(
                     "Synchronization state could not be committed",
                     { cause: error },
                 );
+            }
+            try {
+                await pruneManagedReleases(
+                    config.deployRoot, releaseId, previousRelease, nextState,
+                    dependencies.removeReleaseDirectory ??
+                        ((path) => rm(path, { recursive: true })),
+                );
+            } catch {
+                // Publication is durable; cleanup failure cannot roll it back or expose paths.
+                try { dependencies.logger?.info("Release retention skipped; retrying after a later publication."); }
+                catch { /* Logging must not undo a committed publication. */ }
             }
             dependencies.logger?.info("Published a new pCloud backup release.");
             return {

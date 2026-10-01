@@ -38,6 +38,17 @@ Operational changes must preserve current release and rollback safety. Never
 prune user backups, run destructive cleanup on real data, or modify deployment
 credentials. Availability and freshness are independent signals.
 
+A5 retention policy: keep five app-owned releases, always including the active
+and immediately previous current targets. Cleanup occurs only after durable
+state commit under the worker lease; any state/current mismatch skips cleanup.
+A versioned marker identifies newly generated releases. Preserve unknown,
+legacy unmarked and symlinked entries rather than infer ownership from names.
+No age grace is promised: the five-release count limits newly managed growth;
+legacy artifacts require a separately authorized manual inventory/cleanup.
+Cleanup failure is nonfatal to an otherwise successful publication. Do not
+change the local download CLI. Retention supports rollback, not stale asset URL
+availability: current Nginx resolves assets only through the active release.
+
 Reuse existing historical means, elapsed comparisons, previous-year comparison
 and merchant-frequency metrics. Keep category rows compact; extra detail is
 disclosed on demand. Savings rates require an explicitly eligible scope and
@@ -58,7 +69,7 @@ checks trigger the mandatory writer/verification routing rules.
   Checks: UI tests and synthetic desktop/mobile keyboard/browser scenarios.
 - [x] A4 Add repository CI for existing checks and isolated browser smoke.
   Checks: workflow validation and local equivalents; disclose hosted-run limits.
-- [ ] A5 Add bounded release retention with protected active/rollback releases.
+- [x] A5 Add bounded release retention with protected active/rollback releases.
   Checks: synthetic filesystem, leases, symlink/failure and rollback regressions.
 - [ ] A6 Add sync freshness observability separate from service readiness.
   Checks: fresh/stale/failing/no-new-backup worker scenarios; operational docs.
@@ -96,7 +107,7 @@ checks trigger the mandatory writer/verification routing rules.
   assessment was unavailable due to explicit untracked-file scope; delivery
   assessment will use the committed-only unit, excluding unrelated user edits.
 - Running authored count: 507 across A1/A2 commits (net slice 495).
-  Last reviewed boundary: `6d0f934`; original base: `f45c7e6`.
+  Last reviewed boundary: `bd9092f`; original base: `f45c7e6`.
 - A2: new pure `analyzeBudgetPace(analysis, today)` calculates the global and
   inclusive per-category allowance and signed consumption through cutoff.
   Difference is allowance minus consumption; positive means below allowance.
@@ -161,8 +172,28 @@ checks trigger the mandatory writer/verification routing rules.
   installation and runtime input against official docs.
 - A4 rollback: workflow, CI contract test, browser-testing docs paragraph and
   two export-only barrels. No production runtime behavior changed.
-  Commit and native review assessment pending in this snapshot.
+  Commit `bd9092f`; A3+A4 assessed high (workflow process boundary), 404 net
+  authored lines. User granted the slice's review. Four native lenses passed
+  with no findings; `review-c0bf57c5f452086e` acknowledged, authority burned.
+  A4 merged and pushed to origin/main at `bd9092f`. Hosted CI result has not
+  been retrieved; no claim of a successful hosted run.
+- A5 identifies generated releases through an app-written versioned marker,
+  retains five with active/prior pins, and prunes only after successful state
+  persistence with current/state reconciliation under the existing lease.
+  Ownership, marker, containment, directory/link and tree checks fail closed.
+  Unknown/legacy artifacts stay untouched; cleanup errors cannot undo publish.
+  Documentation distinguishes bounded managed growth from total disk usage.
+- A5 TDD: three expected regressions failed before implementation; final focused
+  checks 41/41; full Node 295 passed with 3 optional private-data skips;
+  synthetic deployment 1/1; all three TypeScript checks, Oxlint and diff check
+  passed. Parent repeated orchestrator tests 29/29. No UI suite repeated for
+  this backend-only unit; no real deployment cleanup was executed.
+- A5 rollback boundary: orchestrator source/tests and deployment guide only.
+  Existing state-write durability behavior is unchanged. The lease protects
+  cooperating workers, not a malicious/non-cooperating same-user filesystem
+  writer. Keeping old release directories does not serve their asset URLs.
+  Commit and review assessment pending at this snapshot.
 
 ## Next step
 
-Commit and assess A4; then A5 retention, A6 freshness and A7–A10.
+Commit and assess A5 retention; then A6 freshness and A7–A10.

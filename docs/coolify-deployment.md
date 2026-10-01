@@ -170,11 +170,19 @@ Compose y validaciones conjuntamente.
   intervalo; un icono healthy puede reflejar una release **vieja**. Compara
   `fileId`, `modifiedEpochSeconds`, `releaseId`, logs y fecha esperada en pCloud.
 - **Cambio de código o reinicio:** cada arranque del worker fuerza un build,
-  incluso con el mismo backup, y conserva las releases anteriores. Rotar token
-  o frase en Coolify exige guardar y reiniciar/recrear el worker; después
+  incluso con el mismo backup. Tras confirmar el nuevo estado, el worker conserva
+  cinco releases generadas por la aplicación, incluyendo la activa y la que era
+  activa inmediatamente antes de publicar; la limpieza falla de forma segura y
+  no revierte una publicación confirmada. Las releases anteriores sin marcador
+  válido, ajenas o enlazadas simbólicamente no se eliminan automáticamente: el
+  espacio total del volumen puede seguir creciendo y exige inventario manual
+  antes de cualquier limpieza autorizada. Esta retención facilita un rollback
+  coordinado, pero no garantiza que sigan disponibles las URL de assets de
+  clientes antiguos: Nginx sirve los assets desde `current`.
+  Rotar token o frase en Coolify exige guardar y reiniciar/recrear el worker; después
   comprueba el desbloqueo del navegador con la **nueva** frase. Conserva también
-  las frases anteriores mientras existan releases cifradas con ellas. Vigila
-  capacidad del volumen: no hay poda automática.
+  las frases anteriores mientras existan releases cifradas con ellas, incluidas
+  las no gestionadas. Vigila la capacidad del volumen.
 - **Fallo/rollback:** no borres el volumen, `.sync.lock`, `.sync-state.json`, `releases` ni
   `current` para «arreglar» un fallo. Primero detén el worker y toma una copia
   coherente del **volumen completo**. Cualquier restauración o mutación manual

@@ -141,6 +141,204 @@ async function currentReleaseId(deployRoot: string): Promise<string | null> {
     }
 }
 
+async function publishForced(
+    value: Fixture,
+    sequence: number,
+    overrides: Partial<PCloudSyncDependencies> = {},
+) {
+    return runPCloudSync(value.config, {
+        ...dependencies(fakeClient(verified()), pipeline({ value: 0 })),
+        now: () => 1_800_000_000_000 + sequence,
+        ...overrides,
+    }, { force: true });
+}
+
+test("retains five managed releases including an older previous current target", async () => {
+    const value = await fixture();
+    try {
+        const ids: string[] = [];
+        for (let sequence = 0; sequence < 5; sequence++) {
+            // oxlint-disable-next-line no-await-in-loop -- serial publications exercise the same lease and retention history.
+            ids.push((await publishForced(value, sequence)).releaseId);
+        }
+        await unlink(join(value.deployRoot, "current"));
+        await symlink(`releases/${ids[0]}`, join(value.deployRoot, "current"));
+        const newest = (await publishForced(value, 5)).releaseId;
+        assert.deepEqual(
+            (await readdir(join(value.deployRoot, "releases"))).sort(),
+            [ids[0], ...ids.slice(2), newest].sort(),
+        );
+        assert.equal(await currentReleaseId(value.deployRoot), newest);
+        const marker = JSON.parse(await readFile(
+            join(value.deployRoot, "releases", newest, ".sync-release.json"), "utf8",
+        ));
+        assert.deepEqual(Object.keys(marker).sort(), ["createdAt", "releaseId", "version"]);
+        assert.deepEqual(marker, { version: 1, releaseId: newest, createdAt: 1_800_000_000_005 });
+        assert.equal((await lstat(join(value.deployRoot, "releases", newest, ".sync-release.json"))).mode & 0o777, 0o600);
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("retention preserves legacy, foreign, malformed, and symlinked release entries", async () => {
+    const value = await fixture();
+    const outside = join(value.root, "outside");
+    try {
+        await mkdir(outside);
+        await writeFile(join(outside, "sentinel"), "keep");
+        await mkdir(join(value.deployRoot, "releases"));
+        await mkdir(join(value.deployRoot, "releases", "legacy-release"));
+        await mkdir(join(value.deployRoot, "releases", "foreign-release"));
+        await writeFile(join(value.deployRoot, "releases", "foreign-release", ".sync-release.json"), "{}", { mode: 0o600 });
+        const malformedId = "b20260822210453-f998-caaaaaaaaaaaa";
+        const symlinkedMarkerId = "b20260822210453-f999-caaaaaaaaaaaa";
+        await mkdir(join(value.deployRoot, "releases", malformedId));
+        await writeFile(join(value.deployRoot, "releases", malformedId, ".sync-release.json"),
+            JSON.stringify({ version: 1, releaseId: "wrong", createdAt: 1 }), { mode: 0o600 });
+        await mkdir(join(value.deployRoot, "releases", symlinkedMarkerId));
+        await symlink(join(outside, "sentinel"),
+            join(value.deployRoot, "releases", symlinkedMarkerId, ".sync-release.json"));
+        await symlink(outside, join(value.deployRoot, "releases", "symlink-release"));
+        for (let sequence = 0; sequence < 7; sequence++) {
+            // oxlint-disable-next-line no-await-in-loop -- history must accumulate sequentially.
+            await publishForced(value, sequence);
+        }
+        const names = await readdir(join(value.deployRoot, "releases"));
+        assert.equal(names.length, 10);
+        for (const name of ["legacy-release", "foreign-release", malformedId, symlinkedMarkerId, "symlink-release"]) {
+            assert.equal(names.includes(name), true);
+        }
+        assert.equal(await readFile(join(outside, "sentinel"), "utf8"), "keep");
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("failed state commit never prunes older managed releases", async () => {
+    const value = await fixture();
+    try {
+        for (let sequence = 0; sequence < 5; sequence++) {
+            // oxlint-disable-next-line no-await-in-loop -- create the serial history before the failed commit.
+            await publishForced(value, sequence);
+        }
+        const before = await readdir(join(value.deployRoot, "releases"));
+        await assert.rejects(publishForced(value, 5, {
+            writeState: async () => { throw new Error("injected failure"); },
+        }), /state could not be committed/iu);
+        const after = await readdir(join(value.deployRoot, "releases"));
+        assert.equal(before.every((name) => after.includes(name)), true);
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("retention skips cleanup if committed state and current disagree", async () => {
+    const value = await fixture();
+    try {
+        for (let sequence = 0; sequence < 5; sequence++) {
+            // oxlint-disable-next-line no-await-in-loop -- create serial managed releases.
+            await publishForced(value, sequence);
+        }
+        const before = await readdir(join(value.deployRoot, "releases"));
+        await publishForced(value, 5, {
+            writeState: async (root, state) => {
+                await writeFile(join(root, ".sync-state.json"), JSON.stringify(state), { mode: 0o600 });
+                await unlink(join(root, "current"));
+                await symlink(`releases/${before[0]}`, join(root, "current"));
+            },
+        });
+        assert.equal((await readdir(join(value.deployRoot, "releases"))).length, 6);
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("retention deletion failure is nonfatal after a successful state commit", async () => {
+    const value = await fixture();
+    const logs: string[] = [];
+    try {
+        for (let sequence = 0; sequence < 5; sequence++) {
+            // oxlint-disable-next-line no-await-in-loop -- create serial managed releases.
+            await publishForced(value, sequence);
+        }
+        const result = await publishForced(value, 5, {
+            logger: { info: (message) => logs.push(message) },
+            removeReleaseDirectory: async () => { throw new Error("private filesystem detail"); },
+        });
+        assert.equal(result.status, "published");
+        assert.equal(await currentReleaseId(value.deployRoot), result.releaseId);
+        assert.equal((await readdir(join(value.deployRoot, "releases"))).length, 6);
+        assert.equal(logs.some((message) => /retention/u.test(message)), true);
+        assert.equal(logs.some((message) => /private filesystem detail/u.test(message)), false);
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("app replaces a forged build marker before promoting the release", async () => {
+    const value = await fixture();
+    try {
+        const result = await runPCloudSync(value.config, dependencies(
+            fakeClient(verified()),
+            async (input) => {
+                const buildDirectory = join(input.workspacePath, "build");
+                await mkdir(buildDirectory);
+                await writeFile(join(buildDirectory, "index.html"), "release");
+                await writeFile(join(buildDirectory, ".sync-release.json"), JSON.stringify({
+                    version: 1, releaseId: "forged", createdAt: 0,
+                }));
+                return { buildDirectory };
+            },
+        ));
+        const marker = JSON.parse(await readFile(join(
+            value.deployRoot, "releases", result.releaseId, ".sync-release.json",
+        ), "utf8"));
+        assert.equal(marker.releaseId, result.releaseId);
+        assert.notEqual(marker.createdAt, 0);
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("unsafe releases parent skips retention without undoing publication", async () => {
+    const value = await fixture();
+    try {
+        for (let sequence = 0; sequence < 5; sequence++) {
+            // oxlint-disable-next-line no-await-in-loop -- create serial managed releases.
+            await publishForced(value, sequence);
+        }
+        const result = await publishForced(value, 5, {
+            writeState: async (root, state) => {
+                await writeFile(join(root, ".sync-state.json"), JSON.stringify(state), { mode: 0o600 });
+                await chmod(join(root, "releases"), 0o777);
+            },
+        });
+        assert.equal(result.status, "published");
+        assert.equal((await readdir(join(value.deployRoot, "releases"))).length, 6);
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
+test("retention leaves a managed release with a later-added symlink untouched", async () => {
+    const value = await fixture();
+    const outside = join(value.root, "outside.txt");
+    try {
+        await writeFile(outside, "keep");
+        const ids: string[] = [];
+        for (let sequence = 0; sequence < 5; sequence++) {
+            // oxlint-disable-next-line no-await-in-loop -- create serial managed releases.
+            ids.push((await publishForced(value, sequence)).releaseId);
+        }
+        await symlink(outside, join(value.deployRoot, "releases", ids[0]!, "manual-link"));
+        await publishForced(value, 5);
+        assert.equal((await readdir(join(value.deployRoot, "releases"))).includes(ids[0]!), true);
+        assert.equal(await readFile(outside, "utf8"), "keep");
+    } finally {
+        await rm(value.root, { force: true, recursive: true });
+    }
+});
+
 test("publishes atomically, then no-ops by checksum identity", async () => {
     const value = await fixture();
     const count = { value: 0 };
