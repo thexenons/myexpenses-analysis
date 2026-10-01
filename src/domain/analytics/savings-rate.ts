@@ -1,6 +1,7 @@
 import { aggregateTimeSeries } from "./aggregations.ts";
 import { datasetDateBounds } from "./date-bounds.ts";
-import type { FilteredAnalyticsDataset, IsoDate } from "./types.ts";
+import { resolvePostingAccounts } from "./transfer-relations.ts";
+import type { AnalyticsScope, FilteredAnalyticsDataset, IsoDate, NormalizedPosting } from "./types.ts";
 
 export interface MonthlySavingsRatePoint {
   readonly key: string;
@@ -9,17 +10,19 @@ export interface MonthlySavingsRatePoint {
   readonly incomeEurMinor: number;
   readonly expensesEurMinor: number;
   readonly resultEurMinor: number;
-  /** Signed percentage; null when net income is zero or negative. */
+  /** Positive operational entries excluding verified internal transfers; Real only. */
+  readonly cashEntriesEurMinor?: number;
+  /** Signed percentage; null when the mode's denominator is zero or negative. */
   readonly ratePercent: number | null;
 }
 
 export type MonthlySavingsRateResult =
-  | { readonly status: "available"; readonly months: readonly MonthlySavingsRatePoint[] }
+  | { readonly status: "available"; readonly mode: AnalyticsScope; readonly months: readonly MonthlySavingsRatePoint[] }
   | { readonly status: "unavailable"; readonly reason: "subset" | "noCompleteMonths" };
 
 function hasSubset(filtered: FilteredAnalyticsDataset): boolean {
   const filters = filtered.filters;
-  return filters.scope !== "all" || filters.accountIds.length > 0 ||
+  return filters.accountIds.length > 0 ||
     (filters.originAccountIds?.length ?? 0) > 0 || (filters.destinationAccountIds?.length ?? 0) > 0 ||
     filters.categoryPrefixes.length > 0 || filters.statuses.length > 0 || filters.tags.length > 0 ||
     filters.search !== "" || filters.linked !== "all" ||
@@ -29,7 +32,14 @@ function hasSubset(filtered: FilteredAnalyticsDataset): boolean {
     (filters.commentSearch ?? "") !== "" || (filters.referenceSearch ?? "") !== "";
 }
 
-/** Accounting result over selected Yo accounts, never available cash or net worth. */
+function isInternalOperationalEntry(posting: NormalizedPosting, filtered: FilteredAnalyticsDataset): boolean {
+  const { peer, originAccount, destinationAccount } = resolvePostingAccounts(posting, filtered.source);
+  return peer !== undefined && !peer.isVoid &&
+    originAccount?.type === "DEFAULT" && destinationAccount?.type === "DEFAULT" &&
+    originAccount.includedInAll !== false && destinationAccount.includedInAll !== false;
+}
+
+/** Calendar-month trends preserve each perspective's existing accounting meaning. */
 export function analyzeMonthlySavingsRate(
   filtered: FilteredAnalyticsDataset,
   today: IsoDate,
@@ -46,11 +56,22 @@ export function analyzeMonthlySavingsRate(
     ...filtered,
     filters: { ...filtered.filters, dateRange: { from, to } },
   }, "month", { monthStart: 1 });
+  const entriesByMonth = filtered.filters.scope === "realCashFlow"
+    ? new Map(aggregateTimeSeries({
+      ...filtered,
+      activePostings: filtered.activePostings.filter((posting) =>
+        posting.amountNativeMinor > 0 && !isInternalOperationalEntry(posting, filtered)),
+      filters: { ...filtered.filters, dateRange: { from, to } },
+    }, "month", { monthStart: 1 }).map((point) => [point.key, point.realCashFlowEurMinor]))
+    : undefined;
   const months = monthly.flatMap((point): MonthlySavingsRatePoint[] => {
     if (point.startDate < from || point.endDate > to || point.endDate >= today) return [];
-    const resultEurMinor = point.incomesEurMinor + point.expensesEurMinor;
-    if (!Number.isSafeInteger(resultEurMinor)) throw new Error("Monthly accounting result exceeds the safe integer range");
-    const ratePercent = point.incomesEurMinor > 0 ? resultEurMinor / point.incomesEurMinor * 100 : null;
+    const mode = filtered.filters.scope;
+    const resultEurMinor = mode === "all" ? point.incomesEurMinor + point.expensesEurMinor
+      : mode === "realCashFlow" ? point.realCashFlowEurMinor : point.debtFlowEurMinor;
+    if (!Number.isSafeInteger(resultEurMinor)) throw new Error("Monthly result exceeds the safe integer range");
+    const base = mode === "realCashFlow" ? entriesByMonth?.get(point.key) ?? 0 : point.incomesEurMinor;
+    const ratePercent = mode !== "debtsOnly" && base > 0 ? resultEurMinor / base * 100 : null;
     return [{
       key: point.key,
       startDate: point.startDate,
@@ -58,8 +79,10 @@ export function analyzeMonthlySavingsRate(
       incomeEurMinor: point.incomesEurMinor,
       expensesEurMinor: point.expensesEurMinor,
       resultEurMinor,
+      ...(mode === "realCashFlow" ? { cashEntriesEurMinor: base } : {}),
       ratePercent: ratePercent !== null && Number.isFinite(ratePercent) ? ratePercent : null,
     }];
   });
-  return months.length > 0 ? { status: "available", months } : { status: "unavailable", reason: "noCompleteMonths" };
+  return months.length > 0 ? { status: "available", mode: filtered.filters.scope, months }
+    : { status: "unavailable", reason: "noCompleteMonths" };
 }

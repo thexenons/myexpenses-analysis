@@ -659,7 +659,7 @@ test("keeps cash-flow scope and available-cash warning ahead of methods", async 
   await expectNoDocumentOverflow(page);
 });
 
-test("reveals only eligible completed-month accounting savings rates on demand", async ({ page }, testInfo) => {
+test("reveals perspective-specific completed-month trends on demand", async ({ page }, testInfo) => {
   await page.route("**/data/app-dataset.vault.json", async (route) => {
     const variant = await route.fetch({ url: `${BASE}/data/u7-budget-history.vault.json` });
     await route.fulfill({ response: variant });
@@ -668,10 +668,10 @@ test("reveals only eligible completed-month accounting savings rates on demand",
   await page.getByLabel("Frase de desbloqueo").fill(PASSPHRASE);
   await page.getByRole("button", { name: "Abrir bóveda" }).click();
   await page.locator('a[href="/flujo-de-caja"]').click();
-  const summary = page.getByText("Tendencia mensual de ahorro contable", { exact: true });
+  const summary = page.getByText("Tendencia mensual", { exact: true });
   const disclosure = summary.locator("xpath=..");
   await expect(disclosure).not.toHaveAttribute("open");
-  await expect(page.getByRole("heading", { name: "Tasa mensual de ahorro contable" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Tasa mensual de retención de efectivo" })).toHaveCount(0);
   const affordance = await summary.evaluate((element) => ({
     display: getComputedStyle(element).display,
     height: element.getBoundingClientRect().height,
@@ -681,17 +681,31 @@ test("reveals only eligible completed-month accounting savings rates on demand",
   await summary.focus();
   await page.keyboard.press("Enter");
   await expect(disclosure).toHaveAttribute("open", "");
-  await expect(disclosure.getByText(/No disponible con esta perspectiva/)).toBeVisible();
+  await expect(disclosure.getByRole("heading", { name: "Tasa mensual de retención de efectivo" })).toBeVisible();
+  const realTable = disclosure.getByRole("table", { name: "Detalle mensual de retención de efectivo" });
+  await expect(realTable.locator("tbody tr")).toHaveCount(4);
+  await expect(realTable.getByRole("columnheader", { name: "Entradas reales (base)" })).toBeVisible();
+  await expect(realTable.getByRole("row", { name: /may 26/ })).toContainText(/1000,00\s*€.*990,00\s*€.*\+99\s*%/);
+  await disclosure.screenshot({ path: `/tmp/a9r-real-${testInfo.project.name}.png`, animations: "disabled" });
   const scope = page.getByRole("region", { name: "Filtros globales" })
     .getByRole("group", { name: "Ámbito de las estadísticas" });
   await scope.locator('input[value="all"]').check();
   await expect(disclosure.getByRole("heading", { name: "Tasa mensual de ahorro contable" })).toBeVisible();
   const table = disclosure.getByRole("table", { name: "Detalle mensual del ahorro contable" });
   await expect(table.locator("tbody tr")).toHaveCount(4);
-  await expect(disclosure.getByText(/no representa efectivo disponible ni patrimonio/)).toBeVisible();
-  await expect(disclosure.locator("p").filter({ hasText: /no representa los meses intermedios sin base/ })).toBeVisible();
-  await disclosure.screenshot({ path: `/tmp/a9-savings-${testInfo.project.name}.png`, animations: "disabled" });
-  await table.screenshot({ path: `/tmp/a9-savings-table-${testInfo.project.name}.png`, animations: "disabled" });
+  await expect(table.getByRole("row", { name: /may 26/ })).toContainText(/1000,00\s*€.*-10,00\s*€.*990,00\s*€.*\+99\s*%/);
+  await disclosure.screenshot({ path: `/tmp/a9r-yo-${testInfo.project.name}.png`, animations: "disabled" });
+  await scope.locator('input[value="debtsOnly"]').check();
+  await expect(disclosure.getByRole("heading", { name: "Variación mensual de deudas" })).toBeVisible();
+  const debtTable = disclosure.getByRole("table", { name: "Detalle mensual de variación de deudas" });
+  await expect(debtTable.locator("tbody tr")).toHaveCount(4);
+  await expect(debtTable.getByRole("columnheader", { name: "Variación contable" })).toBeVisible();
+  await expect(debtTable.getByRole("columnheader")).toHaveCount(2);
+  await expect(debtTable.getByRole("row", { name: /ago 26/ })).toContainText(/0,50\s*€/);
+  await expect(disclosure.getByText(/Los saldos contables no implican importes recuperables/)).toBeVisible();
+  await disclosure.screenshot({ path: `/tmp/a9r-debt-${testInfo.project.name}.png`, animations: "disabled" });
+  await scope.locator('input[value="all"]').check();
+  await expect(table.locator("tbody tr")).toHaveCount(4);
   if (page.viewportSize()!.width <= 390) {
     const scrollRegion = table.locator("xpath=..");
     await scrollRegion.focus();
@@ -708,7 +722,7 @@ test("reveals only eligible completed-month accounting savings rates on demand",
     expect(horizontalGeometry.headerLeft).toBeGreaterThanOrEqual(horizontalGeometry.regionLeft - 1);
     expect(horizontalGeometry.headerRight).toBeLessThanOrEqual(horizontalGeometry.regionRight + 1);
     await page.evaluate(() => window.scrollBy(0, -250));
-    await page.screenshot({ path: `/tmp/a9-savings-mobile-right-page.png`, animations: "disabled" });
+    await page.screenshot({ path: `/tmp/a9r-savings-mobile-right-page.png`, animations: "disabled" });
   }
   const toolbar = page.getByRole("region", { name: "Filtros globales" });
   await toolbar.getByRole("combobox", { name: "Tipo de periodo" }).selectOption("month");

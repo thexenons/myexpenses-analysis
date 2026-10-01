@@ -123,7 +123,13 @@ test("completed Yo savings months use accounting income and expenses after debt 
   assert.equal(month.resultEurMinor, 1_400);
   assert.equal(month.ratePercent, 70);
   assert.equal(month.resultEurMinor, month.incomeEurMinor + month.expensesEurMinor);
-  assert.equal(analyzeMonthlySavingsRate(applyFilters(source, { ...createDefaultFilterState(), scope: "realCashFlow" }), "2024-04-01").status, "unavailable");
+  const real = analyzeMonthlySavingsRate(applyFilters(source, { ...createDefaultFilterState(), scope: "realCashFlow" }), "2024-04-01");
+  assert.equal(real.status, "available");
+  if (real.status === "available") {
+    assert.equal(real.months[0]?.resultEurMinor, 1_250);
+    assert.equal(real.months[0]?.cashEntriesEurMinor, 2_300);
+    assert.equal(real.months[0]?.ratePercent, 1_250 / 2_300 * 100);
+  }
 });
 
 test("a categorized shared split records cash paid, own cost and financed share without a fictitious refund", () => {

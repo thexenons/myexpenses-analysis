@@ -51,7 +51,7 @@ describe("CashFlowPageView", () => {
     const filtered = applyFilters(source, createDefaultFilterState());
     const user = userEvent.setup();
     render(<CashFlowPageView {...createCashFlowPageModel(filtered, "month")} />);
-    const summary = screen.getByText("Tendencia mensual de ahorro contable");
+    const summary = screen.getByText("Tendencia mensual");
     const disclosure = summary.closest("details");
     expect(disclosure).not.toHaveAttribute("open");
     expect(screen.queryByRole("heading", { name: "Tasa mensual de ahorro contable" })).toBeNull();
@@ -68,16 +68,12 @@ describe("CashFlowPageView", () => {
     expect(screen.queryByRole("heading", { name: "Tasa mensual de ahorro contable" })).toBeNull();
   });
 
-  it.each([
-    ["realCashFlow" as const, "No disponible con esta perspectiva"],
-    ["debtsOnly" as const, "No disponible con esta perspectiva"],
-    ["all" as const, "No hay meses calendario completos"],
-  ])("explains unavailable trend for %s", async (scope, reason) => {
+  it.each(["realCashFlow", "debtsOnly", "all"] as const)("explains missing complete months for %s", async (scope) => {
     const user = userEvent.setup();
     const filtered = applyFilters(emptyTrendFiltered.source, { ...createDefaultFilterState(), scope });
     render(<CashFlowPageView {...createCashFlowPageModel(filtered, "month")} />);
-    await user.click(screen.getByText("Tendencia mensual de ahorro contable"));
-    expect(screen.getByText(new RegExp(reason))).toBeVisible();
+    await user.click(screen.getByText("Tendencia mensual"));
+    expect(screen.getByText(/No hay meses calendario completos/)).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Tasa mensual de ahorro contable" })).toBeNull();
     expect(screen.getByText(/Las fechas observadas no garantizan/)).toBeVisible();
   });
@@ -85,8 +81,44 @@ describe("CashFlowPageView", () => {
   it("suppresses the trend when requested status filters are present even though chart metrics ignore status", async () => {
     const user = userEvent.setup();
     render(<CashFlowPageView {...createCashFlowPageModel(emptyTrendFiltered, "month", ["RECONCILED"])} />);
-    await user.click(screen.getByText("Tendencia mensual de ahorro contable"));
-    expect(screen.getByText(/No disponible con esta perspectiva/)).toBeVisible();
+    await user.click(screen.getByText("Tendencia mensual"));
+    expect(screen.getByText(/No disponible con filtros de cuentas o contenido/)).toBeVisible();
+  });
+
+  it("switches between Real cash retention, Yo accounting savings and Debt ledger variation while open", async () => {
+    const source = normalizeDataset({
+      accounts: { version: 2, accounts: {
+        cash: { label: "Cash", type: "DEFAULT" }, partner: { label: "Attributed", type: "DEBT" },
+      } },
+      categories: { Income: { categoryType: "INCOME" }, Expense: { categoryType: "EXPENSE" } },
+      parsedData: [
+        { uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+          { uuid: "jan", date: "2024-01-15", amount: -1, category: ["Expense"], sourceTransactionUuid: "jan", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+          { uuid: "salary", date: "2024-02-10", amount: 100, category: ["Income"], sourceTransactionUuid: "salary", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+          { uuid: "attributed", date: "2024-02-11", amount: -20, category: ["Expense"], sourceTransactionUuid: "attributed", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+          { uuid: "mar", date: "2024-03-10", amount: 1, category: ["Income"], sourceTransactionUuid: "mar", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+        ] },
+        { uuid: "partner", label: "Attributed", currency: "EUR", openingBalance: 0, transactions: [
+          { uuid: "mirror", date: "2024-02-11", amount: 20, category: ["Expense"], sourceTransactionUuid: "mirror", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+        ] },
+      ],
+    });
+    const user = userEvent.setup();
+    const renderScope = (scope: "realCashFlow" | "all" | "debtsOnly") => <CashFlowPageView {...createCashFlowPageModel(applyFilters(source, { ...createDefaultFilterState(), scope }), "month")} />;
+    const view = render(renderScope("realCashFlow"));
+    const summary = screen.getByText("Tendencia mensual");
+    await user.click(summary);
+    expect(screen.getByRole("heading", { name: "Tasa mensual de retención de efectivo" })).toBeVisible();
+    expect(within(screen.getByRole("table", { name: "Detalle mensual de retención de efectivo" })).getByText(/80\s*%/)).toBeVisible();
+    view.rerender(renderScope("all"));
+    expect(screen.getByRole("heading", { name: "Tasa mensual de ahorro contable" })).toBeVisible();
+    view.rerender(renderScope("debtsOnly"));
+    const debtTable = screen.getByRole("table", { name: "Detalle mensual de variación de deudas" });
+    expect(within(debtTable).getByRole("columnheader", { name: "Variación contable" })).toBeVisible();
+    expect(within(debtTable).queryByText(/%|Sin base/)).toBeNull();
+    expect(screen.getByText(/Los saldos contables no implican importes recuperables/)).toBeVisible();
+    await user.click(summary);
+    expect(screen.queryByRole("table", { name: "Detalle mensual de variación de deudas" })).toBeNull();
   });
 
   it("distinguishes signed real flow and shows active debt adjustments beside the composition", async () => {

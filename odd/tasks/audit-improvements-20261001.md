@@ -100,12 +100,16 @@ checks trigger the mandatory writer/verification routing rules.
     chart inside the same comparison context, calculated only on demand.
 - [x] A8 Expose category gross expenses, refunds and net in detail.
   Checks: existing accounting identities, no duplicate hierarchy totals.
-- [x] A9 Add eligible completed-period savings-rate trend.
-  Route: delegated sole writer (domain + CashFlow UI + regressions).
-  Eligible Yo/all with no account/content subsets; use completed calendar months
-  within observed date bounds, not verified backup completeness. Native optional
-  disclosure next to the accounting result; no cash/net-worth claims or clamping.
-  Checks: income denominator, transfer/debt/scope rules and incomplete periods.
+- [x] A9 Add perspective-specific completed-period monthly financial trends.
+  Reopened after local `dd8a725` (not pushed): user accepted extension to all
+  three perspectives. Route: delegated sole writer (domain + CashFlow UI/tests).
+  Real: signed cash variation / positive real inflows, with verified transfers
+  between operational accounts excluded from the inflow denominator. Yo: existing
+  accounting result / positive net income. Debts: signed monthly ledger variation
+  in EUR, not an income-based savings percentage. No account/content subsets.
+  Keep complete-calendar-month observed/date bounds and optional lazy disclosure.
+  Checks: positive denominator, own/debt transfers, statistical debt accounts,
+  signed rates, dates, unchanged identities, scope switching and responsive UI.
 - [ ] A10 Run final cross-screen functional and responsive acceptance.
   Checks: applicable full suites, synthetic desktop/mobile and navigation checks.
 
@@ -444,9 +448,45 @@ checks trigger the mandatory writer/verification routing rules.
   regressions (13 files). No underlying balance/budget/debt identities change.
   Final full-browser route × perspective acceptance and deployment remain A10.
 
+- User confirmed A9 extension to Real, Yo and Debts. The initial Yo-only A9
+  implementation is committed locally as `dd8a725`, not pushed or reviewed.
+  Assessment was medium/due against `b6d9381`; no START or consent was issued
+  before this accepted requirement change. Preserve this commit and implement
+  the extension in a separate work unit; do not rewrite existing history.
+- User clarified some DEBT accounts are statistical attribution of spending on
+  another person, not expected receivables (their partner account is an example).
+  Do not infer collectibility, hardcode names, invert account postings or change
+  existing balances. Real measures actual cash left after all recorded outflows;
+  debt labels must remain neutral and never promise repayment. Real inflows can
+  include recorded refunds/financing, so cash retention is not income-only saving
+  or net worth. Verified own-account transfers must not inflate its denominator.
+
+- A9 extension implements all three accepted modes in the same lazy disclosure.
+  Real retention uses existing signed cash variation over recorded positive
+  operational entries, excluding only verified internal operational transfers
+  from the base. Yo keeps its accounting formula; Debts plots signed EUR ledger
+  variation without a savings rate or assumed collectibility. No account name
+  is special-cased. Definitions are under Information and the debt caveat stays
+  visible; chart/table labels and units change when scope changes while open.
+- Extension TDD: domain 8/10 RED and UI 4/10 RED preceded implementation; final
+  domain/debt 31/31 and CashFlow UI 10/10 passed. Full UI 477/477; source-only
+  Node 324 passed/3 optional-data skips; three TypeScript projects, Oxlint with
+  zero warnings and scoped diff check passed. Synthetic desktop/mobile browser
+  A9 and adjacent CashFlow checks passed 6/6. Parent repeated domain/debt 31/31
+  and inspected `/tmp/a9r-{real,yo,debt}-{desktop,mobile-390}.png`.
+- Tests cover statistical partner attribution, actual recorded entries/refunds/
+  financing, reciprocal/unlinked/broken/VOID peers, operational scope inclusion,
+  cross-month internal transfers, signed/zero-base rates and debt-only EUR output.
+  Cross-month transfer timing preserves the recorded real variation rather than
+  silently rewriting it. No private vault, live service, physical-device,
+  cross-engine or hosted CI check is claimed. A10 full acceptance remains pending.
+- Extension rollback is limited to savings-rate helper, CashFlow trend/view/test,
+  savings-rate/debt-flow tests and browser regression (seven files against
+  `dd8a725`). Rolling back the complete A9 also requires the initial A9 unit.
+
 ## Next step
 
-Close A9 delivery, then run A10. A1–A8 are pushed to main.
+Close extended A9 delivery, then run A10. A1–A8 are on main.
 Do not infer capture time from pCloud modification metadata or invent a default
 expected backup cadence. Runtime registration must be restored before memory
 attribution resumes; the local task document preserves all pending progress.

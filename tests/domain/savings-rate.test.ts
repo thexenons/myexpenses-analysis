@@ -120,7 +120,7 @@ test("fully bounded no-activity gaps remain months with unavailable denominators
 test("non-date subsets suppress the trend, including active zero amount bounds", () => {
   const source = fixture();
   const subsets: Partial<FilterState>[] = [
-    { scope: "realCashFlow" }, { scope: "debtsOnly" }, { accountIds: ["cash"] },
+    { accountIds: ["cash"] },
     { originAccountIds: ["cash"] }, { destinationAccountIds: ["cash"] },
     { categoryPrefixes: [["Expense"]] }, { statuses: ["RECONCILED"] },
     { tags: ["tag"] }, { search: "expense" }, { linked: "linked" },
@@ -133,4 +133,116 @@ test("non-date subsets suppress the trend, including active zero amount bounds",
     const result = analyze(source, subset);
     assert.deepEqual(result, { status: "unavailable", reason: "subset" }, JSON.stringify(subset));
   }
+});
+
+test("Real retention uses recorded cash variation and positive operational entries, while Yo retains accounting result", () => {
+  const base = fixture();
+  const source: AnalyticsDataset = {
+    ...base,
+    accounts: [...base.accounts, { ...base.accounts[0]!, id: "partner", label: "Partner allocation", type: "DEBT" }],
+    postings: [...base.postings,
+      { ...base.postings[0]!, id: "partner-expense", transactionId: "partner-expense", date: "2024-02-15", amountNativeMinor: -2_000, amountEurMinor: -2_000 },
+      { ...base.postings[0]!, id: "partner-mirror", transactionId: "partner-mirror", accountId: "partner", accountType: "DEBT", date: "2024-02-15", amountNativeMinor: 2_000, amountEurMinor: 2_000 },
+    ],
+  };
+  const real = analyze(source, { scope: "realCashFlow" });
+  const all = analyze(source);
+  assert.equal(real.status, "available");
+  assert.equal(all.status, "available");
+  if (real.status !== "available" || all.status !== "available") return;
+  assert.equal(real.months[0]?.resultEurMinor, 5_000);
+  assert.equal(real.months[0]?.cashEntriesEurMinor, 10_500);
+  assert.equal(real.months[0]?.ratePercent, 5_000 / 10_500 * 100);
+  assert.equal(all.months[0]?.resultEurMinor, 8_000);
+  assert.equal(all.months[0]?.ratePercent, 80);
+});
+
+test("Debt trend is signed ledger variation, not a percentage or presumed repayment", () => {
+  const base = fixture();
+  const source: AnalyticsDataset = {
+    ...base,
+    accounts: [{ ...base.accounts[0]!, id: "partner", type: "DEBT" }],
+    postings: base.postings.map((row) => Object.assign({}, row, { accountId: "partner", accountType: "DEBT" })),
+  };
+  const result = analyze(source, { scope: "debtsOnly" });
+  assert.equal(result.status, "available");
+  if (result.status !== "available") return;
+  assert.equal(result.months[0]?.resultEurMinor, 7_000);
+  assert.equal(result.months[0]?.ratePercent, null);
+});
+
+test("only reciprocal non-VOID DEFAULT transfers are excluded from the Real entry base", () => {
+  const base = fixture();
+  const row = base.postings.find((posting) => posting.transactionId === "feb-transfer")!;
+  const entry = (id: string, amount: number, accountId = "cash", extra = {}) => ({
+    ...row, id, transactionId: id, accountId, accountLabel: accountId,
+    amountNativeMinor: amount, amountEurMinor: amount, ...extra,
+  });
+  const source: AnalyticsDataset = {
+    ...base,
+    accounts: [...base.accounts, { ...base.accounts[0]!, id: "savings", label: "Savings" }],
+    postings: [...base.postings,
+      entry("internal-in", 5_000, "cash", { transferPeerPostingId: "internal-out" }),
+      entry("internal-out", -5_000, "savings", { transferPeerPostingId: "internal-in" }),
+      entry("unlinked-in", 1_000),
+      entry("broken-in", 1_000, "cash", { transferPeerPostingId: "broken-out" }),
+      entry("broken-out", -1_000, "savings"),
+      entry("void-peer-in", 500, "cash", { transferPeerPostingId: "void-peer-out" }),
+      entry("void-peer-out", -500, "savings", { transferPeerPostingId: "void-peer-in", isVoid: true }),
+    ],
+  };
+  const result = analyze(source, { scope: "realCashFlow" });
+  assert.equal(result.status, "available");
+  if (result.status !== "available") return;
+  assert.equal(result.months[0]?.resultEurMinor, 8_500);
+  assert.equal(result.months[0]?.cashEntriesEurMinor, 13_000);
+  assert.equal(result.months[0]?.ratePercent, 8_500 / 13_000 * 100);
+});
+
+test("a cross-month internal transfer changes recorded cash variation but not the entry base", () => {
+  const base = fixture();
+  const row = base.postings.find((posting) => posting.transactionId === "feb-transfer")!;
+  const source: AnalyticsDataset = {
+    ...base,
+    accounts: [...base.accounts, { ...base.accounts[0]!, id: "savings", label: "Savings" }],
+    postings: [...base.postings,
+      { ...row, id: "cross-in", transactionId: "cross-in", amountNativeMinor: 5_000, amountEurMinor: 5_000, transferPeerPostingId: "cross-out" },
+      { ...row, id: "cross-out", transactionId: "cross-out", accountId: "savings", accountLabel: "Savings", date: "2024-03-05", amountNativeMinor: -5_000, amountEurMinor: -5_000, transferPeerPostingId: "cross-in" },
+    ],
+  };
+  const result = analyze(source, { scope: "realCashFlow" });
+  assert.equal(result.status, "available");
+  if (result.status !== "available") return;
+  assert.equal(result.months[0]?.resultEurMinor, 12_000);
+  assert.equal(result.months[0]?.cashEntriesEurMinor, 10_500);
+  assert.ok(result.months[0]!.ratePercent! > 100);
+});
+
+test("Real entries include refunds and recorded financing at converted EUR amounts, with signed unclamped rates", () => {
+  const base = fixture();
+  const row = base.postings.find((posting) => posting.transactionId === "feb-transfer")!;
+  const financed: AnalyticsDataset = {
+    ...base,
+    postings: [...base.postings, {
+      ...row, id: "loan-in", transactionId: "loan-in", currency: "USD", amountNativeMinor: 1_000,
+      amountEurMinor: 750, exchangeRateToEur: 0.75, exchangeRateSource: "static", linked: false,
+    }],
+  };
+  const result = analyze(financed, { scope: "realCashFlow" });
+  assert.equal(result.status, "available");
+  if (result.status !== "available") return;
+  assert.equal(result.months[0]?.cashEntriesEurMinor, 11_250);
+  assert.equal(result.months[0]?.resultEurMinor, 7_750);
+  assert.equal(result.months[0]?.ratePercent, 7_750 / 11_250 * 100);
+
+  const outflow = { ...base, postings: base.postings.map((posting) => posting.transactionId === "feb-income"
+    ? Object.assign({}, posting, { amountNativeMinor: 0, amountEurMinor: 0 }) : posting) };
+  const signed = analyze(outflow, { scope: "realCashFlow" });
+  assert.equal(signed.status, "available");
+  if (signed.status === "available") assert.equal(signed.months[0]?.ratePercent, -600);
+  const noBase = { ...outflow, postings: outflow.postings.map((posting) => posting.transactionId === "feb-refund"
+    ? Object.assign({}, posting, { amountNativeMinor: 0, amountEurMinor: 0 }) : posting) };
+  const empty = analyze(noBase, { scope: "realCashFlow" });
+  assert.equal(empty.status, "available");
+  if (empty.status === "available") assert.equal(empty.months[0]?.ratePercent, null);
 });

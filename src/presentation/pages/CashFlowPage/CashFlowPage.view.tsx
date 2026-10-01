@@ -74,7 +74,7 @@ export function CashFlowPageView({
       </div>
 
       <details className={styles.details} onToggle={(event) => setTrendOpen(event.currentTarget.open)} open={trendOpen}>
-        <summary>Tendencia mensual de ahorro contable</summary>
+        <summary>Tendencia mensual</summary>
         {trendOpen ? <MonthlySavingsTrend filtered={trendFiltered} /> : null}
       </details>
 
