@@ -8,6 +8,12 @@
   height: 2.75rem;
 }
 
+/* A collapsed composition adds a second header line; keep the disclosure's inset stable. */
+.row:has(.composition) > button:first-child {
+  align-self: start;
+  margin-top: 0.3rem;
+}
+
 .selection {
   display: grid;
   min-width: 0;

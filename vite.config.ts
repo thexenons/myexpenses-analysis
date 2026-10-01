@@ -49,6 +49,20 @@ function dataFileSource(fileName: DataFile): URL | string {
   return VAULT_SOURCE;
 }
 
+function cssLayerOrderPlugin(): Plugin {
+  const prelude = "@layer reset, tokens, base, layout, components;\n";
+  return {
+    name: "canonical-css-layer-order",
+    apply: "build",
+    enforce: "pre",
+    transform(source, id) {
+      // CSS chunks may precede global.css; establish order before Vite hashes each asset.
+      if (!id.split("?", 1)[0]?.endsWith(".css")) return;
+      return { code: `${prelude}${source}`, map: null };
+    },
+  };
+}
+
 export async function readValidatedVaultFile(
   filePath: URL | string,
 ): Promise<Buffer> {
@@ -274,5 +288,6 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] }),
     clientDataPlugin(),
+    cssLayerOrderPlugin(),
   ],
 });

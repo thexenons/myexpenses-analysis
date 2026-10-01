@@ -255,14 +255,21 @@ test("synthetic pCloud backup publishes validated static releases and preserves 
             assert.equal(aggregateKpis(all).periodClosingBalanceEurMinor,
                 aggregateKpis(debtOnly).periodClosingBalanceEurMinor + aggregateKpis(cashOnly).periodClosingBalanceEurMinor);
             let revisionPublished = false;
+            let cssAssets = 0;
             for (const file of await files(release)) {
                 assert.doesNotMatch(file, /(?:app-dataset\.json|BACKUP(?:_PREF)?|\.zip|\.sqlite|\.db)$/u);
                 // oxlint-disable-next-line no-await-in-loop -- scan every published asset for fixture canaries.
                 const bytes = await readFile(file);
                 if (file.endsWith(".js") && bytes.includes(Buffer.from(revision))) revisionPublished = true;
+                if (file.endsWith(".css")) {
+                    cssAssets++;
+                    // Minification may merge order declarations into the first layer block.
+                    assert.match(bytes.toString("utf8"), /^@layer reset(?:\s*,|\s*\{)/u);
+                }
                 for (const secret of forbidden) assert.equal(bytes.includes(Buffer.from(secret)), false);
             }
             assert.equal(revisionPublished, true);
+            assert.ok(cssAssets > 0);
             assert.deepEqual(await readdir(join(deploy, ".work")), []);
             const state = JSON.parse(await readFile(join(deploy, ".sync-state.json"), "utf8"));
             assert.equal(state.localSha256, hash(remote.archive));
@@ -279,11 +286,24 @@ test("synthetic pCloud backup publishes validated static releases and preserves 
         assert.equal(pipelineCalls, 1);
         assert.equal(downloads, 1);
         assert.deepEqual(await snapshot(), beforeNoop);
+        const cssNames = async (target: string) => (await files(join(deploy, target)))
+            .filter((file) => file.endsWith(".css"))
+            .map((file) => file.slice(join(deploy, target).length + 1)).sort();
+        const firstCssNames = await cssNames(first);
+        const viteConfigPath = join(project, "vite.config.ts");
+        const viteConfig = await readFile(viteConfigPath, "utf8");
+        const revisedViteConfig = viteConfig.replace(
+            "base, layout, components;\\n",
+            "base, layout, syntheticCacheProbe, components;\\n",
+        );
+        assert.notEqual(revisedViteConfig, viteConfig);
+        await writeFile(viteConfigPath, revisedViteConfig);
         const html = await readFile(join(project, "index.html"), "utf8");
         await writeFile(join(project, "index.html"), html.replace("</title>", " synthetic-revision-two</title>"));
         assert.equal((await runPCloudSync(runtime.config, dependencies, { force: true, signal: AbortSignal.timeout(120_000) })).status, "published");
         const forced = await checkPublished(0);
         assert.notEqual(forced, first);
+        assert.notDeepEqual(await cssNames(forced), firstCssNames, "prelude-only changes must change CSS asset identity");
         assert.match(await readFile(join(deploy, forced, "index.html"), "utf8"), /synthetic-revision-two/u);
         remote = { id: 101, archive: zipB };
         assert.equal((await runPCloudSync(runtime.config, dependencies, { signal: AbortSignal.timeout(120_000) })).status, "published");

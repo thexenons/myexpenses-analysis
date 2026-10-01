@@ -1156,6 +1156,46 @@ test("keeps every primary route inside the document viewport", async ({ page }) 
   }
 });
 
+for (const scopeValue of ["realCashFlow", "all", "debtsOnly"] as const) {
+  test(`settles every primary route with ${scopeValue} global scope`, async ({ page }) => {
+    test.setTimeout(90_000);
+    const toolbar = page.getByRole("region", { name: "Filtros globales" });
+    const scope = toolbar.getByRole("group", { name: "Ámbito de las estadísticas" })
+      .locator(`input[value="${scopeValue}"]`);
+    const period = toolbar.getByRole("combobox", { name: "Tipo de periodo" });
+    const granularity = toolbar.getByRole("group", { name: "Granularidad de estadísticas y gráficas" });
+    const navigation = page.getByRole("navigation", { name: "Secciones principales" });
+    const routes = [
+      "/resumen", "/flujo-de-caja", "/comparativa", "/deudas", "/presupuestos",
+      "/categorias", "/cuentas", "/patrones", "/transacciones",
+    ];
+    await scope.check();
+    // oxlint-disable no-await-in-loop -- Each scope/route state must settle before the next navigation.
+    for (const route of routes) {
+      await test.step(`${scopeValue} ${route}`, async () => {
+        const link = navigation.locator(`a[href="${route}"]`);
+        await link.click();
+        await expect.poll(() => new URL(page.url()).pathname).toBe(route);
+        await expect(link).toHaveAttribute("aria-current", "page");
+        const heading = page.locator("main h1");
+        await expect(heading).toBeVisible();
+        expect((await heading.textContent())?.trim()).toBeTruthy();
+        await expect(scope).toBeChecked();
+        await expect(period).toBeVisible();
+        await expect(period).toHaveValue("all");
+        await expect(granularity).toBeVisible();
+        await expect(granularity.getByRole("radio", { checked: true })).toHaveCount(1);
+        await period.focus();
+        await expect(period).toBeFocused();
+        await page.keyboard.press("Tab");
+        await expect(page.locator(":focus")).toHaveCount(1);
+        await expectNoDocumentOverflow(page);
+      });
+    }
+    // oxlint-enable no-await-in-loop
+  });
+}
+
 test("keeps shared navigation, controls and serious accessibility checks consistent across routes", async ({ page }) => {
   test.setTimeout(120_000);
   await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });

@@ -110,8 +110,14 @@ checks trigger the mandatory writer/verification routing rules.
   Keep complete-calendar-month observed/date bounds and optional lazy disclosure.
   Checks: positive denominator, own/debt transfers, statistical debt accounts,
   signed rates, dates, unchanged identities, scope switching and responsive UI.
-- [ ] A10 Run final cross-screen functional and responsive acceptance.
-  Checks: applicable full suites, synthetic desktop/mobile and navigation checks.
+- [x] A10 Run final cross-screen functional and responsive acceptance.
+  Route: delegated sole test writer/checker (browser harness preparation and
+  test execution); no speculative production changes. Add bounded synthetic
+  route × scope acceptance for nine routes, all three scopes and all configured
+  desktop/mobile-390/narrow-320 projects. Reuse existing exact accounting tests,
+  VOID, global/budget/category comparison, keyboard and axe coverage.
+  Checks: full UI, source-only Node/deployment, three tsc projects, lint and full
+  isolated browser suite. Local snapshots/builds only; no real vault/services.
 
 ## Evidence and delivery
 
@@ -484,9 +490,75 @@ checks trigger the mandatory writer/verification routing rules.
   savings-rate/debt-flow tests and browser regression (seven files against
   `dd8a725`). Rolling back the complete A9 also requires the initial A9 unit.
 
+- Extended A9 commit `67fcb8c` contains 354 authored changed lines against
+  `dd8a725`; combined A9 range against reviewed/main boundary `b6d9381` is
+  758 lines across 14 files. Native assessment is medium/due at slice budget.
+  Exact START returned new candidate consent required, not a review receipt:
+  lineage `review-d0a1eb3f112d384c`, target
+  `sha256:82afe390849f16425ca0090aff5553e5d1b1db5ef51e3b1183812af651e7e9d7`.
+  Neither A9 commit is pushed; main remains `b6d9381`. A10 waits for this choice.
+
+- User granted A9 candidate review. Native reliability lens found no findings
+  from immutable patches (no independent command execution); exact acknowledgement
+  consumed `review-d0a1eb3f112d384c` and burned authority. Fast-forward pushed
+  both A9 commits to origin/main at `67fcb8c`, advancing local main safely.
+  Last reviewed boundary is `67fcb8c`; the pending review slice is empty.
+
+- A10 focused matrix passed 9/9 tests, visiting 81 route/scope/viewport states.
+  First full isolated browser run: 188 passed, 3 expected skips, 4 failures
+  (10.4 minutes). Three failures are existing cascade typography/border checks;
+  one is desktop category/budget disclosure spacing. These are real observed
+  failures, not a completed acceptance result; investigation/fixes are pending.
+  Runtime evidence shows component font/border rules losing to reset/base;
+  source-only CSS-layer mapper assists the sole writer. A8's taller closed
+  category header also shifted its centered disclosure away from A3F's baseline.
+  Preserve strict assertions, verify root causes, do not weaken CSP or promise
+  full acceptance until focused fixes and all applicable final checks pass.
+
+- A10 deterministic causes: built CSS established component layers before the
+  global layer-order prelude, allowing later reset/base layers to override
+  component typography/borders. A source-only deployment regression failed
+  before a Vite build prefix established canonical order in each CSS asset;
+  no CSP, dependency or finance changes. A8's taller category row needed a
+  category-local disclosure offset to preserve the agreed budget/tree spacing.
+  Focused browser cascade/geometry/matrix passed 15/15 across all three projects;
+  measured Category inset 12.984px versus Budget 13px, 44×44 targets retained.
+  Development checks and the full frozen-source rerun are still pending.
+
+- A10 final candidate uses a build-only pre-CSS transform, not post-hash bundle
+  mutation, to establish the canonical layer order in each CSS source. Synthetic
+  deployment tests prove emitted CSS begins with reset order and a prelude-only
+  CSS change alters the asset filename; no dependency or CSP weakening.
+  Category-local geometry retains 44px targets and 12.984px vs Budget 13px inset.
+- Final frozen-source checks: isolated browser 192 passed/3 intentional skips,
+  0 failures (195 total, 10.4 minutes), including all 81 route/scope/viewport
+  states; focused cascade/matrix/spacing 15/15. Skips: touch hold on desktop,
+  desktop hover on mobile-390 and narrow-320. All applicable viewport tests ran.
+  Full Vitest UI 477/477; source-only Node 324 passed/3 optional private-data
+  skips; synthetic deployment 1/1; node/app/browser tsc and Oxlint passed.
+  Scoped diff check and protected-file hashes passed. Parent spot check repeated
+  `node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit` successfully.
+- Final commands used installed direct CLIs in sanitized Node 24 environments:
+  `node node_modules/tsx/dist/cli.mjs tests/browser/run-isolated.ts` (no grep),
+  `node node_modules/vitest/vitest.mjs run`, source-only snapshot
+  `node node_modules/tsx/dist/cli.mjs --test 'scripts/**/*.test.ts' 'tests/domain/**/*.test.ts' 'tests/architecture/**/*.test.ts'`,
+  `node node_modules/tsx/dist/cli.mjs --test tests/deployment/runtime-pipeline.test.ts`,
+  three `tsc -p tsconfig.{node,app,browser}.json --noEmit` commands, and
+  `node node_modules/oxlint/bin/oxlint --jsx-a11y-plugin --vitest-plugin --deny-warnings`.
+- Actual synthetic Vite dev lock-screen probe showed 11.2px button text and a
+  1px solid border before the final hook change. The plugin remains build-only,
+  but final dev mode was not rerun and the exact probe command was not retained;
+  do not describe that as final-candidate dev proof. No live deployment/private
+  vault, physical device, other engine, hosted CI or 50k benchmark ran in A10.
+  Final Node/deployment snapshot: `/tmp/a10-source.TJ0zs3`; full browser runner
+  cleaned its isolated artifacts. Counts above are observed tool outcomes.
+- A10 rollback: Vite CSS-order plugin, CategoryTreeNode local CSS, route/scope
+  browser matrix and deployment CSS-order/cache regression (four files, 81
+  additions against `67fcb8c`). Financial arithmetic and dataset files unchanged.
+
 ## Next step
 
-Close extended A9 delivery, then run A10. A1–A8 are on main.
+Commit, assess and push the verified A10 unit. A1–A9 are already on main.
 Do not infer capture time from pCloud modification metadata or invent a default
 expected backup cadence. Runtime registration must be restored before memory
 attribution resumes; the local task document preserves all pending progress.
