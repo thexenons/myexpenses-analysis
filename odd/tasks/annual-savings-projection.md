@@ -19,7 +19,7 @@ The page has budget pacing and historical income comparisons, but no annual savi
 
 ## Tasks
 - [x] T01: Implement the pure annual projection and domain tests. Route: delegated; preparation and 2-file writer triggers. Completed in `3f8b4b31bdb33dc0885be392494e7f9af29f9eb6` with 16 tests and independent verification.
-- [ ] T02: Integrate an accessible real-versus-estimated chart into Plans, add integration tests, verify and deliver. Route: delegated; multi-file writer trigger. Show month-end cumulative values, December total and concise income/budget assumptions; preserve existing budget controls and comparisons.
+- [x] T02: Integrate an accessible real-versus-estimated chart into Plans, add integration tests, verify and deliver. Route: delegated; multi-file writer trigger. Implementation `ba11ffa`; source and recovery commits delivered to `origin/main` at `772b74d` by observed successful non-force push.
 
 ## Acceptance and verification
 Focused domain/UI tests during RED/GREEN, then `pnpm type-check`, `pnpm lint`, `pnpm test`, `pnpm build`, and `pnpm test:browser` at integration closure. Report exact failed/unavailable/skipped checks. Inspect diff for user edits and private data. Each task closes with a Conventional Commit and evidence below; no AI attribution. Native candidate is a work-unit commit/slice, not the entire feature branch.
@@ -45,7 +45,7 @@ Exploration completed read-only. Imported data has no scheduled income; user app
 - Native assessment: medium, review due `slice_budget_reached`; one provider-selected reliability review. Candidate consent granted under the user's explicit request for automatic grants. Review found no blocker; lineage `review-4ca32de600d1a275` closed by exact acknowledgement (no fabricated PASS).
 - Engram mirror pending: resume hook reported no authoritative registered identity; all agent-attributed memory writes are paused until runtime registration is restored. Local progress remains authoritative and must be mirrored later.
 
-### T02 implementation and verification (delivery pending)
+### T02 implementation and verification
 - Added the isolated AnnualProjection panel, full-year cumulative chart, December total, exact monthly contribution/cumulative table, real/estimated labels, assumptions, and distinct unavailable/calculation-error messages. Existing controls and comparisons are unchanged.
 - Hook and view integration, component/page/hook tests, and synthetic browser fixture/scenario implemented. UI neutral Spanish follows existing project copy.
 - Observed UI RED: 4 failed / 21 passed; final focused GREEN: 43 passed. Parent spot check independently passed 43/43.
@@ -56,7 +56,10 @@ Exploration completed read-only. Imported data has no scheduled income; user app
 - Browser command: `MYEXPENSES_BROWSER_RUNTIME_LIB_DIR=/tmp/saracastello-browser-libs.hDbDUm/root/usr/lib/x86_64-linux-gnu timeout --signal=TERM --kill-after=15s 900s pnpm test:browser`. Evidence log: `/tmp/annual-projection-verify.vFhzu5.log`; screenshots: `/tmp/myexpenses-annual-projection-{desktop,mobile-390,narrow-320}.png`. These are temporary, synthetic artifacts, not committed data.
 - Source/test diff: 335 authored lines. Rollback: remove the new AnnualProjection component and isolated BudgetsPage wiring/tests plus the new synthetic fixture/scenario; T01 domain logic remains independently valid.
 - Implementation commit: `ba11ffaf03cc161343ef537dc36e036ca7f79813`. Native assessment of its exact range against `3f8b4b3`: medium, 356 lines, `review_due: false`, reason `under_budget`. No review was started or approval fabricated for that range; functional verification is complete and the native slice remains pending under its threshold policy.
-- Remote delivery is still pending explicit origin/session scope. No remote probing, fetch, push, PR, or deployment performed.
+- User explicitly authorized synchronization and push to `origin/main` using configured repository Git authentication. Fetch confirmed remote main at `c86d1c4`; local main fast-forwarded to `772b74d`. Observed `git push origin main` exit 0: `c86d1c4..772b74d main -> main`. No force, rebase, history rewrite, PR, or deployment performed. Unrelated edited files remained untouched.
+
+## Final state
+Both implementation tasks are complete and source delivery is verified. Exact tests, environmental failures, resolved regressions, native review outcome and residual unsupported scopes are recorded above. Historical Engram mirror is deliberately stale/pending: do not trust its original unchecked tasks over this repository document until the runtime restores session attribution and the full document can be mirrored.
 
 ## Next step
-Ask for exact authorization to synchronize and push these commits to `origin/main` using the repository's configured Git authentication/session. Do not inspect or probe authentication until authorized. Then synchronize safely, fast-forward local main if possible without altering user edits, push without force, observe remote result, and record delivery. Keep T02 unchecked until delivery is observed. Engram mirror remains pending runtime identity restoration.
+Publish this passive delivery record through the same authorized non-force main push and verify local/remote identity. No further source work is required. Resynchronize the Engram mirror only when the host restores the authoritative session identity; do not invent or register one.
