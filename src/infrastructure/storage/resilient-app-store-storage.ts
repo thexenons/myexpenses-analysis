@@ -1,3 +1,4 @@
+import { FILTER_PRESETS_STORAGE_NAME } from "../../application/store/app-store/filter-presets.ts";
 import type { AppStoreStorage } from "../../application/store/app-store/app-store.types.ts";
 
 export interface BrowserStorageLike {
@@ -16,6 +17,7 @@ export function createResilientAppStoreStorage(
   const overlay = new Map<string, string | null>();
   return {
     getItem(name) {
+      if (name === FILTER_PRESETS_STORAGE_NAME) return resolveStorage().getItem(name);
       if (overlay.has(name)) return overlay.get(name) ?? null;
       try {
         return resolveStorage().getItem(name);
@@ -24,6 +26,7 @@ export function createResilientAppStoreStorage(
       }
     },
     removeItem(name) {
+      if (name === FILTER_PRESETS_STORAGE_NAME) return resolveStorage().removeItem(name);
       overlay.set(name, null);
       try {
         resolveStorage().removeItem(name);
@@ -32,6 +35,7 @@ export function createResilientAppStoreStorage(
       }
     },
     setItem(name, value) {
+      if (name === FILTER_PRESETS_STORAGE_NAME) return resolveStorage().setItem(name, value);
       overlay.set(name, value);
       try {
         resolveStorage().setItem(name, value);

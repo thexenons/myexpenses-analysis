@@ -416,3 +416,96 @@ test("tag exclusion persists inherited split tags and keeps untagged movements",
   await emptySelection.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
   await expectTransactions(page, 1);
 });
+
+const PRESET_KEY = "myexpenses-analysis:filter-presets:v1";
+
+test("named filter presets restore the full local view across reload and require explicit CRUD confirmation", async ({ page }) => {
+  await page.getByRole("link", { name: /^(Transacciones|Movimientos)$/ }).click();
+  const drawer = await openDrawer(page);
+  await drawer.getByRole("searchbox", { name: "Buscar en movimientos" }).fill("Synthetic food");
+  await drawer.getByRole("button", { name: "Desplegar Expense", exact: true }).click();
+  await drawer.getByRole("button", { name: "Seleccionar Expense › Food", exact: true }).click();
+  await drawer.getByRole("group", { name: "Nivel de categoría" }).getByRole("radio", { name: "Solo ruta exacta" }).check();
+  await drawer.getByRole("group", { name: "Granularidad de estadísticas y gráficas" }).locator('input[value="week"]').check();
+  await drawer.locator("summary").filter({ hasText: /^Criterios adicionales$/ }).click();
+  await drawer.getByRole("searchbox", { name: "Buscar en comentarios" }).fill("No matching comment");
+  await drawer.getByRole("searchbox", { name: "Buscar en referencias" }).fill("No matching reference");
+  await drawer.locator("summary").filter({ hasText: /^Filtros guardados$/ }).click();
+  await drawer.getByRole("textbox", { name: "Nombre del filtro" }).fill("  Monthly  ");
+  await drawer.getByRole("button", { name: "Guardar filtro actual" }).click();
+  await expect(drawer.getByRole("option", { name: "Monthly", exact: true })).toHaveCount(1);
+  const original = await page.evaluate((key) => localStorage.getItem(key), PRESET_KEY);
+  expect(JSON.parse(original!).presets[0]).toMatchObject({ name: "Monthly", granularity: "week", snapshot: { filters: {
+    search: "Synthetic food", commentSearch: "No matching comment", referenceSearch: "No matching reference",
+    categoryPrefixes: [["Expense", "Food"]], categoryDepth: "exact",
+  } } });
+  await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expectTransactions(page, 0);
+  await page.reload();
+  await unlock(page);
+  const restored = await openDrawer(page);
+  await restored.getByRole("button", { name: "Restablecer", exact: true }).click();
+  await restored.locator("summary").filter({ hasText: /^Filtros guardados$/ }).click();
+  await restored.getByRole("combobox", { name: "Filtro guardado", exact: true }).selectOption("Monthly");
+  await restored.getByRole("button", { name: "Aplicar filtro guardado" }).click();
+  await expect(restored.getByRole("searchbox", { name: "Buscar en movimientos" })).toHaveValue("Synthetic food");
+  await expect(restored.getByRole("group", { name: "Granularidad de estadísticas y gráficas" }).locator('input[value="week"]')).toBeChecked();
+  await expect(restored.getByRole("button", { name: "Quitar Expense › Food", exact: true })).toBeVisible();
+  await restored.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expectTransactions(page, 0);
+  await openDrawer(page);
+  await restored.getByRole("button", { name: "Restablecer", exact: true }).click();
+  await restored.getByRole("searchbox", { name: "Buscar en movimientos" }).fill("Synthetic food");
+  await restored.getByRole("button", { name: "Sobrescribir filtro guardado" }).click();
+  await expect(restored.getByRole("button", { name: "Cancelar", exact: true })).toBeFocused();
+  expect(await page.evaluate((key) => localStorage.getItem(key), PRESET_KEY)).toBe(original);
+  await restored.getByRole("button", { name: "Confirmar sobrescritura" }).click();
+  await expect(restored.getByRole("combobox", { name: "Filtro guardado", exact: true })).toBeFocused();
+  const replaced = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), PRESET_KEY);
+  expect(replaced.presets[0]).toMatchObject({ granularity: "auto", snapshot: { filters: { categoryPrefixes: [], commentSearch: "", referenceSearch: "", search: "Synthetic food" } } });
+  await restored.getByRole("button", { name: "Restablecer", exact: true }).click();
+  await restored.getByRole("button", { name: "Aplicar filtro guardado" }).click();
+  await restored.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expectTransactions(page, 1);
+  await openDrawer(page);
+  await restored.getByRole("button", { name: "Eliminar filtro guardado" }).click();
+  await restored.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(restored.getByRole("option", { name: "Monthly", exact: true })).toHaveCount(1);
+  await restored.getByRole("button", { name: "Eliminar filtro guardado" }).click();
+  await restored.getByRole("button", { name: "Confirmar eliminación" }).click();
+  await expect(restored.getByRole("combobox", { name: "Filtro guardado", exact: true })).toBeFocused();
+  await expect(restored.getByRole("option", { name: "Monthly", exact: true })).toHaveCount(0);
+  expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!).presets, PRESET_KEY)).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test("named filter presets preserve future payloads and visibly reject durable quota failures", async ({ page }) => {
+  const raw = JSON.stringify({ version: 2, presets: [] });
+  await page.evaluate(({ key, value }) => localStorage.setItem(key, value), { key: PRESET_KEY, value: raw });
+  await page.reload();
+  await unlock(page);
+  const drawer = await openDrawer(page);
+  await drawer.locator("summary").filter({ hasText: /^Filtros guardados$/ }).click();
+  await drawer.getByRole("textbox", { name: "Nombre del filtro" }).fill("Preserved");
+  await drawer.getByRole("button", { name: "Guardar filtro actual" }).click();
+  await expect(drawer.getByText(/No se pueden utilizar los filtros guardados/)).toBeVisible();
+  expect(await page.evaluate((key) => localStorage.getItem(key), PRESET_KEY)).toBe(raw);
+  await page.evaluate((key) => localStorage.removeItem(key), PRESET_KEY);
+  await page.reload();
+  await unlock(page);
+  const fresh = await openDrawer(page);
+  await fresh.locator("summary").filter({ hasText: /^Filtros guardados$/ }).click();
+  await fresh.getByRole("textbox", { name: "Nombre del filtro" }).fill("Quota");
+  await page.evaluate((key) => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (name, value) {
+      if (name === key) throw new DOMException("Synthetic quota failure", "QuotaExceededError");
+      original.call(this, name, value);
+    };
+  }, PRESET_KEY);
+  await fresh.getByRole("button", { name: "Guardar filtro actual" }).click();
+  await expect(fresh.getByText(/No se pudieron guardar los filtros locales/)).toBeVisible();
+  await expect(fresh.getByRole("option", { name: "Quota", exact: true })).toHaveCount(0);
+  expect(await page.evaluate((key) => localStorage.getItem(key), PRESET_KEY)).toBeNull();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});

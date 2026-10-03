@@ -1051,3 +1051,85 @@ it.each([
   expect(restored.getState().filters.categoryMode).toBe(mode);
   expect(applyFilters(restored.getState().analytics!, restored.getState().filters).postings).toHaveLength(count);
 });
+
+it("named presets replace the full filter view, deep-copy it and retain registered no-match paths", async () => {
+  window.localStorage.clear();
+  const fixture = datasetWithIdentity("b".repeat(64));
+  const registered = { ...fixture, categories: [...fixture.categories, { ...fixture.categories[0]!, uuid: "unused", sourceId: 2, name: "Unused", parentUuid: "neutral", path: ["Reajuste*", "Unused"] }] };
+  const store = createSecureStore({ load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(registered) });
+  await store.getState().actions.unlock("phrase");
+  const actions = store.getState().actions;
+  actions.patchFilters({ accountIds: ["debt"], categoryPrefixes: [["Reajuste*", "Unused"], []], categoryDepth: "exact", search: "  Stored  ", commentSearch: "Note", referenceSearch: "Reference", payeeKeys: ['["source",7]'], paymentMethodKeys: ['["source",9]'], tagMode: "exclude", tags: ["Tagged"] });
+  actions.setGranularity("week");
+  const expected = structuredClone(store.getState().filters);
+  expect(await actions.saveFilterPreset("No matches")).toBe(true);
+  actions.clearFilters();
+  actions.patchFilters({ linked: "linked", minAmountEurMinor: 123 });
+  actions.setGranularity("year");
+  expect(await actions.applyFilterPreset("No matches")).toBe(true);
+  expect(store.getState().filters).toEqual(expected);
+  expect(store.getState().granularity).toBe("week");
+  expect(applyFilters(store.getState().analytics!, store.getState().filters).activePostings).toHaveLength(0);
+  const reloaded = createSecureStore({ load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(registered) });
+  await reloaded.getState().actions.unlock("phrase");
+  expect(await reloaded.getState().actions.applyFilterPreset("No matches")).toBe(true);
+  expect(reloaded.getState().filters).toEqual(expected);
+  expect(applyFilters(reloaded.getState().analytics!, reloaded.getState().filters).activePostings).toHaveLength(0);
+  expect(await actions.saveFilterPreset("NO MATCHES")).toBe(false);
+  expect(store.getState().presetError).toMatch(/existe/);
+  expect(await actions.saveFilterPreset("No matches", true)).toBe(true);
+  expect(await actions.deleteFilterPreset("No matches")).toBe(true);
+  expect(store.getState().filterPresets).toEqual([]);
+});
+
+it("named presets prune unknown identities and protect numeric keys after a changed dataset", async () => {
+  window.localStorage.clear();
+  const first = createSecureStore({ load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetWithIdentity("b".repeat(64))) });
+  await first.getState().actions.unlock("phrase");
+  first.getState().actions.patchFilters({ payeeKeys: ['["source",7]'], paymentMethodKeys: ['["source",9]'], categoryPrefixes: [["Reajuste*"], [], ["Unknown"]], accountIds: ["account"] });
+  expect(await first.getState().actions.saveFilterPreset("Identity")).toBe(true);
+  const second = createSecureStore({ load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetWithIdentity("c".repeat(64))) });
+  await second.getState().actions.unlock("phrase");
+  expect(await second.getState().actions.applyFilterPreset("Identity")).toBe(true);
+  expect(second.getState().filters.payeeKeys).toEqual([]);
+  expect(second.getState().filters.paymentMethodKeys).toEqual([]);
+  expect(second.getState().filters.categoryPrefixes).toEqual([["Reajuste*"], []]);
+  expect(second.getState().filters.accountIds).toEqual(["account"]);
+});
+
+it("named presets expose storage errors and leave live filters and ordinary preferences intact", async () => {
+  window.localStorage.clear();
+  const store = createSecureStore({ load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetFixture()) });
+  await store.getState().actions.unlock("phrase");
+  store.getState().actions.patchFilters({ search: "Live" });
+  const filters = store.getState().filters;
+  const ordinary = window.localStorage.getItem("myexpenses-analysis:filters:v1");
+  const raw = '{"version":99,"presets":[]}';
+  window.localStorage.setItem("myexpenses-analysis:filter-presets:v1", raw);
+  expect(await store.getState().actions.saveFilterPreset("Blocked")).toBe(false);
+  expect(await store.getState().actions.applyFilterPreset("Blocked")).toBe(false);
+  expect(store.getState().presetError).not.toBeNull();
+  expect(store.getState().filters).toBe(filters);
+  expect(window.localStorage.getItem("myexpenses-analysis:filters:v1")).toBe(ordinary);
+  expect(window.localStorage.getItem("myexpenses-analysis:filter-presets:v1")).toBe(raw);
+});
+
+
+it("keeps preset read failures visible without modifying ordinary filter persistence", async () => {
+  window.localStorage.clear();
+  const storage: AppStoreStorage = {
+    getItem: (name) => name === "myexpenses-analysis:filter-presets:v1" ? Promise.reject(new Error("private storage detail")) : window.localStorage.getItem(name),
+    setItem: (name, value) => window.localStorage.setItem(name, value),
+    removeItem: (name) => window.localStorage.removeItem(name),
+  };
+  const store = createAppStore({ load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetFixture()) }, storage, SECURE_ENVIRONMENT);
+  await store.getState().actions.unlock("phrase");
+  expect(store.getState().presetError).toMatch(/leer/);
+  expect(store.getState().presetError).not.toContain("private");
+  store.getState().actions.patchFilters({ search: "Still usable" });
+  const filters = store.getState().filters;
+  const ordinary = window.localStorage.getItem("myexpenses-analysis:filters:v1");
+  expect(await store.getState().actions.applyFilterPreset("Unknown")).toBe(false);
+  expect(store.getState().filters).toBe(filters);
+  expect(window.localStorage.getItem("myexpenses-analysis:filters:v1")).toBe(ordinary);
+});

@@ -24,6 +24,12 @@ import {
 import type { FilterDrawerViewProps } from "../FilterDrawer.types"
 
 export function useFilterDrawer(): FilterDrawerViewProps {
+  const filterPresets = useAppStore((state) => state.filterPresets)
+  const presetError = useAppStore((state) => state.presetError)
+  const presetBusy = useAppStore((state) => state.presetBusy)
+  const onPresetSave = useAppStore((state) => state.actions.saveFilterPreset)
+  const onPresetApply = useAppStore((state) => state.actions.applyFilterPreset)
+  const onPresetDelete = useAppStore((state) => state.actions.deleteFilterPreset)
   const analytics = useAppStore((state) => state.analytics)
   const clearFilters = useAppStore((state) => state.actions.clearFilters)
   const onClose = useAppStore((state) => state.actions.closeFilterDrawer)
@@ -120,6 +126,7 @@ export function useFilterDrawer(): FilterDrawerViewProps {
   }, [open])
 
   return {
+    filterPresets, presetError, presetBusy, onPresetSave, onPresetApply, onPresetDelete,
     accounts,
     endpointAccounts,
     categoryPaths,

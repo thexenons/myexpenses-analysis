@@ -465,3 +465,62 @@
     outline-offset: -2px;
   }
 }
+
+
+@layer components {
+  .presetBody,
+  .presetForm,
+  .presetLabel {
+    display: grid;
+    gap: 0.6rem;
+    min-width: 0;
+  }
+
+  .presetBody {
+    padding-top: 0.85rem;
+  }
+
+  .presetLabel {
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+  }
+
+  .presetLabel input,
+  .presetLabel select {
+    width: 100%;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: 0.5rem;
+    border: 1px solid var(--line-dark);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+  }
+
+  .presetActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .presetActions > * {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .presetConfirmation {
+    min-width: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--line-dark);
+    border-radius: var(--radius-sm);
+    overflow-wrap: anywhere;
+  }
+
+  .presetConfirmation p {
+    margin-block: 0.5rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+}

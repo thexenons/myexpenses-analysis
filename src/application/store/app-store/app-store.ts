@@ -33,7 +33,10 @@ import type {
   AppStoreStorage,
   RememberedVaultStorage,
 } from "./app-store.types.ts";
-import { readFilterPreferences, reconcileSavedFilters, saveFilterPreferences } from "./filter-preferences.ts";
+import { createFilterPresetSnapshot, readFilterPreferences, reconcileSavedFilters, saveFilterPreferences } from "./filter-preferences.ts";
+
+import { deleteFilterPreset, readFilterPresets, saveFilterPreset } from "./filter-presets.ts";
+import type { FilterPreset } from "./filter-presets.ts";
 
 const REMEMBER_SAVE_FAILED = "La bóveda está abierta, pero no se pudo recordar este dispositivo.";
 const REMEMBER_REVOKE_FAILED = "La bóveda está bloqueada, pero no se pudo confirmar que este dispositivo haya olvidado el acceso. Borra los datos del sitio.";
@@ -142,12 +145,13 @@ export function createAppStore(
   let activeController: AbortController | null = null;
   let startupAttempted = false;
   let preserveFutureFilterPreferences = false;
+  const presetsReady = readFilterPresets(storage);
   const safeStorage = safeAppStoreStorage(storage);
   const blockedReason = unlockBlockedReason(environment);
 
   const store = createStore<AppStoreState>()(
     persist(
-      (set) => {
+      (set, get) => {
         const clearLive = () => {
           activeController?.abort();
           activeController = null;
@@ -185,7 +189,51 @@ export function createAppStore(
           }));
           return true;
         };
+        const mutatePresets = async (operation: () => Promise<readonly FilterPreset[]>) => {
+          if (get().presetBusy) return false;
+          set({ presetBusy: true, presetError: null });
+          try {
+            await presetsReady;
+            const filterPresets = await operation();
+            set({ filterPresets });
+            return true;
+          } catch (error) {
+            set({ presetError: error instanceof Error ? error.message : "No se pudo actualizar el filtro guardado." });
+            return false;
+          } finally {
+            set({ presetBusy: false });
+          }
+        };
         const actions: AppStoreActions = {
+          saveFilterPreset: async (name, overwrite = false) => {
+            const state = get();
+            if (state.analytics === null) return false;
+            const snapshot = createFilterPresetSnapshot(state.filters, state.analytics);
+            return mutatePresets(() => saveFilterPreset(storage, name, snapshot, state.granularity, overwrite));
+          },
+          deleteFilterPreset: (name) => mutatePresets(() => deleteFilterPreset(storage, name)),
+          applyFilterPreset: async (name) => {
+            if (get().presetBusy || get().analytics === null) return false;
+            set({ presetBusy: true, presetError: null });
+            try {
+              await presetsReady;
+              const read = await readFilterPresets(storage);
+              if (read.error !== null) throw new Error(read.error);
+              const preset = read.presets.find((item) => item.name === name);
+              if (!preset) throw new Error("El filtro guardado ya no existe.");
+              const state = get();
+              if (state.analytics === null) return false;
+              const reconciled = reconcileSavedFilters(preset.snapshot, state.analytics);
+              set({ filterPresets: read.presets, filters: { ...reconciled, statuses: [...preset.snapshot.filters.statuses] },
+                granularity: preset.granularity, filterResetRevision: state.filterResetRevision + 1 });
+              return true;
+            } catch (error) {
+              set({ presetError: error instanceof Error ? error.message : "No se pudo aplicar el filtro guardado." });
+              return false;
+            } finally {
+              set({ presetBusy: false });
+            }
+          },
           clearFilters: () => set((state) => ({ filters: { ...createDefaultFilterState(), scope: DEFAULT_APP_SCOPE }, filterResetRevision: state.filterResetRevision + 1 })),
           closeFilterDrawer: () => set({ filterDrawerOpen: false }),
           lock: async () => {
@@ -346,6 +394,9 @@ export function createAppStore(
           notice: null,
           filterDrawerOpen: false,
           filterResetRevision: 0,
+          filterPresets: [],
+          presetError: null,
+          presetBusy: false,
           filters: { ...createDefaultFilterState(), scope: DEFAULT_APP_SCOPE },
           granularity: "auto",
           loadPhase: "locked",
@@ -370,6 +421,7 @@ export function createAppStore(
       },
     ),
   );
+  void presetsReady.then((read) => store.setState({ filterPresets: read.presets, presetError: read.error }));
   store.subscribe((state, previous) => {
     if (state.loadPhase !== "ready" || state.analytics === null || preserveFutureFilterPreferences) return;
     if (state.filters !== previous.filters || previous.loadPhase !== "ready") {

@@ -1,3 +1,4 @@
+import type { FilterPreset } from "./filter-presets.ts";
 import type {
   AnalyticsDataset,
   DatePeriodMode,
@@ -33,6 +34,9 @@ export interface RememberedVaultStorage {
 }
 
 export interface AppStoreActions {
+  saveFilterPreset(name: string, overwrite?: boolean): Promise<boolean>;
+  applyFilterPreset(name: string): Promise<boolean>;
+  deleteFilterPreset(name: string): Promise<boolean>;
   clearFilters(): void;
   closeFilterDrawer(): void;
   lock(): Promise<boolean>;
@@ -55,6 +59,9 @@ export interface AppStoreState {
   analytics: AnalyticsDataset | null;
   error: string | null;
   notice: string | null;
+  filterPresets: readonly FilterPreset[];
+  presetError: string | null;
+  presetBusy: boolean;
   filterDrawerOpen: boolean;
   /** In-memory signal for explicit filter resets; never persisted. */
   filterResetRevision: number;

@@ -34,7 +34,7 @@ requested every remaining workspace modification committed and pushed.
   Delegated writer: non-trivial multi-file logic.
 - [x] A03 — Restore keyboard focus after removing global and drawer category chips.
   Delegated writer: two non-trivial UI surfaces and regression tests.
-- [ ] A04 — Local named filter presets with bounded failure-safe storage and UI.
+- [x] A04 — Local named filter presets with bounded failure-safe storage and UI.
   Delegated writer: storage/store/UI integration and new tests.
 - [x] A06 — Replace the flat category picker with an expandable hierarchy in
   the shared drawer, selecting any node and multiple explicit paths. Delegated
@@ -195,3 +195,38 @@ Order now A03 -> A06 -> A07 -> A04 -> A05; all remain separately reviewable.
   Rollback boundary: cumulative domain/page modes plus optional exact chart
   metadata and associated tests; unrelated existing period semantics unchanged.
 - Next: commit/assess A07 from reviewed boundary58fff1c, then A04/A05.
+
+## A07 native slice closure
+- Work-unit `98cfda7`, medium/due from `58fff1c`, 626 authored lines / 22 files.
+  User granted native review; reliability returned zero findings.
+- Exact acknowledgement burned `review-2943ddd417393cf2`; reviewed boundary
+  advances to `98cfda7`. Main push remains deferred until A04/A05 complete.
+
+## A04 accepted integration detail
+- Presets include selected granularity alongside the full filter snapshot; applying
+  resets dependent invalid amount drafts through the existing reset revision.
+- Actual injected resilient storage suppresses quota/read failures and caches raw
+  values. Preset-key operations require strict passthrough to expose failures and
+  observe latest malformed/future payloads; ordinary preferences stay resilient.
+- Added narrow surfaces infrastructure/storage/resilient-app-store-storage.ts and
+  its existing test file for strict preset-key behavior and integration regressions.
+
+## A04 proof
+- Versioned local-only named snapshots preserve full filters plus granularity;
+  apply replaces/reconciles state, and overwrite/delete require confirmation.
+- Limits: 20 presets, trimmed/case-insensitive unique names up to 80 characters,
+  aggregate 64 KiB UTF-8. Malformed/future/oversized payloads remain untouched;
+  quota/read failures visible. Ordinary preference resilience remains unchanged.
+- Initial RED 5 behavioral failures / 77 pass plus missing helper. Actual adapter
+  RED 2 fail / 2 pass. Final independent and parent four-file Vitest: 101 pass.
+- Architecture/runtime boundaries: 5 pass. Lint/all3 typeconfigs/diff pass.
+- Independent isolated browser: 6 pass, zero failed/skipped at1280/390/320,
+  52 seconds including synthetic production build. Reload, no-match result,
+  overwrite/delete/cancel focus, quota/future guards and narrow overflow verified.
+- Evidence /tmp/filter-presets-verify.8wt25q, source hash stable, cleanup complete.
+  No private/golden bodies, full suites or remote operations used in verification.
+- Work unit is 735 source/test authored lines across 14 files: necessary schema,
+  limits/storage failure integration and regression tests justify advisory overage.
+  Rollback: preset module/store/drawer/strict preset-key adapter/tests only,
+  preserving ordinary filter preferences and previous cumulative/tree features.
+- Next: commit/assess A04 from98cfda7; then A05 registry/final proof/main clean push.

@@ -1,4 +1,4 @@
-import { accountMatchesScope, restoreFilterState } from "../../../domain/analytics/filters.ts";
+import { accountMatchesScope, createDefaultFilterState, restoreFilterState } from "../../../domain/analytics/filters.ts";
 import { payeeIdentityKey, paymentMethodIdentityKey } from "../../../domain/analytics/identity-keys.ts";
 import type { AnalyticsDataset, CategoriesRegistry, FilterState } from "../../../domain/analytics/types.ts";
 import type { AppStoreStorage } from "./app-store.types.ts";
@@ -8,7 +8,7 @@ const FILTER_PREFERENCES_VERSION = 1;
 const MAX_PREFERENCE_LENGTH = 64 * 1024;
 const MAX_SELECTED_VALUES = 100;
 
-interface SavedFilterPreferences {
+export interface SavedFilterPreferences {
   readonly version: 1;
   readonly databaseSha256: string | null;
   readonly filters: FilterState;
@@ -25,6 +25,11 @@ function isObject(value: unknown): value is Record<string, unknown> {
 function databaseHash(analytics: AnalyticsDataset): string | null {
   const hash = analytics.backup?.source.databaseSha256;
   return typeof hash === "string" && /^[a-f0-9]{64}$/i.test(hash) ? hash : null;
+}
+
+/** Full independent preset snapshot; ordinary preferences keep their existing subset. */
+export function createFilterPresetSnapshot(filters: FilterState, analytics: AnalyticsDataset): SavedFilterPreferences {
+  return { version: 1, databaseSha256: databaseHash(analytics), filters: structuredClone({ ...createDefaultFilterState(), ...filters }) };
 }
 
 function exceedsSelectionLimit(filters: FilterState): boolean {

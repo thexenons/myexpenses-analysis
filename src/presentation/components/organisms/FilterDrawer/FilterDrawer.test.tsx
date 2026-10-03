@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { beforeEach, describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { appStore } from "../../../../composition/app-store.ts"
 import { applyFilters, createDefaultFilterState } from "../../../../domain/analytics/filters.ts"
@@ -628,3 +628,83 @@ it.each([
   await user.clear(screen.getByRole("searchbox", { name: "Buscar en movimientos" }))
   expect(applyFilters(analytics, appStore.getState().filters).postings.map((posting) => posting.sourceTransactionId)).toEqual(expected)
 })
+
+it("saves and applies named local presets with explicit overwrite/delete confirmation and keyboard focus", async () => {
+  resetAppStore();
+  const user = userEvent.setup();
+  const analytics = normalizeDataset({ accounts: { version: 2, accounts: {} }, categories: {}, parsedData: [] });
+  appStore.setState({ analytics, loadPhase: "ready", filterDrawerOpen: true, filters: { ...createDefaultFilterState(), search: "Saved text", commentSearch: "Notes" } });
+  render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>);
+  await user.click(screen.getByText("Filtros guardados"));
+  await user.type(screen.getByRole("textbox", { name: "Nombre del filtro" }), "Monthly");
+  await user.click(screen.getByRole("button", { name: "Guardar filtro actual" }));
+  await waitFor(() => expect(screen.getByRole("option", { name: "Monthly" })).toBeInTheDocument());
+  act(() => appStore.getState().actions.patchFilters({ search: "Changed", commentSearch: "" }));
+  await user.click(screen.getByRole("button", { name: "Aplicar filtro guardado" }));
+  await waitFor(() => expect(appStore.getState().filters.search).toBe("Saved text"));
+  expect(appStore.getState().filters.commentSearch).toBe("Notes");
+  await user.click(screen.getByRole("button", { name: "Sobrescribir filtro guardado" }));
+  expect(screen.getByRole("group", { name: /¿Sobrescribir/ })).toBeVisible();
+  expect(screen.getByRole("button", { name: "Cancelar" })).toHaveFocus();
+  const search = screen.getByRole("searchbox", { name: "Buscar en movimientos" });
+  await user.click(search);
+  act(() => appStore.getState().actions.patchFilters({ linked: "linked" }));
+  expect(search).toHaveFocus();
+  await user.click(screen.getByRole("button", { name: "Cancelar" }));
+  expect(screen.getByRole("button", { name: "Sobrescribir filtro guardado" })).toHaveFocus();
+  act(() => appStore.getState().actions.patchFilters({ commentSearch: "Updated" }));
+  await user.click(screen.getByRole("button", { name: "Sobrescribir filtro guardado" }));
+  await user.click(screen.getByRole("button", { name: "Confirmar sobrescritura" }));
+  await waitFor(() => expect(appStore.getState().filterPresets[0]?.snapshot.filters.commentSearch).toBe("Updated"));
+  await user.click(screen.getByRole("button", { name: "Eliminar filtro guardado" }));
+  expect(screen.getByRole("option", { name: "Monthly" })).toBeInTheDocument();
+  const originalSet = Storage.prototype.setItem;
+  const pendingBlur = vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
+    // Emulate native browsers blurring the focused button when pending disables it.
+    if (key === "myexpenses-analysis:filter-presets:v1" && document.activeElement instanceof HTMLButtonElement) document.activeElement.blur();
+    originalSet.call(this, key, value);
+  });
+  try {
+    await user.click(screen.getByRole("button", { name: "Confirmar eliminación" }));
+    await waitFor(() => expect(screen.queryByRole("option", { name: "Monthly" })).toBeNull());
+    expect(screen.getByRole("combobox", { name: "Filtro guardado" })).toHaveFocus();
+  } finally {
+    pendingBlur.mockRestore();
+  }
+});
+
+it("announces preset storage errors without replacing malformed local data", async () => {
+  resetAppStore();
+  const user = userEvent.setup();
+  window.localStorage.setItem("myexpenses-analysis:filter-presets:v1", "{");
+  appStore.setState({ analytics: normalizeDataset({ accounts: { version: 2, accounts: {} }, categories: {}, parsedData: [] }), loadPhase: "ready", filterDrawerOpen: true });
+  render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>);
+  await user.click(screen.getByText("Filtros guardados"));
+  await user.type(screen.getByRole("textbox", { name: "Nombre del filtro" }), "New");
+  await user.click(screen.getByRole("button", { name: "Guardar filtro actual" }));
+  await waitFor(() => expect(screen.getByText(/No se pueden utilizar los filtros guardados/)).toBeVisible());
+  expect(window.localStorage.getItem("myexpenses-analysis:filter-presets:v1")).toBe("{");
+});
+
+
+it("visibly rejects a quota failure through the real preset storage adapter", async () => {
+  resetAppStore();
+  const user = userEvent.setup();
+  appStore.setState({ analytics: normalizeDataset({ accounts: { version: 2, accounts: {} }, categories: {}, parsedData: [] }), loadPhase: "ready", filterDrawerOpen: true });
+  render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>);
+  await user.click(screen.getByText("Filtros guardados"));
+  await user.type(screen.getByRole("textbox", { name: "Nombre del filtro" }), "Quota");
+  const originalSet = Storage.prototype.setItem;
+  const write = vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
+    if (key === "myexpenses-analysis:filter-presets:v1") throw new DOMException("Quota", "QuotaExceededError");
+    return originalSet.call(this, key, value);
+  });
+  try {
+    await user.click(screen.getByRole("button", { name: "Guardar filtro actual" }));
+    await waitFor(() => expect(screen.getByText(/No se pudieron guardar los filtros locales/)).toBeVisible());
+    expect(screen.queryByRole("option", { name: "Quota" })).toBeNull();
+    expect(window.localStorage.getItem("myexpenses-analysis:filter-presets:v1")).toBeNull();
+  } finally {
+    write.mockRestore();
+  }
+});

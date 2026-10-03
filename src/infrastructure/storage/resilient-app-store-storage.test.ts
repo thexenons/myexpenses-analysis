@@ -35,3 +35,35 @@ describe("createResilientAppStoreStorage", () => {
     expect(browserStorage.removeItem).toHaveBeenCalledWith("preferences");
   });
 });
+
+it("uses durable latest bytes for preset keys without an overlay or swallowed failures", () => {
+  const key = "myexpenses-analysis:filter-presets:v1";
+  const browser = new Map<string, string>();
+  const adapter = createResilientAppStoreStorage(() => ({
+    getItem: (name) => browser.get(name) ?? null,
+    setItem: (name, value) => { browser.set(name, value); },
+    removeItem: (name) => { browser.delete(name); },
+  }));
+  adapter.setItem(key, "first");
+  browser.set(key, "newer malformed bytes");
+  expect(adapter.getItem(key)).toBe("newer malformed bytes");
+  adapter.removeItem(key);
+  expect(browser.has(key)).toBe(false);
+  const blocked = createResilientAppStoreStorage(() => { throw new DOMException("Blocked", "SecurityError"); });
+  expect(() => blocked.getItem(key)).toThrow(/Blocked/);
+  expect(() => blocked.setItem(key, "not durable")).toThrow(/Blocked/);
+  expect(() => blocked.removeItem(key)).toThrow(/Blocked/);
+  expect(() => blocked.setItem("preferences", "month")).not.toThrow();
+  expect(blocked.getItem("preferences")).toBe("month");
+});
+
+it("does not mask a failed preset write with a successful session-only copy", () => {
+  const key = "myexpenses-analysis:filter-presets:v1";
+  const adapter = createResilientAppStoreStorage(() => ({
+    getItem: () => "original",
+    setItem: () => { throw new DOMException("Quota", "QuotaExceededError"); },
+    removeItem: () => { throw new DOMException("Blocked", "SecurityError"); },
+  }));
+  expect(() => adapter.setItem(key, "replacement")).toThrow(/Quota/);
+  expect(adapter.getItem(key)).toBe("original");
+});

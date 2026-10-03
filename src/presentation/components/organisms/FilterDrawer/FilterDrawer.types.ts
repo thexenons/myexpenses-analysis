@@ -1,3 +1,4 @@
+import type { FilterPreset } from "../../../../application/store/app-store/filter-presets.ts"
 import type { RefObject } from "react"
 
 import type {
@@ -24,6 +25,12 @@ export interface FilterDrawerViewProps {
   amountError: string | null
   closeButtonRef: RefObject<HTMLButtonElement | null>
   dialogRef: RefObject<HTMLDialogElement | null>
+  filterPresets: readonly FilterPreset[]
+  presetError: string | null
+  presetBusy: boolean
+  onPresetSave(name: string, overwrite?: boolean): Promise<boolean>
+  onPresetApply(name: string): Promise<boolean>
+  onPresetDelete(name: string): Promise<boolean>
   filters: FilterState
   hasActiveFilters: boolean
   onAccountToggle(accountId: string): void

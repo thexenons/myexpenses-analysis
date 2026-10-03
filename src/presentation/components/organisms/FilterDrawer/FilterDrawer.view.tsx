@@ -3,7 +3,7 @@ import type {
   CategoryType,
   LinkedFilter,
 } from "../../../../domain/analytics/types"
-import { useRef, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import { formatCategoryPath } from "../../../utils/format.ts"
 import { Button } from "../../atoms/Button"
 import { Icon } from "../../atoms/Icon"
@@ -52,6 +52,7 @@ export function FilterDrawerView({
   amountError,
   closeButtonRef,
   dialogRef,
+  filterPresets, presetError, presetBusy, onPresetSave, onPresetApply, onPresetDelete,
   filters,
   hasActiveFilters,
   onAccountToggle,
@@ -78,6 +79,33 @@ export function FilterDrawerView({
   onCommentSearchChange,
   onReferenceSearchChange,
 }: FilterDrawerViewProps) {
+  const [presetName, setPresetName] = useState("")
+  const [selectedPreset, setSelectedPreset] = useState("")
+  const [presetNotice, setPresetNotice] = useState("")
+  const [confirmation, setConfirmation] = useState<{ kind: "overwrite" | "delete"; name: string } | null>(null)
+  const presetSelectorRef = useRef<HTMLSelectElement>(null)
+  const confirmationOriginRef = useRef<HTMLButtonElement | null>(null)
+  const focusConfirmationCancel = useCallback((element: HTMLButtonElement | null) => { element?.focus() }, [])
+  const selectedPresetExists = filterPresets.some((preset) => preset.name === selectedPreset)
+  const savePreset = async () => {
+    setPresetNotice("")
+    if (await onPresetSave(presetName)) {
+      setSelectedPreset(presetName.trim())
+      setPresetNotice("Filtro guardado en este navegador.")
+    }
+  }
+  const confirmPreset = async () => {
+    if (confirmation === null) return
+    const origin = document.activeElement
+    setPresetNotice("")
+    const succeeded = confirmation.kind === "overwrite"
+      ? await onPresetSave(confirmation.name, true)
+      : await onPresetDelete(confirmation.name)
+    if (!succeeded) return
+    setPresetNotice(confirmation.kind === "overwrite" ? "Filtro sobrescrito." : "Filtro eliminado.")
+    setConfirmation(null)
+    if (document.activeElement === origin) presetSelectorRef.current?.focus()
+  }
   const categoryTreeRef = useRef<HTMLElement>(null)
   const [payeeQuery, setPayeeQuery] = useState("")
   const [methodQuery, setMethodQuery] = useState("")
@@ -116,6 +144,47 @@ export function FilterDrawerView({
         </header>
 
         <div className={styles.body}>
+          <details className={styles.additionalCriteria}>
+            <summary>Filtros guardados</summary>
+            <p id="filter-presets-help">Solo en este navegador. Guardan todos los criterios, búsquedas y resolución; aplicar sustituye los filtros actuales. Máximo 20 nombres de 80 caracteres y 64 KiB en total.</p>
+            <div className={styles.presetBody}>
+              <form className={styles.presetForm} onSubmit={(event) => { event.preventDefault(); void savePreset() }}>
+                <label className={styles.presetLabel}>Nombre del filtro
+                  <input aria-describedby="filter-presets-help filter-presets-status" disabled={presetBusy} onChange={(event) => setPresetName(event.currentTarget.value)} value={presetName} />
+                </label>
+                <Button disabled={presetBusy} type="submit" variant="secondary">Guardar filtro actual</Button>
+              </form>
+              <label className={styles.presetLabel}>Filtro guardado
+                <select aria-describedby="filter-presets-help" disabled={presetBusy} onChange={(event) => { setSelectedPreset(event.currentTarget.value); setConfirmation(null) }} ref={presetSelectorRef} value={selectedPresetExists ? selectedPreset : ""}>
+                  <option value="">Seleccionar filtro…</option>
+                  {filterPresets.map((preset) => <option key={preset.name} value={preset.name}>{preset.name}</option>)}
+                </select>
+              </label>
+              <div className={styles.presetActions}>
+                <Button disabled={presetBusy || !selectedPresetExists} onClick={async () => {
+                  setPresetNotice("")
+                  if (await onPresetApply(selectedPreset)) setPresetNotice("Filtro aplicado; los criterios no disponibles se han reconciliado con los datos cargados.")
+                }} variant="secondary">Aplicar filtro guardado</Button>
+                <Button disabled={presetBusy || !selectedPresetExists} onClick={(event) => {
+                  confirmationOriginRef.current = event.currentTarget
+                  setConfirmation({ kind: "overwrite", name: selectedPreset })
+                }} variant="ghost">Sobrescribir filtro guardado</Button>
+                <Button disabled={presetBusy || !selectedPresetExists} onClick={(event) => {
+                  confirmationOriginRef.current = event.currentTarget
+                  setConfirmation({ kind: "delete", name: selectedPreset })
+                }} variant="ghost">Eliminar filtro guardado</Button>
+              </div>
+              {confirmation ? <fieldset className={styles.presetConfirmation}>
+                <legend>{confirmation.kind === "overwrite" ? "¿Sobrescribir" : "¿Eliminar"} «{confirmation.name}»?</legend>
+                <p>{confirmation.kind === "overwrite" ? "Sustituirá la copia guardada por los filtros actuales." : "Se eliminará únicamente esta copia local."}</p>
+                <div className={styles.presetActions}>
+                  <Button disabled={presetBusy} onClick={() => void confirmPreset()} variant="secondary">{confirmation.kind === "overwrite" ? "Confirmar sobrescritura" : "Confirmar eliminación"}</Button>
+                  <Button disabled={presetBusy} onClick={() => { setConfirmation(null); confirmationOriginRef.current?.focus() }} ref={focusConfirmationCancel} variant="ghost">Cancelar</Button>
+                </div>
+              </fieldset> : null}
+              <p className={presetError ? styles.amountError : undefined}><output aria-live={presetError ? "assertive" : "polite"} id="filter-presets-status">{presetError ?? presetNotice}</output></p>
+            </div>
+          </details>
           <section className={styles.section}>
             <div className={styles.sectionHeading}>
               <span aria-hidden="true">01</span>
