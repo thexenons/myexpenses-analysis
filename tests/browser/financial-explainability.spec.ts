@@ -156,17 +156,19 @@ test("compares cumulative recorded activity on demand with inspectable endpoints
 test("wraps long filter category names without hiding selection or removal", async ({ page }) => {
   await page.getByRole("button", { name: /Abrir todos los filtros/ }).click();
   const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });
-  const category = drawer.getByRole("group", { name: "Categorías raíz", exact: true }).getByRole("checkbox", { name: "Expense", exact: true });
-  await category.check();
-  await category.evaluate((input) => input.setAttribute("aria-label", "Expense"));
-  const rootLabel = category.locator("..");
+  const category = drawer.getByRole("button", { name: "Seleccionar Expense", exact: true });
+  await category.click();
+  const rootLabel = category;
+  await drawer.getByRole("button", { name: "Desplegar Expense", exact: true }).click();
+  const child = drawer.getByRole("button", { name: "Seleccionar Expense › Food", exact: true });
   const removal = drawer.getByRole("button", { name: "Quitar Expense", exact: true });
   // Change only visible synthetic text: these assertions exercise CSS containment,
   // not category matching, which keeps the fixture's original accessible identity.
   const longLabel = "MantenimientoextraordinariodelhogarSharedHouseholdExpensesWithUniqueIdentifyingSuffix123456789";
-  await rootLabel.locator("span").evaluate((span, text) => { span.textContent = text; }, longLabel);
+  await rootLabel.locator("span").first().evaluate((span, text) => { span.textContent = text; }, longLabel);
+  await child.locator("span").first().evaluate((span, text) => { span.textContent = text; }, longLabel);
   await removal.locator("span").first().evaluate((span, text) => { span.textContent = text; }, longLabel);
-  for (const control of [rootLabel, removal]) {
+  for (const control of [rootLabel, child, removal]) {
     // oxlint-disable-next-line no-await-in-loop -- Each real control has its own text and bounds.
     await control.scrollIntoViewIfNeeded();
     // oxlint-disable-next-line no-await-in-loop -- Compare rendered glyphs, not just element widths.
@@ -183,7 +185,7 @@ test("wraps long filter category names without hiding selection or removal", asy
   await removal.focus();
   await page.keyboard.press("Space");
   await expect(removal).toHaveCount(0);
-  await expect(category).not.toBeChecked();
+  await expect(category).toHaveAttribute("aria-pressed", "false");
 });
 
 test("preserves the component cascade across routes and drawer controls", async ({ page }, testInfo) => {
@@ -2325,10 +2327,11 @@ test("keeps keyboard focus on adjacent filter removals and stable fallbacks", as
   const opener = toolbar.getByRole("button", { name: /Abrir todos los filtros/ });
   await opener.click();
   const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });
-  const selector = drawer.getByLabel("Añadir categoría o subcategoría");
-  await selector.selectOption('["Expense"]');
-  await selector.selectOption('["Expense","Food"]');
-  await selector.selectOption('["Income"]');
+  const selector = drawer.getByRole("region", { name: "Selector de categorías" });
+  await drawer.getByRole("button", { name: "Seleccionar Expense", exact: true }).click();
+  await drawer.getByRole("button", { name: "Desplegar Expense", exact: true }).click();
+  await drawer.getByRole("button", { name: "Seleccionar Expense › Food", exact: true }).click();
+  await drawer.getByRole("button", { name: "Seleccionar Income", exact: true }).click();
   const drawerMiddle = drawer.getByRole("button", { name: "Quitar Expense › Food", exact: true });
   const drawerLast = drawer.getByRole("button", { name: "Quitar Income", exact: true });
   const drawerFirst = drawer.getByRole("button", { name: "Quitar Expense", exact: true });
@@ -2348,9 +2351,9 @@ test("keeps keyboard focus on adjacent filter removals and stable fallbacks", as
   await expect(opener).toBeFocused();
 
   await opener.click();
-  await selector.selectOption('["Expense"]');
-  await selector.selectOption('["Expense","Food"]');
-  await selector.selectOption('["Income"]');
+  await drawer.getByRole("button", { name: "Seleccionar Expense", exact: true }).click();
+  await drawer.getByRole("button", { name: "Seleccionar Expense › Food", exact: true }).click();
+  await drawer.getByRole("button", { name: "Seleccionar Income", exact: true }).click();
   await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
   const globalMiddle = toolbar.getByRole("button", { name: "Quitar filtro Expense › Food", exact: true });
   const globalLast = toolbar.getByRole("button", { name: "Quitar filtro Income", exact: true });
@@ -2376,7 +2379,7 @@ test("keeps keyboard focus on adjacent filter removals and stable fallbacks", as
   await accounts.getByRole("checkbox", { name: /Debt, EUR/ }).check();
   await scope.locator('input[value="realCashFlow"]').check();
   await drawer.getByRole("combobox", { name: "Modo de cuentas" }).selectOption("include");
-  await selector.selectOption('["Expense"]');
+  await drawer.getByRole("button", { name: "Seleccionar Expense", exact: true }).click();
   await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
   const cashChip = toolbar.getByRole("button", { name: "Quitar filtro Cuenta: Cash", exact: true });
   const debtChip = toolbar.getByRole("button", { name: "Quitar filtro Cuenta: Debt", exact: true });

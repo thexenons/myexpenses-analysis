@@ -4,6 +4,7 @@ import { formatCategoryPath } from "../../../utils/format.ts"
 import type {
   AnalyticsScope,
   AnalyticsDataset,
+  CategoriesRegistry,
   FilterState,
   TimeGranularitySetting,
 } from "../../../../domain/analytics/types"
@@ -104,6 +105,14 @@ export function collectFilterDrawerTags(
 export function collectFilterDrawerCategoryPaths(dataset: AnalyticsDataset | null): readonly (readonly string[])[] {
   if (dataset === null) return []
   const paths = new Map<string, readonly string[]>()
+  const collectRegistryPaths = (registry: CategoriesRegistry, parent: readonly string[]) => {
+    for (const [label, entry] of Object.entries(registry)) {
+      const path = [...parent, label]
+      paths.set(JSON.stringify(path), path)
+      if (entry.children) collectRegistryPaths(entry.children, path)
+    }
+  }
+  collectRegistryPaths(dataset.source.categories, [])
   for (const posting of dataset.postings) {
     if (posting.isVoid) continue;
     if (posting.categoryPath.length === 0) paths.set("[]", [])

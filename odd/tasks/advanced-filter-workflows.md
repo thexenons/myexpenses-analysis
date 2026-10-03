@@ -36,7 +36,7 @@ requested every remaining workspace modification committed and pushed.
   Delegated writer: two non-trivial UI surfaces and regression tests.
 - [ ] A04 — Local named filter presets with bounded failure-safe storage and UI.
   Delegated writer: storage/store/UI integration and new tests.
-- [ ] A06 — Replace the flat category picker with an expandable hierarchy in
+- [x] A06 — Replace the flat category picker with an expandable hierarchy in
   the shared drawer, selecting any node and multiple explicit paths. Delegated
   writer: new narrow UI component and integration/tests.
 - [ ] A07 — Add accumulated-flow view to Overview and Cash Flow line charts,
@@ -134,3 +134,23 @@ Order now A03 -> A06 -> A07 -> A04 -> A05; all remain separately reviewable.
   proof, Enter/Space, drawer selector fallback/Escape and serious axe/overflow.
 - Lint/types/diff pass, source stable and cleanup complete. No golden/private
   inputs. A03 commit/native assessment follows; A06/A07/A04/A05 remain pending.
+
+## A03 boundary and A06 proof
+- A03 work-unit `6947bee` assessed medium/under_budget (290 authored lines)
+  against reviewed boundary `4eaa176`; it remains in the pending review slice.
+- A06 hierarchy RED 6 fail / 44 pass -> GREEN 52 UI pass. Restoration RED
+  4 fail / 42 pass -> GREEN 46 store pass. Independent and parent combined
+  four-file UI/store command: 98 pass, zero failed/skipped.
+- Independent isolated synthetic browser: 57 pass, zero failed/skipped across
+  1280/390/320, including multi-path selection, reload, keyboard and focus.
+  Production synthetic build, lint, all three type configurations and diff pass.
+- Parent checked the expanded 320px screenshot and repeated the 98-case command.
+  Evidence: /tmp/category-tree-verify.s3WYlF. No private reference inputs read.
+- Registry descendants without postings and explicit uncategorized selections
+  survive restore without becoming unrestricted. Disclosure and explicit selection
+  remain independent; include/exclude and exact/subtree semantics are unchanged.
+- A06 authored source/test change is 407 lines, justified by restoration regressions;
+  the 400-line planning heuristic does not remove necessary tests or split behavior.
+- Rollback boundary: the CategoryFilterTree component, drawer integration, category
+  preference reconciliation and associated regression tests, without reverting A03.
+- Next: commit A06, assess A03/A06 slice from `4eaa176`, then A07/A04/A05.

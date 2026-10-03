@@ -1,0 +1,60 @@
+.selector {
+  min-width: 0;
+  margin-block: 0.75rem;
+}
+
+.selector:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.row {
+  padding: 0.25rem;
+  gap: 0.25rem;
+}
+
+.selection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.5rem;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.selection > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.selection[aria-pressed="true"] {
+  font-weight: 650;
+  background: var(--paper-deep);
+  border-color: var(--line-dark);
+}
+
+.mark {
+  flex: 0 0 auto;
+}
+
+/* Bound indentation so deeply nested names remain usable on narrow screens. */
+.selector ul ul {
+  margin-left: 0.25rem;
+  padding-left: 0.25rem;
+}
+
+.selector ul ul ul ul ul {
+  margin-left: 0;
+  padding-left: 0;
+  border-left: 0;
+}

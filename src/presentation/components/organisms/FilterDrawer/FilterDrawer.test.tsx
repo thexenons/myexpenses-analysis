@@ -91,7 +91,7 @@ describe("FilterDrawer", () => {
     appStore.setState({ analytics, filterDrawerOpen: true })
     render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
 
-    await user.selectOptions(screen.getByRole("combobox", { name: "Añadir categoría o subcategoría" }), "[]")
+    await user.click(screen.getByRole("button", { name: "Seleccionar Sin categoría" }))
     expect(appStore.getState().filters.categoryPrefixes).toEqual([[]])
     await user.click(screen.getByRole("button", { name: "Quitar Sin categoría" }))
     expect(appStore.getState().filters.categoryPrefixes).toEqual([])
@@ -176,11 +176,11 @@ describe("FilterDrawer", () => {
     Object.assign(analytics.postings[1]!, { payee: "Hidden", payeeSourceId: 2, tags: ["Void only"], currency: "GBP" })
     appStore.setState({ analytics, filterDrawerOpen: true })
     render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
-    expect(screen.getByRole("checkbox", { name: "Active" })).toBeVisible()
-    expect(screen.getByRole("checkbox", { name: "Archived" })).toBeVisible()
+    expect(screen.getByRole("button", { name: "Seleccionar Active" })).toBeVisible()
+    expect(screen.getByRole("button", { name: "Seleccionar Archived" })).toBeVisible()
     expect(screen.getByRole("checkbox", { name: "Current" })).toBeVisible()
     expect(screen.queryByRole("checkbox", { name: "Void only" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("option", { name: "Archived" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Seleccionar Archived" })).toHaveAttribute("aria-pressed", "false")
     await userEvent.setup().click(screen.getByText("Criterios adicionales"))
     expect(screen.getByRole("checkbox", { name: "Visible" })).toBeVisible()
     expect(screen.queryByRole("checkbox", { name: "Hidden" })).not.toBeInTheDocument()
@@ -481,7 +481,7 @@ it("offers accessible include and exclude category modes without an empty restri
   expect(mode).toHaveValue("include")
   await user.selectOptions(mode, "exclude")
   expect(appStore.getState().filters.categoryMode).toBe("exclude")
-  expect(screen.getByText("Sin selección no se limita por categoría.")).toBeVisible()
+  expect(screen.getByText(/Sin selección no se limita por categoría\./)).toBeVisible()
   expect(screen.getByRole("button", { name: "Restablecer" })).toBeDisabled()
   act(() => appStore.getState().actions.setCategoryPrefixes([["Gastos"]]))
   expect(await screen.findByText("1 ruta excluida")).toBeVisible()
@@ -564,7 +564,7 @@ it.each([
   await user.keyboard(key)
   expect(screen.queryByRole("button", { name: `Quitar ${remove}` })).toBeNull()
   const destination = target === null
-    ? screen.getByRole("combobox", { name: "Añadir categoría o subcategoría" })
+    ? screen.getByRole("region", { name: "Selector de categorías" })
     : screen.getByRole("button", { name: `Quitar ${target}` })
   expect(destination).toHaveFocus()
 })
@@ -580,4 +580,51 @@ it("does not steal drawer focus when another control or background reset removes
   expect(search).toHaveFocus()
   act(() => appStore.getState().actions.clearFilters())
   expect(search).toHaveFocus()
+})
+
+it.each([
+  { mode: "include", depth: "subtree", expected: ["food", "groceries", "income", "uncategorized"] },
+  { mode: "include", depth: "exact", expected: ["food", "income", "uncategorized"] },
+  { mode: "exclude", depth: "subtree", expected: ["root"] },
+  { mode: "exclude", depth: "exact", expected: ["root", "groceries"] },
+] as const)("selects multiple hierarchical paths in $mode/$depth without narrowing available nodes", async ({ mode, depth, expected }) => {
+  resetAppStore()
+  const user = userEvent.setup()
+  const analytics = normalizeDataset({
+    accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+    categories: {
+      Expense: { categoryType: "EXPENSE", children: {
+        Food: { categoryType: "EXPENSE", children: { Groceries: { categoryType: "EXPENSE" } } },
+        Unused: { categoryType: "EXPENSE" },
+      } },
+      Income: { categoryType: "INCOME" },
+    },
+    parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0,
+      transactions: [
+        { uuid: "root", category: ["Expense"] },
+        { uuid: "food", category: ["Expense", "Food"] },
+        { uuid: "groceries", category: ["Expense", "Food", "Groceries"] },
+        { uuid: "income", category: ["Income"] },
+        { uuid: "uncategorized", category: ["Expense"] },
+      ].map((transaction) => ({ uuid: transaction.uuid, category: transaction.category, date: "2026-01-02", amount: -1, sourceTransactionUuid: transaction.uuid, sourceStatus: "CLEARED" as const, splitIndex: null, splitCount: null })),
+    }],
+  })
+  Object.assign(analytics.postings.find((posting) => posting.sourceTransactionId === "uncategorized")!, { categoryPath: [] })
+  appStore.setState({ analytics, filterDrawerOpen: true })
+  appStore.getState().actions.patchFilters({ search: "no matching posting", categoryMode: mode, categoryDepth: depth })
+  render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
+  expect(applyFilters(analytics, appStore.getState().filters).postings).toHaveLength(0)
+  expect(screen.queryByRole("button", { name: "Seleccionar Expense › Food" })).toBeNull()
+  await user.click(screen.getByRole("button", { name: "Desplegar Expense" }))
+  expect(screen.getByRole("button", { name: "Seleccionar Expense › Unused" })).toBeVisible()
+  expect(screen.getByRole("button", { name: "Seleccionar Expense" })).toHaveAttribute("aria-pressed", "false")
+  await user.click(screen.getByRole("button", { name: "Seleccionar Expense › Food" }))
+  await user.click(screen.getByRole("button", { name: "Desplegar Expense › Food" }))
+  expect(screen.getByRole("button", { name: "Seleccionar Expense › Food › Groceries" })).toHaveAttribute("aria-pressed", "false")
+  await user.click(screen.getByRole("button", { name: "Seleccionar Income" }))
+  await user.click(screen.getByRole("button", { name: "Seleccionar Sin categoría" }))
+  expect(appStore.getState().filters.categoryPrefixes).toEqual([["Expense", "Food"], ["Income"], []])
+  expect(screen.getByRole("button", { name: "Seleccionar Expense › Food" })).toHaveAttribute("aria-pressed", "true")
+  await user.clear(screen.getByRole("searchbox", { name: "Buscar en movimientos" }))
+  expect(applyFilters(analytics, appStore.getState().filters).postings.map((posting) => posting.sourceTransactionId)).toEqual(expected)
 })

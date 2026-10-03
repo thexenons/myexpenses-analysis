@@ -4,7 +4,6 @@ import type {
   LinkedFilter,
 } from "../../../../domain/analytics/types"
 import { useRef, useState } from "react"
-import { categoryPathsEqual } from "../../../../domain/analytics/filters.ts"
 import { formatCategoryPath } from "../../../utils/format.ts"
 import { Button } from "../../atoms/Button"
 import { Icon } from "../../atoms/Icon"
@@ -18,6 +17,7 @@ import { GranularityControl } from "../GranularityControl/index.ts"
 import { PeriodSelector } from "../PeriodSelector/index.ts"
 import styles from "./FilterDrawer.module.css"
 import type { FilterDrawerViewProps } from "./FilterDrawer.types"
+import { CategoryFilterTree } from "./components/CategoryFilterTree/CategoryFilterTree.tsx"
 
 const SCOPE_OPTIONS: readonly SegmentedControlOption<AnalyticsScope>[] = [
   { value: "realCashFlow", label: "Flujo real", shortLabel: "Real" },
@@ -77,9 +77,8 @@ export function FilterDrawerView({
   onAmountInput,
   onCommentSearchChange,
   onReferenceSearchChange,
-  rootCategories,
 }: FilterDrawerViewProps) {
-  const categorySelectorRef = useRef<HTMLSelectElement>(null)
+  const categoryTreeRef = useRef<HTMLElement>(null)
   const [payeeQuery, setPayeeQuery] = useState("")
   const [methodQuery, setMethodQuery] = useState("")
   return (
@@ -166,7 +165,7 @@ export function FilterDrawerView({
               value={filters.search}
             />
             <fieldset className={styles.choiceGroup}>
-              <legend>Categorías raíz</legend>
+              <legend>Categorías</legend>
               <p>
                 {filters.categoryPrefixes.length === 0
                   ? "Todas las categorías incluidas"
@@ -176,43 +175,15 @@ export function FilterDrawerView({
               </p>
               <label className={styles.pathSelector}>
                 Modo de categorías
-                <select value={filters.categoryMode ?? "include"} onChange={(event) => onCategoryModeChange(event.target.value === "exclude" ? "exclude" : "include")}>
+                <select aria-describedby="category-mode-help" value={filters.categoryMode ?? "include"} onChange={(event) => onCategoryModeChange(event.target.value === "exclude" ? "exclude" : "include")}>
                   <option value="include">Incluir seleccionadas</option>
                   <option value="exclude">Excluir seleccionadas</option>
                 </select>
               </label>
-              <p>Sin selección no se limita por categoría.</p>
-              <p>Excluir conserva las demás categorías; también respeta el nivel y la contrapartida elegidos.</p>
-              <div className={styles.compactChoices}>
-                {rootCategories.map((category) => (
-                  <label className={styles.choice} key={category}>
-                    <input
-                      checked={filters.categoryPrefixes.some((path) =>
-                        categoryPathsEqual(path, [category]),
-                      )}
-                      onChange={() => onCategoryToggle([category])}
-                      type="checkbox"
-                    />
-                    <span>{category}</span>
-                  </label>
-                ))}
-              </div>
-              <label className={styles.pathSelector}>
-                Añadir categoría o subcategoría
-                <select
-                  ref={categorySelectorRef}
-                  value=""
-                  onChange={(event) => {
-                    const path = categoryPaths.find((candidate) => JSON.stringify(candidate) === event.target.value)
-                    if (path !== undefined) onCategoryToggle(path)
-                  }}
-                >
-                  <option value="">Selecciona una ruta…</option>
-                  {categoryPaths.filter((path) => !filters.categoryPrefixes.some((selected) => categoryPathsEqual(selected, path))).map((path) => (
-                    <option key={JSON.stringify(path)} value={JSON.stringify(path)}>{formatCategoryPath(path)}</option>
-                  ))}
-                </select>
-              </label>
+              <p id="category-mode-help">Sin selección no se limita por categoría. Excluir conserva las demás; cada botón indica solo su selección explícita.</p>
+              <p>Con subcategorías, una ruta seleccionada abarca sus descendientes. Desplegar no selecciona.</p>
+              <CategoryFilterTree paths={categoryPaths} selectedPaths={filters.categoryPrefixes}
+                onToggle={onCategoryToggle} focusRef={categoryTreeRef} />
               <SegmentedControl
                 label="Nivel de categoría"
                 onChange={onCategoryDepthChange}
@@ -237,7 +208,7 @@ export function FilterDrawerView({
                             const item = event.currentTarget.parentElement
                             const destination = item?.nextElementSibling?.querySelector<HTMLButtonElement>("button")
                               ?? item?.previousElementSibling?.querySelector<HTMLButtonElement>("button")
-                              ?? categorySelectorRef.current
+                              ?? categoryTreeRef.current
                             destination?.focus()
                           }
                           onCategoryToggle(path)

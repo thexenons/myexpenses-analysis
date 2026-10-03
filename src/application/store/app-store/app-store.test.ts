@@ -1024,3 +1024,30 @@ it.each([undefined, "invalid"])("restores legacy tag mode %s as include", async 
   await store.getState().actions.unlock("synthetic");
   expect(store.getState().filters).toMatchObject({ tagMode: "include", tags: ["Tagged"] });
 });
+
+it.each([
+  { path: ["Reajuste*", "Unused"], mode: "include", count: 0 },
+  { path: [], mode: "include", count: 0 },
+  { path: ["Reajuste*", "Unused"], mode: "exclude", count: 1 },
+  { path: [], mode: "exclude", count: 1 },
+] as const)("restores explicit unused category $path in $mode mode without broadening results", async ({ path, mode, count }) => {
+  window.localStorage.clear();
+  const fixture = datasetFixture();
+  const source: BackupDatasetV1 = { ...fixture, categories: [
+    ...fixture.categories,
+    { ...fixture.categories[0]!, uuid: "unused", sourceId: 2, name: "Unused", parentUuid: "neutral", path: ["Reajuste*", "Unused"] },
+  ] };
+  const repository: DatasetRepository = { load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(source) };
+  const first = createSecureStore(repository);
+  await first.getState().actions.unlock("synthetic");
+  first.getState().actions.patchFilters({ categoryMode: mode, categoryPrefixes: [path] });
+  expect(applyFilters(first.getState().analytics!, first.getState().filters).postings).toHaveLength(count);
+  const saved = JSON.parse(window.localStorage.getItem(FILTER_PREFERENCES_NAME)!);
+  saved.filters.categoryPrefixes.push(["Reajuste*", "Missing"], ["Unknown root"]);
+  window.localStorage.setItem(FILTER_PREFERENCES_NAME, JSON.stringify(saved));
+  const restored = createSecureStore(repository);
+  await restored.getState().actions.unlock("synthetic");
+  expect(restored.getState().filters.categoryPrefixes).toEqual([path]);
+  expect(restored.getState().filters.categoryMode).toBe(mode);
+  expect(applyFilters(restored.getState().analytics!, restored.getState().filters).postings).toHaveLength(count);
+});

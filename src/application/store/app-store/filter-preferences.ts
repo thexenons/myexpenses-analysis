@@ -1,6 +1,6 @@
 import { accountMatchesScope, restoreFilterState } from "../../../domain/analytics/filters.ts";
 import { payeeIdentityKey, paymentMethodIdentityKey } from "../../../domain/analytics/identity-keys.ts";
-import type { AnalyticsDataset, FilterState } from "../../../domain/analytics/types.ts";
+import type { AnalyticsDataset, CategoriesRegistry, FilterState } from "../../../domain/analytics/types.ts";
 import type { AppStoreStorage } from "./app-store.types.ts";
 
 export const FILTER_PREFERENCES_STORAGE_NAME = "myexpenses-analysis:filters:v1";
@@ -140,7 +140,15 @@ export function reconcileSavedFilters(saved: SavedFilterPreferences, analytics: 
   // reached from exclusion. The central predicate applies the current scope.
   const accountIds = new Set(analytics.accounts.map((account) => account.id));
   const endpointIds = new Set(analytics.accounts.filter((account) => accountMatchesScope(account, "all")).map((account) => account.id));
-  const categoryPaths = new Set<string>();
+  const categoryPaths = new Set<string>(["[]"]);
+  const collectRegistryPaths = (registry: CategoriesRegistry, parent: readonly string[]) => {
+    for (const [label, entry] of Object.entries(registry)) {
+      const path = [...parent, label];
+      categoryPaths.add(JSON.stringify(path));
+      if (entry.children) collectRegistryPaths(entry.children, path);
+    }
+  };
+  collectRegistryPaths(analytics.source.categories, []);
   const tags = new Set<string>();
   const currencies = new Set<string>();
   const payees = new Set<string>();

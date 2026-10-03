@@ -87,7 +87,8 @@ test("filter persistence restores advanced controls and a fixture-backed result"
   const drawer = await openDrawer(page);
   await drawer.getByRole("searchbox", { name: "Buscar en movimientos" }).fill("Synthetic food");
   await drawer.getByRole("group", { name: "Fecha utilizada" }).getByRole("radio", { name: "Valor" }).check();
-  await drawer.getByLabel("Añadir categoría o subcategoría").selectOption('["Expense","Food"]');
+  await drawer.getByRole("button", { name: "Desplegar Expense", exact: true }).click();
+  await drawer.getByRole("button", { name: "Seleccionar Expense › Food", exact: true }).click();
   await drawer.getByText("Criterios adicionales").click();
   await drawer.getByRole("group", { name: "Moneda del movimiento" }).getByRole("checkbox", { name: "EUR" }).check();
   await drawer.getByRole("group", { name: "Beneficiarios" }).getByRole("checkbox", { name: "Child payee (ID 1)" }).check();
@@ -231,7 +232,8 @@ test("category exclusion persists its mode and keeps all other categories", asyn
   const drawer = await openDrawer(page);
   const mode = drawer.getByRole("combobox", { name: "Modo de categorías" });
   await expect(mode).toHaveValue("include");
-  await drawer.getByLabel("Añadir categoría o subcategoría").selectOption('["Expense","Food"]');
+  await drawer.getByRole("button", { name: "Desplegar Expense", exact: true }).click();
+  await drawer.getByRole("button", { name: "Seleccionar Expense › Food", exact: true }).click();
   await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
   await expectTransactions(page, 1);
 
@@ -305,6 +307,46 @@ test("owning account exclusion persists IDs across scopes and can exclude every 
   for (const account of await accounts.all()) await account.check();
   await allExcluded.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
   await expectTransactions(page, 0);
+});
+
+test("hierarchical category selection persists multiple explicit paths and modes across pages", async ({ page }) => {
+  const drawer = await openDrawer(page);
+  const root = drawer.getByRole("button", { name: "Seleccionar Expense", exact: true });
+  await expect(root).toHaveAttribute("aria-pressed", "false");
+  await drawer.getByRole("button", { name: "Desplegar Expense", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(root).toHaveAttribute("aria-pressed", "false");
+  const child = drawer.getByRole("button", { name: "Seleccionar Expense › Food", exact: true });
+  await child.focus();
+  await page.keyboard.press("Space");
+  await expect(child).toHaveAttribute("aria-pressed", "true");
+  await expect(root).toHaveAttribute("aria-pressed", "false");
+  await root.click();
+  await drawer.getByRole("button", { name: "Seleccionar Income", exact: true }).click();
+  await drawer.getByRole("button", { name: "Seleccionar Sin categoría", exact: true }).click();
+  await drawer.getByRole("group", { name: "Nivel de categoría" })
+    .getByRole("radio", { name: "Solo ruta exacta" }).check();
+  await drawer.getByRole("combobox", { name: "Modo de categorías" }).selectOption("exclude");
+  await expect(child).toHaveAttribute("aria-pressed", "true");
+  await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await page.getByRole("link", { name: /^(Transacciones|Movimientos)$/ }).click();
+  await expect(page.getByRole("button", { name: "Quitar filtro Excluir: Expense › Food", exact: true })).toBeVisible();
+  const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), PREFERENCE_KEY);
+  expect(saved.filters).toMatchObject({
+    categoryMode: "exclude", categoryDepth: "exact",
+    categoryPrefixes: [["Expense", "Food"], ["Expense"], ["Income"], []],
+  });
+  await page.reload();
+  await unlock(page);
+  const restored = await openDrawer(page);
+  await expect(restored.getByRole("combobox", { name: "Modo de categorías" })).toHaveValue("exclude");
+  await expect(restored.getByRole("radio", { name: "Solo ruta exacta" })).toBeChecked();
+  await expect(restored.getByRole("button", { name: "Seleccionar Expense", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(restored.getByRole("button", { name: "Seleccionar Sin categoría", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await restored.getByRole("button", { name: "Desplegar Expense", exact: true }).click();
+  await expect(restored.getByRole("button", { name: "Seleccionar Expense › Food", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await restored.getByRole("combobox", { name: "Modo de categorías" }).selectOption("include");
+  await expect(restored.getByRole("button", { name: "Seleccionar Expense › Food", exact: true })).toHaveAttribute("aria-pressed", "true");
 });
 
 
