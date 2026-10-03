@@ -43,6 +43,20 @@ test("child admission rejects unsafe or mismatched counts, metrics and checksums
   }
 });
 
+for (const [field, expected] of Object.entries({ accountCount: 4, categoryCount: 4, budgetCount: 1 })) {
+  test(`child admission requires exactly ${expected} for ${field}`, async () => {
+    const { validateChildResult } = await load();
+    const good = { role: "import", count: 2, postingCount: 2, accountCount: 4, categoryCount: 4,
+      budgetCount: 1, amountHomeMinor: 100, checksum: "a".repeat(64), importMs: 1,
+      peakRssBytes: 1024, outputBytes: 100, pid: 123 };
+    assert.deepEqual(validateChildResult(good, "import", 2), good);
+    for (const wrong of [expected + 1, expected + 2]) {
+      assert.throws(() => validateChildResult({ ...good, [field]: wrong }, "import", 2),
+        /fixture entity counts/);
+    }
+  });
+}
+
 test("existing output is never overwritten or measured", async () => {
   const { measure, parseArguments } = await load();
   const directory = await mkdtemp(join(tmpdir(), "import-memory-test-"));
@@ -85,6 +99,9 @@ test("tiny synthetic ZIP uses fresh children, exact counts and repeatable financ
     assert.equal(new Set([...run.warmups, ...run.samples].map((sample) => sample.pid)).size, 3);
     for (const sample of [...run.warmups, ...run.samples]) {
       assert.equal(sample.postingCount, 2);
+      assert.equal(sample.accountCount, 4);
+      assert.equal(sample.categoryCount, 4);
+      assert.equal(sample.budgetCount, 1);
       assert.equal(sample.amountHomeMinor, 100);
       assert.ok(sample.peakRssBytes > 0);
       assert.ok(sample.roundTripMs >= sample.importMs);

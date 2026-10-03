@@ -173,3 +173,32 @@ and non-force main delivery under the selected strategy. PR creation is not requ
   Rollback boundary: two adapter CASE guards/tests plus opt-in harness/docs;
   no schema/index, production caps, dependency or financial behavior changes.
   F05 work-unit commit, native assessment and main delivery remain pending.
+
+- F05 commit `f2de5dc` (+572/-6, coherent measurement/optimization unit)
+  assessed medium/due by slice budget. User granted; consolidated native review
+  approved with one non-blocking harness admission warning R3-001. Exact ACK
+  burned `review-472dac9b2d0a532a`; non-force main push and remote readback
+  confirmed `f2de5dc`. Reviewed boundary now `f2de5dc`.
+- [x] F05.1 — Enforce documented fixed fixture entity counts during admission.
+  Route: delegated writer, harness and regression test; native informational
+  R3-001 identified a missing assertion, not an invalid prior measurement.
+  Acceptance: reject account/category/budget counts other than 4/4/1 with
+  deterministic RED/GREEN; preserve existing posting/sum/checksum behavior.
+  Focused tests, lint/types, same full synthetic matrix, independent verification.
+  This is a separate work unit; do not reopen acknowledged F05 review.
+
+- F05.1 verified: RED 8 pass / 3 fail, GREEN 11 pass; independent adapter +
+  harness 16 pass and parent harness 11 pass. Lint/project/performance types and
+  diff checks pass. Full same synthetic matrix exit 0; all 12 imports exactly
+  match F05 optimized checksums/counts/sums/bytes, 15 distinct child PIDs, cleanup
+  complete. Prior unchanged Node 340 pass / 3 skips, UI 502 pass and deployment
+  1 pass were not rerun for this opt-in assertion-only follow-up.
+  Native assessment and work-unit delivery are recorded in the final closure.
+
+## Completion scope
+All authorized local implementation and measurement tasks are complete. No
+production memory-cap change, private backup access, deployment or unrelated
+upgrade occurred. Hosted scheduled jobs, real production configuration, manual
+assistive-technology/physical-device checks and unmeasured complex backup shapes
+remain explicit verification limits, not claimed results. User registry edits
+are preserved and excluded from delivery.

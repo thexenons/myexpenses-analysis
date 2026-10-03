@@ -72,6 +72,9 @@ export function validateChildResult(value: unknown, role: Request["role"], count
   }
   if (role === "import" && (row.postingCount !== count || row.amountHomeMinor !== Math.floor(count / 2) * 100 - count % 2 * 100 ||
       typeof row.checksum !== "string" || !/^[a-f0-9]{64}$/u.test(row.checksum))) throw new Error("Invalid synthetic count or financial checksum");
+  if (role === "import" && (row.accountCount !== 4 || row.categoryCount !== 4 || row.budgetCount !== 1)) {
+    throw new Error("Invalid synthetic fixture entity counts");
+  }
   if (role === "fixture" && (Number(row.databaseBytes) > Number(row.expandedBytes) ||
       numbers.some((key) => Number(row[key]) > limits[key as keyof typeof limits]))) throw new Error("Synthetic fixture exceeds existing archive limits");
   return value as ChildResult;
