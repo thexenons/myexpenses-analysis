@@ -248,6 +248,8 @@ export interface FilterState {
   readonly dateRange: DateRangeFilter;
   /** Empty means every account allowed by scope. */
   readonly accountIds: readonly string[];
+  /** Owning accounts only; an empty selection imposes no account restriction. */
+  readonly accountMode?: "include" | "exclude";
   /** Directional endpoints of a payment; independent from the displayed account scope. */
   readonly originAccountIds?: readonly string[];
   readonly destinationAccountIds?: readonly string[];

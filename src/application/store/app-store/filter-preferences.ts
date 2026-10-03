@@ -46,6 +46,7 @@ function savedFilterFields(filters: FilterState): FilterState {
     periodMode: filters.periodMode,
     dateRange: { ...filters.dateRange },
     accountIds: filters.accountIds.slice(),
+    accountMode: filters.accountMode ?? "include",
     originAccountIds: filters.originAccountIds?.slice() ?? [],
     destinationAccountIds: filters.destinationAccountIds?.slice() ?? [],
     dateBasis: filters.dateBasis,
@@ -134,7 +135,9 @@ function isNumericIdentityKey(key: string): boolean {
 /** Reconcile against the full loaded dataset, never options narrowed by another filter. */
 export function reconcileSavedFilters(saved: SavedFilterPreferences, analytics: AnalyticsDataset): FilterState {
   const filters = saved.filters;
-  const accountIds = new Set(analytics.accounts.filter((account) => accountMatchesScope(account, filters.scope)).map((account) => account.id));
+  // Preserve valid selections independently of scope, including include mode
+  // reached from exclusion. The central predicate applies the current scope.
+  const accountIds = new Set(analytics.accounts.map((account) => account.id));
   const endpointIds = new Set(analytics.accounts.filter((account) => accountMatchesScope(account, "all")).map((account) => account.id));
   const categoryPaths = new Set<string>();
   const tags = new Set<string>();

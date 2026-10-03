@@ -56,6 +56,7 @@ export function createDefaultFilterState(): FilterState {
     periodMode: "all",
     dateRange: { from: null, to: null },
     accountIds: [],
+    accountMode: "include",
     originAccountIds: [],
     destinationAccountIds: [],
     dateBasis: "operation",
@@ -231,6 +232,7 @@ export function restoreFilterState(value: unknown): FilterState {
       : "all",
     dateRange: { from, to },
     accountIds: restoreStringList(value.accountIds),
+    accountMode: value.accountMode === "exclude" ? "exclude" : "include",
     originAccountIds: restoreStringList(value.originAccountIds),
     destinationAccountIds: restoreStringList(value.destinationAccountIds),
     dateBasis: value.dateBasis === "value" ? "value" : "operation",
@@ -320,6 +322,9 @@ function snapshotFilters(filters: FilterState): FilterState {
   }
 
   validateStringList(filters.accountIds, "accountIds");
+  if (filters.accountMode !== undefined && filters.accountMode !== "include" && filters.accountMode !== "exclude") {
+    throw new Error("Unknown account mode");
+  }
   validateStringList(filters.originAccountIds ?? [], "originAccountIds");
   validateStringList(filters.destinationAccountIds ?? [], "destinationAccountIds");
   if (filters.dateBasis !== undefined && filters.dateBasis !== "operation" && filters.dateBasis !== "value") {
@@ -373,6 +378,7 @@ function snapshotFilters(filters: FilterState): FilterState {
     periodMode: filters.periodMode,
     dateRange: { from, to },
     accountIds: [...new Set(filters.accountIds)],
+    accountMode: filters.accountMode ?? "include",
     originAccountIds: [...new Set(filters.originAccountIds ?? [])],
     destinationAccountIds: [...new Set(filters.destinationAccountIds ?? [])],
     dateBasis: filters.dateBasis ?? "operation",
@@ -626,7 +632,9 @@ export function applyFilters(
   const accounts = dataset.accounts.filter(
     (account) =>
       accountMatchesScope(account, filters.scope) &&
-      (requestedAccountIds.size === 0 || requestedAccountIds.has(account.id)),
+      (requestedAccountIds.size === 0 || (filters.accountMode === "exclude"
+        ? !requestedAccountIds.has(account.id)
+        : requestedAccountIds.has(account.id))),
   );
   const matcher = createMatcherState(accounts, filters);
   const postings: NormalizedPosting[] = [];

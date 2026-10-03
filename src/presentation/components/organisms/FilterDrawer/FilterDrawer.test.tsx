@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { appStore } from "../../../../composition/app-store.ts"
-import { createDefaultFilterState } from "../../../../domain/analytics/filters.ts"
+import { applyFilters, createDefaultFilterState } from "../../../../domain/analytics/filters.ts"
 import { normalizeDataset } from "../../../../domain/analytics/normalize.ts"
 import { AppStoreProvider } from "../../../providers/AppStoreProvider/index.ts"
 import { FilterDrawer } from "./FilterDrawer"
@@ -487,4 +487,38 @@ it("offers accessible include and exclude category modes without an empty restri
   expect(await screen.findByText("1 ruta excluida")).toBeVisible()
   await user.selectOptions(mode, "include")
   expect(appStore.getState().filters.categoryMode).toBe("include")
+})
+
+it("can exclude every owning account and retains selected IDs when modes change", async () => {
+  resetAppStore()
+  const user = userEvent.setup()
+  const analytics = normalizeDataset({
+    accounts: { version: 2, accounts: { cash: { label: "Caja", type: "DEFAULT" } } },
+    categories: {},
+    parsedData: [{ uuid: "cash", label: "Caja", currency: "EUR", openingBalance: 10, transactions: [] }],
+  })
+  appStore.setState({ analytics, filterDrawerOpen: true })
+  render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
+  const mode = screen.getByRole("combobox", { name: "Modo de cuentas" })
+  expect(mode).toHaveValue("include")
+  const cash = screen.getByRole("checkbox", { name: "Caja, EUR, Efectivo" })
+  expect(cash).toBeChecked()
+  expect(cash).toBeDisabled()
+  await user.selectOptions(mode, "exclude")
+  expect(cash).not.toBeChecked()
+  expect(cash).toBeEnabled()
+  expect(screen.getByRole("button", { name: "Restablecer" })).toBeDisabled()
+  expect(mode).toHaveAccessibleDescription(/Sin selección se incluyen todas las cuentas del ámbito/)
+  await user.click(cash)
+  expect(appStore.getState().filters.accountIds).toEqual(["cash"])
+  expect(cash).toBeChecked()
+  expect(cash).toBeEnabled()
+  expect(applyFilters(analytics, appStore.getState().filters).accounts).toEqual([])
+  await user.selectOptions(mode, "include")
+  expect(appStore.getState().filters.accountIds).toEqual(["cash"])
+  await user.selectOptions(mode, "exclude")
+  expect(appStore.getState().filters.accountIds).toEqual(["cash"])
+  await user.click(cash)
+  expect(appStore.getState().filters.accountIds).toEqual([])
+  expect(applyFilters(analytics, appStore.getState().filters).accounts).toHaveLength(1)
 })

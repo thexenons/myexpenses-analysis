@@ -21,7 +21,7 @@ export function useGlobalFilters(): GlobalFiltersViewProps {
   const identityLabel = (key: string, kind: "payee" | "method") => (kind === "payee" ? payeeOptions : methodOptions).find((option) => option.key === key)?.label ?? identityOptionLabel(key, undefined, kind)
   for (const [field, prefix] of [["accountIds", "Cuenta"], ["originAccountIds", "Origen"], ["destinationAccountIds", "Destino"]] as const) {
     for (const id of filters[field] ?? []) {
-      activeSelections.push({ id: `${field}:${id}`, label: `${prefix}: ${accountName(id)}`, onRemove: () => patchFilters({ [field]: (filters[field] ?? []).filter((candidate) => candidate !== id) }) })
+      activeSelections.push({ id: `${field}:${id}`, label: `${field === "accountIds" && filters.accountMode === "exclude" ? "Excluir cuenta" : prefix}: ${accountName(id)}`, onRemove: () => patchFilters({ [field]: (filters[field] ?? []).filter((candidate) => candidate !== id) }) })
     }
   }
   for (const path of filters.categoryPrefixes) {

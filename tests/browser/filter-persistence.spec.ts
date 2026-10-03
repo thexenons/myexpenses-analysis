@@ -265,3 +265,70 @@ test("category exclusion persists its mode and keeps all other categories", asyn
   await emptySelection.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
   await expectTransactions(page, 1);
 });
+
+test("owning account exclusion persists IDs across scopes and can exclude every account", async ({ page }) => {
+  await page.getByRole("link", { name: /^(Transacciones|Movimientos)$/ }).click();
+  const drawer = await openDrawer(page);
+  await drawer.getByRole("searchbox", { name: "Buscar en movimientos" }).fill("Synthetic food");
+  await drawer.getByRole("combobox", { name: "Modo de cuentas" }).selectOption("exclude");
+  const cash = drawer.getByRole("group", { name: "Cuentas", exact: true })
+    .getByRole("checkbox", { name: /Cash, EUR/ });
+  await expect(cash).not.toBeChecked();
+  await cash.check();
+  await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expectTransactions(page, 0);
+  await expect(page.getByRole("button", { name: "Quitar filtro Excluir cuenta: Cash" })).toBeVisible();
+  const narrowed = await openDrawer(page);
+  await narrowed.getByRole("group", { name: "Ámbito de las estadísticas" })
+    .locator('input[value="debtsOnly"]').check();
+  const persisted = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), PREFERENCE_KEY);
+  expect(persisted).toMatchObject({ version: 1, filters: { accountMode: "exclude", accountIds: [CASH_ID] } });
+  await narrowed.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await page.reload();
+  await unlock(page);
+  const restored = await openDrawer(page);
+  await expect(restored.getByRole("combobox", { name: "Modo de cuentas" })).toHaveValue("exclude");
+  await restored.getByRole("group", { name: "Ámbito de las estadísticas" })
+    .locator('input[value="realCashFlow"]').check();
+  const restoredCash = restored.getByRole("group", { name: "Cuentas", exact: true })
+    .getByRole("checkbox", { name: /Cash, EUR/ });
+  await expect(restoredCash).toBeChecked();
+  await restored.getByRole("combobox", { name: "Modo de cuentas" }).selectOption("include");
+  await expect(restoredCash).toBeChecked();
+  await restored.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expectTransactions(page, 1);
+  const allExcluded = await openDrawer(page);
+  await allExcluded.getByRole("searchbox", { name: "Buscar en movimientos" }).fill("");
+  await allExcluded.getByRole("combobox", { name: "Modo de cuentas" }).selectOption("exclude");
+  const accounts = allExcluded.getByRole("group", { name: "Cuentas", exact: true }).getByRole("checkbox");
+  // oxlint-disable-next-line no-await-in-loop -- Each account selection must settle before selecting the next visible account.
+  for (const account of await accounts.all()) await account.check();
+  await allExcluded.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expectTransactions(page, 0);
+});
+
+
+test("off-scope owning inclusion remains empty after reloading a mode transition", async ({ page }) => {
+  await page.getByRole("link", { name: /^(Transacciones|Movimientos)$/ }).click();
+  const drawer = await openDrawer(page);
+  const scope = drawer.getByRole("group", { name: "Ámbito de las estadísticas" });
+  await scope.locator('input[value="debtsOnly"]').check();
+  await drawer.getByRole("combobox", { name: "Modo de cuentas" }).selectOption("exclude");
+  await drawer.getByRole("group", { name: "Cuentas", exact: true })
+    .getByRole("checkbox", { name: /Debt, EUR/ }).check();
+  await scope.locator('input[value="realCashFlow"]').check();
+  await drawer.getByRole("combobox", { name: "Modo de cuentas" }).selectOption("include");
+  await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expectTransactions(page, 0);
+  const before = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), PREFERENCE_KEY);
+  expect(before.filters).toMatchObject({ scope: "realCashFlow", accountMode: "include", accountIds: [DEBT_ID] });
+  await page.reload();
+  await unlock(page);
+  await expectTransactions(page, 0);
+  const restored = await openDrawer(page);
+  await expect(restored.getByRole("combobox", { name: "Modo de cuentas" })).toHaveValue("include");
+  await expect(restored.getByRole("group", { name: "Ámbito de las estadísticas" })
+    .locator('input[value="realCashFlow"]')).toBeChecked();
+  const after = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), PREFERENCE_KEY);
+  expect(after.filters.accountIds).toEqual([DEBT_ID]);
+});

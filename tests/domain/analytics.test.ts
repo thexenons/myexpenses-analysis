@@ -1028,3 +1028,63 @@ test("category mode restores include for missing or invalid legacy values", () =
   }
   assert.equal(restoreFilterState({ categoryMode: "exclude" }).categoryMode, "exclude");
 });
+
+test("account exclusion complements one, multiple, all and empty owning selections", () => {
+  const dataset = normalizeDataset(fixtureSource());
+  const filter = (accountIds: readonly string[], patch: Partial<FilterState> = {}) =>
+    applyFilters(dataset, { ...createDefaultFilterState(), accountMode: "exclude", accountIds, ...patch });
+  for (const ids of [["cash"], ["cash", "gbp"], ["cash", "debt", "gbp"], []]) {
+    const expected = dataset.accounts.filter((account) => !ids.includes(account.id));
+    const filtered = filter(ids);
+    assert.deepEqual(filtered.accounts.map((account) => account.id), expected.map((account) => account.id));
+    assert.deepEqual(filtered.postings, dataset.postings.filter((posting) => !ids.includes(posting.accountId)));
+  }
+  const none = filter(["cash", "debt", "gbp"]);
+  assert.equal(none.periodOpeningBalanceEurMinor, 0);
+  assert.equal(none.periodClosingBalanceEurMinor, 0);
+  assert.ok(none.periodClosingEurMinorByAccountId);
+  assert.deepEqual(Object.keys(none.periodClosingEurMinorByAccountId), []);
+  assert.deepEqual(filter(["cash"], { scope: "debtsOnly" }).accounts.map((account) => account.id), ["debt"]);
+  assert.deepEqual(filter(["debt"], { scope: "realCashFlow" }).accounts.map((account) => account.id), ["cash", "gbp"]);
+  assert.deepEqual(filter([], { scope: "realCashFlow" }).accounts.map((account) => account.id), ["cash", "gbp"]);
+});
+
+test("account exclusion computes balances over the effective account complement", () => {
+  const dataset = normalizeDataset(fixtureSource());
+  const filtered = applyFilters(dataset, {
+    ...createDefaultFilterState(), accountMode: "exclude", accountIds: ["cash"],
+    dateRange: { from: "2024-01-05", to: "2024-01-10" },
+  });
+  assert.deepEqual(Object.keys(filtered.periodOpeningEurMinorByAccountId), ["debt", "gbp"]);
+  assert.equal(filtered.periodOpeningEurMinorByAccountId.debt, 2_000);
+  assert.ok(filtered.periodClosingEurMinorByAccountId);
+  assert.equal(filtered.periodClosingEurMinorByAccountId.debt, 3_000);
+  assert.equal(filtered.periodOpeningBalanceEurMinor, 2_000);
+  assert.equal(filtered.periodClosingBalanceEurMinor, 3_126);
+});
+
+test("account exclusion leaves transfer origin and destination meanings unchanged", () => {
+  const initial = normalizeDataset(fixtureSource());
+  const base = initial.postings[0]!;
+  const dataset = { ...initial, postings: [
+    { ...base, id: "out", accountId: "cash", amountEurMinor: -500, amountNativeMinor: -500, linked: true, transferPeerPostingId: "in" },
+    { ...base, id: "in", accountId: "debt", amountEurMinor: 500, amountNativeMinor: 500, linked: true, transferPeerPostingId: "out" },
+  ] };
+  for (const endpoint of [{ originAccountIds: ["cash"] }, { destinationAccountIds: ["debt"] }]) {
+    const filtered = applyFilters(dataset, {
+      ...createDefaultFilterState(), accountMode: "exclude", accountIds: ["cash"], ...endpoint,
+    });
+    assert.deepEqual(filtered.postings.map((posting) => posting.id), ["in"]);
+  }
+});
+
+test("account mode defaults and restores legacy values as include", () => {
+  assert.equal(createDefaultFilterState().accountMode, "include");
+  for (const accountMode of [undefined, null, "invalid", 1]) {
+    assert.equal(restoreFilterState({ accountMode, accountIds: ["cash"] }).accountMode, "include");
+  }
+  assert.equal(restoreFilterState({ accountMode: "exclude" }).accountMode, "exclude");
+  const dataset = normalizeDataset(fixtureSource());
+  assert.deepEqual(applyFilters(dataset, { ...createDefaultFilterState(), accountMode: undefined, accountIds: ["cash"] }).accounts.map((account) => account.id), ["cash"]);
+  assert.throws(() => applyFilters(dataset, { ...createDefaultFilterState(), accountMode: "invalid" as FilterState["accountMode"] }), /account.*mode/i);
+});

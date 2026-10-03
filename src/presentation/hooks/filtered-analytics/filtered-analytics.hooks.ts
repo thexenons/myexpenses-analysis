@@ -42,6 +42,7 @@ export function useFilteredAnalytics() {
   const deferredFilters = useMemo(
     () => ({
       accountIds: filters.accountIds,
+      accountMode: filters.accountMode,
       originAccountIds: filters.originAccountIds,
       destinationAccountIds: filters.destinationAccountIds,
       dateBasis: filters.dateBasis,
@@ -70,6 +71,7 @@ export function useFilteredAnalytics() {
       deferredCommentSearch,
       deferredReferenceSearch,
       filters.accountIds,
+      filters.accountMode,
       filters.originAccountIds,
       filters.destinationAccountIds,
       filters.dateBasis,

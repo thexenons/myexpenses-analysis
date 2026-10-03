@@ -191,3 +191,18 @@ describe("excluded category chips", () => {
     expect(screen.getByRole("button", { name: "Abrir todos los filtros" })).toBeVisible()
   })
 })
+
+it("labels only owning account exclusions and ignores an empty exclusion mode", async () => {
+  resetAppStore()
+  const user = userEvent.setup()
+  appStore.getState().actions.patchFilters({ accountMode: "exclude" })
+  render(<AppStoreProvider store={appStore}><GlobalFilters /></AppStoreProvider>)
+  expect(screen.getByRole("button", { name: "Abrir todos los filtros" })).toBeVisible()
+  act(() => appStore.getState().actions.patchFilters({ accountIds: ["cash"], originAccountIds: ["cash"] }))
+  expect(screen.getByRole("button", { name: "Quitar filtro Excluir cuenta: Cuenta no disponible" })).toBeVisible()
+  expect(screen.getByRole("button", { name: "Abrir todos los filtros, 2 activos" })).toBeVisible()
+  expect(screen.getByRole("button", { name: "Quitar filtro Origen: Cuenta no disponible" })).toBeVisible()
+  await user.click(screen.getByRole("button", { name: "Quitar filtro Excluir cuenta: Cuenta no disponible" }))
+  expect(appStore.getState().filters.accountIds).toEqual([])
+  expect(appStore.getState().filters.accountMode).toBe("exclude")
+})

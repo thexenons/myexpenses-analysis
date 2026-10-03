@@ -55,6 +55,7 @@ export function FilterDrawerView({
   filters,
   hasActiveFilters,
   onAccountToggle,
+  onAccountModeChange,
   onOriginToggle,
   onDestinationToggle,
   onDateBasisChange,
@@ -243,11 +244,20 @@ export function FilterDrawerView({
             <fieldset className={styles.choiceGroup}>
               <legend>Cuentas</legend>
               <p>
-                {allAccountsSelected
-                  ? "Todas las cuentas incluidas"
-                  : `${filters.accountIds.length} de ${accounts.length} cuentas`}
+                {filters.accountIds.length === 0
+                  ? "Todas las cuentas del ámbito incluidas"
+                  : filters.accountMode === "exclude"
+                    ? `${filters.accountIds.length} cuentas excluidas`
+                    : `${filters.accountIds.length} de ${accounts.length} cuentas`}
               </p>
-              <p>Selecciona al menos una cuenta. Origen y destino se filtran por separado.</p>
+              <label className={styles.pathSelector}>
+                Modo de cuentas
+                <select aria-describedby="account-mode-help" value={filters.accountMode ?? "include"} onChange={(event) => onAccountModeChange(event.target.value === "exclude" ? "exclude" : "include")}>
+                  <option value="include">Incluir seleccionadas</option>
+                  <option value="exclude">Excluir seleccionadas</option>
+                </select>
+              </label>
+              <p id="account-mode-help">Sin selección se incluyen todas las cuentas del ámbito. En modo excluir, las casillas marcadas se omiten, incluso si marcas todas. Origen y destino se filtran por separado.</p>
               <div className={styles.choiceList}>
                 {accounts.map((account) => (
                   <label className={styles.choice} key={account.id}>
@@ -258,7 +268,7 @@ export function FilterDrawerView({
                       checked={
                         allAccountsSelected || filters.accountIds.includes(account.id)
                       }
-                      disabled={(allAccountsSelected ? accounts.length : filters.accountIds.length) === 1 && (allAccountsSelected || filters.accountIds.includes(account.id))}
+                      disabled={filters.accountMode !== "exclude" && (allAccountsSelected ? accounts.length : filters.accountIds.length) === 1 && (allAccountsSelected || filters.accountIds.includes(account.id))}
                       onChange={() => onAccountToggle(account.id)}
                       type="checkbox"
                     />

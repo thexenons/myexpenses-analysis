@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BackupDatasetV1 } from "../../../domain/analytics/backup-dataset.types.ts";
-import { createDefaultFilterState } from "../../../domain/analytics/filters.ts";
+import { applyFilters, createDefaultFilterState } from "../../../domain/analytics/filters.ts";
 import {
   DatasetTransportError,
   type DatasetRepository,
@@ -916,4 +916,79 @@ it.each([undefined, "invalid"])("restores saved category mode %s as include", as
   await store.getState().actions.unlock("synthetic phrase");
   expect(store.getState().filters.categoryMode).toBe("include");
   expect(store.getState().filters.categoryPrefixes).toEqual([["Reajuste*"]]);
+});
+
+it("preserves excluded accounts across scopes and restores a fully excluded scope", async () => {
+  window.localStorage.clear();
+  const repository: DatasetRepository = { load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetFixture()) };
+  const store = createSecureStore(repository);
+  await store.getState().actions.unlock("synthetic");
+  store.getState().actions.patchFilters({ scope: "all", accountMode: "exclude" });
+  store.getState().actions.setAccountIds(["account", "debt", "missing"]);
+  expect(store.getState().filters.accountIds).toEqual(["account", "debt"]);
+  store.getState().actions.patchFilters({ scope: "realCashFlow" });
+  expect(store.getState().filters.accountIds).toEqual(["account", "debt"]);
+  store.getState().actions.patchFilters({ scope: "debtsOnly" });
+  expect(store.getState().filters.accountIds).toEqual(["account", "debt"]);
+  store.getState().actions.patchFilters({ accountMode: "include" });
+  expect(store.getState().filters.accountIds).toEqual(["account", "debt"]);
+  store.getState().actions.patchFilters({ accountMode: "exclude", scope: "realCashFlow" });
+  const saved = JSON.parse(window.localStorage.getItem(FILTER_PREFERENCES_NAME)!);
+  expect(saved).toMatchObject({ version: 1, filters: { accountMode: "exclude", accountIds: ["account", "debt"] } });
+  saved.filters.accountIds.push("missing");
+  window.localStorage.setItem(FILTER_PREFERENCES_NAME, JSON.stringify(saved));
+  const restored = createSecureStore(repository);
+  await restored.getState().actions.unlock("synthetic");
+  expect(restored.getState().filters).toMatchObject({ accountMode: "exclude", accountIds: ["account", "debt"] });
+  const filtered = applyFilters(restored.getState().analytics!, restored.getState().filters);
+  expect(filtered.accounts).toEqual([]);
+  expect(filtered.postings).toEqual([]);
+  expect(filtered.periodClosingBalanceEurMinor).toBe(0);
+  restored.getState().actions.clearFilters();
+  expect(restored.getState().filters.accountMode).toBe("include");
+});
+
+it.each([undefined, "invalid"])("restores legacy account mode %s as include", async (accountMode) => {
+  window.localStorage.clear();
+  window.localStorage.setItem(FILTER_PREFERENCES_NAME, JSON.stringify({ version: 1,
+    filters: { ...createDefaultFilterState(), scope: "realCashFlow", accountMode, accountIds: ["debt", "missing"] } }));
+  const repository: DatasetRepository = { load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetFixture()) };
+  const store = createSecureStore(repository);
+  await store.getState().actions.unlock("synthetic");
+  expect(store.getState().filters).toMatchObject({ accountMode: "include", accountIds: ["debt"] });
+  expect(applyFilters(store.getState().analytics!, store.getState().filters).accounts).toEqual([]);
+});
+
+it("retains off-scope IDs on a mode-only transition without falling back to all accounts", async () => {
+  window.localStorage.clear();
+  const fixture = datasetFixture();
+  const source = {
+    ...fixture,
+    accounts: [{ ...fixture.accounts[0]!, openingNativeMinor: 1_000, openingHomeMinor: 1_000 }, ...fixture.accounts.slice(1)],
+  };
+  const repository: DatasetRepository = { load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(source) };
+  const store = createSecureStore(repository);
+  await store.getState().actions.unlock("synthetic");
+  store.getState().actions.patchFilters({ accountMode: "exclude", accountIds: ["debt"] });
+  store.getState().actions.patchFilters({ accountMode: "include" });
+  expect(store.getState().filters.accountIds).toEqual(["debt"]);
+  expect(applyFilters(store.getState().analytics!, store.getState().filters).accounts).toEqual([]);
+  store.getState().actions.patchFilters({ search: "synthetic" });
+  expect(store.getState().filters.accountIds).toEqual(["debt"]);
+  const beforeReload = applyFilters(store.getState().analytics!, store.getState().filters);
+  expect(beforeReload.accounts).toEqual([]);
+  expect(beforeReload.postings).toEqual([]);
+  expect(beforeReload.periodClosingBalanceEurMinor).toBe(0);
+  const saved = JSON.parse(window.localStorage.getItem(FILTER_PREFERENCES_NAME)!);
+  saved.filters.accountIds.push("missing");
+  window.localStorage.setItem(FILTER_PREFERENCES_NAME, JSON.stringify(saved));
+  const restored = createSecureStore(repository);
+  await restored.getState().actions.unlock("synthetic");
+  expect(restored.getState().filters).toMatchObject({
+    scope: "realCashFlow", accountMode: "include", accountIds: ["debt"],
+  });
+  const afterReload = applyFilters(restored.getState().analytics!, restored.getState().filters);
+  expect(afterReload.accounts).toEqual(beforeReload.accounts);
+  expect(afterReload.postings).toEqual(beforeReload.postings);
+  expect(afterReload.periodClosingBalanceEurMinor).toBe(0);
 });

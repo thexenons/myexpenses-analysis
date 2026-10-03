@@ -213,7 +213,13 @@ export function createAppStore(
                 dateRange: patch.dateRange ?? state.filters.dateRange,
               };
               return {
-                filters: reconcileFilterAccounts(filters, state.analytics),
+                filters: reconcileFilterAccounts(
+                  filters,
+                  state.analytics,
+                  // A mode-only transition preserves the explicit list, including
+                  // off-scope IDs. Only scope/selection edits reconcile inclusion.
+                  patch.scope === undefined && patch.accountIds === undefined,
+                ),
               };
             }),
           reloadVault: () => {

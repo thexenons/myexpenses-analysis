@@ -27,6 +27,7 @@ export interface FilterDrawerViewProps {
   filters: FilterState
   hasActiveFilters: boolean
   onAccountToggle(accountId: string): void
+  onAccountModeChange(accountMode: "include" | "exclude"): void
   onOriginToggle(accountId: string): void
   onDestinationToggle(accountId: string): void
   onDateBasisChange(dateBasis: "operation" | "value"): void

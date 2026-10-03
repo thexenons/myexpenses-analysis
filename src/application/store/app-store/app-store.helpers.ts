@@ -58,13 +58,14 @@ export function restoreAppStorePersistedState(
 export function reconcileFilterAccounts(
   filters: FilterState,
   analytics: AnalyticsDataset | null,
+  preserveOutOfScopeAccounts = false,
 ): FilterState {
   if (analytics === null || filters.accountIds.length === 0) {
     return filters;
   }
   const allowedAccountIds = new Set(
     analytics.accounts
-      .filter((account) => accountMatchesScope(account, filters.scope))
+      .filter((account) => filters.accountMode === "exclude" || preserveOutOfScopeAccounts || accountMatchesScope(account, filters.scope))
       .map((account) => account.id),
   );
   const accountIds = filters.accountIds.filter((accountId) =>

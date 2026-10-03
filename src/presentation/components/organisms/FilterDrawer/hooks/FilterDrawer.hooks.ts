@@ -123,7 +123,7 @@ export function useFilterDrawer(): FilterDrawerViewProps {
     accounts,
     endpointAccounts,
     categoryPaths,
-    allAccountsSelected: filters.accountIds.length === 0,
+    allAccountsSelected: filters.accountMode !== "exclude" && filters.accountIds.length === 0,
     availableTags,
     payeeOptions,
     methodOptions,
@@ -137,8 +137,11 @@ export function useFilterDrawer(): FilterDrawerViewProps {
     hasActiveFilters: hasActiveDrawerFilters(filters, granularity) || amountError !== null,
     onAccountToggle: (accountId) =>
       setAccountIds(
-        toggleFilterDrawerUniversalValue(filters.accountIds, accountId, accountIds),
+        filters.accountMode === "exclude"
+          ? toggleFilterDrawerOptionalValue(filters.accountIds, accountId)
+          : toggleFilterDrawerUniversalValue(filters.accountIds, accountId, accountIds),
       ),
+    onAccountModeChange: (accountMode) => patchFilters({ accountMode }),
     onCategoryToggle: (path) =>
       setCategoryPrefixes(toggleCategoryPath(filters.categoryPrefixes, path)),
     onOriginToggle: (accountId) => patchFilters({ originAccountIds: toggleFilterDrawerOptionalValue(filters.originAccountIds ?? [], accountId) }),
