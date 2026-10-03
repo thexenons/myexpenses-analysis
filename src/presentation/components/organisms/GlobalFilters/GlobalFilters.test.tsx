@@ -206,3 +206,18 @@ it("labels only owning account exclusions and ignores an empty exclusion mode", 
   expect(appStore.getState().filters.accountIds).toEqual([])
   expect(appStore.getState().filters.accountMode).toBe("exclude")
 })
+
+it("labels excluded tags explicitly and does not count an empty tag mode", async () => {
+  resetAppStore()
+  const user = userEvent.setup()
+  appStore.getState().actions.patchFilters({ tagMode: "exclude" })
+  render(<AppStoreProvider store={appStore}><GlobalFilters /></AppStoreProvider>)
+  expect(screen.getByRole("button", { name: "Abrir todos los filtros" })).toBeVisible()
+  act(() => appStore.getState().actions.setTags(["Viaje", "Trabajo"]))
+  expect(screen.getByRole("button", { name: "Abrir todos los filtros, 1 activo" })).toBeVisible()
+  await user.click(screen.getByRole("button", { name: "Quitar filtro Excluir etiqueta: Viaje" }))
+  expect(appStore.getState().filters.tags).toEqual(["Trabajo"])
+  expect(appStore.getState().filters.tagMode).toBe("exclude")
+  await user.click(screen.getByRole("button", { name: "Quitar filtro Excluir etiqueta: Trabajo" }))
+  expect(screen.getByRole("button", { name: "Abrir todos los filtros" })).toBeVisible()
+})

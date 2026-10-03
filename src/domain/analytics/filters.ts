@@ -66,6 +66,7 @@ export function createDefaultFilterState(): FilterState {
     categoryPrefixes: [],
     statuses: [],
     tags: [],
+    tagMode: "include",
     search: "",
     linked: "all",
     payeeKeys: [],
@@ -249,6 +250,7 @@ export function restoreFilterState(value: unknown): FilterState {
       ? [...new Set(value.statuses.filter(isTransactionStatus))]
       : [],
     tags: restoreStringList(value.tags),
+    tagMode: value.tagMode === "exclude" ? "exclude" : "include",
     search: typeof value.search === "string" ? value.search.trim() : "",
     linked: isLinkedFilter(value.linked) ? value.linked : "all",
     payeeKeys: restoreIdentityList(value.payeeKeys),
@@ -341,6 +343,9 @@ function snapshotFilters(filters: FilterState): FilterState {
     throw new Error("Unknown category depth");
   }
   validateStringList(filters.tags, "tags");
+  if (filters.tagMode !== undefined && filters.tagMode !== "include" && filters.tagMode !== "exclude") {
+    throw new Error("Unknown tag mode");
+  }
   validateStringList(filters.payeeKeys ?? [], "payeeKeys");
   validateStringList(filters.paymentMethodKeys ?? [], "paymentMethodKeys");
   for (const key of [...(filters.payeeKeys ?? []), ...(filters.paymentMethodKeys ?? [])]) {
@@ -388,6 +393,7 @@ function snapshotFilters(filters: FilterState): FilterState {
     categoryPrefixes,
     statuses: [...new Set(filters.statuses)],
     tags: [...new Set(filters.tags)],
+    tagMode: filters.tagMode ?? "include",
     search: filters.search.trim(),
     linked: filters.linked,
     payeeKeys: [...new Set(filters.payeeKeys ?? [])],
@@ -547,11 +553,9 @@ function matchesPostingWithoutDate(
         categoryMatchesPrefixes(relation.peer.categoryPath, filters.categoryPrefixes, filters.categoryDepth));
     if (filters.categoryMode === "exclude" ? categoryMatches : !categoryMatches) return false;
   }
-  if (
-    matcher.tags.size > 0 &&
-    !posting.tags.some((tag) => matcher.tags.has(tag))
-  ) {
-    return false;
+  if (matcher.tags.size > 0) {
+    const tagMatches = posting.tags.some((tag) => matcher.tags.has(tag));
+    if (filters.tagMode === "exclude" ? tagMatches : !tagMatches) return false;
   }
   if (filters.linked === "linked" && !posting.linked) {
     return false;

@@ -33,7 +33,7 @@ export function useGlobalFilters(): GlobalFiltersViewProps {
   if (filters.categoryMatch === "either") activeSelections.push({ id: "categoryMatch", label: "Categoría de ambas partes", onRemove: () => patchFilters({ categoryMatch: "posting" }) })
   if (filters.categoryDepth === "exact") activeSelections.push({ id: "categoryDepth", label: "Categoría exacta", onRemove: () => patchFilters({ categoryDepth: "subtree" }) })
   if (filters.linked !== "all") activeSelections.push({ id: "linked", label: filters.linked === "linked" ? "Vinculados" : "Sin vínculo", onRemove: () => patchFilters({ linked: "all" }) })
-  for (const tag of filters.tags) activeSelections.push({ id: `tag:${tag}`, label: `Etiqueta: ${tag}`, onRemove: () => patchFilters({ tags: filters.tags.filter((candidate) => candidate !== tag) }) })
+  for (const tag of filters.tags) activeSelections.push({ id: `tag:${tag}`, label: `${filters.tagMode === "exclude" ? "Excluir etiqueta" : "Etiqueta"}: ${tag}`, onRemove: () => patchFilters({ tags: filters.tags.filter((candidate) => candidate !== tag) }) })
   if (filters.search.trim()) activeSelections.push({ id: "search", label: `Texto: ${filters.search.trim()}`, onRemove: () => patchFilters({ search: "" }) })
   for (const key of filters.payeeKeys ?? []) activeSelections.push({ id: `payee:${key}`, label: `Beneficiario: ${identityLabel(key, "payee")}`, onRemove: () => patchFilters({ payeeKeys: (filters.payeeKeys ?? []).filter((candidate) => candidate !== key) }) })
   for (const key of filters.paymentMethodKeys ?? []) activeSelections.push({ id: `method:${key}`, label: `Método: ${identityLabel(key, "method")}`, onRemove: () => patchFilters({ paymentMethodKeys: (filters.paymentMethodKeys ?? []).filter((candidate) => candidate !== key) }) })

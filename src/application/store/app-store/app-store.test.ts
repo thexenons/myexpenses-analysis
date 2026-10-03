@@ -992,3 +992,35 @@ it("retains off-scope IDs on a mode-only transition without falling back to all 
   expect(afterReload.postings).toEqual(beforeReload.postings);
   expect(afterReload.periodClosingBalanceEurMinor).toBe(0);
 });
+
+it("persists tag exclusion, reconciles unknown tags and restores an explicit reset", async () => {
+  window.localStorage.clear();
+  const repository: DatasetRepository = {
+    load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetWithIdentity("b".repeat(64))),
+  };
+  const store = createSecureStore(repository);
+  await store.getState().actions.unlock("synthetic");
+  store.getState().actions.patchFilters({ tagMode: "exclude", tags: ["Tagged"] });
+  const saved = JSON.parse(window.localStorage.getItem(FILTER_PREFERENCES_NAME)!);
+  expect(saved).toMatchObject({ version: 1, filters: { tagMode: "exclude", tags: ["Tagged"] } });
+  saved.filters.tags.push("Missing tag");
+  window.localStorage.setItem(FILTER_PREFERENCES_NAME, JSON.stringify(saved));
+  const restored = createSecureStore(repository);
+  await restored.getState().actions.unlock("synthetic");
+  expect(restored.getState().filters).toMatchObject({ tagMode: "exclude", tags: ["Tagged"] });
+  expect(applyFilters(restored.getState().analytics!, restored.getState().filters).postings.map((posting) => posting.tags)).toEqual([[]]);
+  restored.getState().actions.clearFilters();
+  expect(restored.getState().filters).toMatchObject({ tagMode: "include", tags: [] });
+});
+
+it.each([undefined, "invalid"])("restores legacy tag mode %s as include", async (tagMode) => {
+  window.localStorage.clear();
+  window.localStorage.setItem(FILTER_PREFERENCES_NAME, JSON.stringify({ version: 1,
+    filters: { ...createDefaultFilterState(), tagMode, tags: ["Tagged"] } }));
+  const repository: DatasetRepository = {
+    load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetWithIdentity("b".repeat(64))),
+  };
+  const store = createSecureStore(repository);
+  await store.getState().actions.unlock("synthetic");
+  expect(store.getState().filters).toMatchObject({ tagMode: "include", tags: ["Tagged"] });
+});

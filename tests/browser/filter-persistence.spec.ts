@@ -332,3 +332,45 @@ test("off-scope owning inclusion remains empty after reloading a mode transition
   const after = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), PREFERENCE_KEY);
   expect(after.filters.accountIds).toEqual([DEBT_ID]);
 });
+
+test("tag exclusion persists inherited split tags and keeps untagged movements", async ({ page }) => {
+  await page.getByRole("link", { name: /^(Transacciones|Movimientos)$/ }).click();
+  const results = page.getByRole("region", { name: "Movimientos filtrados" });
+  await expect(results).toContainText(/\d+ resultados/u);
+  const baselineCount = Number((await results.innerText()).match(/(\d+) resultados/u)?.[1]);
+  expect(baselineCount).toBeGreaterThan(3);
+  const drawer = await openDrawer(page);
+  const mode = drawer.getByRole("combobox", { name: "Modo de etiquetas" });
+  await expect(mode).toHaveValue("include");
+  await drawer.getByRole("group", { name: "Etiquetas disponibles" })
+    .getByRole("checkbox", { name: "Parent tag" }).check();
+  await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expectTransactions(page, 2);
+  const excluding = await openDrawer(page);
+  await excluding.getByRole("combobox", { name: "Modo de etiquetas" }).selectOption("exclude");
+  await excluding.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expect(results).toContainText(`${baselineCount - 2} resultados`);
+  await expect(page.getByRole("button", { name: "Quitar filtro Excluir etiqueta: Parent tag" })).toBeVisible();
+  await page.reload();
+  await unlock(page);
+  await expect(results).toContainText(`${baselineCount - 2} resultados`);
+  const restored = await openDrawer(page);
+  await expect(restored.getByRole("combobox", { name: "Modo de etiquetas" })).toHaveValue("exclude");
+  await expect(restored.getByRole("group", { name: "Etiquetas disponibles" })
+    .getByRole("checkbox", { name: "Parent tag" })).toBeChecked();
+  const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), PREFERENCE_KEY);
+  expect(saved).toMatchObject({ version: 1, filters: { tagMode: "exclude", tags: ["Parent tag"] } });
+  await restored.getByRole("searchbox", { name: "Buscar en movimientos" }).fill("Synthetic food");
+  await restored.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expectTransactions(page, 1);
+  const including = await openDrawer(page);
+  await including.getByRole("combobox", { name: "Modo de etiquetas" }).selectOption("include");
+  await including.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expectTransactions(page, 0);
+  const emptySelection = await openDrawer(page);
+  await emptySelection.getByRole("combobox", { name: "Modo de etiquetas" }).selectOption("exclude");
+  await emptySelection.getByRole("group", { name: "Etiquetas disponibles" })
+    .getByRole("checkbox", { name: "Parent tag" }).uncheck();
+  await emptySelection.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expectTransactions(page, 1);
+});

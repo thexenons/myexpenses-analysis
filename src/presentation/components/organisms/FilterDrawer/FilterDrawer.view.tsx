@@ -69,6 +69,7 @@ export function FilterDrawerView({
   onScopeChange,
   onSearchChange,
   onTagToggle,
+  onTagModeChange,
   onPayeeToggle,
   onMethodToggle,
   onCategoryTypeToggle,
@@ -324,7 +325,7 @@ export function FilterDrawerView({
               <span aria-hidden="true">05</span>
               <div>
                 <h3>Etiquetas</h3>
-                <p>Una selección incluye movimientos con cualquiera de ellas.</p>
+                <p>Incluye o excluye movimientos con cualquiera de las etiquetas seleccionadas.</p>
               </div>
             </div>
             {availableTags.length > 0 ? (
@@ -333,8 +334,16 @@ export function FilterDrawerView({
                 <p>
                   {filters.tags.length === 0
                     ? "Sin limitar por etiqueta"
-                    : `${filters.tags.length} seleccionadas`}
+                    : `${filters.tags.length} ${filters.tagMode === "exclude" ? "excluidas" : "seleccionadas"}`}
                 </p>
+                <label className={styles.pathSelector}>
+                  Modo de etiquetas
+                  <select aria-describedby="tag-mode-help" value={filters.tagMode ?? "include"} onChange={(event) => onTagModeChange(event.target.value === "exclude" ? "exclude" : "include")}>
+                    <option value="include">Incluir seleccionadas</option>
+                    <option value="exclude">Excluir seleccionadas</option>
+                  </select>
+                </label>
+                <p id="tag-mode-help">Sin selección no se limita por etiqueta. Excluir omite movimientos con cualquiera de las etiquetas marcadas.</p>
                 <div className={styles.tagList}>
                   {availableTags.map((tag) => (
                     <label className={styles.tag} key={tag}>

@@ -41,6 +41,7 @@ export interface FilterDrawerViewProps {
   onScopeChange(scope: AnalyticsScope): void
   onSearchChange(search: string): void
   onTagToggle(tag: string): void
+  onTagModeChange(tagMode: "include" | "exclude"): void
   onPayeeToggle(key: string): void
   onMethodToggle(key: string): void
   onCategoryTypeToggle(value: CategoryType): void

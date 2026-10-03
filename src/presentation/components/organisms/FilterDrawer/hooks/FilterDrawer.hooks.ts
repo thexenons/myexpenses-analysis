@@ -158,6 +158,7 @@ export function useFilterDrawer(): FilterDrawerViewProps {
     },
     onScopeChange: (scope) => patchFilters({ scope }),
     onSearchChange: (search) => patchFilters({ search }),
+    onTagModeChange: (tagMode) => patchFilters({ tagMode }),
     onTagToggle: (tag) =>
       setTags(toggleFilterDrawerOptionalValue(filters.tags, tag)),
     onPayeeToggle: (key) => patchFilters({ payeeKeys: toggleFilterDrawerOptionalValue(filters.payeeKeys ?? [], key) }),

@@ -233,3 +233,14 @@ it("forwards owning account mode and invalidates mode-only shared results", () =
   expect(applyFiltersSpy).toHaveBeenCalledTimes(2);
   expect(applyFiltersSpy.mock.lastCall?.[1].accountMode).toBe("exclude");
 });
+
+it("forwards tag mode and invalidates shared results on mode-only changes", () => {
+  const store = createAppStore({ load: vi.fn<DatasetRepository["load"]>() }, window.localStorage);
+  store.setState({ analytics: EMPTY_ANALYTICS, loadPhase: "ready" });
+  applyFiltersSpy.mockClear();
+  render(<AppStoreProvider store={store}><FilteredAnalyticsProbe /></AppStoreProvider>);
+  expect(applyFiltersSpy.mock.lastCall?.[1].tagMode).toBe("include");
+  act(() => store.getState().actions.patchFilters({ tagMode: "exclude" }));
+  expect(applyFiltersSpy).toHaveBeenCalledTimes(2);
+  expect(applyFiltersSpy.mock.lastCall?.[1].tagMode).toBe("exclude");
+});

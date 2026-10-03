@@ -30,7 +30,7 @@ requested every remaining workspace modification committed and pushed.
 ## Tasks and routes
 - [x] A01 — Include/exclude owning accounts, balance/persistence reconciliation,
   drawer controls and explicit chips. Delegated writer: non-trivial multi-file logic.
-- [ ] A02 — Include/exclude tags with existing split tag semantics and persistence.
+- [x] A02 — Include/exclude tags with existing split tag semantics and persistence.
   Delegated writer: non-trivial multi-file logic.
 - [ ] A03 — Restore keyboard focus after removing global and drawer category chips.
   Delegated writer: two non-trivial UI surfaces and regression tests.
@@ -69,3 +69,19 @@ behavior or credentials in their changes. Next: A01 bounded writer.
 - Lint/types/diff pass; independent four synthetic cases/82 UI pass and source
   stable. No golden reference bodies or private inputs used. Full suites reserved
   for final feature closure. A01 commit/native assessment recorded subsequently.
+- A01 work-unit `55085ff` (+383/-14 with initial task record, 397 authored lines)
+  assessed medium/under_budget against branch point707ec7a. Native review boundary
+  remains707ec7a; the next behavior commit accumulates into this pending slice.
+  No native approval claimed. Main delivery will follow the pending slice review.
+
+## A02 proof
+- Synthetic tag RED 3 fail -> GREEN 3 pass; focused UI/store/hooks RED 82 pass /
+  6 fail -> GREEN 88 pass. Retained logs recovered an interrupted worker without
+  discarding edits or inventing RED evidence. Parent repeated three domain cases.
+- Independent three synthetic domain/88 UI pass; entire isolated persistence
+  browser file 27 pass, zero fail/skip at 1280/390/320 in 2.8 minutes, synthetic
+  build succeeded. Tag include selects two inherited split-tag rows; exclude
+  complements baseline across reload, search composition and empty selection.
+- Central mode uses normalized posting.tags; no additional parent-tag propagation.
+  Lint/types/diff pass; source stable, cleanup complete, no private golden bodies.
+  A02 commit/native pending slice assessment recorded subsequently.

@@ -1088,3 +1088,60 @@ test("account mode defaults and restores legacy values as include", () => {
   assert.deepEqual(applyFilters(dataset, { ...createDefaultFilterState(), accountMode: undefined, accountIds: ["cash"] }).accounts.map((account) => account.id), ["cash"]);
   assert.throws(() => applyFilters(dataset, { ...createDefaultFilterState(), accountMode: "invalid" as FilterState["accountMode"] }), /account.*mode/i);
 });
+
+test("tag exclusion complements any selected tag and retains untagged postings", () => {
+  const initial = normalizeDataset(fixtureSource());
+  const tags = [["Casa"], ["Casa", "Viaje"], ["Trabajo"], [], ["Viaje"]];
+  const dataset = {
+    ...initial,
+    postings: initial.postings.slice(0, tags.length).map((posting, index) =>
+      Object.assign({}, posting, { tags: tags[index]! })),
+  };
+  const filter = (selection: readonly string[], tagMode: FilterState["tagMode"] = "exclude") =>
+    applyFilters(dataset, { ...createDefaultFilterState(), tags: selection, tagMode });
+  const ids = dataset.postings.map((posting) => posting.id);
+  assert.deepEqual(filter(["Casa"]).postings.map((posting) => posting.id), ids.slice(2));
+  assert.deepEqual(filter(["Casa", "Trabajo"]).postings.map((posting) => posting.id), ids.slice(3));
+  assert.deepEqual(filter(["Casa", "Viaje", "Trabajo"]).postings.map((posting) => posting.id), [ids[3]]);
+  assert.deepEqual(filter([]).postings, dataset.postings);
+  assert.deepEqual(filter(["Casa", "Trabajo"], "include").postings.map((posting) => posting.id), ids.slice(0, 3));
+  assert.deepEqual(filter(["Unknown"]).postings, dataset.postings);
+});
+
+test("tag exclusion uses normalized split tags without adding parent-context tags", () => {
+  const dataset = normalizeDataset({
+    accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+    categories,
+    parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+      { ...direct("child", "2024-01-01", -1, ["Gastos"], { tags: ["Parent", "Child"] }),
+        sourceTransactionUuid: "parent", splitIndex: 0, splitCount: 2,
+        parent: { date: "2024-01-01", amount: -2, tags: ["Parent"] } },
+      { ...direct("sibling", "2024-01-01", -1, ["Gastos"], { tags: ["Parent"] }),
+        sourceTransactionUuid: "parent", splitIndex: 1, splitCount: 2,
+        parent: { date: "2024-01-01", amount: -2, tags: ["Parent"] } },
+      { ...direct("context-only", "2024-01-02", -1, ["Gastos"]),
+        sourceTransactionUuid: "other-parent", splitIndex: 0, splitCount: 1,
+        parent: { date: "2024-01-02", amount: -1, tags: ["Context-only"] } },
+      direct("untagged", "2024-01-03", -1, ["Gastos"]),
+    ] }],
+  });
+  const filter = (tags: readonly string[], tagMode: FilterState["tagMode"]) =>
+    applyFilters(dataset, { ...createDefaultFilterState(), tags, tagMode }).postings.map((posting) => posting.transactionId);
+  assert.deepEqual(filter(["Parent"], "include"), ["child", "sibling"]);
+  assert.deepEqual(filter(["Parent"], "exclude"), ["context-only", "untagged"]);
+  assert.deepEqual(filter(["Child"], "exclude"), ["sibling", "context-only", "untagged"]);
+  assert.deepEqual(filter(["Context-only"], "include"), []);
+  assert.equal(filter(["Context-only"], "exclude").length, dataset.postings.length);
+});
+
+test("tag mode defaults and restores missing or invalid legacy values as include", () => {
+  assert.equal(createDefaultFilterState().tagMode, "include");
+  for (const tagMode of [undefined, null, "invalid", 1]) {
+    assert.equal(restoreFilterState({ tagMode, tags: ["Casa"] }).tagMode, "include");
+  }
+  assert.equal(restoreFilterState({ tagMode: "exclude" }).tagMode, "exclude");
+  const dataset = normalizeDataset(fixtureSource());
+  const legacy = applyFilters(dataset, { ...createDefaultFilterState(), tagMode: undefined, tags: ["Casa"] });
+  assert.equal(legacy.postings.length, 2);
+  assert.throws(() => applyFilters(dataset, { ...createDefaultFilterState(), tagMode: "invalid" as FilterState["tagMode"] }), /tag.*mode/i);
+});

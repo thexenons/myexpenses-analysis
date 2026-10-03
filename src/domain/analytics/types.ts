@@ -263,6 +263,7 @@ export interface FilterState {
   readonly statuses: readonly TransactionStatus[];
   /** Empty means every tag; otherwise a transaction matching any selected tag. */
   readonly tags: readonly string[];
+  readonly tagMode?: "include" | "exclude";
   readonly search: string;
   readonly linked: LinkedFilter;
   readonly payeeKeys?: readonly string[];

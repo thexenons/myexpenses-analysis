@@ -522,3 +522,28 @@ it("can exclude every owning account and retains selected IDs when modes change"
   expect(appStore.getState().filters.accountIds).toEqual([])
   expect(applyFilters(analytics, appStore.getState().filters).accounts).toHaveLength(1)
 })
+
+it("offers accessible tag modes without creating an empty active filter", async () => {
+  resetAppStore()
+  const user = userEvent.setup()
+  const analytics = normalizeDataset({
+    accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+    categories: { Expense: { categoryType: "EXPENSE" } },
+    parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+      { uuid: "tagged", date: "2024-01-01", amount: -1, category: ["Expense"], tags: ["Viaje"], sourceTransactionUuid: "tagged", sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+    ] }],
+  })
+  appStore.setState({ analytics, filterDrawerOpen: true })
+  render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
+  const mode = screen.getByRole("combobox", { name: "Modo de etiquetas" })
+  expect(mode).toHaveValue("include")
+  await user.selectOptions(mode, "exclude")
+  expect(mode).toHaveAccessibleDescription(/Sin selección no se limita por etiqueta/)
+  expect(screen.getByRole("button", { name: "Restablecer" })).toBeDisabled()
+  await user.click(screen.getByRole("checkbox", { name: "Viaje" }))
+  expect(appStore.getState().filters).toMatchObject({ tagMode: "exclude", tags: ["Viaje"] })
+  expect(applyFilters(analytics, appStore.getState().filters).postings).toEqual([])
+  await user.selectOptions(mode, "include")
+  expect(appStore.getState().filters.tags).toEqual(["Viaje"])
+  expect(applyFilters(analytics, appStore.getState().filters).postings).toHaveLength(1)
+})
