@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from "react"
 import type { AnalyticsScope } from "../../../../domain/analytics/types"
 import { Button } from "../../atoms/Button"
 import { Icon } from "../../atoms/Icon"
@@ -25,6 +26,29 @@ export function GlobalFiltersView({
   onScopeChange,
   onSearchChange,
 }: GlobalFiltersViewProps) {
+  const drawerButtonRef = useRef<HTMLButtonElement>(null)
+  const selectionsRef = useRef<HTMLUListElement>(null)
+  const pendingFocusRef = useRef<{
+    origin: HTMLButtonElement
+    candidateIds: string[]
+  } | null>(null)
+
+  useLayoutEffect(() => {
+    const pending = pendingFocusRef.current
+    pendingFocusRef.current = null
+    if (!pending || pending.origin.isConnected) return
+    const document = pending.origin.ownerDocument
+    if (document.activeElement !== document.body && document.activeElement !== pending.origin) return
+
+    // Reconciliation can remove several chips in the same update.
+    const survivingId = pending.candidateIds.find((id) => activeSelections.some((selection) => selection.id === id))
+    const survivingIndex = activeSelections.findIndex((selection) => selection.id === survivingId)
+    const destination = survivingIndex < 0
+      ? drawerButtonRef.current
+      : selectionsRef.current?.querySelectorAll<HTMLButtonElement>("button")[survivingIndex]
+    destination?.focus()
+  }, [activeSelections])
+
   return (
     <section aria-label="Filtros globales" className={styles.filters}>
       <div className={styles.filterIdentity}>
@@ -54,6 +78,7 @@ export function GlobalFiltersView({
       <GranularityControl className={styles.granularity} compact />
 
       <Button
+        ref={drawerButtonRef}
         aria-label={
           activeFilterCount === 0
             ? "Abrir todos los filtros"
@@ -73,9 +98,20 @@ export function GlobalFiltersView({
           </span>
         ) : null}
       </Button>
-      {activeSelections.length > 0 ? <ul aria-label="Filtros aplicados" className={styles.activeSelections}>
-        {activeSelections.map((selection) => <li key={selection.id}>
-          <button type="button" onClick={selection.onRemove} aria-label={`Quitar filtro ${selection.label}`}>
+      {activeSelections.length > 0 ? <ul ref={selectionsRef} aria-label="Filtros aplicados" className={styles.activeSelections}>
+        {activeSelections.map((selection, index) => <li key={selection.id}>
+          <button type="button" onClick={(event) => {
+            if (event.currentTarget.ownerDocument.activeElement === event.currentTarget) {
+              pendingFocusRef.current = {
+                origin: event.currentTarget,
+                candidateIds: [
+                  ...activeSelections.slice(index + 1),
+                  ...activeSelections.slice(0, index).reverse(),
+                ].map((candidate) => candidate.id),
+              }
+            }
+            selection.onRemove()
+          }} aria-label={`Quitar filtro ${selection.label}`}>
             {selection.label} <span aria-hidden="true">×</span>
           </button>
         </li>)}

@@ -3,7 +3,7 @@ import type {
   CategoryType,
   LinkedFilter,
 } from "../../../../domain/analytics/types"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { categoryPathsEqual } from "../../../../domain/analytics/filters.ts"
 import { formatCategoryPath } from "../../../utils/format.ts"
 import { Button } from "../../atoms/Button"
@@ -79,6 +79,7 @@ export function FilterDrawerView({
   onReferenceSearchChange,
   rootCategories,
 }: FilterDrawerViewProps) {
+  const categorySelectorRef = useRef<HTMLSelectElement>(null)
   const [payeeQuery, setPayeeQuery] = useState("")
   const [methodQuery, setMethodQuery] = useState("")
   return (
@@ -199,6 +200,7 @@ export function FilterDrawerView({
               <label className={styles.pathSelector}>
                 Añadir categoría o subcategoría
                 <select
+                  ref={categorySelectorRef}
                   value=""
                   onChange={(event) => {
                     const path = categoryPaths.find((candidate) => JSON.stringify(candidate) === event.target.value)
@@ -230,7 +232,16 @@ export function FilterDrawerView({
                     <li key={JSON.stringify(path)}>
                       <button
                         aria-label={`Quitar ${filters.categoryMode === "exclude" ? "exclusión " : ""}${formatCategoryPath(path)}`}
-                        onClick={() => onCategoryToggle(path)}
+                        onClick={(event) => {
+                          if (event.currentTarget.ownerDocument.activeElement === event.currentTarget) {
+                            const item = event.currentTarget.parentElement
+                            const destination = item?.nextElementSibling?.querySelector<HTMLButtonElement>("button")
+                              ?? item?.previousElementSibling?.querySelector<HTMLButtonElement>("button")
+                              ?? categorySelectorRef.current
+                            destination?.focus()
+                          }
+                          onCategoryToggle(path)
+                        }}
                         type="button"
                       >
                         <span>{filters.categoryMode === "exclude" ? "Excluir: " : ""}{formatCategoryPath(path)}</span>

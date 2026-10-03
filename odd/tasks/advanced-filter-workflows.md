@@ -32,10 +32,16 @@ requested every remaining workspace modification committed and pushed.
   drawer controls and explicit chips. Delegated writer: non-trivial multi-file logic.
 - [x] A02 — Include/exclude tags with existing split tag semantics and persistence.
   Delegated writer: non-trivial multi-file logic.
-- [ ] A03 — Restore keyboard focus after removing global and drawer category chips.
+- [x] A03 — Restore keyboard focus after removing global and drawer category chips.
   Delegated writer: two non-trivial UI surfaces and regression tests.
 - [ ] A04 — Local named filter presets with bounded failure-safe storage and UI.
   Delegated writer: storage/store/UI integration and new tests.
+- [ ] A06 — Replace the flat category picker with an expandable hierarchy in
+  the shared drawer, selecting any node and multiple explicit paths. Delegated
+  writer: new narrow UI component and integration/tests.
+- [ ] A07 — Add accumulated-flow view to Overview and Cash Flow line charts,
+  retaining per-period default and selected granularity/global filters. Delegated
+  writer: shared derivation and two page integrations/tests.
 - [ ] A05 — Commit existing registry changes; complete independent checks, native
   due reviews, chained main delivery and verify a clean worktree/remote ref.
   Parent state/commits plus delegated verification; passive registry structural check.
@@ -85,3 +91,46 @@ behavior or credentials in their changes. Next: A01 bounded writer.
 - Central mode uses normalized posting.tags; no additional parent-tag propagation.
   Lint/types/diff pass; source stable, cleanup complete, no private golden bodies.
   A02 commit/native pending slice assessment recorded subsequently.
+
+## A01/A02 slice delivery
+- A02 work-unit4eaa176; combined range707ec7a..4eaa176 assessed medium/due by
+  slice budget (630 lines/17 files). User granted consolidated native review;
+  zero findings, exact acknowledgement burned review-a680680abec62a6b.
+- Non-force fast-forward/push and remote readback confirmed4eaa176 on main.
+  Reviewed boundary now4eaa176. A03/A04/A05 remain pending; .atl files still staged
+  for their separately authorized commit, not accidentally included in this slice.
+
+## Accepted category-tree scope (user follow-up)
+The existing picker already adds multiple paths, but does not expose hierarchy.
+Replace root checkboxes/flat dropdown with a drawer-specific path tree reusing
+existing disclosure primitives, not the metric-dependent category-page node.
+Expansion and selection independent; any node plus uncategorized leaf selectable.
+Keep include/exclude and exact/subtree controls, explicit selected-path states.
+In subtree mode parent selection covers descendants; no implicit parent-minus-
+child exceptions or misleading inherited checkbox states are introduced.
+Tree selection affects the existing shared global filters across every page.
+Order now A03 correction -> A06 tree -> A04 presets -> A05 final clean delivery.
+Forecast increases to approximately1,200–1,800 authored lines, advisory only.
+
+## Accepted accumulated-flow scope (user follow-up)
+Overview and Cash Flow currently show period line values. Add accessible
+Por período / Acumulado mode without changing existing period KPIs, bars or
+monthly trend. Cumulative curves sum the same filtered time-series minor-unit
+values chronologically, preserving zero buckets and day/week/month/year
+granularity. Start at the selected/observed interval, not account opening balance
+or total wealth; state this visibly. Chart, exact table and CSV must use the same
+selected series. Checked integer arithmetic; original inputs not mutated.
+No period drilldown currently wired on these line charts; do not introduce one
+that labels cumulative values as single-period movements.
+Order now A03 -> A06 -> A07 -> A04 -> A05; all remain separately reviewable.
+
+## A03 proof
+- Original focus RED 6 fail / 37 pass -> GREEN 43 pass. Independent uncovered
+  account reconciliation removing both focused and adjacent chips; correction
+  RED 2 fail / 44 pass -> GREEN 46 pass. Resolve actual surviving destination
+  after committed update, without stealing external redirected focus.
+- Independent and parent two-file UI46pass; isolated browser21pass, zero fail/
+  skip at 1280/390/320 in1.7minutes. Direct Cash/Debt cascade -> Expense -> opener
+  proof, Enter/Space, drawer selector fallback/Escape and serious axe/overflow.
+- Lint/types/diff pass, source stable and cleanup complete. No golden/private
+  inputs. A03 commit/native assessment follows; A06/A07/A04/A05 remain pending.

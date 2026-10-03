@@ -221,3 +221,78 @@ it("labels excluded tags explicitly and does not count an empty tag mode", async
   await user.click(screen.getByRole("button", { name: "Quitar filtro Excluir etiqueta: Trabajo" }))
   expect(screen.getByRole("button", { name: "Abrir todos los filtros" })).toBeVisible()
 })
+
+it.each([
+  { paths: [["A"], ["B"], ["C"]], remove: "B", target: "C", key: "{Enter}" },
+  { paths: [["A"], ["B"], ["C"]], remove: "C", target: "B", key: " " },
+  { paths: [["A"]], remove: "A", target: null, key: "{Enter}" },
+])("keeps keyboard focus after removing global chip $remove", async ({ paths, remove, target, key }) => {
+  resetAppStore()
+  const user = userEvent.setup()
+  appStore.getState().actions.setCategoryPrefixes(paths)
+  render(<AppStoreProvider store={appStore}><GlobalFilters /></AppStoreProvider>)
+  const removal = screen.getByRole("button", { name: `Quitar filtro ${remove}` })
+  removal.focus()
+  expect(removal).toHaveFocus()
+  await user.keyboard(key)
+  expect(screen.queryByRole("button", { name: `Quitar filtro ${remove}` })).toBeNull()
+  const destination = target === null
+    ? screen.getByRole("button", { name: "Abrir todos los filtros" })
+    : screen.getByRole("button", { name: `Quitar filtro ${target}` })
+  expect(destination).toHaveFocus()
+})
+
+it("does not steal global focus when another control or background reset removes chips", () => {
+  resetAppStore()
+  appStore.getState().actions.setCategoryPrefixes([["A"], ["B"]])
+  render(<AppStoreProvider store={appStore}><GlobalFilters /></AppStoreProvider>)
+  const search = screen.getByRole("searchbox", { name: "Buscar en todos los movimientos" })
+  search.focus()
+  fireEvent.click(screen.getByRole("button", { name: "Quitar filtro A" }))
+  expect(search).toHaveFocus()
+  act(() => appStore.getState().actions.clearFilters())
+  expect(search).toHaveFocus()
+})
+
+it.each([
+  { category: false, redirectFocus: false },
+  { category: true, redirectFocus: false },
+  { category: true, redirectFocus: true },
+])("resolves focus after account reconciliation removes multiple chips: $category/$redirectFocus", async ({ category, redirectFocus }) => {
+  resetAppStore()
+  const user = userEvent.setup()
+  const analytics = normalizeDataset({
+    accounts: { version: 2, accounts: {
+      cash: { label: "Cash", type: "DEFAULT" },
+      debt: { label: "Debt", type: "DEBT" },
+    } },
+    categories: {},
+    parsedData: [
+      { uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 10, transactions: [] },
+      { uuid: "debt", label: "Debt", currency: "EUR", openingBalance: 0, transactions: [] },
+    ],
+  })
+  appStore.setState({ analytics })
+  appStore.getState().actions.patchFilters({ accountMode: "exclude", accountIds: ["cash", "debt"] })
+  appStore.getState().actions.patchFilters({ accountMode: "include" })
+  if (category) appStore.getState().actions.setCategoryPrefixes([["A"]])
+  expect(appStore.getState().filters.accountIds).toEqual(["cash", "debt"])
+  render(<AppStoreProvider store={appStore}><GlobalFilters /></AppStoreProvider>)
+  const search = screen.getByRole("searchbox", { name: "Buscar en todos los movimientos" })
+  const unsubscribe = appStore.subscribe(() => {
+    if (redirectFocus) search.focus()
+  })
+  try {
+    screen.getByRole("button", { name: "Quitar filtro Cuenta: Cash" }).focus()
+    await user.keyboard("{Enter}")
+    expect(appStore.getState().filters.accountIds).toEqual([])
+    expect(screen.queryByRole("button", { name: "Quitar filtro Cuenta: Cash" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Quitar filtro Cuenta: Debt" })).toBeNull()
+    const destination = redirectFocus ? search : category
+      ? screen.getByRole("button", { name: "Quitar filtro A" })
+      : screen.getByRole("button", { name: "Abrir todos los filtros" })
+    expect(destination).toHaveFocus()
+  } finally {
+    unsubscribe()
+  }
+})

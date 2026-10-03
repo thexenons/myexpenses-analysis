@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it } from "vitest"
 
@@ -546,4 +546,38 @@ it("offers accessible tag modes without creating an empty active filter", async 
   await user.selectOptions(mode, "include")
   expect(appStore.getState().filters.tags).toEqual(["Viaje"])
   expect(applyFilters(analytics, appStore.getState().filters).postings).toHaveLength(1)
+})
+
+it.each([
+  { paths: [["A"], ["B"], ["C"]], remove: "B", target: "C", key: "{Enter}" },
+  { paths: [["A"], ["B"], ["C"]], remove: "C", target: "B", key: " " },
+  { paths: [["A"]], remove: "A", target: null, key: "{Enter}" },
+])("keeps keyboard focus after removing drawer category $remove", async ({ paths, remove, target, key }) => {
+  resetAppStore()
+  const user = userEvent.setup()
+  appStore.setState({ filterDrawerOpen: true })
+  appStore.getState().actions.setCategoryPrefixes(paths)
+  render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
+  const removal = screen.getByRole("button", { name: `Quitar ${remove}` })
+  removal.focus()
+  expect(removal).toHaveFocus()
+  await user.keyboard(key)
+  expect(screen.queryByRole("button", { name: `Quitar ${remove}` })).toBeNull()
+  const destination = target === null
+    ? screen.getByRole("combobox", { name: "Añadir categoría o subcategoría" })
+    : screen.getByRole("button", { name: `Quitar ${target}` })
+  expect(destination).toHaveFocus()
+})
+
+it("does not steal drawer focus when another control or background reset removes categories", () => {
+  resetAppStore()
+  appStore.setState({ filterDrawerOpen: true })
+  appStore.getState().actions.setCategoryPrefixes([["A"], ["B"]])
+  render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
+  const search = screen.getByRole("searchbox", { name: "Buscar en movimientos" })
+  search.focus()
+  fireEvent.click(screen.getByRole("button", { name: "Quitar A" }))
+  expect(search).toHaveFocus()
+  act(() => appStore.getState().actions.clearFilters())
+  expect(search).toHaveFocus()
 })
