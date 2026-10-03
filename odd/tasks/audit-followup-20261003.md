@@ -41,7 +41,7 @@ production inspection and global installation remain out of scope.
   Reuse existing synthetic benchmark and prior measurements; record latency and
   memory for representative history sizes. Index/cache only for a measured
   bottleneck, preserving dataset-identity lifetime and financial equality.
-- [ ] F05 — Measure import peak-memory scaling and document resource envelope.
+- [x] F05 — Measure import peak-memory scaling and document resource envelope.
   Route: delegated verification/writer; synthetic ZIP/SQLite only. Keep current
   legitimate-backup compatibility unless evidence supports a limit change.
 - [x] F06 — Measure UI test startup and improve only with retained isolation.
@@ -51,7 +51,7 @@ production inspection and global installation remain out of scope.
 
 ## Delivery and verification
 - Feature identity: `audit-followup-20261003`; current local branch
-  `fix/annual-projection-budget-scope`. Work-unit commits and independent main
+  `feat/audit-maintenance-20261003`. Work-unit commits and independent main
   integration/push are authorized; no PR creation requested.
 - Delivery strategy: `auto-chain`; chain strategy: `stacked-to-main`. Advisory forecast:
   400–700 authored changed lines including durable tests/docs, generated files
@@ -142,3 +142,34 @@ and non-force main delivery under the selected strategy. PR creation is not requ
   seven available updates, audit exit 0 reported zero advisories at this time.
   Dependencies were not upgraded; hosted execution remains unverified.
   F03 work-unit commit/native assessment/main delivery are recorded next.
+
+### F03 delivery and F05 measured refinement
+- F03 commit `31c7f5c` passed four native reviewers with zero findings; exact
+  acknowledgement burned `review-f1c8cf06d71c801e`. Non-force main push and
+  remote readback confirmed the same commit. Reviewed boundary: `31c7f5c`.
+- F05 baseline completed all 1k/10k/50k cases, one fresh warmup and three
+  retained imports each. Median seconds: 0.280 / 11.460 / 296.148; median
+  peak RSS MiB: 121.270 / 224.883 / 519.348. All counts, signed sums and
+  checksums agree; all owned fixtures and workers cleaned up.
+- F05 technical refinement: skip both correlated sibling-count subqueries
+  only when the outer parent_id is NULL. SQL equality to NULL never matches;
+  preserve all existing non-null sibling semantics, statuses and ordering.
+  Route: delegated writer, two non-trivial adapter source/test files; observed
+  unindexed query scans and repeatable 50k cost justify this optimization.
+  Acceptance: deterministic RED/GREEN guard and unchanged root/split results,
+  full fresh-process matrix with byte-identical baseline output, full Node tests,
+  performance types, lint/type and synthetic deployment. No index or cap change.
+  F05 implementation and final resource report verified; delivery follows below.
+
+- F05 final proof: deterministic adapter RED 4 pass / 1 fail, GREEN 5 pass;
+  parent and independent adapter+harness 13/13 pass. Node 340 pass with three
+  existing reference-input skips; UI 502 pass / 91 files; lint, all project and
+  performance TypeScript checks, diff check and synthetic deployment 1/1 pass.
+  Same fresh-process matrix optimized medians: 0.165 / 0.732 / 2.869 seconds;
+  peak RSS 121.367 / 222.699 / 521.535 MiB. All 12 outputs match baseline
+  SHA-256, financial sums, counts and byte sizes; 103.21x 50k fixture latency
+  gain, no memory gain. Actual 1,000ms timeout cleanup also verified.
+  Methodology/ranges/bytes and unmeasured shapes are in performance README.
+  Rollback boundary: two adapter CASE guards/tests plus opt-in harness/docs;
+  no schema/index, production caps, dependency or financial behavior changes.
+  F05 work-unit commit, native assessment and main delivery remain pending.

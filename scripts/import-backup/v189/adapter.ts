@@ -858,13 +858,13 @@ function loadPostings(
             parent.payee_id AS parent_payee_id,
             parent.method_id AS parent_method_id,
             parent.comment AS parent_comment,
-            (SELECT count(*)
+            CASE WHEN t.parent_id IS NULL THEN 0 ELSE (SELECT count(*)
                FROM transactions siblings
-              WHERE siblings.parent_id = t.parent_id) AS sibling_count,
-            (SELECT count(*)
+              WHERE siblings.parent_id = t.parent_id) END AS sibling_count,
+            CASE WHEN t.parent_id IS NULL THEN 0 ELSE (SELECT count(*)
                FROM transactions earlier_siblings
               WHERE earlier_siblings.parent_id = t.parent_id
-                AND earlier_siblings._id < t._id) AS sibling_index,
+                AND earlier_siblings._id < t._id) END AS sibling_index,
             own_equivalent.equivalent_amount,
             parent_equivalent.equivalent_amount AS parent_equivalent_amount
          FROM transactions t

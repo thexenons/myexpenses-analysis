@@ -348,6 +348,101 @@ test("normalizes v189 postings, FX, lookups, budgets and scope partitions", () =
     }
 });
 
+test("skips both sibling subqueries for roots but evaluates them for non-null parents", () => {
+    const database = fixtureDatabase();
+    const evaluations: string[] = [];
+    const prepare = database.prepare.bind(database);
+    let instrumentedQueries = 0;
+    try {
+        database.create_function("observe_sibling_query", (id, alias) => {
+            evaluations.push(`${id}:${alias}`);
+            return 0;
+        });
+        database.prepare = (sql, parameters) => {
+            if (sql.includes("AS sibling_count")) {
+                let replacements = 0;
+                // Probe the aggregate result, even when no rows match. Returning zero
+                // preserves the count and leaves SQLite's CASE evaluation observable.
+                sql = sql.replace(
+                    /SELECT count\(\*\)(\s+FROM transactions (siblings|earlier_siblings))/g,
+                    (_match, from: string, alias: string) => {
+                        replacements += 1;
+                        return `SELECT count(*) + observe_sibling_query(t._id, '${alias}')${from}`;
+                    },
+                );
+                assert.equal(replacements, 2);
+                instrumentedQueries += 1;
+            }
+            return prepare(sql, parameters);
+        };
+
+        const dataset = adaptV189(database, {
+            timeZone: "Europe/Madrid",
+            preferences: { homeCurrency: "EUR", dynamicExchangeRatesMode: "PER_ACCOUNT" },
+        });
+        assert.equal(instrumentedQueries, 1);
+        assert.deepEqual(
+            evaluations.sort(),
+            [7, 8, 10, 15].flatMap((id) => [
+                `${id}:siblings`,
+                `${id}:earlier_siblings`,
+            ]).sort(),
+        );
+        for (const posting of dataset.postings) {
+            if (posting.parentTransactionId === null) {
+                assert.equal(posting.splitIndex, null);
+                assert.equal(posting.splitCount, null);
+            }
+        }
+    } finally {
+        database.prepare = prepare;
+        database.close();
+    }
+});
+
+test("retains all-row split positions including excluded, VOID and archived siblings", () => {
+    const database = fixtureDatabase();
+    try {
+        database.run(`
+            INSERT INTO transactions
+                (_id, uuid, date, value_date, amount, cat_id, account_id,
+                 parent_id, status, cr_status)
+            VALUES
+                (17, 'excluded-sibling', 1787425493, 0, 1, 11, 1, 6, 2, 'UNRECONCILED'),
+                (18, 'wrapper-sibling', 1787425493, 0, 1, 11, 1, 6, 4, 'UNRECONCILED'),
+                (19, 'void-sibling', 1787425493, 0, 1, 11, 1, 6, 0, 'VOID'),
+                (20, 'archived-sibling', 1787425493, 0, 1, 11, 1, 6, 5, 'UNRECONCILED');
+        `);
+        const dataset = adaptV189(database, {
+            timeZone: "Europe/Madrid",
+            preferences: { homeCurrency: "EUR", dynamicExchangeRatesMode: "PER_ACCOUNT" },
+        });
+        assert.deepEqual(
+            dataset.postings.filter((posting) => posting.parentTransactionId === 6)
+                .map((posting) => ({
+                    id: posting.id,
+                    index: posting.splitIndex,
+                    count: posting.splitCount,
+                    isVoid: posting.isVoid,
+                    isArchived: posting.isArchivedContent,
+                })),
+            [
+                { id: 7, index: 0, count: 6, isVoid: false, isArchived: false },
+                { id: 8, index: 1, count: 6, isVoid: false, isArchived: false },
+                { id: 19, index: 4, count: 6, isVoid: true, isArchived: false },
+                { id: 20, index: 5, count: 6, isVoid: false, isArchived: true },
+            ],
+        );
+        const archivedContent = dataset.postings.find((posting) => posting.id === 10);
+        assert.equal(archivedContent?.parentTransactionId, 9);
+        assert.equal(archivedContent?.isSplitPart, false);
+        assert.equal(archivedContent?.splitIndex, null);
+        assert.equal(archivedContent?.splitCount, null);
+    } finally {
+        database.close();
+    }
+});
+
 test("rejects a non-zero foreign posting without a usable conversion", () => {
     const database = fixtureDatabase();
     try {
