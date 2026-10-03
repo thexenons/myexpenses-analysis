@@ -81,3 +81,10 @@ staged and excluded. Rollback: remove this filter mode and its tests/docs togeth
   writer, independent and parent verification above are observed functional proof.
 - Local branch feat/category-exclusion-filter; not pushed or merged to main.
   Next: user decision on new remote publication; keep staged .atl edits intact.
+
+## Delivery closure
+The user explicitly authorized integration and push. Non-force fast-forward of
+main and push to origin completed; remote readback confirmed
+3f6248b4e3cd25366ecdba6ec288fe7a70149488. Prior pending-publication notes above are
+historical checkpoints, now superseded. No application bytes changed after
+verification. User-staged .atl registry files remain untouched and excluded.
