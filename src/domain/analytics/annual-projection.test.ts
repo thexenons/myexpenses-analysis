@@ -243,10 +243,43 @@ describe("annual savings projection", () => {
     expect(result.points[1]?.monthlyContributionEurMinor).toBe(100);
   });
 
-  it("rejects incompatible budget currency, own budget scope, and content-filtered comparisons", () => {
+  it.each([
+    { accountUuid: "cash" },
+    { filter: { type: "account" as const, accountUuids: ["cash"] } },
+    { filter: { type: "category" as const, categoryUuids: ["category"] } },
+  ])("keeps global flow and income with selected budget restrictions %j", (restriction) => {
+    const rows = [
+      coverage("2026-01-01"), coverage("2026-01-31"),
+      income("salary", "2026-01-05", 1_000),
+      income("other-income", "2026-01-06", 2_000, { accountId: "other" }),
+      posting("cash-cost", "2026-01-10", -200),
+      posting("other-cost", "2026-01-11", -300, { accountId: "other", categoryPath: ["Other expense"] }),
+      income("today-income", "2026-02-15", 3_500, { accountId: "other" }),
+    ];
+    const selected = budget(restriction);
+    const filters = createDefaultFilterState();
+    const current = analyzeBudgetPeriod(dataset(rows, selected), applyFilters(dataset(rows, selected), filters), selected, "MONTH:2026:0");
+    expect(current.status).toBe("ready");
+    if (current.status !== "ready") return;
+    // The budget view is scoped, but its annual projection must not reuse that scope.
+    expect(current.analysis.filteredPostingCount).toBeLessThan(rows.length);
+    const result = project(dataset(rows, selected), filters, "2026-02-15");
+    expect(result).toEqual(project(dataset(rows), filters, "2026-02-15"));
+    expect(result.status).toBe("ready");
+    if (result.status !== "ready") return;
+    expect(result.income).toMatchObject({ completeMonthCount: 1, expectedMonthlyMinor: 3_000 });
+    expect(result.points.slice(0, 3)).toMatchObject([
+      { kind: "actual", monthlyContributionEurMinor: 2_500, cumulativeEurMinor: 2_500 },
+      { kind: "estimated", incomeMinor: 3_500, budgetMinor: 500, monthlyContributionEurMinor: 3_000, cumulativeEurMinor: 5_500 },
+      { kind: "estimated", incomeMinor: 3_000, budgetMinor: 500, monthlyContributionEurMinor: 2_500, cumulativeEurMinor: 8_000 },
+    ]);
+    expect(project(dataset(rows, selected), { ...filters, accountIds: ["cash"] })).toEqual({ status: "unavailable", reason: "filtered-scope" });
+    expect(project(dataset(rows, selected), { ...filters, categoryPrefixes: [["Expense"]] })).toEqual({ status: "unavailable", reason: "filtered-scope" });
+  });
+
+  it("rejects incompatible budget currency and content-filtered comparisons", () => {
     const rows = [coverage("2026-01-01"), coverage("2026-01-31")];
     expect(project(dataset(rows, budget({ currency: "GBP" })))).toEqual({ status: "unavailable", reason: "incompatible-currency" });
-    expect(project(dataset(rows, budget({ accountUuid: "cash" })))).toEqual({ status: "unavailable", reason: "unsupported-budget-scope" });
     expect(project(dataset(rows), { ...createDefaultFilterState(), tags: ["keep"] })).toEqual({ status: "unavailable", reason: "filtered-scope" });
   });
 

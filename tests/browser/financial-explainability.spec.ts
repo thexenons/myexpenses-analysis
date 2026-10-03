@@ -2292,6 +2292,21 @@ test("shows an accessible annual savings trajectory on Plans at desktop and mobi
   await expect(table.getByRole("row")).toHaveCount(13);
   await expect(table.getByRole("row", { name: /2026-05/ })).toContainText("Real");
   await expect(table.getByRole("row", { name: /2026-08/ })).toContainText("Estimado");
+  const globalRows = await table.getByRole("row").allTextContents();
+  const globalIncomeAssumption = await projection.getByText(/Ingresos estimados:/).textContent();
+  const expectGlobalProjection = async (title: string) => {
+    await controls.getByRole("combobox", { name: "Presupuesto", exact: true }).selectOption({ label: title });
+    await expect(projection.getByRole("img", { name: "Ahorro acumulado en 2026" })).toBeVisible();
+    await expect(projection.getByText(/El flujo real y los ingresos son globales/)).toContainText("asignación completa del presupuesto seleccionado");
+    await expect(projection).not.toContainText("no se puede comparar con el flujo real total");
+    await expect(projection.getByText(/Ingresos estimados:/)).toHaveText(globalIncomeAssumption!);
+    const summary = projection.locator("summary").filter({ hasText: "Desglose mensual" });
+    if (await summary.evaluate((element) => !element.parentElement!.hasAttribute("open"))) await summary.press("Enter");
+    await expect(table.getByRole("row")).toHaveText(globalRows);
+  };
+  await expectGlobalProjection("Account annual outlook");
+  await expectGlobalProjection("Category annual outlook");
+
   await expectNoDocumentOverflow(page);
   const paragraphsFit = await projection.locator("p").evaluateAll((elements) =>
     elements.every((element) => element.scrollWidth <= element.clientWidth + 1));

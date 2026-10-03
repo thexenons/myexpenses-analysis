@@ -39,6 +39,7 @@ export function AnnualProjectionContent({ result }: { result: ReadyProjection })
         title={`Ahorro acumulado en ${result.year}`}
       />
       <div className={styles.assumptions}>
+        <p>El flujo real y los ingresos son globales: no se recortan por las restricciones de cuentas o categorías del presupuesto. Para los meses estimados se usa la asignación completa del presupuesto seleccionado como referencia de gasto.</p>
         <p>Año natural completo de {result.year}: sustituye el intervalo de fechas seleccionado. Los meses cerrados con cobertura completa usan el flujo real registrado. Fecha de {result.dateBasis === "value" ? "valor (operación si falta)" : "operación"}.</p>
         {allActual ? (
           <p>{result.income.completeMonthCount} meses completos; todos los puntos son reales y no se necesita estimar ingresos.</p>

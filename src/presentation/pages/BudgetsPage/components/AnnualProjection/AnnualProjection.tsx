@@ -5,7 +5,6 @@ import styles from "./AnnualProjection.module.css";
 
 const unavailableLabels: Record<Extract<AnnualProjectionResult, { status: "unavailable" }>["reason"], string> = {
   "unsupported-grouping": "Solo se pueden proyectar presupuestos mensuales o anuales.",
-  "unsupported-budget-scope": "Este presupuesto limita cuentas o categorías y no se puede comparar con el flujo real total.",
   "incompatible-currency": "La moneda del presupuesto no se puede comparar de forma segura con el flujo real en euros.",
   "filtered-scope": "Los filtros de contenido recortan el historial. Restablécelos para consultar el año completo.",
   "invalid-period": "El periodo seleccionado no identifica un año válido para la proyección.",

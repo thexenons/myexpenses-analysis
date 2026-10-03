@@ -37,6 +37,9 @@ describe("AnnualProjection", () => {
     expect(panel).toHaveTextContent("Diciembre: 0,00");
     expect(panel).toHaveTextContent("12 meses completos");
     expect(panel).toHaveTextContent("12 meses naturales");
+    expect(panel).toHaveTextContent("flujo real y los ingresos son globales");
+    expect(panel).toHaveTextContent("restricciones de cuentas o categorías del presupuesto");
+    expect(panel).toHaveTextContent("asignación completa del presupuesto seleccionado");
     expect(panel).toHaveTextContent("céntimos restantes");
     expect(within(panel).getByRole("img", { name: "Ahorro acumulado en 2026" })).toBeVisible();
   });

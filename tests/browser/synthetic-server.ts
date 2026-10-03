@@ -9,6 +9,7 @@ import { importBackup } from "../../scripts/import-backup/import-backup.ts";
 import { encryptDataset } from "../../scripts/encrypt-dataset/encrypt-dataset.ts";
 import { runBuildStaticCli } from "../../scripts/build-static/cli.ts";
 import { applyFilters, createDefaultFilterState } from "../../src/domain/analytics/filters.ts";
+import type { BackupDatasetV1 } from "../../src/domain/analytics/backup-dataset.types.ts";
 import { normalizeDataset } from "../../src/domain/analytics/normalize.ts";
 import { createImportedHistorySeed, makeSyntheticHistory } from "../performance/synthetic-history.ts";
 
@@ -188,6 +189,20 @@ async function main(): Promise<void> {
       inputPath: historyArchivePath, outputPath: historyDatasetPath, timeZone: "Europe/Madrid",
       backupFilenameTimestamp: "20260822210453", importedAt: "2026-08-23T10:00:00.000Z",
     });
+    // Restricted copies share the annual allocation; their projections must retain global history.
+    const historyDataset = JSON.parse(await readFile(historyDatasetPath, "utf8")) as BackupDatasetV1;
+    const annualOutlook = historyDataset.budgets.find((budget) => budget.title === "Annual outlook");
+    if (annualOutlook === undefined) throw new Error("Missing synthetic annual outlook budget");
+    await writeFile(historyDatasetPath, JSON.stringify({
+      ...historyDataset,
+      budgets: [
+        ...historyDataset.budgets,
+        { ...annualOutlook, uuid: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", sourceId: 4,
+          title: "Account annual outlook", accountUuid: "22222222-2222-4222-8222-222222222222" },
+        { ...annualOutlook, uuid: "ffffffff-ffff-4fff-8fff-ffffffffffff", sourceId: 5,
+          title: "Category annual outlook", filter: { type: "category", categoryUuids: ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1"] } },
+      ],
+    }), { mode: 0o600 });
     await encryptDataset({ inputPath: historyDatasetPath, outputPath: historyVaultPath, passphrase: PASSPHRASE });
     await copyFile(historyVaultPath, join(distPath, "data", "u7-budget-history.vault.json"));
     await rm(historyArchivePath);

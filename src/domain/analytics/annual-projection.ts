@@ -47,7 +47,7 @@ export type AnnualProjectionResult =
     }
   | {
       readonly status: "unavailable";
-      readonly reason: "unsupported-grouping" | "unsupported-budget-scope" | "incompatible-currency" |
+      readonly reason: "unsupported-grouping" | "incompatible-currency" |
         "filtered-scope" | "invalid-period" | "no-complete-months";
     };
 
@@ -97,9 +97,6 @@ export function analyzeAnnualSavingsProjection(
   if (period.grouping !== "MONTH" && period.grouping !== "YEAR") {
     return { status: "unavailable", reason: "unsupported-grouping" };
   }
-  if (budget.accountUuid !== null || budget.filter !== null) {
-    return { status: "unavailable", reason: "unsupported-budget-scope" };
-  }
   if (analysis.currency !== "EUR" || analysis.fractionDigits !== 2 || analytics.backup?.preferences.homeCurrency !== "EUR") {
     return { status: "unavailable", reason: "incompatible-currency" };
   }
@@ -110,6 +107,7 @@ export function analyzeAnnualSavingsProjection(
   }
 
   const months = Array.from({ length: 12 }, (_, index) => civilMonth(year, index));
+  // Budget restrictions affect its allocation view, never the global flow or income baseline.
   const realFilters: FilterState = {
     ...filters, scope: "realCashFlow", periodMode: "year",
     dateRange: { from: months[0]!.startDate, to: months[11]!.endDate },

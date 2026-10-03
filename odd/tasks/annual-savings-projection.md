@@ -1,5 +1,13 @@
 # Annual cumulative savings projection
 
+## 2026-10-03 resumed work
+- User authorized finishing recorded pending work before audit improvements.
+- Reconciled current repository with the historical Engram snapshot: T01/T02 are complete; T03 is the actual pending behavior. Local HEAD/main are at `48c4a54`; cached remote refs are not fresh remote-delivery proof.
+- T03 remains delegated direct (multi-file behavior/tests). Preserve unrelated dirty registry and pCloud evidence. Current authorization does not add remote delivery.
+- Use the existing annual trajectory browser scenario and inline synthetic fixture; no new harness is required.
+- Historical browser runtime library directory is absent. Resolve the local verification prerequisite without changing global packages, or report browser proof blocked.
+- Engram recovery mirroring is now available through the registered runtime session; previous mirror-pending notes are historical.
+
 ## Objective
 Show the projected cumulative real flow at every month end, January through December of the selected budget year, on Planning/Plans.
 
@@ -20,6 +28,17 @@ The page has budget pacing and historical income comparisons, but no annual savi
 ## Tasks
 - [x] T01: Implement the pure annual projection and domain tests. Route: delegated; preparation and 2-file writer triggers. Completed in `3f8b4b31bdb33dc0885be392494e7f9af29f9eb6` with 16 tests and independent verification.
 - [x] T02: Integrate an accessible real-versus-estimated chart into Plans, add integration tests, verify and deliver. Route: delegated; multi-file writer trigger. Implementation `ba11ffa`; source and recovery commits delivered to `origin/main` at `772b74d` by observed successful non-force push.
+- [x] T03: Support selected budgets with account/category restrictions while preserving global real flow and income. Route: delegated; preparation and multi-file behavioral regression triggers. User explicitly approved this correction after reporting the unsupported-scope message. Verified locally on 2026-10-03; commit and assessment recorded below.
+
+### T03 authorized correction
+- Remove the selected budget's account/category restriction as an availability blocker. Closed months still use global real flow; estimated months still use global same-year income minus the full selected budget allocation. The budget's own restrictions must not filter projection income or real flow.
+- Preserve application-level content-filter and incompatible-currency guards, completed-month coverage, inclusive today cutoff, signed values, monthly allocation resolution, and cumulative arithmetic.
+- Explain the global-flow/selected-budget basis in existing neutral Spanish UI copy. Remove the obsolete unsupported-budget-scope reason and message; add domain and UI/browser regressions for account/category-restricted budgets.
+- Current fix authorization covers local implementation and feature-branch work-unit commits only. Original main delivery was completed at `48c4a54`; a new remote delivery requires explicit authorization.
+- Fix branch: `fix/annual-projection-budget-scope`; branch point and first native review boundary: `48c4a5406b64950f1714b6dfdf4b95cfc1b4cc1a`. Forecast approximately 100–200 authored lines; delivery strategy remains `ask-on-risk`, no PR requested.
+- Applicable test-first policy: observe runnable deterministic regression RED before implementation, then GREEN and refactor. Verification: focused domain/component Vitest, `pnpm type-check`, `pnpm lint`, `pnpm test`, and the isolated synthetic annual-projection browser scenario at all three configured widths. The browser runner also exercises the isolated production build; do not load private vault data for a direct build.
+- Native RDD mode is on (global). Assess the committed fix against its own branch point; follow exact returned transitions and the current candidate-consent contract. Historical automatic grants are not a fabricated approval for this fix.
+- Engram mirror remains pending because runtime session registration is unavailable; do not perform agent-attributed memory writes.
 
 ## Acceptance and verification
 Focused domain/UI tests during RED/GREEN, then `pnpm type-check`, `pnpm lint`, `pnpm test`, `pnpm build`, and `pnpm test:browser` at integration closure. Report exact failed/unavailable/skipped checks. Inspect diff for user edits and private data. Each task closes with a Conventional Commit and evidence below; no AI attribution. Native candidate is a work-unit commit/slice, not the entire feature branch.
@@ -59,7 +78,18 @@ Exploration completed read-only. Imported data has no scheduled income; user app
 - User explicitly authorized synchronization and push to `origin/main` using configured repository Git authentication. Fetch confirmed remote main at `c86d1c4`; local main fast-forwarded to `772b74d`. Observed `git push origin main` exit 0: `c86d1c4..772b74d main -> main`. No force, rebase, history rewrite, PR, or deployment performed. Unrelated edited files remained untouched.
 
 ## Final state
-Both implementation tasks are complete and source delivery is verified. Exact tests, environmental failures, resolved regressions, native review outcome and residual unsupported scopes are recorded above. Historical Engram mirror is deliberately stale/pending: do not trust its original unchecked tasks over this repository document until the runtime restores session attribution and the full document can be mirrored.
+Original implementation tasks T01/T02 and their main delivery are complete. T03 is implemented and locally verified; no new remote delivery is authorized. The full Engram task mirror was restored using the authoritative runtime identity on 2026-10-03.
 
 ## Next step
-Publish this passive delivery record through the same authorized non-force main push and verify local/remote identity. No further source work is required. Resynchronize the Engram mirror only when the host restores the authoritative session identity; do not invent or register one.
+Close the local T03 work-unit commit and native assessment, then continue the accepted audit opportunities. Request explicit authorization before any new remote delivery.
+
+### T03 implementation and verification (2026-10-03)
+- Removed the obsolete selected-budget scope availability guard and reason, leaving global flow/income and complete selected allocation arithmetic unchanged. Added neutral Spanish calculation-basis disclosure.
+- Added independent account/category-restricted domain cases and browser fixtures that exclude salary from the selected budget scope, preserving global table rows and income baseline.
+- Observed focused RED: 4 failed / 17 passed; GREEN: 21 passed. No further production refactor was necessary.
+- Writer: type-check and lint passed; full suite Node 324 passed / 3 optional private-reference skips, UI 502 passed. No private data was loaded.
+- Parent independently reran focused Vitest: 21 passed; structural diff readback and diff check clean.
+- Independent verifier: focused Vitest 21 passed; isolated annual trajectory browser scenario 3/3 at desktop, 390px, 320px (24.3s), including synthetic production build, keyboard/axe/overflow and equality regressions; synthetic deployment pipeline 1/1 (22.6s). Full browser matrix remains a separate pending audit verification item.
+- Browser prerequisite resolved through public apt packages extracted into temporary local directories, without global installation. Supported runtime environment: `MYEXPENSES_BROWSER_RUNTIME_LIB_DIR=/tmp/myexpenses-browser-libs.ayxt79/root/usr/lib/x86_64-linux-gnu`. No orphan processes remain.
+- Source/test diff: seven files, +71/-7 = 78 authored lines. Rollback only this scope guard removal, disclosure and its regressions; preserve T01/T02 and unrelated edits.
+- Work-unit commit and committed assessment: pending below; current uncommitted assessment medium/under-budget includes unrelated registry changes and is not the fix-only assessment.
