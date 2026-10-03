@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { createAppStore } from "../../../../application/store/app-store/app-store.ts"
 import { appStore } from "../../../../composition/app-store.ts"
 import { applyFilters, createDefaultFilterState } from "../../../../domain/analytics/filters.ts"
 import { normalizeDataset } from "../../../../domain/analytics/normalize.ts"
@@ -707,4 +708,97 @@ it("visibly rejects a quota failure through the real preset storage adapter", as
   } finally {
     write.mockRestore();
   }
+});
+
+async function pendingPresetConfirmation(kind: "delete" | "overwrite", focused = true) {
+  installDialogStub();
+  const values = new Map<string, string>();
+  let delay = false;
+  let settle: ((succeed: boolean) => void) | undefined;
+  const store = createAppStore({ load: async () => { throw new Error("Unused synthetic repository"); } }, {
+    getItem: (key) => values.get(key) ?? null,
+    removeItem: (key) => { values.delete(key); },
+    setItem: async (key, value) => {
+      if (delay && key === "myexpenses-analysis:filter-presets:v1") {
+        await new Promise<void>((resolve, reject) => {
+          settle = (succeed) => succeed ? resolve() : reject(new Error("Synthetic write failure"));
+        });
+      }
+      values.set(key, value);
+    },
+  }, { hostname: "localhost", isSecureContext: true });
+  store.setState({ analytics: normalizeDataset({ accounts: { version: 2, accounts: {} }, categories: {}, parsedData: [] }), loadPhase: "ready", filterDrawerOpen: true });
+  await store.getState().actions.saveFilterPreset("Pending");
+  const user = userEvent.setup();
+  const view = render(<AppStoreProvider store={store}><FilterDrawer /></AppStoreProvider>);
+  await user.click(await screen.findByText("Filtros guardados"));
+  const selector = screen.getByRole("combobox", { name: "Filtro guardado" });
+  await user.selectOptions(selector, "Pending");
+  await user.click(screen.getByRole("button", { name: kind === "delete" ? "Eliminar filtro guardado" : "Sobrescribir filtro guardado" }));
+  const confirm = screen.getByRole("button", { name: kind === "delete" ? "Confirmar eliminación" : "Confirmar sobrescritura" });
+  const search = screen.getByRole("searchbox", { name: "Buscar en movimientos" });
+  delay = true;
+  if (focused) {
+    confirm.focus();
+    await user.keyboard("{Enter}");
+  } else {
+    search.focus();
+    fireEvent.click(confirm);
+  }
+  await waitFor(() => expect(settle).toBeTypeOf("function"));
+  expect(confirm).toBeDisabled();
+  return { store, view, user, confirm, selector, search, settle: async (succeed = true) => {
+    await act(async () => { settle!(succeed); });
+    await waitFor(() => expect(store.getState().presetBusy).toBe(false));
+  } };
+}
+
+function forcePendingBodyFocus(confirm: HTMLElement) {
+  // jsdom ignores blur() on disabled buttons: temporarily enable only for a genuine blur.
+  const button = confirm as HTMLButtonElement;
+  button.disabled = false;
+  button.blur();
+  button.disabled = true;
+  expect(document.activeElement).toBe(document.body);
+}
+
+it.each(["delete", "overwrite"] as const)("restores owned confirmation focus after genuine pending BODY blur on %s", async (kind) => {
+  const pending = await pendingPresetConfirmation(kind);
+  forcePendingBodyFocus(pending.confirm);
+  await pending.settle();
+  expect(pending.confirm).not.toBeInTheDocument();
+  expect(pending.selector).toHaveFocus();
+});
+
+it.each(["focus", "focus-then-body", "pointer", "keyboard", "closed", "disconnected", "unfocused"] as const)("does not reclaim preset confirmation focus after %s", async (redirect) => {
+  const pending = await pendingPresetConfirmation("delete", redirect !== "unfocused");
+  if (redirect !== "unfocused") forcePendingBodyFocus(pending.confirm);
+  if (redirect === "focus" || redirect === "focus-then-body") pending.search.focus();
+  if (redirect === "focus-then-body") pending.search.blur();
+  if (redirect === "pointer") fireEvent.pointerDown(document.body);
+  if (redirect === "keyboard") fireEvent.keyDown(document.body, { key: "Tab" });
+  if (redirect === "closed") await act(async () => { pending.store.getState().actions.closeFilterDrawer(); });
+  if (redirect === "disconnected") pending.view.unmount();
+  const destination = document.activeElement;
+  await pending.settle();
+  expect(document.activeElement).toBe(destination);
+});
+
+it("restores an owned failed confirmation after pending blur without closing it", async () => {
+  const pending = await pendingPresetConfirmation("delete");
+  forcePendingBodyFocus(pending.confirm);
+  await pending.settle(false);
+  expect(pending.confirm).toHaveFocus();
+  expect(pending.confirm).toBeEnabled();
+  expect(screen.getByText(/No se pudieron guardar los filtros locales/)).toBeVisible();
+});
+
+
+it("does not steal external focus when a pending confirmation fails", async () => {
+  const pending = await pendingPresetConfirmation("delete");
+  forcePendingBodyFocus(pending.confirm);
+  pending.search.focus();
+  await pending.settle(false);
+  expect(pending.search).toHaveFocus();
+  expect(pending.confirm).toBeEnabled();
 });

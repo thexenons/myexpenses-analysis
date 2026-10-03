@@ -3,7 +3,7 @@ import type {
   CategoryType,
   LinkedFilter,
 } from "../../../../domain/analytics/types"
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { formatCategoryPath } from "../../../utils/format.ts"
 import { Button } from "../../atoms/Button"
 import { Icon } from "../../atoms/Icon"
@@ -94,17 +94,85 @@ export function FilterDrawerView({
       setPresetNotice("Filtro guardado en este navegador.")
     }
   }
-  const confirmPreset = async () => {
+  const pendingConfirmationFocusRef = useRef<{
+    origin: HTMLButtonElement
+    dialog: HTMLDialogElement
+    sawPendingDisable: boolean
+    settled: boolean
+    succeeded: boolean
+    redirected: boolean
+    cleanup: () => void
+  } | null>(null)
+  const [, setConfirmationFocusRevision] = useState(0)
+
+  useEffect(() => () => {
+    pendingConfirmationFocusRef.current?.cleanup()
+    pendingConfirmationFocusRef.current = null
+  }, [])
+
+  useLayoutEffect(() => {
+    const pending = pendingConfirmationFocusRef.current
+    if (pending === null) return
+    if (presetBusy && pending.origin.disabled) pending.sawPendingDisable = true
+    if (!pending.settled || presetBusy) return
+    pendingConfirmationFocusRef.current = null
+    pending.cleanup()
+    const ownerDocument = pending.origin.ownerDocument
+    const active = ownerDocument.activeElement
+    // BODY is recoverable only after this owned control was disabled, without a redirect.
+    const lostOwnedFocus = active === ownerDocument.body && pending.sawPendingDisable
+    if (pending.redirected || !pending.dialog.isConnected || !pending.dialog.open
+      || (active !== pending.origin && !lostOwnedFocus)) return
+    const destination = pending.succeeded ? presetSelectorRef.current : pending.origin
+    if (destination?.isConnected && !destination.disabled && pending.dialog.contains(destination)) {
+      destination.focus()
+    }
+  })
+
+  const confirmPreset = async (origin: HTMLButtonElement) => {
     if (confirmation === null) return
-    const origin = document.activeElement
+    const ownerDocument = origin.ownerDocument
+    const dialog = dialogRef.current
+    if (ownerDocument.activeElement === origin && dialog?.open) {
+      pendingConfirmationFocusRef.current?.cleanup()
+      const pending = {
+        origin, dialog, sawPendingDisable: false, settled: false,
+        succeeded: false, redirected: false, cleanup: () => {},
+      }
+      const revoke = () => { pending.redirected = true }
+      const onFocus = (event: FocusEvent) => {
+        if (event.target !== origin && event.target !== ownerDocument.body) revoke()
+      }
+      const onPointer = (event: PointerEvent) => {
+        if (!origin.contains(event.target as Node)) revoke()
+      }
+      ownerDocument.addEventListener("focusin", onFocus)
+      ownerDocument.addEventListener("pointerdown", onPointer)
+      ownerDocument.addEventListener("keydown", revoke)
+      dialog.addEventListener("close", revoke)
+      dialog.addEventListener("cancel", revoke)
+      pending.cleanup = () => {
+        ownerDocument.removeEventListener("focusin", onFocus)
+        ownerDocument.removeEventListener("pointerdown", onPointer)
+        ownerDocument.removeEventListener("keydown", revoke)
+        dialog.removeEventListener("close", revoke)
+        dialog.removeEventListener("cancel", revoke)
+      }
+      pendingConfirmationFocusRef.current = pending
+    }
     setPresetNotice("")
     const succeeded = confirmation.kind === "overwrite"
       ? await onPresetSave(confirmation.name, true)
       : await onPresetDelete(confirmation.name)
+    const pending = pendingConfirmationFocusRef.current
+    if (pending?.origin === origin) {
+      pending.settled = true
+      pending.succeeded = succeeded
+      setConfirmationFocusRevision((revision) => revision + 1)
+    }
     if (!succeeded) return
     setPresetNotice(confirmation.kind === "overwrite" ? "Filtro sobrescrito." : "Filtro eliminado.")
     setConfirmation(null)
-    if (document.activeElement === origin) presetSelectorRef.current?.focus()
   }
   const categoryTreeRef = useRef<HTMLElement>(null)
   const [payeeQuery, setPayeeQuery] = useState("")
@@ -178,7 +246,7 @@ export function FilterDrawerView({
                 <legend>{confirmation.kind === "overwrite" ? "¿Sobrescribir" : "¿Eliminar"} «{confirmation.name}»?</legend>
                 <p>{confirmation.kind === "overwrite" ? "Sustituirá la copia guardada por los filtros actuales." : "Se eliminará únicamente esta copia local."}</p>
                 <div className={styles.presetActions}>
-                  <Button disabled={presetBusy} onClick={() => void confirmPreset()} variant="secondary">{confirmation.kind === "overwrite" ? "Confirmar sobrescritura" : "Confirmar eliminación"}</Button>
+                  <Button disabled={presetBusy} onClick={(event) => void confirmPreset(event.currentTarget)} variant="secondary">{confirmation.kind === "overwrite" ? "Confirmar sobrescritura" : "Confirmar eliminación"}</Button>
                   <Button disabled={presetBusy} onClick={() => { setConfirmation(null); confirmationOriginRef.current?.focus() }} ref={focusConfirmationCancel} variant="ghost">Cancelar</Button>
                 </div>
               </fieldset> : null}

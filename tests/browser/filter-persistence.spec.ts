@@ -509,3 +509,47 @@ test("named filter presets preserve future payloads and visibly reject durable q
   expect(await page.evaluate((key) => localStorage.getItem(key), PRESET_KEY)).toBeNull();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+for (const redirected of [false, true]) {
+  test(`pending preset confirmation ${redirected ? "preserves redirected focus" : "recovers owned focus"}`, async ({ page }) => {
+    const drawer = await openDrawer(page);
+    await drawer.locator("summary").filter({ hasText: /^Filtros guardados$/ }).click();
+    await drawer.getByRole("textbox", { name: "Nombre del filtro" }).fill("Pending");
+    await drawer.getByRole("button", { name: "Guardar filtro actual" }).click();
+    const selector = drawer.getByRole("combobox", { name: "Filtro guardado", exact: true });
+    await expect(selector).toHaveValue("Pending");
+    // Native localStorage is synchronous; inject the supported async storage contract.
+    await page.evaluate((key) => {
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (name, value) {
+        if (name !== key) return original.call(this, name, value);
+        document.documentElement.dataset.presetWritePending = "true";
+        return new Promise<void>((resolve) => {
+          document.addEventListener("synthetic-preset-write-release", () => {
+            original.call(this, name, value);
+            resolve();
+          }, { once: true });
+        });
+      };
+    }, PRESET_KEY);
+    await drawer.getByRole("button", { name: "Eliminar filtro guardado" }).click();
+    const confirm = drawer.getByRole("button", { name: "Confirmar eliminación" });
+    await confirm.focus();
+    await confirm.press("Enter");
+    await expect(confirm).toBeDisabled();
+    await expect(page.locator("html")).toHaveAttribute("data-preset-write-pending", "true");
+    await confirm.evaluate((element) => {
+      const button = element as HTMLButtonElement;
+      button.disabled = false;
+      button.blur();
+      button.disabled = true;
+    });
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+    const search = drawer.getByRole("searchbox", { name: "Buscar en movimientos" });
+    if (redirected) await search.focus();
+    await page.evaluate(() => document.dispatchEvent(new Event("synthetic-preset-write-release")));
+    await expect(confirm).toHaveCount(0);
+    await expect(redirected ? search : selector).toBeFocused();
+    await expect(drawer).toBeVisible();
+  });
+}

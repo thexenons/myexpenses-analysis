@@ -245,7 +245,7 @@ Order now A03 -> A06 -> A07 -> A04 -> A05; all remain separately reviewable.
   focus remained respected. Native synchronous-browser occurrence not established.
 - [x] A08 — Correct category-tree component structure, preserve behavior.
   Delegated writer: component structure/index and focused architecture/UI proof.
-- [ ] A09 — Correct owned post-commit confirmation focus after async pending blur.
+- [x] A09 — Correct owned post-commit confirmation focus after async pending blur.
   Delegated writer: drawer logic plus effective deterministic/browser regression.
 - A05 remains pending; repeat full checks after these corrections, then registry
   commit and final main delivery. No previous approved review is reopened.
@@ -256,3 +256,16 @@ Order now A03 -> A06 -> A07 -> A04 -> A05; all remain separately reviewable.
 - Public index added; hook-free recursive rendering preserves stable disclosure
   keys. Four-file13add13delete, normalization before verification, source frozen.
 - Rollback only tree renderer/index and its consumer imports; A09 remains pending.
+
+## A08/A09 correction proof and boundaries
+- A08 work-unit `56cb31a`, medium52lines/under_budget from reviewed5a5f1d2.
+- A09 async confirmation focus regression RED4fail5pass34skip -> GREEN drawer/
+  store95pass; parent repeated95pass. Lint/all3types/diffpass after normalization.
+- Recovery after committed settlement requires original focus ownership and open,
+  connected drawer; external focus/actions/close/unmount revoke it permanently.
+  Success focuses selector; failed writes restore confirmation. Effective tests
+  cover BODY loss, delete/overwrite/failure, intentional redirection and revocation.
+- Two browser regressions explicitly inject supported async storage, not native
+  localStorage async behavior; execution remains pending in full final browser.
+- Three-file211add5delete, separate work unit. Rollback only confirmation recovery
+  and its regressions. Next commit/assess then repeat A05 full synthetic checks.
