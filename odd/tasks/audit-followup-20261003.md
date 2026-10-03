@@ -28,7 +28,7 @@ production inspection and global installation remain out of scope.
   Acceptance: full synthetic browser matrix observed, exact skips identified;
   append current local integration status without rewriting historical proof or
   claiming fresh remote verification. Resynchronize relevant recovery mirrors.
-- [ ] F02 — Add periodic full browser regression while preserving fast PR smoke.
+- [x] F02 — Add periodic full browser regression while preserving fast PR smoke.
   Route: delegated writer; CI/runtime configuration and tests. Preserve synthetic
   isolation, minimum permissions, pinned actions, timeouts and no private data.
   Check workflow selectors and run equivalent commands locally.
@@ -97,3 +97,17 @@ tree shapes still need dedicated synthetic measurements.
 
 Continue F02–F06 as independent work units, with native assessment at each slice
 and non-force main delivery under the selected strategy. PR creation is not requested.
+
+## Work-unit evidence
+- F01 recovery commit `56d3e91` and T03 `edd0bbc` were fast-forwarded and pushed
+  non-force to origin/main. Remote `ls-remote` confirmed `56d3e91` exactly.
+  Unrelated registry edits were excluded. Follow-up branch is
+  `feat/audit-maintenance-20261003`; native pending slice boundary remains `48c4a54`.
+- F02 uses weekly Monday 04:17 UTC and manual triggers. Existing push/PR checks
+  and smoke stay event-exclusive; scheduled/manual runs call unrestricted
+  `pnpm test:browser` with shared pinned setup and the existing 35-minute timeout.
+  Meaningful regression RED: 7 failed / 1 passed; GREEN: 8 passed; existing + new
+  CI tests 9 passed. Lint, type-check, PyYAML shape validation and diff check
+  passed. Parent independently reran both architecture files: 9 passed. Runner
+  unchanged; F01 full synthetic browser/build proof applies. Hosted scheduled
+  execution has not yet occurred and is not claimed. F02 commit identity follows.
