@@ -1,6 +1,8 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- The generated SVG itself is the image and supplies title, description and an exact-data table. */
 import { useCallback, useImperativeHandle, useRef } from "react";
 
+import { formatExactEuroMinor } from "../../../utils/format.ts";
+import type { ChartPoint } from "../chart/chart.types.ts";
 import { cx, formatNumber } from "../../../utils/component.helpers.ts";
 import { ChartDataTable } from "../ChartDataTable/index.ts";
 import { ChartFrame } from "../ChartFrame/index.ts";
@@ -73,32 +75,30 @@ export function SeriesChart({
     zeroY,
   } = useSeriesChartModel(visibleSeries, chartWidth, formatValue, formatLabel);
   const createDataTableRows = useCallback(() => {
-    const valuesBySeriesAndLabel = visibleSeries.map((item) => {
-      const valuesByLabel = new Map<string, number | null>();
+    const pointsBySeriesAndLabel = visibleSeries.map((item) => {
+      const pointsByLabel = new Map<string, ChartPoint>();
       for (const point of item.data) {
-        if (!valuesByLabel.has(point.label)) {
-          valuesByLabel.set(
-            point.label,
-            Number.isFinite(point.value) ? point.value : null,
-          );
-        }
+        if (!pointsByLabel.has(point.label)) pointsByLabel.set(point.label, point);
       }
-      return valuesByLabel;
+      return pointsByLabel;
     });
-
-    return labels.map((label) => ({
-      id: label,
-      label,
-      values: valuesBySeriesAndLabel.map(
-        (valuesByLabel) => valuesByLabel.get(label) ?? null,
-      ),
-    }));
+    const hasMinorMetadata = visibleSeries.some((item) => item.data.some((point) => point.valueEurMinor !== undefined));
+    return labels.map((label) => {
+      const points = pointsBySeriesAndLabel.map((pointsByLabel) => pointsByLabel.get(label));
+      return {
+        id: label,
+        label,
+        values: points.map((point) => point !== undefined && Number.isFinite(point.value) ? point.value : null),
+        ...(hasMinorMetadata ? { valuesEurMinor: points.map((point) => point?.valueEurMinor) } : {}),
+      };
+    });
   }, [labels, visibleSeries]);
   const getInspectorValues = useCallback((label: string) => visibleSeries.map((item) => {
     const point = item.data.find((candidate) => candidate.label === label);
     return {
       id: item.id, label: item.label, color: item.color,
       value: point !== undefined && Number.isFinite(point.value) ? point.value : null,
+      valueEurMinor: point?.valueEurMinor,
       detail: point?.tooltip ?? (point === undefined ? undefined : tooltipFormatter?.(point, item)),
     };
   }), [visibleSeries, tooltipFormatter]);
@@ -244,7 +244,7 @@ export function SeriesChart({
                 const tooltip =
                   point.tooltip ??
                   tooltipFormatter?.(point, item) ??
-                  `${item.label} · ${formatLabel(point.label)}: ${formatNumber(point.value, formatValue)}`;
+                  `${item.label} · ${formatLabel(point.label)}: ${formatExactEuroMinor(point.valueEurMinor) ?? formatNumber(point.value, formatValue)}`;
 
                 return (
                   <circle

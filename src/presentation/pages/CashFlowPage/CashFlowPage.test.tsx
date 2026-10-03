@@ -1,12 +1,13 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { applyFilters, createDefaultFilterState } from "../../../domain/analytics/filters.ts";
 import { normalizeDataset } from "../../../domain/analytics/normalize.ts";
 import type { AppDataset, KpiSummary } from "../../../domain/analytics/types.ts";
 import { createCashFlowPageModel } from "./CashFlowPage.helpers.ts";
 import { CashFlowPageView } from "./CashFlowPage.view.tsx";
+import * as csvHelpers from "../../components/organisms/ChartDataTable/ChartDataTable.helpers.ts";
 
 const kpis: KpiSummary = {
   accountCount: 1,
@@ -266,4 +267,76 @@ describe("CashFlowPageView", () => {
       { exact: false, selector: "p" },
     )).toBeVisible();
   });
+});
+
+it("switches cash-flow lines and exact CSV together while leaving bars and monthly trend unchanged", async () => {
+  const user = userEvent.setup();
+  const source = normalizeDataset({
+    accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+    categories: { Expense: { categoryType: "EXPENSE" }, Income: { categoryType: "INCOME" } },
+    parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 100, transactions: [
+      { uuid: "expense", date: "2026-01-01", amount: -2, category: ["Expense"], sourceTransactionUuid: "expense", sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+      { uuid: "income", date: "2026-01-03", amount: 10, category: ["Income"], sourceTransactionUuid: "income", sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+    ] }],
+  });
+  const filters = { ...createDefaultFilterState(), dateRange: { from: "2026-01-01", to: "2026-01-03" } } as const;
+  const model = createCashFlowPageModel(applyFilters(source, filters), "day");
+  const view = render(<CashFlowPageView {...model} />);
+  expect(screen.getByRole("radio", { name: "Por período" })).toBeChecked();
+  const bars = screen.getByRole("heading", { name: "Tensión entre entradas y salidas" }).closest("figure")!;
+  const originalBars = bars.innerHTML;
+  const originalKpi = screen.getByRole("article", { name: "Flujo real" }).textContent;
+  await user.click(screen.getByRole("radio", { name: "Acumulado" }));
+  const figure = screen.getByRole("heading", { name: "Flujo neto acumulado" }).closest("figure")!;
+  expect(within(figure).getByText(/No incluye el saldo de apertura ni representa patrimonio/, { selector: "p" })).toBeVisible();
+  await user.click(within(figure).getByText("Ver datos exactos"));
+  const table = within(figure).getByRole("table");
+  expect(within(table).getAllByRole("row").at(-1)).toHaveTextContent(/8,00\s*€.*8,00\s*€/);
+  expect(within(table).getAllByRole("row")[2]).toHaveTextContent(/-2,00\s*€.*-2,00\s*€/);
+  const download = vi.spyOn(csvHelpers, "downloadChartCsv").mockImplementation(() => {});
+  await user.click(within(figure).getByRole("button", { name: /Descargar CSV/ }));
+  expect(download.mock.calls[0]![2].map((row) => row.values)).toEqual([[-2, -2], [-2, -2], [8, 8]]);
+  expect(bars.innerHTML).toBe(originalBars);
+  expect(screen.getByRole("article", { name: "Flujo real" }).textContent).toBe(originalKpi);
+  expect(screen.getByText("Tendencia mensual").closest("details")).not.toHaveAttribute("open");
+  const later = applyFilters(source, { ...filters, dateRange: { from: "2026-01-02", to: "2026-01-03" } });
+  view.rerender(<CashFlowPageView {...createCashFlowPageModel(later, "day")} />);
+  expect(within(screen.getByRole("table")).getAllByRole("row")[1]).toHaveTextContent(/0,00\s*€.*0,00\s*€/);
+  expect(within(screen.getByRole("table")).getAllByRole("row").at(-1)).toHaveTextContent(/10,00\s*€.*10,00\s*€/);
+  await user.click(screen.getByRole("radio", { name: "Por período" }));
+  expect(screen.getByRole("heading", { name: "Flujo neto por periodo" })).toBeVisible();
+});
+
+it("reports an unavailable cumulative cash-flow curve without replacing period bars", async () => {
+  render(<CashFlowPageView {...createCashFlowPageModel(emptyTrendFiltered, "day")} {...{ cumulativeLineSeries: null }} />);
+  await userEvent.setup().click(screen.getByRole("radio", { name: "Acumulado" }));
+  expect(screen.getByRole("status")).toHaveTextContent("No se puede representar el acumulado de forma segura.");
+  expect(screen.getByRole("heading", { name: "Tensión entre entradas y salidas" })).toBeVisible();
+  expect(screen.queryByRole("img", { name: /Flujo neto/ })).toBeNull();
+});
+
+
+it("preserves safe accumulated minor units in the exact table and CSV at the decimal precision boundary", async () => {
+  const user = userEvent.setup();
+  const source = normalizeDataset({
+    accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+    categories: { Income: { categoryType: "INCOME" } },
+    parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+      { uuid: "first", date: "2026-01-01", amount: 40000000000000, category: ["Income"], sourceTransactionUuid: "first", sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+      { uuid: "second", date: "2026-01-02", amount: 40000000000000.01, category: ["Income"], sourceTransactionUuid: "second", sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+    ] }],
+  });
+  const filtered = applyFilters(source, createDefaultFilterState());
+  expect(filtered.activePostings.map((point) => point.amountEurMinor)).toEqual([4000000000000000, 4000000000000001]);
+  const model = createCashFlowPageModel(filtered, "day");
+  render(<CashFlowPageView {...model} />);
+  await user.click(screen.getByRole("radio", { name: "Acumulado" }));
+  const figure = screen.getByRole("heading", { name: "Flujo neto acumulado" }).closest("figure")!;
+  await user.click(within(figure).getByText("Ver datos exactos"));
+  const lastRow = within(within(figure).getByRole("table")).getAllByRole("row").at(-1)!;
+  expect(lastRow).toHaveTextContent(/80\.000\.000\.000\.000,01\s*€/);
+  const download = vi.spyOn(csvHelpers, "downloadChartCsv").mockImplementation(() => {});
+  await user.click(within(figure).getByRole("button", { name: /Descargar CSV/ }));
+  const [header, columns, rows] = download.mock.calls[0]!;
+  expect(csvHelpers.createChartCsv(header, columns, rows).split("\r\n").at(-1)).toContain(",80000000000000.01");
 });

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import { formatExactEuroMinor } from "../../../utils/format.ts";
 import { formatNumber } from "../../../utils/component.helpers.ts";
 import { Button } from "../../atoms/Button/index.ts";
 import { TableScrollRegion } from "../TableScrollRegion";
@@ -80,7 +81,7 @@ export function ChartDataTable({
                     </th>
                     {row.values.map((value, index) => (
                       <td className={styles.value} key={columns[index]?.id ?? index}>
-                        {value === null ? "—" : formatNumber(value, formatValue)}
+                        {value === null ? "—" : formatExactEuroMinor(row.valuesEurMinor?.[index]) ?? formatNumber(value, formatValue)}
                       </td>
                     ))}
                   </tr>

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ChartDataTable } from "./ChartDataTable.tsx";
 import { createChartCsv } from "./ChartDataTable.helpers.ts";
 import * as csvHelpers from "./ChartDataTable.helpers.ts";
-import { formatPeriodLabel } from "../../../utils/format.ts";
+import { exactEuroDecimalFromMinor, formatExactEuroMinor, formatPeriodLabel } from "../../../utils/format.ts";
 
 describe("ChartDataTable", () => {
   it("distinguishes shortened dates across years without changing drilldowns or CSV rows", async () => {
@@ -97,4 +97,42 @@ describe("ChartDataTable", () => {
     expect(createRows).toHaveBeenCalledOnce();
     expect(screen.getByRole("row", { name: /Enero 125,5/ })).toBeVisible();
   });
+});
+
+
+it("renders and exports validated signed minor metadata without losing cents or CSV escaping", async () => {
+  const user = userEvent.setup();
+  const rows = [
+    { id: "positive", label: "=formula", values: [80000000000000.02], valuesEurMinor: [8000000000000001] },
+    { id: "negative", label: "Negative", values: [-90071992547409.9], valuesEurMinor: [-Number.MAX_SAFE_INTEGER] },
+    { id: "small", label: "Small", values: [-0.01, 0], valuesEurMinor: [-1, 0] },
+    { id: "missing", label: "Missing", values: [null, 12], valuesEurMinor: [1, null] },
+    { id: "invalid", label: "Invalid", values: [3, 4, 5, 6], valuesEurMinor: [1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1] },
+  ];
+  const columns = [{ id: "a", label: "Amount" }, { id: "b", label: "Other" }];
+  render(<ChartDataTable caption="Minor units" columns={columns} labelHeader="Period" rows={rows} />);
+  await user.click(screen.getByText("Ver datos exactos"));
+  expect(screen.getByRole("row", { name: /80\.000\.000\.000\.000,01/ })).toBeVisible();
+  expect(screen.getByRole("row", { name: /-90\.071\.992\.547\.409,91/ })).toBeVisible();
+  expect(screen.getByRole("row", { name: /Small -0,01.*0,00/ })).toBeVisible();
+  expect(createChartCsv("Period", columns, rows)).toBe([
+    "Period,Amount,Other", "'=formula,80000000000000.01", "Negative,-90071992547409.91",
+    "Small,-0.01,0.00", "Missing,,12", "Invalid,3,4,5,6",
+  ].join("\r\n"));
+});
+
+
+it("formats exact signed minor boundaries and rejects invalid or missing metadata", () => {
+  for (const [minor, decimal, currency] of [
+    [Number.MAX_SAFE_INTEGER, "90071992547409.91", "90.071.992.547.409,91"],
+    [-Number.MAX_SAFE_INTEGER, "-90071992547409.91", "-90.071.992.547.409,91"],
+    [-1, "-0.01", "-0,01"], [0, "0.00", "0,00"], [-0, "0.00", "0,00"],
+  ] as const) {
+    expect(exactEuroDecimalFromMinor(minor)).toBe(decimal);
+    expect(formatExactEuroMinor(minor)).toBe(`${currency}\u00a0€`);
+  }
+  for (const invalid of [null, undefined, NaN, Infinity, 0.5, Number.MAX_SAFE_INTEGER + 1]) {
+    expect(exactEuroDecimalFromMinor(invalid)).toBeNull();
+    expect(formatExactEuroMinor(invalid)).toBeNull();
+  }
 });

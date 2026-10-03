@@ -5,6 +5,7 @@ export interface ChartInspectorValue {
   readonly id: string;
   readonly label: string;
   readonly value: number | null;
+  readonly valueEurMinor?: number | null;
   readonly color?: string;
   readonly detail?: string;
 }

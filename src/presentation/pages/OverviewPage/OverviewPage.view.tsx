@@ -1,9 +1,12 @@
+import { useState } from "react";
+
 import { Badge } from "../../components/atoms/Badge/index.ts";
 import { Icon } from "../../components/atoms/Icon/index.ts";
 import { FinancialFactList } from "../../components/molecules/FinancialFactList/index.ts";
 import { InformationDisclosure } from "../../components/molecules/InformationDisclosure/InformationDisclosure.tsx";
 import { KpiCard } from "../../components/molecules/KpiCard/index.ts";
 import { Panel } from "../../components/molecules/Panel/index.ts";
+import { SegmentedControl } from "../../components/molecules/SegmentedControl/index.ts";
 import { AreaChart } from "../../components/organisms/AreaChart/index.ts";
 import { HorizontalBarChart } from "../../components/organisms/HorizontalBarChart/index.ts";
 import { AnalyticsPage } from "../../components/templates/AnalyticsPage/index.ts";
@@ -22,6 +25,7 @@ import type { OverviewPageViewProps } from "./OverviewPage.types.ts";
 export function OverviewPageView({
   accounts,
   chartSeries,
+  cumulativeChartSeries = null,
   debtAccountCount,
   debtBalanceEurMinor,
   expenseComposition,
@@ -31,6 +35,8 @@ export function OverviewPageView({
   topCategories,
   valuationBalanceEurMinor,
 }: OverviewPageViewProps) {
+  const [flowMode, setFlowMode] = useState<"period" | "cumulative">("period");
+  const selectedSeries = flowMode === "cumulative" ? cumulativeChartSeries : chartSeries;
   const expenseAllocation = kpis.debtExpenseAdjustmentsEurMinor ?? 0;
   const incomeAllocation = kpis.debtIncomeAdjustmentsEurMinor ?? 0;
   const incomeDetail = `${formatEuroMinor(kpis.grossIncomeEurMinor)} bruto`;
@@ -76,13 +82,17 @@ export function OverviewPageView({
       <p className={styles.scopeNote}>El flujo usa los apuntes filtrados; los saldos de apertura, cierre y deuda incluyen todo el historial de las cuentas seleccionadas hasta el corte.</p>
 
       <Panel className={styles.chartPanel}>
-        <AreaChart
-          description="Ingresos, movimiento contable de gastos y movimiento neto del ámbito seleccionado; se conserva el signo de los apuntes."
+        <SegmentedControl<"period" | "cumulative"> label="Vista del pulso financiero" value={flowMode} onChange={setFlowMode}
+          options={[{ value: "period", label: "Por período" }, { value: "cumulative", label: "Acumulado" }]} />
+        {selectedSeries === null ? <p><output>No se puede representar el acumulado de forma segura.</output></p> : <AreaChart
+          description={flowMode === "cumulative"
+            ? "Suma de los movimientos filtrados desde el inicio del intervalo seleccionado u observado. No incluye el saldo de apertura ni representa patrimonio."
+            : "Ingresos, movimiento contable de gastos y movimiento neto del ámbito seleccionado; se conserva el signo de los apuntes."}
           formatLabel={formatPeriodLabel}
           formatValue={euroFormatter}
-          series={chartSeries}
-          title="Pulso financiero"
-        />
+          series={selectedSeries}
+          title={flowMode === "cumulative" ? "Pulso financiero acumulado" : "Pulso financiero"}
+        />}
       </Panel>
 
       <details className={styles.details}>

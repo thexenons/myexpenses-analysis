@@ -39,7 +39,7 @@ requested every remaining workspace modification committed and pushed.
 - [x] A06 — Replace the flat category picker with an expandable hierarchy in
   the shared drawer, selecting any node and multiple explicit paths. Delegated
   writer: new narrow UI component and integration/tests.
-- [ ] A07 — Add accumulated-flow view to Overview and Cash Flow line charts,
+- [x] A07 — Add accumulated-flow view to Overview and Cash Flow line charts,
   retaining per-period default and selected granularity/global filters. Delegated
   writer: shared derivation and two page integrations/tests.
 - [ ] A05 — Commit existing registry changes; complete independent checks, native
@@ -154,3 +154,44 @@ Order now A03 -> A06 -> A07 -> A04 -> A05; all remain separately reviewable.
 - Rollback boundary: the CategoryFilterTree component, drawer integration, category
   preference reconciliation and associated regression tests, without reverting A03.
 - Next: commit A06, assess A03/A06 slice from `4eaa176`, then A07/A04/A05.
+
+## A03/A06 native slice closure
+- A06 work-unit `58fff1c`; combined `4eaa176..58fff1c` medium/due,
+  693 authored lines / 13 files. User granted this exact consolidated review.
+- Native reliability review returned zero findings. Exact acknowledgement burned
+  `review-34bbc6810ffc1be9`; reviewed boundary now `58fff1c`.
+- Main remains `4eaa176`; final push waits for A07/A04/A05 as requested.
+
+## A07 independent correction scope
+- Initial browser verification: 0 pass / 3 fail, all at an ancestor-prefixed
+  relative Playwright locator. Correction stays in the existing browser spec.
+- Independent synthetic boundary proved safe minor-unit prefix sums can lose
+  a cent when converted to floating euros. Accepted optional exact minor-unit
+  metadata through chart points, inspector and exact table/CSV, preserving
+  existing numeric geometry and fallback formatting for other charts.
+- Additional narrow surfaces: shared chart.types.ts, SeriesChart component/tests,
+  ChartDataTable component/types/helpers/tests, ChartInspector component/types
+  and presentation/utils/format.ts. No dependency or general formatting changes.
+- Boundary regression RED observed before correction; independent recheck pending.
+
+## A07 proof
+- Accessible per-period default/cumulative mode on both pages derives the same
+  filtered, chronological buckets; other KPIs, bars and trend remain unchanged.
+- UI RED 4 fail / 12 pass -> GREEN 16 pass. Precision correction RED 5 fail /
+  28 pass -> GREEN 34 pass across both pages, SeriesChart and ChartDataTable.
+- Positive-only synthetic cumulative domain: six cases passed, including four
+  granularities, zeros/gaps/negatives/filtering/immutability/intermediate overflow.
+  Parent repeated the same six-case command successfully; no golden bodies run.
+- Independent corrected browser: 3 pass, zero failed/skipped at 1280/390/320,
+  32 seconds including synthetic production build. Exact table/CSV mode agreement,
+  day/month gaps, interval restart and scoped filters passed.
+- Concrete 8000000000000001 minor exports 80000000000000.01; eight external
+  signed-boundary/zero assertions pass. Metadata preserves exact table/CSV,
+  inspector and point titles; numeric geometry remains approximate by design.
+- Lint/all three type configurations/diff checks pass, frozen sources stable,
+  cleanup complete. Evidence: /tmp/cumulative-flow-correction.ShVG3Z.
+- A07 source/test work unit is 583 authored lines across 21 files. Necessary
+  precision plumbing and regressions justify exceeding the advisory planning size.
+  Rollback boundary: cumulative domain/page modes plus optional exact chart
+  metadata and associated tests; unrelated existing period semantics unchanged.
+- Next: commit/assess A07 from reviewed boundary58fff1c, then A04/A05.

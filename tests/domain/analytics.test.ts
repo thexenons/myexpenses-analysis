@@ -14,6 +14,7 @@ import {
   analyzeBudgetPeriod,
   flattenBudgetAllocationNodes,
 } from "../../src/domain/analytics/budgets.ts";
+import { buildCumulativeTimeSeries } from "../../src/domain/analytics/cumulative-time-series.ts";
 import { datasetDateBounds } from "../../src/domain/analytics/date-bounds.ts";
 import {
   applyFilters,
@@ -34,6 +35,7 @@ import type {
   FilterState,
   ParsedDirectTransaction,
   TransactionStatus,
+  TimeSeriesPoint,
 } from "../../src/domain/analytics/types.ts";
 
 function withPeriodPreferences(
@@ -1144,4 +1146,72 @@ test("tag mode defaults and restores missing or invalid legacy values as include
   const legacy = applyFilters(dataset, { ...createDefaultFilterState(), tagMode: undefined, tags: ["Casa"] });
   assert.equal(legacy.postings.length, 2);
   assert.throws(() => applyFilters(dataset, { ...createDefaultFilterState(), tagMode: "invalid" as FilterState["tagMode"] }), /tag.*mode/i);
+});
+
+function cumulativeFlowPoint(key: TimeSeriesPoint["startDate"], net: number): TimeSeriesPoint {
+  return { key, startDate: key, endDate: key, postingCount: 1,
+    netEurMinor: net, incomesEurMinor: net, expensesEurMinor: -net,
+    transfersEurMinor: net, realCashFlowEurMinor: net, debtFlowEurMinor: net };
+}
+
+test("cumulative flow orders immutable minor-unit buckets and preserves period metadata", () => {
+  const first = Object.freeze(cumulativeFlowPoint("2026-01-01", -2));
+  const gap = Object.freeze({ ...cumulativeFlowPoint("2026-01-02", 0), postingCount: 0 });
+  const last = Object.freeze(cumulativeFlowPoint("2026-01-03", 10));
+  const input = Object.freeze([last, first, gap]);
+  const output = buildCumulativeTimeSeries(input)!;
+  assert.deepEqual(output.map((item) => item.key), [first.key, gap.key, last.key]);
+  for (const key of ["netEurMinor", "incomesEurMinor", "transfersEurMinor", "realCashFlowEurMinor", "debtFlowEurMinor"] as const) {
+    assert.deepEqual(output.map((item) => item[key]), [-2, -2, 8]);
+  }
+  assert.deepEqual(output.map((item) => item.expensesEurMinor), [2, 2, -8]);
+  assert.deepEqual(output.map((item) => item.postingCount), [1, 0, 1]);
+  assert.deepEqual(input, [last, first, gap]);
+  assert.notEqual(output[0], first);
+  assert.deepEqual(buildCumulativeTimeSeries([]), []);
+});
+
+for (const granularity of ["day", "week", "month", "year"] as const) {
+  test(`cumulative flow preserves ${granularity} gap buckets and the selected filtered interval`, () => {
+    const source = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+      categories: { Income: { categoryType: "INCOME" }, Expense: { categoryType: "EXPENSE" } },
+      parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 999, transactions: [
+        { uuid: "before", date: "2023-12-31", amount: 50, category: ["Income"], sourceTransactionUuid: "before", sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+        { uuid: "first", date: "2024-01-01", amount: 1.01, category: ["Income"], sourceTransactionUuid: "first", sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+        { uuid: "expense", date: "2024-02-01", amount: -4, category: ["Expense"], sourceTransactionUuid: "expense", sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+        { uuid: "void", date: "2024-03-01", amount: 20, category: ["Income"], sourceTransactionUuid: "void", sourceStatus: "VOID", splitIndex: null, splitCount: null },
+        { uuid: "last", date: "2026-01-01", amount: 2.02, category: ["Income"], sourceTransactionUuid: "last", sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+      ] }],
+    });
+    const filtered = applyFilters(source, { ...createDefaultFilterState(),
+      dateRange: { from: "2024-01-01", to: "2026-01-01" }, categoryPrefixes: [["Income"]] });
+    const periods = aggregateTimeSeries(filtered, granularity);
+    const cumulative = buildCumulativeTimeSeries(periods)!;
+    assert.equal(cumulative.length, periods.length);
+    assert.deepEqual(cumulative.map(({ key, startDate, endDate }) => ({ key, startDate, endDate })),
+      periods.map(({ key, startDate, endDate }) => ({ key, startDate, endDate })));
+    assert.equal(cumulative[0]!.netEurMinor, 101);
+    assert.equal(cumulative.at(-1)!.netEurMinor, 303);
+    assert.ok(periods.some((item) => item.postingCount === 0));
+    for (let index = 1; index < periods.length; index += 1) {
+      if (periods[index]!.postingCount === 0) assert.equal(cumulative[index]!.netEurMinor, cumulative[index - 1]!.netEurMinor);
+    }
+  });
+}
+
+test("cumulative flow rejects unsafe intermediate sums and invalid amounts instead of exposing partial curves", () => {
+  for (const key of ["netEurMinor", "incomesEurMinor", "expensesEurMinor", "transfersEurMinor", "realCashFlowEurMinor", "debtFlowEurMinor"] as const) {
+    for (const sign of [-1, 1]) {
+      const values = [Number.MAX_SAFE_INTEGER * sign, sign, -sign];
+      const dates = ["2026-01-01", "2026-01-02", "2026-01-03"] as const;
+      const input = values.map((value, index) => Object.assign(cumulativeFlowPoint(dates[index]!, 0), { [key]: value }));
+      assert.equal(buildCumulativeTimeSeries(input), null, key);
+    }
+    for (const invalid of [1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      assert.equal(buildCumulativeTimeSeries([{ ...cumulativeFlowPoint("2026-01-01", 0), [key]: invalid }]), null);
+    }
+  }
+  assert.equal(buildCumulativeTimeSeries([cumulativeFlowPoint("2026-01-01", Number.MAX_SAFE_INTEGER)])![0]!.netEurMinor, Number.MAX_SAFE_INTEGER);
+  assert.equal(buildCumulativeTimeSeries([cumulativeFlowPoint("2026-01-01", -0)])![0]!.netEurMinor, 0);
 });

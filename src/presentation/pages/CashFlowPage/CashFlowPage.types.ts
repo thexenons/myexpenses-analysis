@@ -11,6 +11,7 @@ export interface CashFlowPageViewProps {
   readonly composition: FlowComposition;
   readonly expenseCategories: readonly CategoryBreakdownNode[];
   readonly lineSeries: readonly ChartSeries[];
+  readonly cumulativeLineSeries?: readonly ChartSeries[] | null;
   readonly periodBars: readonly DivergingBarDatum[];
   readonly savingsEurMinor: number;
   readonly trendFiltered: FilteredAnalyticsDataset;

@@ -5,6 +5,7 @@ import { FinancialFactList } from "../../components/molecules/FinancialFactList/
 import { InformationDisclosure } from "../../components/molecules/InformationDisclosure/InformationDisclosure.tsx";
 import { KpiCard } from "../../components/molecules/KpiCard/index.ts";
 import { Panel } from "../../components/molecules/Panel/index.ts";
+import { SegmentedControl } from "../../components/molecules/SegmentedControl/index.ts";
 import { DivergingBarChart } from "../../components/organisms/DivergingBarChart/index.ts";
 import { LineChart } from "../../components/organisms/LineChart/index.ts";
 import { HorizontalBarChart } from "../../components/organisms/HorizontalBarChart/index.ts";
@@ -25,11 +26,14 @@ export function CashFlowPageView({
   expenseCategories,
   kpis,
   lineSeries,
+  cumulativeLineSeries = null,
   periodBars,
   savingsEurMinor,
   trendFiltered,
 }: CashFlowPageViewProps) {
   const [trendOpen, setTrendOpen] = useState(false);
+  const [flowMode, setFlowMode] = useState<"period" | "cumulative">("period");
+  const selectedSeries = flowMode === "cumulative" ? cumulativeLineSeries : lineSeries;
   return (
     <AnalyticsPage
       description="Entradas, salidas y resultado del periodo seleccionado."
@@ -80,13 +84,17 @@ export function CashFlowPageView({
 
       <AnalyticsPageGrid variant="two">
         <Panel className={styles.chartPanel}>
-          <LineChart
-            description="Movimiento neto y flujo sin cuentas de deuda."
+          <SegmentedControl<"period" | "cumulative"> label="Vista del flujo neto" value={flowMode} onChange={setFlowMode}
+            options={[{ value: "period", label: "Por período" }, { value: "cumulative", label: "Acumulado" }]} />
+          {selectedSeries === null ? <p><output>No se puede representar el acumulado de forma segura.</output></p> : <LineChart
+            description={flowMode === "cumulative"
+              ? "Suma de los movimientos filtrados desde el inicio del intervalo seleccionado u observado. No incluye el saldo de apertura ni representa patrimonio."
+              : "Movimiento neto y flujo sin cuentas de deuda."}
             formatLabel={formatPeriodLabel}
             formatValue={euroFormatter}
-            series={lineSeries}
-            title="Flujo neto por periodo"
-          />
+            series={selectedSeries}
+            title={flowMode === "cumulative" ? "Flujo neto acumulado" : "Flujo neto por periodo"}
+          />}
         </Panel>
         <Panel className={styles.chartPanel}>
           <DivergingBarChart

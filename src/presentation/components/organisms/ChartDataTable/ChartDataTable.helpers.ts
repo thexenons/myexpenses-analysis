@@ -1,3 +1,4 @@
+import { exactEuroDecimalFromMinor } from "../../../utils/format.ts";
 import type { ChartDataTableColumn, ChartDataTableRow } from "./ChartDataTable.types.ts";
 
 function csvCell(value: string | number | null): string {
@@ -15,7 +16,11 @@ export function createChartCsv(
 ): string {
   return [
     [labelHeader, ...columns.map(({ label }) => label)].map(csvCell).join(","),
-    ...rows.map((row) => [row.label, ...row.values].map(csvCell).join(",")),
+    ...rows.map((row) => [
+      csvCell(row.label),
+      ...row.values.map((value, index) => value === null ? ""
+        : exactEuroDecimalFromMinor(row.valuesEurMinor?.[index]) ?? csvCell(value)),
+    ].join(",")),
   ].join("\r\n");
 }
 

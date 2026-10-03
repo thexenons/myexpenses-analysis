@@ -18,6 +18,7 @@ export interface OverviewAmountRow {
 export interface OverviewPageViewProps {
   readonly accounts: readonly AccountBreakdownItem[];
   readonly chartSeries: readonly ChartSeries[];
+  readonly cumulativeChartSeries?: readonly ChartSeries[] | null;
   readonly debtAccountCount: number;
   readonly debtBalanceEurMinor: number;
   readonly expenseComposition: readonly OverviewAmountRow[];

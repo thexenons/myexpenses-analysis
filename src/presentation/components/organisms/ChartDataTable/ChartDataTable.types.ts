@@ -9,6 +9,7 @@ export interface ChartDataTableRow {
   readonly id: string;
   readonly label: string;
   readonly values: readonly (number | null)[];
+  readonly valuesEurMinor?: readonly (number | null | undefined)[];
 }
 
 export interface ChartDataTableProps {

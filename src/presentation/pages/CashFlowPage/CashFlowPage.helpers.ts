@@ -4,13 +4,27 @@ import {
   aggregateKpis,
   aggregateTimeSeries,
 } from "../../../domain/analytics/aggregations.ts";
+import { buildCumulativeTimeSeries } from "../../../domain/analytics/cumulative-time-series.ts";
 import type {
+  TimeSeriesPoint,
   FilteredAnalyticsDataset,
   TimeGranularity,
   TransactionStatus,
 } from "../../../domain/analytics/types.ts";
 import { euroFromMinor } from "../../utils/format.ts";
 import type { CashFlowPageViewProps } from "./CashFlowPage.types.ts";
+
+const CASH_FLOW_LINE_METRICS = [
+  { id: "cashflow", label: "Flujo real", color: "#10251e", key: "realCashFlowEurMinor" },
+  { id: "total", label: "Movimiento total", color: "#35698b", key: "netEurMinor" },
+] as const;
+
+function cashFlowChartSeries(points: readonly TimeSeriesPoint[]): CashFlowPageViewProps["lineSeries"] {
+  return CASH_FLOW_LINE_METRICS.map((metric) => ({
+    id: metric.id, label: metric.label, color: metric.color,
+    data: points.map((point) => ({ label: point.key, value: euroFromMinor(point[metric.key]), valueEurMinor: point[metric.key] })),
+  }));
+}
 
 export function createCashFlowPageModel(
   filtered: FilteredAnalyticsDataset,
@@ -20,6 +34,7 @@ export function createCashFlowPageModel(
   const kpis = aggregateKpis(filtered);
   const composition = aggregateFlowComposition(filtered);
   const series = aggregateTimeSeries(filtered, granularity);
+  const cumulativeSeries = buildCumulativeTimeSeries(series);
   const categories = aggregateCategoryBreakdown(filtered);
   const realPostings = filtered.activePostings.filter((posting) => posting.accountType === "DEFAULT");
   const inflows = new Map(aggregateTimeSeries({ ...filtered, activePostings: realPostings.filter((posting) => posting.amountEurMinor > 0) }, granularity)
@@ -32,26 +47,8 @@ export function createCashFlowPageModel(
     expenseCategories: categories
       .filter((category) => category.summary.expensesEurMinor !== 0),
     kpis,
-    lineSeries: [
-      {
-        id: "cashflow",
-        label: "Flujo real",
-        color: "#10251e",
-        data: series.map((point) => ({
-          label: point.key,
-          value: euroFromMinor(point.realCashFlowEurMinor),
-        })),
-      },
-      {
-        id: "total",
-        label: "Movimiento total",
-        color: "#35698b",
-        data: series.map((point) => ({
-          label: point.key,
-          value: euroFromMinor(point.netEurMinor),
-        })),
-      },
-    ],
+    lineSeries: cashFlowChartSeries(series),
+    cumulativeLineSeries: cumulativeSeries === null ? null : cashFlowChartSeries(cumulativeSeries),
     periodBars: series.map((point) => ({
       id: point.key,
       label: point.key,

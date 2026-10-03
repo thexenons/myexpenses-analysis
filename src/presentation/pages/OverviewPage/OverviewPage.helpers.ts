@@ -6,7 +6,9 @@ import {
   aggregateStatusCounts,
   aggregateTimeSeries,
 } from "../../../domain/analytics/aggregations.ts";
+import { buildCumulativeTimeSeries } from "../../../domain/analytics/cumulative-time-series.ts";
 import type {
+  TimeSeriesPoint,
   FilteredAnalyticsDataset,
   TimeGranularity,
 } from "../../../domain/analytics/types.ts";
@@ -15,6 +17,19 @@ import type {
   OverviewAmountRow,
   OverviewPageViewProps,
 } from "./OverviewPage.types.ts";
+
+const OVERVIEW_LINE_METRICS = [
+  { id: "income", label: "Ingresos", color: "#286a4c", key: "incomesEurMinor" },
+  { id: "expenses", label: "Movimiento contable de gastos", color: "#a33f36", key: "expensesEurMinor" },
+  { id: "net", label: "Flujo neto", color: "#35698b", key: "netEurMinor" },
+] as const;
+
+function overviewChartSeries(points: readonly TimeSeriesPoint[]): OverviewPageViewProps["chartSeries"] {
+  return OVERVIEW_LINE_METRICS.map((metric) => ({
+    id: metric.id, label: metric.label, color: metric.color,
+    data: points.map((point) => ({ label: point.key, value: euroFromMinor(point[metric.key]), valueEurMinor: point[metric.key] })),
+  }));
+}
 
 export function createOverviewPageModel(
   filtered: FilteredAnalyticsDataset,
@@ -27,6 +42,7 @@ export function createOverviewPageModel(
   const composition = aggregateFlowComposition(filtered);
   const status = aggregateStatusCounts(filtered);
   const series = aggregateTimeSeries(filtered, granularity);
+  const cumulativeSeries = buildCumulativeTimeSeries(series);
   const debtAccounts = accounts.filter(
     (account) => account.account.type === "DEBT",
   );
@@ -67,35 +83,8 @@ export function createOverviewPageModel(
 
   return {
     accounts,
-    chartSeries: [
-      {
-        id: "income",
-        label: "Ingresos",
-        color: "#286a4c",
-        data: series.map((point) => ({
-          label: point.key,
-          value: euroFromMinor(point.incomesEurMinor),
-        })),
-      },
-      {
-        id: "expenses",
-        label: "Movimiento contable de gastos",
-        color: "#a33f36",
-        data: series.map((point) => ({
-          label: point.key,
-          value: euroFromMinor(point.expensesEurMinor),
-        })),
-      },
-      {
-        id: "net",
-        label: "Flujo neto",
-        color: "#35698b",
-        data: series.map((point) => ({
-          label: point.key,
-          value: euroFromMinor(point.netEurMinor),
-        })),
-      },
-    ],
+    chartSeries: overviewChartSeries(series),
+    cumulativeChartSeries: cumulativeSeries === null ? null : overviewChartSeries(cumulativeSeries),
     debtAccountCount: debtAccounts.length,
     debtBalanceEurMinor,
     expenseComposition,

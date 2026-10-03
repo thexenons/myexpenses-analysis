@@ -46,6 +46,24 @@ export function formatEuroMinor(amountEurMinor: number): string {
   return euroFormatter.format(euroFromMinor(amountEurMinor));
 }
 
+/** Exact EUR text for optional chart metadata; never convert the amount to decimal Number. */
+export function exactEuroDecimalFromMinor(amountEurMinor: number | null | undefined): string | null {
+  if (amountEurMinor == null || !Number.isSafeInteger(amountEurMinor)) return null;
+  const absolute = BigInt(Math.abs(amountEurMinor));
+  const whole = absolute / 100n;
+  const fraction = (absolute % 100n).toString().padStart(2, "0");
+  return `${amountEurMinor < 0 ? "-" : ""}${whole}.${fraction}`;
+}
+
+export function formatExactEuroMinor(amountEurMinor: number | null | undefined): string | null {
+  if (amountEurMinor == null || !Number.isSafeInteger(amountEurMinor)) return null;
+  const absolute = BigInt(Math.abs(amountEurMinor));
+  const fraction = (absolute % 100n).toString().padStart(2, "0");
+  const formatted = euroFormatter.formatToParts(absolute / 100n)
+    .map((part) => part.type === "fraction" ? fraction : part.value).join("");
+  return `${amountEurMinor < 0 ? "-" : ""}${formatted}`;
+}
+
 export function formatCurrencyMinor(
   amountMinor: number,
   currency: CurrencyCode,

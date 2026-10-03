@@ -124,3 +124,40 @@ describe("SeriesChart", () => {
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
 });
+
+
+it("keeps exact minor metadata aligned with visible series, missing values and hidden-series recovery", async () => {
+  const user = userEvent.setup();
+  const series = [
+    { id: "a", label: "First", data: [{ label: "Jan", value: 80000000000000.02, valueEurMinor: 8000000000000001 }, { label: "Feb", value: 0, valueEurMinor: 0 }] },
+    { id: "b", label: "Second", data: [{ label: "Jan", value: -0.01, valueEurMinor: -1 }] },
+  ];
+  render(<SeriesChart series={series} title="Exact series" variant="line" />);
+  await user.click(screen.getByText("Ver datos exactos"));
+  expect(screen.getByRole("row", { name: /Jan 80\.000\.000\.000\.000,01.*-0,01/ })).toBeVisible();
+  expect(screen.getByRole("row", { name: /Feb 0,00.*—/ })).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Ocultar serie: First" }));
+  expect(screen.getByRole("row", { name: /Jan -0,01/ })).toBeVisible();
+  expect(screen.queryByRole("columnheader", { name: "First" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Ocultar serie: Second" }));
+  expect(screen.getByText(/Todas las series están ocultas/)).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Mostrar serie: First" }));
+  await user.click(screen.getByText("Ver datos exactos"));
+  expect(screen.getByRole("row", { name: /Jan 80\.000\.000\.000\.000,01/ })).toBeVisible();
+});
+
+
+it("shows exact safe boundary and zero minor amounts in the inspector while retaining missing points", async () => {
+  const user = userEvent.setup();
+  render(<SeriesChart title="Exact inspection" variant="line" series={[
+    { id: "safe", label: "Safe", data: [{ label: "Jan", value: 80000000000000.02, valueEurMinor: 8000000000000001 }] },
+    { id: "zero", label: "Zero", data: [{ label: "Jan", value: 0, valueEurMinor: 0 }] },
+    { id: "missing", label: "Missing", data: [{ label: "Jan", value: NaN, valueEurMinor: 1 }] },
+  ]} />);
+  await user.click(screen.getByText("Consultar un punto"));
+  const readout = screen.getByRole("region", { name: "Valores de Exact inspection" });
+  expect(readout).toHaveTextContent(/Safe80\.000\.000\.000\.000,01\s*€/);
+  expect(readout).toHaveTextContent(/Zero0,00\s*€/);
+  expect(readout).toHaveTextContent("MissingSin dato");
+  expect(screen.getByRole("img", { name: "Exact inspection" }).querySelector("circle title")).toHaveTextContent(/80\.000\.000\.000\.000,01/);
+});

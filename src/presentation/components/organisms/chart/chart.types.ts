@@ -6,6 +6,8 @@ export interface ChartPoint {
   label: string
   tooltip?: string
   value: number
+  /** Optional exact EUR minor units; geometry continues to use value. */
+  valueEurMinor?: number | null
 }
 
 export interface ChartSeries {

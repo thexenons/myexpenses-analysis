@@ -1,3 +1,4 @@
+import { formatExactEuroMinor } from "../../../../../utils/format.ts";
 import { formatNumber } from "../../../../../utils/component.helpers.ts";
 import { identityLabel } from "../../chart.helpers.ts";
 import type { ChartInspectorProps } from "./ChartInspector.types.ts";
@@ -16,7 +17,7 @@ export function ChartInspector({ title, items, getValues, formatLabel = identity
     <dl className={styles.values}>
       {values.map((value) => <div className={styles.value} key={value.id}>
         <dt><span aria-hidden="true" className={styles.swatch} style={{ background: value.color }} />{value.label}</dt>
-        <dd>{value.value === null ? "Sin dato" : formatNumber(value.value, formatValue)}</dd>
+        <dd>{value.value === null ? "Sin dato" : formatExactEuroMinor(value.valueEurMinor) ?? formatNumber(value.value, formatValue)}</dd>
         {value.detail ? <dd className={styles.detail}>{value.detail}</dd> : null}
       </div>)}
     </dl>

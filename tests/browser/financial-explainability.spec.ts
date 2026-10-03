@@ -2393,3 +2393,69 @@ test("keeps keyboard focus on adjacent filter removals and stable fallbacks", as
   await expect(globalFirst).toHaveCount(0);
   await expect(opener).toBeFocused();
 });
+
+test("accumulates filtered flow curves with exact tables and CSV at the selected interval", async ({ page }) => {
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  await toolbar.getByRole("combobox", { name: "Tipo de periodo" }).selectOption("custom");
+  await toolbar.getByLabel("Desde", { exact: true }).fill("2026-07-01");
+  await toolbar.getByLabel("Hasta", { exact: true }).fill("2026-08-31");
+  await toolbar.getByRole("button", { name: /Abrir todos los filtros/ }).click();
+  const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });
+  await drawer.getByRole("button", { name: "Seleccionar Expense", exact: true }).click();
+  await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+
+  const downloadRows = async (figure: Locator) => {
+    const disclosure = figure.locator("details").filter({ has: page.locator("summary").filter({ hasText: /^Ver datos exactos$/ }) });
+    if (!(await disclosure.evaluate((element) => element.hasAttribute("open")))) {
+      await disclosure.locator("summary").click();
+    }
+    const downloadPromise = page.waitForEvent("download");
+    await figure.getByRole("button", { name: /Descargar CSV:/ }).click();
+    const csv = await readFile(await (await downloadPromise).path(), "utf8");
+    return csv.replace(/^\uFEFF/u, "").split(/\r?\n/u).slice(1).map((line) => {
+      const [key, ...cells] = line.split(",");
+      return { key, values: cells.map(Number) };
+    });
+  };
+  // oxlint-disable no-await-in-loop -- Each route/mode/granularity must settle before its matching CSV comparison.
+  for (const scenario of [
+    { route: "/resumen", group: "Vista del pulso financiero", period: "Pulso financiero", cumulative: "Pulso financiero acumulado", columns: 3 },
+    { route: "/flujo-de-caja", group: "Vista del flujo neto", period: "Flujo neto por periodo", cumulative: "Flujo neto acumulado", columns: 2 },
+  ]) {
+    await page.locator(`a[href="${scenario.route}"]`).click();
+    const mode = page.getByRole("group", { name: scenario.group });
+    await expect(mode.getByRole("radio", { name: "Por período" })).toBeChecked();
+    for (const resolution of ["month", "day"]) {
+      await mode.getByRole("radio", { name: "Por período" }).check();
+      await toolbar.getByRole("group", { name: "Granularidad de estadísticas y gráficas" })
+        .locator(`input[value="${resolution}"]`).check();
+      const periodFigure = page.locator("figure").filter({ has: page.getByRole("heading", { name: scenario.period, exact: true }) });
+      const periodRows = await downloadRows(periodFigure);
+      expect(periodRows).toHaveLength(resolution === "month" ? 2 : 62);
+      expect(periodRows.every((row) => row.values.length === scenario.columns && row.values.every(Number.isFinite))).toBe(true);
+      if (resolution === "month") expect(periodRows[0]!.values.at(-1)).toBe(-0.1);
+      const totals = Array<number>(scenario.columns).fill(0);
+      const expected = periodRows.map((row) => ({ key: row.key, values: row.values.map((value, index) => {
+        totals[index] = totals[index]! + Math.round(value * 100);
+        return totals[index]! / 100;
+      }) }));
+      await mode.getByRole("radio", { name: "Acumulado" }).focus();
+      await page.keyboard.press("Space");
+      const cumulativeFigure = page.locator("figure").filter({ has: page.getByRole("heading", { name: scenario.cumulative, exact: true }) });
+      await expect(cumulativeFigure.locator("figcaption p")).toContainText("No incluye el saldo de apertura ni representa patrimonio");
+      expect(await downloadRows(cumulativeFigure)).toEqual(expected);
+      await expect(cumulativeFigure.getByRole("table").getByRole("row")).toHaveCount(periodRows.length + 1);
+      const lastValues = await cumulativeFigure.getByRole("table").locator("tbody tr").last().locator("td").allTextContents();
+      const expectedLast = expected.at(-1)!.values.map((value) => new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(value));
+      expect(lastValues).toEqual(expectedLast);
+      await expectNoDocumentOverflow(page);
+    }
+    await toolbar.getByLabel("Desde", { exact: true }).fill("2026-08-01");
+    const cumulativeFigure = page.locator("figure").filter({ has: page.getByRole("heading", { name: scenario.cumulative, exact: true }) });
+    const narrowed = await downloadRows(cumulativeFigure);
+    expect(narrowed).toHaveLength(31);
+    expect(narrowed[0]!.values).toEqual(Array<number>(scenario.columns).fill(0));
+    await toolbar.getByLabel("Desde", { exact: true }).fill("2026-07-01");
+  }
+  // oxlint-enable no-await-in-loop
+});
