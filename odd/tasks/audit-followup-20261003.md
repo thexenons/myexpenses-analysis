@@ -36,7 +36,7 @@ production inspection and global installation remain out of scope.
   Route: delegated writer; configuration analysis. Verify package-manager and
   ecosystem support against official docs. Group noise where appropriate, never
   auto-merge or silently upgrade dependencies. Test/validate configuration.
-- [ ] F04 — Measure full-history filter and split-detail interaction scaling.
+- [x] F04 — Measure full-history filter and split-detail interaction scaling.
   Route: delegated exploration/verification, writer only for evidenced changes.
   Reuse existing synthetic benchmark and prior measurements; record latency and
   memory for representative history sizes. Index/cache only for a measured
@@ -44,7 +44,7 @@ production inspection and global installation remain out of scope.
 - [ ] F05 — Measure import peak-memory scaling and document resource envelope.
   Route: delegated verification/writer; synthetic ZIP/SQLite only. Keep current
   legitimate-backup compatibility unless evidence supports a limit change.
-- [ ] F06 — Measure UI test startup and improve only with retained isolation.
+- [x] F06 — Measure UI test startup and improve only with retained isolation.
   Route: delegated verification/writer. Compare same suite under stable runtime;
   do not treat summed parallel setup timings as wall-clock percentages. Adopt an
   optimization only with a measured repeatable gain and regression-proof tests.
@@ -111,3 +111,15 @@ and non-force main delivery under the selected strategy. PR creation is not requ
   passed. Parent independently reran both architecture files: 9 passed. Runner
   unchanged; F01 full synthetic browser/build proof applies. Hosted scheduled
   execution has not yet occurred and is not claimed. F02 commit identity follows.
+- F02 commit `d140d37`, +95/-2 = 97 authored lines including its record. Native
+  range `48c4a54..d140d37` selected high risk (CI shell execution). User granted;
+  four concurrent immutable reviewers found no blockers; exact acknowledgement
+  burned authority for `review-aa4b2dfee72218ae`. Non-force push and remote ref
+  readback confirmed `d140d37` on main. Reviewed boundary advances to `d140d37`.
+- F04/F06: independent synthetic measurements documented in
+  `docs/audit-performance-20261003.md`. 50k validation+normalization median
+  393.09ms; filters 2.28–7.96ms; warm split lookup 1.43–2.22ms. No new cache
+  justified. UI 502 tests/91 files passed on three default runs (median elapsed
+  44.10s); isolated two-worker comparison 75.30s. Retain four workers/isolation.
+  Passive measurement records need structural readback, not artificial RED.
+  Full methodology, ranges and unmeasured shapes remain explicit in the report.
