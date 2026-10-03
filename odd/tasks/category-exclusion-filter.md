@@ -73,3 +73,11 @@ hook dependencies forward mode; category chart drilldown resets inclusion.
 No dependencies/data/schema/production changes. Unrelated registry files remain
 staged and excluded. Rollback: remove this filter mode and its tests/docs together.
 
+
+## Work-unit and delivery status
+- C01/C02 behavior commit `4748b9f`, +286/-15 including this recovery record.
+  Native assessment against branch point `f09b38c`: medium, review_due false,
+  reason under_budget (301 authored lines). No native review approval claimed;
+  writer, independent and parent verification above are observed functional proof.
+- Local branch feat/category-exclusion-filter; not pushed or merged to main.
+  Next: user decision on new remote publication; keep staged .atl edits intact.
