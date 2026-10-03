@@ -25,7 +25,7 @@ export function useGlobalFilters(): GlobalFiltersViewProps {
     }
   }
   for (const path of filters.categoryPrefixes) {
-    activeSelections.push({ id: `category:${JSON.stringify(path)}`, label: formatCategoryPath(path), onRemove: () => patchFilters({ categoryPrefixes: filters.categoryPrefixes.filter((candidate) => !categoryPathsEqual(candidate, path)) }) })
+    activeSelections.push({ id: `category:${JSON.stringify(path)}`, label: `${filters.categoryMode === "exclude" ? "Excluir: " : ""}${formatCategoryPath(path)}`, onRemove: () => patchFilters({ categoryPrefixes: filters.categoryPrefixes.filter((candidate) => !categoryPathsEqual(candidate, path)) }) })
   }
   if (filters.scope !== DEFAULT_APP_SCOPE) activeSelections.push({ id: "scope", label: filters.scope === "all" ? "Yo" : "Solo deudas", onRemove: () => patchFilters({ scope: DEFAULT_APP_SCOPE }) })
   if (filters.dateRange.from !== null || filters.dateRange.to !== null) activeSelections.push({ id: "dates", label: `${filters.dateRange.from ?? "Inicio"} → ${filters.dateRange.to ?? "Fin"}`, onRemove: () => patchFilters({ dateRange: { from: null, to: null }, periodMode: "all" }) })

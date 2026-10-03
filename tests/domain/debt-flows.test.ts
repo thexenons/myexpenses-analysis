@@ -409,3 +409,20 @@ test("income-side debt mirrors are allocations, not fictitious income reversals"
   assert.equal(composition.debtIncomeAdjustmentsEurMinor, -1_000);
   assert.equal(composition.netIncomeEurMinor, 0);
 });
+
+test("category exclusion negates the combined own-or-verified-counterpart match", () => {
+  const source = dataset([
+    posting("out", "cash", -500, { categoryPath: ["Gastos", "Casa"], linked: true, transferPeerPostingId: "in" }),
+    posting("in", "partner", 500, { categoryPath: ["Transferencia"], linked: true, transferPeerPostingId: "out" }),
+    posting("nested", "cash", -100, { categoryPath: ["Gastos", "Casa", "Luz"] }),
+    posting("unknown", "cash", -100, { categoryPath: [], linked: true, transferPeerPostingId: "out" }),
+  ]);
+  const filters = { ...createDefaultFilterState(), categoryMode: "exclude" as const,
+    categoryPrefixes: [["Gastos", "Casa"]], categoryDepth: "exact" as const };
+  assert.deepEqual(applyFilters(source, filters).postings.map((item) => item.id), ["in", "nested", "unknown"]);
+  assert.deepEqual(applyFilters(source, { ...filters, categoryMatch: "either" }).postings.map((item) => item.id), ["nested", "unknown"]);
+  assert.deepEqual(applyFilters(source, { ...filters, categoryMatch: "either", categoryDepth: "subtree" }).postings.map((item) => item.id), ["unknown"]);
+  assert.deepEqual(applyFilters(source, { ...filters, categoryMatch: "either", scope: "debtsOnly" }).postings, []);
+  const empty = applyFilters(source, { ...filters, categoryMatch: "either", categoryPrefixes: [] });
+  assert.equal(empty.postings.length, source.postings.length);
+});

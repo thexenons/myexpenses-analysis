@@ -51,6 +51,7 @@ function savedFilterFields(filters: FilterState): FilterState {
     dateBasis: filters.dateBasis,
     categoryMatch: filters.categoryMatch,
     categoryDepth: filters.categoryDepth,
+    categoryMode: filters.categoryMode ?? "include",
     categoryPrefixes: filters.categoryPrefixes.map((path) => path.slice()),
     statuses: [],
     tags: filters.tags.slice(),

@@ -486,3 +486,14 @@ describe("createCategoriesPageModel", () => {
     expect(model.categorySeries).toHaveLength(6);
   });
 });
+
+it("category drilldown includes the clicked path instead of inheriting exclusion", () => {
+  const filters = { ...createDefaultFilterState(), categoryMode: "exclude" as const,
+    categoryPrefixes: [["Gastos", "Casa"]], categoryDepth: "exact" as const, categoryMatch: "either" as const };
+  for (const level of ["roots", "direct"] as const) {
+    expect(createCategoryDrilldownFilters(filters, ["Ingresos"], level)).toEqual({
+      categoryMode: "include", categoryPrefixes: [["Ingresos"]],
+      categoryDepth: level === "direct" ? "exact" : "subtree", categoryMatch: "posting",
+    });
+  }
+});

@@ -145,6 +145,7 @@ export function useFilterDrawer(): FilterDrawerViewProps {
     onDestinationToggle: (accountId) => patchFilters({ destinationAccountIds: toggleFilterDrawerOptionalValue(filters.destinationAccountIds ?? [], accountId) }),
     onDateBasisChange: (dateBasis) => patchFilters({ dateBasis }),
     onCategoryMatchChange: (categoryMatch) => patchFilters({ categoryMatch }),
+    onCategoryModeChange: (categoryMode) => patchFilters({ categoryMode }),
     onCategoryDepthChange: (categoryDepth) => patchFilters({ categoryDepth }),
     onClose,
     onLinkedChange: (linked) => patchFilters({ linked }),

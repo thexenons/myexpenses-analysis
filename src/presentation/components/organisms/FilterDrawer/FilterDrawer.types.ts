@@ -32,6 +32,7 @@ export interface FilterDrawerViewProps {
   onDateBasisChange(dateBasis: "operation" | "value"): void
   onCategoryMatchChange(categoryMatch: "posting" | "either"): void
   onCategoryDepthChange(categoryDepth: "subtree" | "exact"): void
+  onCategoryModeChange(categoryMode: "include" | "exclude"): void
   onCategoryToggle(path: readonly string[]): void
   onClose(): void
   onLinkedChange(linked: LinkedFilter): void

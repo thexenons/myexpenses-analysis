@@ -60,6 +60,7 @@ export function FilterDrawerView({
   onDateBasisChange,
   onCategoryMatchChange,
   onCategoryDepthChange,
+  onCategoryModeChange,
   onCategoryToggle,
   onClose,
   onLinkedChange,
@@ -166,8 +167,19 @@ export function FilterDrawerView({
               <p>
                 {filters.categoryPrefixes.length === 0
                   ? "Todas las categorías incluidas"
-                  : `${filters.categoryPrefixes.length} rutas seleccionadas`}
+                  : filters.categoryMode === "exclude"
+                    ? `${filters.categoryPrefixes.length} ${filters.categoryPrefixes.length === 1 ? "ruta excluida" : "rutas excluidas"}`
+                    : `${filters.categoryPrefixes.length} rutas seleccionadas`}
               </p>
+              <label className={styles.pathSelector}>
+                Modo de categorías
+                <select value={filters.categoryMode ?? "include"} onChange={(event) => onCategoryModeChange(event.target.value === "exclude" ? "exclude" : "include")}>
+                  <option value="include">Incluir seleccionadas</option>
+                  <option value="exclude">Excluir seleccionadas</option>
+                </select>
+              </label>
+              <p>Sin selección no se limita por categoría.</p>
+              <p>Excluir conserva las demás categorías; también respeta el nivel y la contrapartida elegidos.</p>
               <div className={styles.compactChoices}>
                 {rootCategories.map((category) => (
                   <label className={styles.choice} key={category}>
@@ -215,11 +227,11 @@ export function FilterDrawerView({
                   {filters.categoryPrefixes.map((path) => (
                     <li key={JSON.stringify(path)}>
                       <button
-                        aria-label={`Quitar ${formatCategoryPath(path)}`}
+                        aria-label={`Quitar ${filters.categoryMode === "exclude" ? "exclusión " : ""}${formatCategoryPath(path)}`}
                         onClick={() => onCategoryToggle(path)}
                         type="button"
                       >
-                        <span>{formatCategoryPath(path)}</span>
+                        <span>{filters.categoryMode === "exclude" ? "Excluir: " : ""}{formatCategoryPath(path)}</span>
                         <span aria-hidden="true">×</span>
                       </button>
                     </li>

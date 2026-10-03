@@ -210,3 +210,15 @@ describe("useFilteredAnalytics", () => {
     expect(screen.getByTestId("probe")).toHaveTextContent("ready::week");
   });
 });
+
+it("forwards category mode and invalidates shared results on mode-only changes", () => {
+  const store = createAppStore({ load: vi.fn<DatasetRepository["load"]>() }, window.localStorage);
+  store.setState({ analytics: EMPTY_ANALYTICS, loadPhase: "ready" });
+  store.getState().actions.setCategoryPrefixes([["Gastos"]]);
+  applyFiltersSpy.mockClear();
+  render(<AppStoreProvider store={store}><FilteredAnalyticsProbe /></AppStoreProvider>);
+  expect(applyFiltersSpy.mock.lastCall?.[1].categoryMode).toBe("include");
+  act(() => store.getState().actions.patchFilters({ categoryMode: "exclude" }));
+  expect(applyFiltersSpy).toHaveBeenCalledTimes(2);
+  expect(applyFiltersSpy.mock.lastCall?.[1].categoryMode).toBe("exclude");
+});

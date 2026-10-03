@@ -61,6 +61,7 @@ export function createDefaultFilterState(): FilterState {
     dateBasis: "operation",
     categoryMatch: "posting",
     categoryDepth: "subtree",
+    categoryMode: "include",
     categoryPrefixes: [],
     statuses: [],
     tags: [],
@@ -235,6 +236,7 @@ export function restoreFilterState(value: unknown): FilterState {
     dateBasis: value.dateBasis === "value" ? "value" : "operation",
     categoryMatch: value.categoryMatch === "either" ? "either" : "posting",
     categoryDepth: value.categoryDepth === "exact" ? "exact" : "subtree",
+    categoryMode: value.categoryMode === "exclude" ? "exclude" : "include",
     categoryPrefixes:
       categoryPrefixes.length > 0
         ? categoryPrefixes
@@ -326,6 +328,9 @@ function snapshotFilters(filters: FilterState): FilterState {
   if (filters.categoryMatch !== undefined && filters.categoryMatch !== "posting" && filters.categoryMatch !== "either") {
     throw new Error("Unknown category matching mode");
   }
+  if (filters.categoryMode !== undefined && filters.categoryMode !== "include" && filters.categoryMode !== "exclude") {
+    throw new Error("Unknown category mode");
+  }
   const categoryPrefixes = snapshotCategoryPrefixes(filters.categoryPrefixes);
   if (filters.categoryDepth !== undefined && filters.categoryDepth !== "subtree" && filters.categoryDepth !== "exact") {
     throw new Error("Unknown category depth");
@@ -373,6 +378,7 @@ function snapshotFilters(filters: FilterState): FilterState {
     dateBasis: filters.dateBasis ?? "operation",
     categoryMatch: filters.categoryMatch ?? "posting",
     categoryDepth: filters.categoryDepth ?? "subtree",
+    categoryMode: filters.categoryMode ?? "include",
     categoryPrefixes,
     statuses: [...new Set(filters.statuses)],
     tags: [...new Set(filters.tags)],
@@ -529,10 +535,11 @@ function matchesPostingWithoutDate(
   if (matcher.destinationIds.size > 0 && (relation?.destinationAccount === undefined || !matcher.destinationIds.has(relation.destinationAccount.id))) {
     return false;
   }
-  if (!categoryMatchesPrefixes(posting.categoryPath, filters.categoryPrefixes, filters.categoryDepth) &&
-    !(filters.categoryMatch === "either" && relation?.peer !== undefined &&
-      categoryMatchesPrefixes(relation.peer.categoryPath, filters.categoryPrefixes, filters.categoryDepth))) {
-    return false;
+  if (filters.categoryPrefixes.length > 0) {
+    const categoryMatches = categoryMatchesPrefixes(posting.categoryPath, filters.categoryPrefixes, filters.categoryDepth) ||
+      (filters.categoryMatch === "either" && relation?.peer !== undefined &&
+        categoryMatchesPrefixes(relation.peer.categoryPath, filters.categoryPrefixes, filters.categoryDepth));
+    if (filters.categoryMode === "exclude" ? categoryMatches : !categoryMatches) return false;
   }
   if (
     matcher.tags.size > 0 &&

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react"
+import { act, fireEvent, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it } from "vitest"
 
@@ -170,5 +170,24 @@ describe("GlobalFilters", () => {
     render(<AppStoreProvider store={appStore}><GlobalFilters /></AppStoreProvider>)
     expect(screen.getByRole("button", { name: "Quitar filtro Beneficiario: Único" })).toBeVisible()
     expect(screen.queryByRole("button", { name: /Beneficiario: Único \(ID 42\)/ })).toBeNull()
+  })
+})
+
+describe("excluded category chips", () => {
+  beforeEach(resetAppStore)
+  it("labels excluded paths explicitly without counting an empty mode", async () => {
+    const user = userEvent.setup()
+    appStore.getState().actions.patchFilters({ categoryMode: "exclude" })
+    render(<AppStoreProvider store={appStore}><GlobalFilters /></AppStoreProvider>)
+    expect(screen.getByRole("button", { name: "Abrir todos los filtros" })).toBeVisible()
+    expect(screen.queryByRole("list", { name: "Filtros aplicados" })).toBeNull()
+    act(() => appStore.getState().actions.patchFilters({ categoryPrefixes: [["Gastos"], ["Ingresos"]] }))
+    const first = await screen.findByRole("button", { name: "Quitar filtro Excluir: Gastos" })
+    expect(screen.getByRole("button", { name: "Abrir todos los filtros, 1 activo" })).toBeVisible()
+    await user.click(first)
+    expect(appStore.getState().filters.categoryPrefixes).toEqual([["Ingresos"]])
+    expect(appStore.getState().filters.categoryMode).toBe("exclude")
+    await user.click(screen.getByRole("button", { name: "Quitar filtro Excluir: Ingresos" }))
+    expect(screen.getByRole("button", { name: "Abrir todos los filtros" })).toBeVisible()
   })
 })

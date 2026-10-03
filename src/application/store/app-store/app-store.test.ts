@@ -574,12 +574,13 @@ describe("AppStore", () => {
     const first = createSecureStore(repository);
     await first.getState().actions.unlock("first phrase");
     first.getState().actions.patchFilters({
-      scope: "all", search: "mercado", accountIds: ["account"], categoryPrefixes: [["Reajuste*"]],
+      scope: "all", search: "mercado", accountIds: ["account"], categoryPrefixes: [["Reajuste*"]], categoryMode: "exclude",
       periodMode: "custom", dateRange: { from: "2030-02-01", to: "2030-02-28" },
       statuses: ["VOID"], commentSearch: "nota", minAmountEurMinor: 0,
     });
     const saved = window.localStorage.getItem(FILTER_PREFERENCES_NAME) ?? "";
     expect(saved).toContain('"search":"mercado"');
+    expect(saved).toContain('"categoryMode":"exclude"');
     expect(saved).not.toMatch(/first phrase|analytics|accountLabel|amountEurMinor|VOID/u);
     first.getState().actions.lock();
     expect(first.getState().filters.search).toBe("");
@@ -594,7 +595,7 @@ describe("AppStore", () => {
     expect(second.getState().filters.search).toBe("");
     await second.getState().actions.unlock("second phrase");
     expect(second.getState().filters).toMatchObject({
-      scope: "all", search: "mercado", accountIds: ["account"], categoryPrefixes: [["Reajuste*"]],
+      scope: "all", search: "mercado", accountIds: ["account"], categoryPrefixes: [["Reajuste*"]], categoryMode: "exclude",
       periodMode: "custom", dateRange: { from: "2030-02-01", to: "2030-02-28" },
       statuses: [], commentSearch: "nota", minAmountEurMinor: 0,
     });
@@ -895,4 +896,24 @@ describe("AppStore", () => {
     expect(repository.load).toHaveBeenCalledOnce();
     expect(store.getState().loadPhase).toBe("ready");
   });
+});
+
+
+it.each([undefined, "invalid"])("restores saved category mode %s as include", async (categoryMode) => {
+  window.localStorage.clear();
+  window.localStorage.setItem(FILTER_PREFERENCES_NAME, JSON.stringify({
+    version: 1,
+    filters: {
+      ...createDefaultFilterState(),
+      categoryMode,
+      categoryPrefixes: [["Reajuste*"]],
+    },
+  }));
+  const repository: DatasetRepository = {
+    load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetFixture()),
+  };
+  const store = createSecureStore(repository);
+  await store.getState().actions.unlock("synthetic phrase");
+  expect(store.getState().filters.categoryMode).toBe("include");
+  expect(store.getState().filters.categoryPrefixes).toEqual([["Reajuste*"]]);
 });

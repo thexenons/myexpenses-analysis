@@ -999,3 +999,32 @@ test("reference backup dataset reproduces the official MyExpenses figures", asyn
     );
   }
 });
+
+test("category exclusion complements multiple paths, depth and uncategorized matches", () => {
+  const initial = normalizeDataset(fixtureSource());
+  const paths = [["Gastos"], ["Gastos", "Casa"], ["Ingresos"], [], ["Otros"]];
+  const dataset = {
+    ...initial,
+    postings: initial.postings.slice(0, paths.length).map((posting, index) =>
+      Object.assign({}, posting, { categoryPath: paths[index]! })),
+  };
+  const selectedIds = (patch: Partial<FilterState>) => applyFilters(dataset, {
+    ...createDefaultFilterState(), ...patch,
+  }).postings.map((posting) => posting.id);
+  const ids = dataset.postings.map((posting) => posting.id);
+  assert.deepEqual(selectedIds({ categoryMode: "exclude", categoryPrefixes: [["Gastos"], ["Ingresos"]] }), ids.slice(3));
+  assert.deepEqual(selectedIds({ categoryMode: "exclude", categoryPrefixes: [["Gastos"]], categoryDepth: "exact" }), ids.slice(1));
+  assert.deepEqual(selectedIds({ categoryMode: "exclude", categoryPrefixes: [["Gastos"]], categoryDepth: "subtree" }), ids.slice(2));
+  assert.deepEqual(selectedIds({ categoryMode: "exclude", categoryPrefixes: [[]] }), ids.filter((_, index) => index !== 3));
+  assert.deepEqual(selectedIds({ categoryMode: "exclude", categoryPrefixes: [] }), ids);
+  assert.deepEqual(selectedIds({ categoryPrefixes: [["Gastos"]] }), ids.slice(0, 2));
+  assert.throws(() => selectedIds({ categoryMode: "invalid" as FilterState["categoryMode"] }), /category.*mode/i);
+});
+
+test("category mode restores include for missing or invalid legacy values", () => {
+  assert.equal(createDefaultFilterState().categoryMode, "include");
+  for (const categoryMode of [undefined, null, "invalid", 1]) {
+    assert.equal(restoreFilterState({ categoryMode, categoryPrefixes: [["Gastos"]] }).categoryMode, "include");
+  }
+  assert.equal(restoreFilterState({ categoryMode: "exclude" }).categoryMode, "exclude");
+});

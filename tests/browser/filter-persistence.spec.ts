@@ -221,3 +221,47 @@ test("filter persistence leaves a future snapshot untouched and recovers from co
   await expect(recovered.getByRole("searchbox", { name: "Buscar en movimientos" })).toHaveValue("");
   expect(await page.evaluate((key) => localStorage.getItem(key), PREFERENCE_KEY)).toContain('"version":1');
 });
+
+test("category exclusion persists its mode and keeps all other categories", async ({ page }) => {
+  await page.getByRole("link", { name: /^(Transacciones|Movimientos)$/ }).click();
+  const results = page.getByRole("region", { name: "Movimientos filtrados" });
+  await expect(results).toContainText(/\d+ resultados/u);
+  const baselineCount = Number((await results.innerText()).match(/(\d+) resultados/u)?.[1]);
+  expect(baselineCount).toBeGreaterThan(1);
+  const drawer = await openDrawer(page);
+  const mode = drawer.getByRole("combobox", { name: "Modo de categorías" });
+  await expect(mode).toHaveValue("include");
+  await drawer.getByLabel("Añadir categoría o subcategoría").selectOption('["Expense","Food"]');
+  await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expectTransactions(page, 1);
+
+  const excluding = await openDrawer(page);
+  await excluding.getByRole("combobox", { name: "Modo de categorías" }).selectOption("exclude");
+  await excluding.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expect(results).toContainText(`${baselineCount - 1} resultados`);
+  await expect(page.getByRole("button", { name: "Quitar filtro Excluir: Expense › Food" })).toBeVisible();
+  await expect(results.getByText("Synthetic food", { exact: true })).toHaveCount(0);
+  await expect(results.getByRole("table").locator("tbody tr").first()).toBeVisible();
+  await page.reload();
+  await unlock(page);
+  await expect(results).toContainText(`${baselineCount - 1} resultados`);
+  const restored = await openDrawer(page);
+  await expect(restored.getByRole("combobox", { name: "Modo de categorías" })).toHaveValue("exclude");
+  await expect(restored.getByRole("button", { name: "Quitar exclusión Expense › Food" })).toBeVisible();
+  const serialized = await page.evaluate((key) => localStorage.getItem(key), PREFERENCE_KEY);
+  expect(JSON.parse(serialized!)).toMatchObject({ version: 1, filters: { categoryMode: "exclude" } });
+
+  await restored.getByRole("searchbox", { name: "Buscar en movimientos" }).fill("Synthetic food");
+  await restored.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expectTransactions(page, 0);
+  const including = await openDrawer(page);
+  await including.getByRole("combobox", { name: "Modo de categorías" }).selectOption("include");
+  await including.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expectTransactions(page, 1);
+  const emptySelection = await openDrawer(page);
+  await emptySelection.getByRole("combobox", { name: "Modo de categorías" }).selectOption("exclude");
+  await emptySelection.getByRole("button", { name: "Quitar exclusión Expense › Food" }).click();
+  await expect(emptySelection.getByRole("combobox", { name: "Modo de categorías" })).toHaveValue("exclude");
+  await emptySelection.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expectTransactions(page, 1);
+});

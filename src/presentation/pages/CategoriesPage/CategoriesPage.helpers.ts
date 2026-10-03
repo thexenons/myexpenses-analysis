@@ -36,9 +36,9 @@ export function createCategoryDrilldownFilters(
   filters: FilterState,
   path: readonly string[],
   level: CategoryLevel,
-): Pick<FilterState, "categoryPrefixes" | "categoryDepth" | "categoryMatch"> {
+): Pick<FilterState, "categoryPrefixes" | "categoryDepth" | "categoryMatch" | "categoryMode"> {
   const preserveExactSelection = level !== "direct" &&
-    filters.categoryDepth === "exact" && filters.categoryPrefixes.length > 0;
+    filters.categoryMode !== "exclude" && filters.categoryDepth === "exact" && filters.categoryPrefixes.length > 0;
   return {
     categoryPrefixes: preserveExactSelection
       ? filters.categoryPrefixes.filter((selected) => path.length === 0
@@ -47,6 +47,7 @@ export function createCategoryDrilldownFilters(
       : [path],
     categoryDepth: level === "direct" || preserveExactSelection ? "exact" : "subtree",
     categoryMatch: "posting",
+    categoryMode: "include",
   };
 }
 

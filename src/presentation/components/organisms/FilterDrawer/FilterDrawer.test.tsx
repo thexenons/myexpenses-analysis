@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it } from "vitest"
 
@@ -470,4 +470,21 @@ describe("FilterDrawer", () => {
     appStore.getState().actions.lock()
     await waitFor(() => expect(min).toHaveValue(""))
   })
+})
+
+it("offers accessible include and exclude category modes without an empty restriction", async () => {
+  resetAppStore()
+  const user = userEvent.setup()
+  appStore.setState({ filterDrawerOpen: true })
+  render(<AppStoreProvider store={appStore}><FilterDrawer /></AppStoreProvider>)
+  const mode = screen.getByRole("combobox", { name: "Modo de categorías" })
+  expect(mode).toHaveValue("include")
+  await user.selectOptions(mode, "exclude")
+  expect(appStore.getState().filters.categoryMode).toBe("exclude")
+  expect(screen.getByText("Sin selección no se limita por categoría.")).toBeVisible()
+  expect(screen.getByRole("button", { name: "Restablecer" })).toBeDisabled()
+  act(() => appStore.getState().actions.setCategoryPrefixes([["Gastos"]]))
+  expect(await screen.findByText("1 ruta excluida")).toBeVisible()
+  await user.selectOptions(mode, "include")
+  expect(appStore.getState().filters.categoryMode).toBe("include")
 })

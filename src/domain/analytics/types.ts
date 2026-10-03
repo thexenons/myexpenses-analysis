@@ -254,7 +254,8 @@ export interface FilterState {
   readonly dateBasis?: "operation" | "value";
   readonly categoryMatch?: "posting" | "either";
   readonly categoryDepth?: "subtree" | "exact";
-  /** Empty means all; an empty path within the list selects uncategorized rows. */
+  readonly categoryMode?: "include" | "exclude";
+  /** Empty means no category restriction; an empty selected path matches uncategorized rows. */
   readonly categoryPrefixes: readonly (readonly string[])[];
   /** Empty means every status. VOID can remain visible in tables. */
   readonly statuses: readonly TransactionStatus[];
