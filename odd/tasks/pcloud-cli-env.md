@@ -18,8 +18,9 @@ assumption, not the intended local workflow. TDD remains explicitly enabled.
   must fail safely. Preserve secret redaction and build-child isolation.
 - Do not read, overwrite, stage, or execute the user's existing `.env`.
 - No real pCloud requests, SMTP, deployment or pull request is authorized. User
-  requested a Git push after T2 commit; destination/authentication confirmation
-  and native candidate review consent remain separate pending gates.
+  approved native review, integration into `main` and push to `origin/main`
+  using configured GitHub SSH authentication. Project delivery preference:
+  always integrate into `main`; do not infer force-push permission.
 - Preserve existing unrelated `.atl` registry changes.
 - Worker scheduling and notification delivery remain unchanged.
 - Preserve timestamp ZIP filenames and all unrelated local backups/datasets.
@@ -67,7 +68,25 @@ assumption, not the intended local workflow. TDD remains explicitly enabled.
   obsolete CLI deployment/cron documentation accounts for substantial churn.
   Keep the coherent correction with its tests and accurate operating guidance;
   do not discard tests or compress code to meet the advisory estimate. The second
-  commit/size exception is approved; independent native review remains pending.
+  commit/size exception is approved; independent native review is complete.
+- T2 work-unit commit: `a12e3004cec2b3813fb1aaa73b1df97412584491`
+  (`fix(pcloud): separate local backup recovery from deployment`). Actual commit
+  includes this recovery record: 17 files, +763/-607 = 1,370 authored lines.
+- Running branch authored lines: 1,858 across T1 and T2 work-unit commits.
+- T2 native assessment: high (`process_boundary`), initially due (`high_risk`).
+  User granted review; risk/resilience/readability/reliability lenses each
+  returned no findings over the 17 immutable patches. No independent test
+  reruns or unchanged transport inspection were claimed by reviewers.
+  Native approval was acknowledged with authority `burned` at revision
+  `sha256:e0577e055691153b23232976eec49e0e98f3ef6db8d4004162870fceb4a0744c`.
+  Target: `sha256:08420b0ff092666d6d548df591cddfefab92cb1e60c38307a3feb861c8656c4d`.
+  Lineage: `review-7f717985bdd49753`.
+- Delivery: fast-forwarded `main` from `dd2f95f` to `a12e300`, then successfully
+  pushed `origin/main` to `github.com:thexenons/myexpenses-analysis.git` using the
+  authorized configured SSH transport. T1 and T2 are both delivered. No force
+  push, PR or unrelated user changes were included.
+- Preserved this agent-owned post-commit evidence through branch switch using a
+  path-scoped temporary stash, then restored and removed that stash successfully.
 
 ## Task
 
@@ -102,7 +121,7 @@ assumption, not the intended local workflow. TDD remains explicitly enabled.
     Lineage: `review-0af5c29416c8e869`.
     Acknowledged revision: `sha256:c5f850af1e784c558ce75d90ddddbecef55a8683dd6b1ef41ffef29f7ed5bb27`.
 
-- [ ] T2 — Separate local backup recovery from worker deployment.
+- [x] T2 — Separate local backup recovery from worker deployment.
   - Route: delegated direct; mapping/preparation exceeds four files and writer
     touches multiple non-trivial files. Preserve valid T1 env-loading behavior;
     replace only its now-superseded full-deployment CLI wiring/assertions/docs.
@@ -141,10 +160,8 @@ assumption, not the intended local workflow. TDD remains explicitly enabled.
     Log: `/tmp/pcloud-download-deployment-tests.log`.
   - `pnpm type-check`, `pnpm lint`, `git diff --check`, relative documentation
     links, and ignore checks for `.env`, backup ZIPs and staging all passed.
-  - Implementation/functionality observed complete; checkbox remains open for
-    commit/delivery and native review. No additional commit/staging performed.
-  - Native review pending a new committed candidate and user consent. T1 review
-    must not be represented as approval of this changed local workflow.
+  - Implementation/functionality, T2 commit, native review and `origin/main`
+    delivery observed complete. T2 has its own review authority, separate from T1.
 
 ## Progress and evidence
 
@@ -173,9 +190,7 @@ assumption, not the intended local workflow. TDD remains explicitly enabled.
 
 ## Next step
 
-Create the authorized T2 commit, assess its isolated committed candidate and
-follow native review consent. Confirm push destination/authentication before
-remote use. After push, investigate the period-selector label overflow on desktop
-and mobile read-only; the user has not requested a style implementation yet.
-No PR, merge or real sync is authorized. Mirror remains pending due to Engram
-session failure.
+CLI work is delivered on `main`. Investigate the period-selector label overflow
+on desktop/mobile read-only as separately requested; no style implementation is
+authorized yet. Post-delivery task evidence remains uncommitted. No real sync or
+PR was performed. Mirror remains pending due to Engram session failure.
