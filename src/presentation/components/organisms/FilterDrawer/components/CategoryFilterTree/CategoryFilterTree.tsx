@@ -1,4 +1,4 @@
-import { useMemo, type Ref } from "react"
+import { useMemo, type ReactElement, type Ref } from "react"
 
 import { categoryPathsEqual } from "../../../../../../domain/analytics/filters.ts"
 import { formatCategoryPath } from "../../../../../utils/format.ts"
@@ -37,22 +37,22 @@ function buildTree(paths: readonly (readonly string[])[]): readonly CategoryNode
   return roots
 }
 
-function CategoryBranch({ node, selectedPaths, onToggle }: {
-  node: CategoryNode
-  selectedPaths: CategoryFilterTreeProps["selectedPaths"]
-  onToggle: CategoryFilterTreeProps["onToggle"]
-}) {
+/** Pure recursive renderer; disclosure state remains owned by AccordionTreeItem. */
+function renderCategoryBranch(
+  node: CategoryNode,
+  selectedPaths: CategoryFilterTreeProps["selectedPaths"],
+  onToggle: CategoryFilterTreeProps["onToggle"],
+): ReactElement {
   const label = formatCategoryPath(node.path)
   const selected = selectedPaths.some((path) => categoryPathsEqual(path, node.path))
-  return <AccordionTreeItem label={label} rowClassName={styles.row} header={
+  return <AccordionTreeItem key={JSON.stringify(node.path)} label={label} rowClassName={styles.row} header={
     <button type="button" className={styles.selection} aria-label={`Seleccionar ${label}`}
       aria-pressed={selected} onClick={() => onToggle(node.path)}>
       <span>{node.path.at(-1) ?? "Sin categoría"}</span>
       <span aria-hidden="true" className={styles.mark}>{selected ? "✓" : "+"}</span>
     </button>
   }>
-    {node.children.map((child) => <CategoryBranch key={JSON.stringify(child.path)} node={child}
-      selectedPaths={selectedPaths} onToggle={onToggle} />)}
+    {node.children.map((child) => renderCategoryBranch(child, selectedPaths, onToggle))}
   </AccordionTreeItem>
 }
 
@@ -60,8 +60,7 @@ export function CategoryFilterTree({ paths, selectedPaths, onToggle, focusRef }:
   const roots = useMemo(() => buildTree(paths), [paths])
   return <section ref={focusRef} aria-label="Selector de categorías" tabIndex={-1} className={styles.selector}>
     <AccordionTree aria-label="Categorías disponibles">
-      {roots.map((node) => <CategoryBranch key={JSON.stringify(node.path)} node={node}
-        selectedPaths={selectedPaths} onToggle={onToggle} />)}
+      {roots.map((node) => renderCategoryBranch(node, selectedPaths, onToggle))}
     </AccordionTree>
   </section>
 }

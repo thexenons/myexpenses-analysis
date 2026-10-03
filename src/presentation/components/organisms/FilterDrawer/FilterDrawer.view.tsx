@@ -17,7 +17,7 @@ import { GranularityControl } from "../GranularityControl/index.ts"
 import { PeriodSelector } from "../PeriodSelector/index.ts"
 import styles from "./FilterDrawer.module.css"
 import type { FilterDrawerViewProps } from "./FilterDrawer.types"
-import { CategoryFilterTree } from "./components/CategoryFilterTree/CategoryFilterTree.tsx"
+import { CategoryFilterTree } from "./components/CategoryFilterTree/index.ts"
 
 const SCOPE_OPTIONS: readonly SegmentedControlOption<AnalyticsScope>[] = [
   { value: "realCashFlow", label: "Flujo real", shortLabel: "Real" },

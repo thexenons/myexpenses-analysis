@@ -230,3 +230,29 @@ Order now A03 -> A06 -> A07 -> A04 -> A05; all remain separately reviewable.
   Rollback: preset module/store/drawer/strict preset-key adapter/tests only,
   preserving ordinary filter preferences and previous cumulative/tree features.
 - Next: commit/assess A04 from98cfda7; then A05 registry/final proof/main clean push.
+
+## A04 native approval and final corrections
+- A04 work-unit `5a5f1d2`, medium/due772lines15files, granted reliability review.
+  Approved with non-blocking focus advisory; exact acknowledgement burned
+  `review-ab3d9b4b90585c45`; reviewed boundary now `5a5f1d2`.
+- Full safe Node check:355pass2fail. Architecture requires a CategoryFilterTree
+  index.ts and one PascalCase component per TSX file. Both originated in A06.
+- Three private test bodies excluded BEFORE execution: official reference figures,
+  enriched reference coverage and latest local backup SQLite parity. Excluded
+  tests are not counted as runner-skipped; no private files read.
+- Independent advisory challenge reproduced async-confirmation BODY focus loss;
+  original jsdom disabled-button blur was ineffective. Intentional redirected
+  focus remained respected. Native synchronous-browser occurrence not established.
+- [x] A08 — Correct category-tree component structure, preserve behavior.
+  Delegated writer: component structure/index and focused architecture/UI proof.
+- [ ] A09 — Correct owned post-commit confirmation focus after async pending blur.
+  Delegated writer: drawer logic plus effective deterministic/browser regression.
+- A05 remains pending; repeat full checks after these corrections, then registry
+  commit and final main delivery. No previous approved review is reopened.
+
+## A08 proof
+- Component structure RED2fail5pass -> GREEN7pass; parent repeated GREEN7.
+- Tree/drawer UI36pass, lint/all3types/diffpass; no category behavior changed.
+- Public index added; hook-free recursive rendering preserves stable disclosure
+  keys. Four-file13add13delete, normalization before verification, source frozen.
+- Rollback only tree renderer/index and its consumer imports; A09 remains pending.

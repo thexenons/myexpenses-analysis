@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event"
 import { expect, it } from "vitest"
 
 import { toggleCategoryPath } from "../../../../../../domain/analytics/filters.ts"
-import { CategoryFilterTree } from "./CategoryFilterTree.tsx"
+import { CategoryFilterTree } from "./index.ts"
 
 it("selects roots and deep leaves independently of expansion and keeps explicit states", async () => {
   const user = userEvent.setup()
