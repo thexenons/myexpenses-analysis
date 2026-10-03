@@ -42,7 +42,7 @@ requested every remaining workspace modification committed and pushed.
 - [x] A07 — Add accumulated-flow view to Overview and Cash Flow line charts,
   retaining per-period default and selected granularity/global filters. Delegated
   writer: shared derivation and two page integrations/tests.
-- [ ] A05 — Commit existing registry changes; complete independent checks, native
+- [x] A05 — Commit existing registry changes; complete independent checks, native
   due reviews, chained main delivery and verify a clean worktree/remote ref.
   Parent state/commits plus delegated verification; passive registry structural check.
 
@@ -269,3 +269,25 @@ Order now A03 -> A06 -> A07 -> A04 -> A05; all remain separately reviewable.
   localStorage async behavior; execution remains pending in full final browser.
 - Three-file211add5delete, separate work unit. Rollback only confirmation recovery
   and its regressions. Next commit/assess then repeat A05 full synthetic checks.
+
+## Final verified delivery
+- A09 work-unit `12725d1`; registry/cache work-unit `4780891` inspected/parsed
+  and committed separately. Combined corrections/registry assessed medium,
+  335 authored lines / under_budget from reviewed boundary `5a5f1d2`.
+- Independent final candidate `4780891`: Node357pass, UI585pass/93files,
+  synthetic deployment1pass, browser228pass3intentional viewport skips0fail.
+  Browser elapsed768seconds, production synthetic build successful; lint,
+  all3typeconfigs and diff pass. Parent repeated all3typeconfigs successfully.
+- Three private Node bodies excluded before execution, not counted as skipped:
+  official reference figures, enriched reference coverage, local-backup SQL parity.
+  Desktop touch-hold and mobile390/320 desktop-hover cases intentionally skipped.
+  Opt-in large-history performance benchmark not enabled; no production deployment.
+- Source hash a18cc32eec5699ff18906c6c00022b1f8bb247ec59c283f54c94355849207eea
+  stable; evidence /tmp/advanced-filters-final-corrected.hAXQSw. No owned runtime
+  processes, port41789, isolated snapshots or deployment fixture directories remain.
+- Non-force main fast-forward/push observed; remote readback confirmed
+  `478089124ed85a201b1c3d25549e568a424edc4c`. All implementation and registry
+  modifications committed; worktree clean at functional delivery.
+- All feature tasks A01–A09 (assigned IDs) closed. This passive completion record
+  follows as a separate commit/main push; final remote/worktree readback is the
+  delivery check, without rerunning unchanged functional source or native authority.
