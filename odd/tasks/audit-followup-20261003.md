@@ -32,7 +32,7 @@ production inspection and global installation remain out of scope.
   Route: delegated writer; CI/runtime configuration and tests. Preserve synthetic
   isolation, minimum permissions, pinned actions, timeouts and no private data.
   Check workflow selectors and run equivalent commands locally.
-- [ ] F03 — Add repository dependency-update/advisory monitoring.
+- [x] F03 — Add repository dependency-update/advisory monitoring.
   Route: delegated writer; configuration analysis. Verify package-manager and
   ecosystem support against official docs. Group noise where appropriate, never
   auto-merge or silently upgrade dependencies. Test/validate configuration.
@@ -123,3 +123,22 @@ and non-force main delivery under the selected strategy. PR creation is not requ
   44.10s); isolated two-worker comparison 75.30s. Retain four workers/isolation.
   Passive measurement records need structural readback, not artificial RED.
   Full methodology, ranges and unmeasured shapes remain explicit in the report.
+- F04/F06 measurement record commit `5a7829b`: +104/-2 = 106 authored lines.
+  Native committed-only assessment against `d140d37` is passive (`non_executable_only`);
+  structural readback and diff check complete. Reviewed boundary advances to
+  `5a7829b`. Initial assessment while F03 files were untracked was unavailable;
+  after their explicit staging, the exact committed documentation slice was
+  assessed successfully. No source or untracked content was silently reviewed.
+- F03 supports native pnpm 12 monitoring, not an unsupported package updater:
+  weekly/manual JSON outdated and audit reports, independent audit eligibility
+  after outdated failure, no suppressed native failures/automatic fixes. Grouped
+  weekly GitHub Actions Dependabot updates are capped at two version-update PRs.
+  Official GitHub documentation lists pnpm support through v10; this repository
+  is v12.6.0. Support gap and update/advisory/network distinctions are documented
+  in `docs/dependency-monitoring.md`.
+  Deterministic regression RED 6 failed; GREEN 6 passed. Lint, type-check, YAML
+  shape validation and diff check passed; parent reran 6 tests successfully.
+  Public-registry native probes used no user config: outdated exit 1 reported
+  seven available updates, audit exit 0 reported zero advisories at this time.
+  Dependencies were not upgraded; hosted execution remains unverified.
+  F03 work-unit commit/native assessment/main delivery are recorded next.
