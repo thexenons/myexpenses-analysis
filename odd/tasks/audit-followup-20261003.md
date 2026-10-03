@@ -202,3 +202,13 @@ upgrade occurred. Hosted scheduled jobs, real production configuration, manual
 assistive-technology/physical-device checks and unmeasured complex backup shapes
 remain explicit verification limits, not claimed results. User registry edits
 are preserved and excluded from delivery.
+
+## Final delivery evidence
+- F05.1 commit `53b2ed3` (+49/-0 with task evidence) assessed medium,
+  `review_due: false`, reason `under_budget` against reviewed `f2de5dc`. No
+  new native review or approval is claimed; independent and parent checks above
+  are the verification of record for this small separate work unit.
+- Non-force fast-forward/push and remote readback confirmed `53b2ed3` on main.
+  All F01–F06 and F05.1 are complete; no substantive unchecked task remains in
+  the local authorized inventory. The final passive closure record follows this
+  commit; unrelated staged `.atl` files remain user-owned and excluded.
