@@ -13,7 +13,7 @@ test("worker image installs locked runtime tools without copying repository secr
     ]);
     assert.match(dockerfile, /FROM node:24\.21\.0-bookworm-slim AS worker/u);
     assert.match(dockerfile, /apt-get install[^\n]*ca-certificates[^\n]*util-linux/u);
-    assert.match(dockerfile, /pnpm@12\.6\.0/u);
+    assert.match(dockerfile, /pnpm@12\.9\.1/u);
     assert.match(dockerfile, /COPY package\.json pnpm-lock\.yaml pnpm-workspace\.yaml/u);
     assert.match(dockerfile, /COPY patches\/ patches\//u);
     assert.match(dockerfile, /pnpm install --frozen-lockfile/u);

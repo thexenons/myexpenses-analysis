@@ -1,11 +1,28 @@
 allowBuilds:
   esbuild: true
-# Exact releases selected by the September 2026 dependency update.
+# Explicit latest stable releases published on 2026-10-05; all other releases retain the 24-hour gate.
 minimumReleaseAgeExclude:
-  - '@types/node@26.6.3'
-  - '@vitest/coverage-v8@5.0.2'
-  - '@vitest/mocker@5.0.2'
-  - '@vitest/spy@5.0.2'
-  - vitest@5.0.2
+  - 'nodemailer@10.0.15'
+  - '@vitejs/plugin-react@6.1.2'
+  - 'oxlint@1.87.0'
+  - '@oxlint/binding-android-arm-eabi@1.87.0'
+  - '@oxlint/binding-android-arm64@1.87.0'
+  - '@oxlint/binding-darwin-arm64@1.87.0'
+  - '@oxlint/binding-darwin-x64@1.87.0'
+  - '@oxlint/binding-freebsd-x64@1.87.0'
+  - '@oxlint/binding-linux-arm-gnueabihf@1.87.0'
+  - '@oxlint/binding-linux-arm-musleabihf@1.87.0'
+  - '@oxlint/binding-linux-arm64-gnu@1.87.0'
+  - '@oxlint/binding-linux-arm64-musl@1.87.0'
+  - '@oxlint/binding-linux-ppc64-gnu@1.87.0'
+  - '@oxlint/binding-linux-riscv64-gnu@1.87.0'
+  - '@oxlint/binding-linux-riscv64-musl@1.87.0'
+  - '@oxlint/binding-linux-s390x-gnu@1.87.0'
+  - '@oxlint/binding-linux-x64-gnu@1.87.0'
+  - '@oxlint/binding-linux-x64-musl@1.87.0'
+  - '@oxlint/binding-openharmony-arm64@1.87.0'
+  - '@oxlint/binding-win32-arm64-msvc@1.87.0'
+  - '@oxlint/binding-win32-ia32-msvc@1.87.0'
+  - '@oxlint/binding-win32-x64-msvc@1.87.0'
 patchedDependencies:
   babel-plugin-react-compiler@1.0.0: patches/babel-plugin-react-compiler@1.0.0.patch

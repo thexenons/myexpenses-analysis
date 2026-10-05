@@ -24,7 +24,7 @@ setup fails or the registry is unavailable.
 
 ## Why package updates are report-only
 
-The repository uses **pnpm 12.6.0**. GitHub's documented Dependabot support lists
+The repository uses **pnpm 12.9.1**. GitHub's documented Dependabot support lists
 **pnpm versions 7–10**, not version 12 (checked 2026-10-03). Consequently, no
 `npm` ecosystem entry is configured for this lockfile. Native pnpm monitoring
 covers the support gap without pretending automatic package-update PRs work.

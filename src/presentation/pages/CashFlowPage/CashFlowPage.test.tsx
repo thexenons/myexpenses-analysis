@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -7,6 +7,7 @@ import { normalizeDataset } from "../../../domain/analytics/normalize.ts";
 import type { AppDataset, KpiSummary } from "../../../domain/analytics/types.ts";
 import { createCashFlowPageModel } from "./CashFlowPage.helpers.ts";
 import { CashFlowPageView } from "./CashFlowPage.view.tsx";
+import { MonthlySavingsTrend } from "./CashFlowPage.savings-trend.tsx";
 import * as csvHelpers from "../../components/organisms/ChartDataTable/ChartDataTable.helpers.ts";
 
 const kpis: KpiSummary = {
@@ -35,6 +36,29 @@ const emptyTrendFiltered = applyFilters(normalizeDataset({
   categories: {},
   parsedData: [],
 }), createDefaultFilterState());
+
+it("refreshes monthly savings completeness across midnight without changing the dataset", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-01-31T22:59:30Z"));
+  const source = normalizeDataset({
+    accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+    categories: { Income: { categoryType: "INCOME" }, Expense: { categoryType: "EXPENSE" } },
+    parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+      { uuid: "income", date: "2026-01-01", amount: 100, category: ["Income"], sourceTransactionUuid: "income", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+      { uuid: "expense", date: "2026-01-31", amount: -50, category: ["Expense"], sourceTransactionUuid: "expense", sourceStatus: "RECONCILED", splitIndex: null, splitCount: null },
+    ] }],
+  });
+  const filtered = applyFilters(source, createDefaultFilterState());
+  const view = render(<MonthlySavingsTrend filtered={filtered} />);
+  try {
+    expect(screen.queryByRole("table", { name: "Detalle mensual del ahorro contable" })).toBeNull();
+    act(() => vi.advanceTimersByTime(60_000));
+    expect(screen.getByRole("table", { name: "Detalle mensual del ahorro contable" })).toBeVisible();
+  } finally {
+    view.unmount();
+    vi.useRealTimers();
+  }
+});
 
 describe("CashFlowPageView", () => {
   it("reveals an eligible monthly accounting savings trend only while its disclosure is open", async () => {

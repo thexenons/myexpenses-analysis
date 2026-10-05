@@ -60,8 +60,8 @@ test("the advisory report remains eligible after an outdated report failure", ()
 
 test("maintainers can distinguish support gaps, updates, advisories and registry errors", () => {
   const manifest = JSON.parse(source("package.json")) as { packageManager: string };
-  assert.equal(manifest.packageManager, "pnpm@12.6.0");
-  for (const phrase of ["pnpm 12.6.0", "pnpm versions 7–10", "exit 1", "registry", "No automatic updates", "Actions logs"]) {
+  assert.equal(manifest.packageManager, "pnpm@12.9.1");
+  for (const phrase of ["pnpm 12.9.1", "pnpm versions 7–10", "exit 1", "registry", "No automatic updates", "Actions logs"]) {
     assert.ok(documentation.includes(phrase), `Missing monitoring guidance: ${phrase}`);
   }
   assert.match(documentation, /https:\/\/docs\.github\.com\/en\/code-security\/reference\/supply-chain-security\/supported-ecosystems-and-repositories/u);

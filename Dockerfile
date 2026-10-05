@@ -3,7 +3,7 @@ FROM node:24.21.0-bookworm-slim AS worker
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates util-linux \
     && rm -rf /var/lib/apt/lists/* \
-    && npm install --global pnpm@12.6.0
+    && npm install --global pnpm@12.9.1
 
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { isoDateInTimeZone } from "../../../domain/analytics/date-periods.ts";
+import { useToday } from "../../hooks/use-today.ts";
 import { analyzeMonthlySavingsRate, type MonthlySavingsRatePoint } from "../../../domain/analytics/savings-rate.ts";
 import type { FilteredAnalyticsDataset } from "../../../domain/analytics/types.ts";
 import { DataTable } from "../../components/organisms/DataTable/index.ts";
@@ -31,10 +31,11 @@ const debtColumns: readonly DataTableColumn<MonthlySavingsRatePoint>[] = [
 ];
 
 export function MonthlySavingsTrend({ filtered }: { readonly filtered: FilteredAnalyticsDataset }) {
+  const today = useToday(filtered.source.backup?.preferences.timeZone ?? "Europe/Madrid");
   const result = useMemo(() => analyzeMonthlySavingsRate(
     filtered,
-    isoDateInTimeZone(new Date(), filtered.source.backup?.preferences.timeZone ?? "Europe/Madrid"),
-  ), [filtered]);
+    today,
+  ), [filtered, today]);
   if (result.status === "unavailable") return <div className={styles.savingsTrendBody}>
     <p>{result.reason === "subset"
       ? "No disponible con filtros de cuentas o contenido. Quita esos filtros para interpretar la tendencia mensual."

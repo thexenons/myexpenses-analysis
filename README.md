@@ -7,10 +7,11 @@ evolución temporal y desglose por cuenta y categoría.
 
 ## Aplicación
 
-Requiere Node `^22.22.2`, `^24.15.0` o `>=26` y pnpm `12.6.0`.
-La actualización de dependencias se validó con Node `24.21.0` LTS.
+Requiere Node `^22.22.2`, `^24.15.0` o `>=26` y pnpm `12.9.1`.
+La actualización de dependencias se validó con Node `24.19.0` LTS.
 Consulta las migraciones y el parche temporal de React Compiler en la
-[revisión de dependencias](docs/dependencies-2026-09-26.md).
+[revisión de dependencias](docs/dependencies-2026-09-26.md) y la
+[actualización del 5 de octubre](docs/dependencies-2026-10-05.md).
 
 ```sh
 pnpm install

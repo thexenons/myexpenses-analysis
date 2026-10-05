@@ -4,7 +4,6 @@ import { datasetDateBounds } from "../../../../../domain/analytics/date-bounds.t
 import {
   dateRangeForPeriod,
   dateRangeForPeriodInput,
-  isoDateInTimeZone,
   periodInputValue,
 } from "../../../../../domain/analytics/date-periods.ts";
 import type {
@@ -13,6 +12,7 @@ import type {
   IsoDate,
 } from "../../../../../domain/analytics/types.ts";
 import { useAppStore } from "../../../../providers/AppStoreProvider/index.ts";
+import { useToday } from "../../../../hooks/use-today.ts";
 import {
   buildYearOptions,
   describeDateRange,
@@ -52,7 +52,7 @@ export function usePeriodSelector({
   const dateBasis = useAppStore((state) => state.filters.dateBasis);
   const setDatePeriod = useAppStore((state) => state.actions.setDatePeriod);
   const timeZone = analytics?.backup?.preferences.timeZone ?? "Europe/Madrid";
-  const today = isoDateInTimeZone(new Date(), timeZone);
+  const today = useToday(timeZone);
   const bounds = analytics === null ? null : datasetDateBounds(analytics, dateBasis);
   const minimum = bounds?.minDate ?? null;
   const maximum = laterDate(today, bounds?.maxDate ?? null);

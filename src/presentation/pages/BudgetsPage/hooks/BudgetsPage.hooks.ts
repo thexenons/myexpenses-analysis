@@ -4,7 +4,7 @@ import { analyzeBudgetPeriodComparison, type BudgetReferenceRange } from "../../
 import { analyzeBudgetPace } from "../../../../domain/analytics/budget-pace.ts";
 import { analyzeAnnualSavingsProjection } from "../../../../domain/analytics/annual-projection.ts";
 import { budgetPeriodForDate } from "../../../../domain/analytics/budgets.ts";
-import { isoDateInTimeZone } from "../../../../domain/analytics/date-periods.ts";
+import { useToday } from "../../../hooks/use-today.ts";
 import { addIsoDays } from "../../../../domain/analytics/periods.ts";
 import { useFilteredAnalytics } from "../../../hooks/filtered-analytics/filtered-analytics.hooks.ts";
 import { createBudgetsPageModel } from "../BudgetsPage.helpers.ts";
@@ -76,7 +76,7 @@ export function useBudgetsPage(): BudgetsPageViewProps | null {
   const selection = requestedReferences?.contextKey === contextKey ? requestedReferences : null;
   const selectedRanges = selection?.ranges ?? defaultRanges;
   const selectedPrimary = selection?.primaryKey ?? selectedRanges[0]?.key ?? null;
-  const today = isoDateInTimeZone(new Date(), analytics?.backup?.preferences.timeZone ?? "Europe/Madrid");
+  const today = useToday(analytics?.backup?.preferences.timeZone ?? "Europe/Madrid");
   const pace = useMemo(() => {
     if (analysis == null) return null;
     try {

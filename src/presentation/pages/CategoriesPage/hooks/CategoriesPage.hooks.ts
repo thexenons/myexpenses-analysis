@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from "react";
 
 import { toggleCategoryPath } from "../../../../domain/analytics/filters.ts";
 import { aggregateTimeSeries } from "../../../../domain/analytics/aggregations.ts";
-import { isoDateInTimeZone } from "../../../../domain/analytics/date-periods.ts";
+import { useToday } from "../../../hooks/use-today.ts";
 import { useFilteredAnalytics } from "../../../hooks/filtered-analytics/filtered-analytics.hooks.ts";
 import { useAppStore } from "../../../providers/AppStoreProvider/index.ts";
 import { createCategoriesPageModel, createCategoryDrilldownFilters, DEFAULT_CATEGORY_CHART_OPTIONS } from "../CategoriesPage.helpers.ts";
@@ -11,7 +11,7 @@ import type { CategoriesPageViewProps } from "../CategoriesPage.types.ts";
 
 export function useCategoriesPage(): CategoriesPageViewProps | null {
   const { analytics, filtered, filters, granularity } = useFilteredAnalytics();
-  const today = isoDateInTimeZone(new Date(), analytics?.backup?.preferences.timeZone ?? "Europe/Madrid");
+  const today = useToday(analytics?.backup?.preferences.timeZone ?? "Europe/Madrid");
   const navigate = useNavigate();
   const [chartOptions, onChartOptionsChange] = useState(DEFAULT_CATEGORY_CHART_OPTIONS);
   const setCategoryPrefixes = useAppStore(
