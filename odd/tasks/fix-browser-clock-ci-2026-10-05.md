@@ -22,7 +22,7 @@ The fixture mounts the application at 27 September, then four tests change the f
 - Work-unit commit follows verified completion; the user's explicit main merge/push request supplies Git delivery authority using the already confirmed configured Git authentication. The earlier dependency delivery remains recorded separately.
 
 ## Tasks
-- [ ] C01 — Set test-specific dates before mounting, or deterministically synchronize through the supported refresh boundary; check all four late clock changes and retain their expected outcomes. Run the exact CI smoke, all affected date-sensitive cases, lint, relevant TypeScript checks, and final diff review. Record the work-unit commit only after observed proof.
+- [x] C01 — Deterministically synchronized the supported refresh boundary; inspected all four late clock changes, retained their expected outcomes, and completed the exact CI smoke, affected cases, lint, TypeScript and diff checks. Work-unit commit: `d1f21c4ead01a7ad8281b36fc0182581fbc13852`.
 
 ## Acceptance criteria and verification
 - RED already observed by the diagnostic worker: desktop/mobile linear allowance fails at the unchanged 23-August assertion; 4 passed, 2 failed, exit 1.
@@ -41,10 +41,13 @@ The fixture mounts the application at 27 September, then four tests change the f
 - Writer lint and all three TypeScript projects passed; independent diff check passed. Earlier old-runtime writer IPC denial produced no assertion-level proof; current-runtime parent and independent runs supersede that environmental attempt.
 - Assessment: high/unassessable because untracked documents were undeclared; conservatively completed independent verification, no actionable findings. RDD off/unmanaged; no native review or consent was started.
 - Full unrelated suites were not repeated for this test-only edit. Remote CI status has not been inspected.
-- Authored delivery count: pending final commit stats; forecast remains under 400 lines. Commit and main delivery: pending.
+- Audit commit: `35e94960e0e43a7b12b543eff75dceb7a3bb5a7e`; CI work-unit commit: `d1f21c4ead01a7ad8281b36fc0182581fbc13852`.
+- Authored delivery count before passive closure: 323 additions plus deletions, no generated files; below the 400-line planning heuristic. No PR or chaining required.
+- Main was fast-forwarded and pushed to origin without force. Direct `ls-remote` confirmed remote main and local HEAD both equal `d1f21c4ead01a7ad8281b36fc0182581fbc13852` after that delivery.
+- This final passive closure records observed delivery; it introduces no source or functional changes.
 
 ## Rollback boundary
 Only the financial-explainability fixture/date setup is changed; revert that test edit independently of the statistical audit report and prior dependency update.
 
 ## Next step
-Commit the verified work units, record their identities, then integrate and push main without force.
+Observe the remote CI run when access is explicitly authorized, then consider S01–S07 with the user. Do not implement statistical recommendations without authorization.
