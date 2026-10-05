@@ -6,6 +6,12 @@ const BASE = "http://127.0.0.1:41789";
 const PASSPHRASE = "synthetic-browser-only-passphrase";
 const outboundByPage = new WeakMap<Page, string[]>();
 
+async function setAppTime(page: Page, date: string): Promise<void> {
+  await page.clock.setFixedTime(new Date(date));
+  // Mounted calendar snapshots refresh on focus, not arbitrary re-renders.
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+}
+
 async function expectNoDocumentOverflow(page: Page): Promise<void> {
   const dimensions = await page.evaluate(() => ({
     viewport: document.documentElement.clientWidth,
@@ -1704,7 +1710,7 @@ test("keeps budget decisions ahead of closed method information across perspecti
 });
 
 test("explains linear budget allowance by keyboard without overflowing the budget tree", async ({ page }, testInfo) => {
-  await page.clock.setFixedTime(new Date("2026-08-23T12:00:00.000Z"));
+  await setAppTime(page, "2026-08-23T12:00:00.000Z");
   const toolbar = page.getByRole("region", { name: "Filtros globales" });
   await toolbar.getByRole("combobox", { name: "Tipo de periodo" }).selectOption("month");
   await toolbar.getByLabel("Mes seleccionado").fill("2026-08");
@@ -1733,7 +1739,7 @@ test("explains linear budget allowance by keyboard without overflowing the budge
 });
 
 test("aligns budget disclosure glyph with the first category title line", async ({ page }, testInfo) => {
-  await page.clock.setFixedTime(new Date("2026-08-23T12:00:00.000Z"));
+  await setAppTime(page, "2026-08-23T12:00:00.000Z");
   await page.getByRole("link", { name: /^(Presupuestos|Planes)$/ }).click();
   await page.getByRole("group", { name: "Marco del presupuesto" }).getByLabel("Periodo").selectOption("MONTH:2026:7");
 
