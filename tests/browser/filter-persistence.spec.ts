@@ -124,7 +124,7 @@ test("current month shortcut uses keyboard activation and preserves saved filter
   const expectPeriodLayout = async (shortcut: Locator) => {
     await expect(shortcut).toBeVisible();
     const layout = await shortcut.evaluate((button) => {
-      const root = button.parentElement!;
+      const root = button.closest("[data-variant]")!;
       const bounds = root.getBoundingClientRect();
       const target = button.getBoundingClientRect();
       return {
@@ -195,6 +195,60 @@ test("current month shortcut uses keyboard activation and preserves saved filter
   await expect(restored.getByRole("combobox", { name: "Filtro guardado", exact: true })
     .getByRole("option", { name: "Month shortcut baseline", exact: true })).toHaveCount(1);
   expect(await page.evaluate((key) => localStorage.getItem(key), PRESET_KEY)).toBe(savedPreset);
+});
+
+test("current month shortcut keeps the period footprint in all, month and custom modes", async ({ page }, testInfo) => {
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  const assertGeometry = async (container: Locator, variant: string, mode: string) => {
+    const shortcut = container.getByRole("button", { name: "Mes actual" });
+    await shortcut.scrollIntoViewIfNeeded();
+    const geometry = await shortcut.evaluate((button) => {
+      const root = button.closest("[data-variant]")!;
+      const bounds = root.getBoundingClientRect();
+      const target = button.getBoundingClientRect();
+      const controls = [...root.querySelectorAll("select, input:not([type=radio])")];
+      const originalDisplay = button.style.display;
+      button.style.display = "none";
+      const withoutAction = root.getBoundingClientRect();
+      const baseline = { width: withoutAction.width, height: withoutAction.height };
+      button.style.display = originalDisplay;
+      return {
+        width: bounds.width, height: bounds.height, baseline,
+        actionWidth: target.width, actionHeight: target.height,
+        overflow: root.scrollWidth - root.clientWidth,
+        viewportContained: bounds.left >= 0 && bounds.right <= window.innerWidth,
+        controlsContained: controls.every((control) => {
+          const box = control.getBoundingClientRect();
+          return box.left >= bounds.left && box.right <= bounds.right && box.width >= 90
+            && (box.top >= target.bottom || box.bottom <= target.top
+              || box.left >= target.right || box.right <= target.left);
+        }),
+      };
+    });
+    expect(geometry.height, `${variant}/${mode} must not gain an action row`).toBeCloseTo(geometry.baseline.height, 1);
+    expect(geometry.width).toBeCloseTo(geometry.baseline.width, 1);
+    expect(geometry.actionWidth).toBeGreaterThanOrEqual(24);
+    expect(geometry.actionHeight).toBeGreaterThanOrEqual(24);
+    expect(geometry.overflow).toBeLessThanOrEqual(1);
+    expect(geometry.viewportContained).toBe(true);
+    expect(geometry.controlsContained).toBe(true);
+    await shortcut.focus();
+    await expect(shortcut).toBeFocused();
+    const root = container.locator(`[data-variant="${variant}"]`);
+    await root.screenshot({
+      path: testInfo.outputPath(`${variant}-${mode}.png`),
+      animations: "disabled",
+    });
+  };
+  // oxlint-disable no-await-in-loop -- Each mode changes the shared state before its responsive geometry is measured.
+  for (const mode of ["all", "month", "custom"]) {
+    await toolbar.getByRole("combobox", { name: "Tipo de periodo" }).selectOption(mode);
+    await assertGeometry(toolbar, "compact", mode);
+    const drawer = await openDrawer(page);
+    await assertGeometry(drawer, "expanded", mode);
+    await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  }
+  // oxlint-enable no-await-in-loop
 });
 
 test("filter persistence prunes unavailable options without losing independent valid selections", async ({ page }) => {

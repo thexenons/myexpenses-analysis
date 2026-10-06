@@ -25,7 +25,7 @@
     border-radius: var(--radius-md);
   }
 
-  .root[data-variant="compact"] > .compactMode {
+  .root[data-variant="compact"] > .modeGroup {
     flex: 1 1 8.5rem;
   }
 
@@ -36,20 +36,55 @@
     min-width: 0;
   }
 
+  .modeGroup {
+    position: relative;
+    display: grid;
+    gap: 0.35rem;
+    min-width: 0;
+    padding: 0;
+    margin: 0;
+    border: 0;
+  }
+
+  .modeHeading {
+    display: flex;
+    align-items: center;
+    min-height: 1.5rem;
+    padding-right: 1.9rem;
+    color: var(--ink-soft);
+    font-size: 0.67rem;
+    font-weight: 760;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .root[data-variant="compact"] > .modeGroup {
+    grid-template-columns: minmax(0, 1fr) 1.5rem;
+    align-items: center;
+    column-gap: 0.35rem;
+  }
+
   .currentMonth {
-    justify-self: start;
-    min-height: 2.25rem;
-    padding: 0.42rem 0.65rem;
-    color: var(--ink);
-    background: var(--surface-bright);
-    border: 1px solid var(--line-dark);
+    display: grid;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    color: var(--muted);
+    background: transparent;
+    border: 0;
     border-radius: var(--radius-xs);
-    font-size: 0.72rem;
-    font-weight: 650;
     cursor: pointer;
+    place-items: center;
+  }
+
+  .root[data-variant="expanded"] .currentMonth {
+    position: absolute;
+    top: 0;
+    right: 0;
   }
 
   .currentMonth:hover {
+    color: var(--ink);
     background: var(--surface);
   }
 
@@ -149,7 +184,7 @@
 }
 
 @media (width <= 32rem) {
-  .root[data-variant="compact"] > .compactMode,
+  .root[data-variant="compact"] > .modeGroup,
   .root[data-variant="compact"] > .field,
   .root[data-variant="compact"] > .customFields,
   .root[data-variant="compact"] > .allPeriod {

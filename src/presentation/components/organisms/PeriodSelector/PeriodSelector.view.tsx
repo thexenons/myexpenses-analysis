@@ -1,3 +1,4 @@
+import { Icon } from "../../atoms/Icon/Icon.tsx";
 import { SegmentedControl } from "../../molecules/SegmentedControl/index.ts";
 import { cx } from "../../../utils/component.helpers.ts";
 import {
@@ -27,39 +28,52 @@ export function PeriodSelectorView({
 }: PeriodSelectorViewProps) {
   return (
     <div className={cx(styles.root, className)} data-variant={variant}>
-      <button
-        className={styles.currentMonth}
-        onClick={onCurrentMonthClick}
-        type="button"
+      <fieldset
+        aria-label="Controles del periodo"
+        className={styles.modeGroup}
       >
-        Mes actual
-      </button>
-      {variant === "expanded" ? (
-        <SegmentedControl
-          className={styles.modeControl}
-          label="Tipo de periodo"
-          onChange={onModeChange}
-          options={PERIOD_MODE_OPTIONS}
-          value={periodMode}
-        />
-      ) : (
-        <label className={styles.compactMode}>
-          <span>Periodo</span>
-          <select
-            aria-label="Tipo de periodo"
-            onChange={(event) =>
-              onModeChange(event.currentTarget.value as typeof periodMode)
-            }
-            value={periodMode}
-          >
-            {PERIOD_MODE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
+        {variant === "expanded" ? (
+          <>
+            <span aria-hidden="true" className={styles.modeHeading}>
+              Tipo de periodo
+            </span>
+            <SegmentedControl
+              className={styles.modeControl}
+              hideLabel
+              label="Tipo de periodo"
+              onChange={onModeChange}
+              options={PERIOD_MODE_OPTIONS}
+              value={periodMode}
+            />
+          </>
+        ) : (
+          <label className={styles.compactMode}>
+            <span>Periodo</span>
+            <select
+              aria-label="Tipo de periodo"
+              onChange={(event) =>
+                onModeChange(event.currentTarget.value as typeof periodMode)
+              }
+              value={periodMode}
+            >
+              {PERIOD_MODE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <button
+          aria-label="Mes actual"
+          className={styles.currentMonth}
+          onClick={onCurrentMonthClick}
+          title="Seleccionar el mes actual"
+          type="button"
+        >
+          <Icon name="calendar" size={16} />
+        </button>
+      </fieldset>
 
       {periodMode === "all" ? (
         <p className={styles.allPeriod}>Sin límite de fechas</p>

@@ -36,7 +36,7 @@ S05 -> S02 (clarification) -> S04 (transparency) -> S01 -> S06 -> S03 -> S07.
 ## Task checklist
 
 ### 1. S05 — Add explicit current-month access
-- [x] Implement a visible Mes actual action in the shared PeriodSelector for toolbar and drawer; scoped functional verification completed.
+- [x] Integrate Mes actual subtly in the shared PeriodSelector; visual correction verified locally, pending production acceptance.
 - Reuse the existing timezone-aware today, calendar helper and date-period action.
 - Current-month selection is month-to-date, following the existing calendar convention.
 - Change only period mode and date range; retain scope, date basis, search, other filters and aggregation granularity.
@@ -129,3 +129,16 @@ S05 -> S02 (clarification) -> S04 (transparency) -> S01 -> S06 -> S03 -> S07.
 
 ## Rollback boundary
 S05 changes only the shared period selector, its focused tests and the added CI smoke scenario. Revert that coherent work unit without reverting prior financial features or unrelated local changes.
+
+## S05 visual correction — reopened 2026-10-06
+- User feedback invalidated visual acceptance: the standalone shortcut adds an unbudgeted flex/grid item and can create an extra header row. Earlier containment checks did not assert stable layout footprint.
+- Route: delegated direct; view/CSS plus component/browser regression changes require a bounded writer.
+- Branch: `fix/current-month-selector-layout-2026-10-06`; base and reviewed boundary: `15974845b60a9a865d21b6513543488993e5b28e`.
+- Scope: PeriodSelector view, CSS, component test and existing browser scenario only; preserve hook/calendar/filter semantics and unrelated registry edits.
+- Design: place a quiet accessible current-month icon action within the period-mode group, with explanatory tooltip and keyboard focus, instead of an independent root item.
+- Acceptance: no additional selector row caused by the action, stable compact footprint, no overlaps/overflow at desktop/390/320, usable compact and expanded all/month/custom modes, preserved existing functional behavior.
+- Forecast: approximately 100–200 authored lines for this correction delivery unit.
+- Proof: observe layout-regression RED before correction, then focused component/browser tests, lint, type-check, synthetic deployment and parent spot check. No private data or remote production inspection.
+- Verified correction: 24px calendar icon grouped with the period mode, accessible Mes actual and tooltip, no calendar/filter changes. Layout RED measured +42.39px mobile height before correction; GREEN no action-induced width/height change across all/month/custom, compact/expanded, desktop/390/320.
+- Checks: component RED 2 failed/23 passed, final GREEN 25/25; browser RED 3 failed/3 passed, final 6/6; broader smoke 10/10; lint/type-check/diff passed; synthetic deployment 1/1. Parent component spot check 25/25 and desktop/mobile screenshot inspection passed. Portable screenshot cleanup rechecked browser 6/6 and lint/diff.
+- Status: commit/review/main push pending. S02 remains deferred until user production acceptance.

@@ -115,6 +115,31 @@ describe("PeriodSelector", () => {
     });
   });
 
+  it.each(["compact", "expanded"] as const)(
+    "keeps the current-month action inside the %s period-mode controls",
+    (variant) => {
+      const store = createAppStore(
+        { load: vi.fn<DatasetRepository["load"]>() },
+        window.localStorage,
+      );
+      render(
+        <AppStoreProvider store={store}>
+          <PeriodSelector variant={variant} />
+        </AppStoreProvider>,
+      );
+      const group = screen.getByRole("group", { name: "Controles del periodo" });
+      const shortcut = screen.getByRole("button", { name: "Mes actual" });
+      expect(group).toContainElement(shortcut);
+      expect(group).toContainElement(
+        screen.getByRole(variant === "compact" ? "combobox" : "group", {
+          name: "Tipo de periodo",
+        }),
+      );
+      expect(shortcut).toHaveAttribute("title", "Seleccionar el mes actual");
+      expect(shortcut.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    },
+  );
+
   it("keeps a custom range ordered when either boundary crosses the other", async () => {
     const user = userEvent.setup();
     const store = createAppStore(
