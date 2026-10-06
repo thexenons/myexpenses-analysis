@@ -17,7 +17,7 @@ import type {
 const EMPTY_POSTINGS: readonly NormalizedPosting[] = [];
 
 export function useTransactionsPage(): TransactionsPageViewProps {
-  const { filtered, searchPending } = useFilteredAnalytics();
+  const { filtered, searchPending } = useFilteredAnalytics({ respectStatuses: true });
   const navigate = useNavigate({ from: "/transacciones" });
   const search = useSearch({ from: "/transacciones" });
   const [pageSize, setPageSize] = useState(TRANSACTIONS_PAGE_SIZE);

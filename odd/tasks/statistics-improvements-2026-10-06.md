@@ -174,3 +174,23 @@ S05 changes only the shared period selector, its focused tests and the added CI 
 - Accumulated native assessment from1597484:medium416lines10files, review_due slice_budget_reached. User granted; consolidated reliability review returned no findings. Exact acknowledgement burned authority for lineage `review-e3bc0fbf91f41664`; reviewed boundary advances to343fe80.
 - Main delivery follows this passive closure record; user production acceptance pending. S01 waits for that boundary and explicit role definitions.
 - Rollback: revert S04 presentation/copy tests, not S02 numeric semantics.
+
+## S06 audit and implementation — 2026-10-06
+- User authorized full S06 audit and implementation. S04 production accepted; S01 duplicate summary rejected because existing Comparativa/Deudas covers the described account-linked representation; no universal person-allocation model implemented.
+- Branch/base: `feat/overview-review-cautions-2026-10-06` / `5692f4492c97c85215f6e7c00a15058edc03c55b` (reviewed boundary).
+- Route: delegated direct; multi-file pure eligibility/drilldown, hooks/view and component/browser proof.
+- Audit: budget-local periods differ global dates, health is withheld for truncated comparisons; exclude budget alarms and pace predictions. Category averages/payee frequencies alone do not support anomalies. Empty-category aggregation includes legitimate transfers, so raw root count is unsafe. Value-date quality counts include VOID unlike active metric postings, so defer consolidation rather than mix denominators.
+- Selected signals: unlinked income/expense postings with no category, and UNRECONCILED active postings. Verify bucket/category-type consistency and exact current-cut drilldown equivalence before implementation. Never classify linked debt mirrors or transfer-bucket rows as missing spending categories.
+- Ranking: positive counts descending, deterministic stable-ID tie-break; transparent volume order, not severity. Counts are active postings, split parts may count separately; overlapping signals must not be summed into a unique total.
+- Context: scope/date basis/date range and current global selection; preserve independent filters and granularity, narrow target filters without widening original cut. Disable actions while deferred search is pending. Show no-data separately from no selected signals; no claim of complete/safe history.
+- UX: compact Qué revisar panel in Resumen, reuse existing styles/components, explicit explanation per signal and action to filtered Transacciones. Existing details remain. No new forecasting/person/coverage model.
+- Scope: OverviewPage helpers/types/view/hooks/CSS/test; financial-explainability browser spec and narrowly scoped synthetic fixture variant; audit report `docs/audit-s06-cautions-20261006.md`. No domain arithmetic/router/CI changes.
+- Forecast: approximately280–380 authored lines source/tests plus concise audit; proportional coherent task, no code compression for budget. Per-task main delivery remains selected. Reassess actual count before commit.
+- Acceptance: deterministic eligibility/ranking, transfer/refund/VOID/debt/filter regressions, exact drilldown preservation, no-data/no-signal distinction, keyboard and desktop/390/320 layout.
+- Checks: relevant component RED/GREEN, existing debt-flow regression, synthetic three-viewport S06 browser plus core smoke, lint/type-check/synthetic deployment/diff, parent spot check.
+- User explicitly approved four additional hook/table test surfaces to repair ignored transaction statuses. Shared hook opts in; statistics default remains unchanged.
+- Implementation verified: Overview24/24; shared/table hooks14/14; debt19/19; browser S06 desktop/390/3203/3; core smoke10/10; lint/type-check/diff exit0; synthetic deployment1/1. Parent combined component/hook38/38 and narrow screenshot passed.
+- RED observed Overview16fail5pass, hook3fail11pass, browser three failures resolved without weakening assertions. NEUTRAL uncategorized rows and cache population isolation covered.
+- Actual worker diff:489 additions24 deletions=513 authored lines, including67-line audit, across13 authorized files; parent tracking separate. Coherent target-table root fix expanded forecast. Before commit, request single-delivery exception versus artificial splitting; no source compression.
+- User authorized exception-ok: one coherent S06 delivery and main push despite513 authored lines; no artificial split. Detailed user guide requested after delivery.
+- Status: verified locally; commit/native review/main push pending. No claim of production deployment.

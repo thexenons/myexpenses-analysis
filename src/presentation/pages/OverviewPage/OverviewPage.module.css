@@ -65,3 +65,44 @@
     grid-column: 1 / -1;
   }
 }
+
+.reviewPanel {
+  min-width: 0;
+}
+
+.reviewList {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.reviewList li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.reviewList li > div {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.reviewList strong {
+  font-size: 0.85rem;
+}
+
+.reviewList p,
+.reviewNote {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.reviewNote {
+  margin-top: 0.65rem;
+}

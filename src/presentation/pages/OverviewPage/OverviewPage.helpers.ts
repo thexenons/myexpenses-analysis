@@ -8,13 +8,18 @@ import {
 } from "../../../domain/analytics/aggregations.ts";
 import { buildCumulativeTimeSeries } from "../../../domain/analytics/cumulative-time-series.ts";
 import type {
+  CategoryType,
+  FilterState,
   TimeSeriesPoint,
   FilteredAnalyticsDataset,
   TimeGranularity,
 } from "../../../domain/analytics/types.ts";
-import { euroFromMinor } from "../../utils/format.ts";
+import { euroFromMinor, formatDate } from "../../utils/format.ts";
 import type {
   OverviewAmountRow,
+  OverviewReview,
+  OverviewReviewId,
+  OverviewReviewSignal,
   OverviewPageViewProps,
 } from "./OverviewPage.types.ts";
 
@@ -29,6 +34,51 @@ function overviewChartSeries(points: readonly TimeSeriesPoint[]): OverviewPageVi
     id: metric.id, label: metric.label, color: metric.color,
     data: points.map((point) => ({ label: point.key, value: euroFromMinor(point[metric.key]), valueEurMinor: point[metric.key] })),
   }));
+}
+
+const REVIEW_CATEGORY_TYPES: readonly CategoryType[] = ["EXPENSE", "INCOME", "NEUTRAL"];
+
+export function createOverviewReviewPatch(filters: FilterState, id: OverviewReviewId): Partial<FilterState> | null {
+  if (id === "unreconciled") {
+    if (filters.statuses.length > 0 && !filters.statuses.includes("UNRECONCILED")) return null;
+    return { statuses: ["UNRECONCILED"] };
+  }
+  const categoryTypes = filters.categoryTypes?.length
+    ? filters.categoryTypes.filter((type) => REVIEW_CATEGORY_TYPES.includes(type))
+    : REVIEW_CATEGORY_TYPES;
+  if (categoryTypes.length === 0 || filters.linked === "linked") return null;
+  const statuses = filters.statuses.length > 0
+    ? filters.statuses.filter((status) => status !== "VOID")
+    : ["UNRECONCILED", "CLEARED", "RECONCILED"] as const;
+  if (statuses.length === 0) return null;
+  // Called only for visible evidence. Unlinked empty paths share the original
+  // category predicate, so replacing it cannot admit another category or peer.
+  return { categoryPrefixes: [[]], categoryDepth: "exact", categoryMode: "include",
+    categoryMatch: "posting", categoryTypes, linked: "unlinked", statuses };
+}
+
+function createOverviewReview(filtered: FilteredAnalyticsDataset): OverviewReview {
+  let uncategorized = 0;
+  let unreconciled = 0;
+  for (const posting of filtered.activePostings) {
+    if (posting.status === "UNRECONCILED") unreconciled += 1;
+    if (!posting.linked && posting.categoryPath.length === 0 &&
+      (posting.bucket === "expense" || posting.bucket === "income")) uncategorized += 1;
+  }
+  const signals: OverviewReviewSignal[] = [
+    { id: "uncategorized", count: uncategorized },
+    { id: "unreconciled", count: unreconciled },
+  ];
+  const { dateRange, dateBasis, scope } = filtered.filters;
+  const range = dateRange.from === null && dateRange.to === null ? "Intervalo observado"
+    : `${dateRange.from === null ? "Inicio observado" : formatDate(dateRange.from)} – ${dateRange.to === null ? "Final observado" : formatDate(dateRange.to)}`;
+  const scopeLabel = { all: "Ámbito general", realCashFlow: "Flujo real", debtsOnly: "Solo deudas" }[scope];
+  return {
+    context: `${scopeLabel} · ${dateBasis === "value" ? "Fecha valor" : "Fecha de operación"} · ${range}`,
+    hasData: filtered.activePostings.length > 0,
+    signals: signals.filter(({ count }) => count > 0).sort((left, right) =>
+      right.count - left.count || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0)),
+  };
 }
 
 export function createOverviewPageModel(
@@ -90,6 +140,7 @@ export function createOverviewPageModel(
     expenseComposition,
     kpis,
     searchPending,
+    review: createOverviewReview(filtered),
     status,
     topCategories: categories.map((category) => ({ category })),
     valuationBalanceEurMinor,

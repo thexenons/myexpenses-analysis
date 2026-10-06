@@ -32,9 +32,13 @@ function deriveFilteredAnalytics(dataset: AnalyticsDataset, filters: FilterState
   return projected;
 }
 
-export function useFilteredAnalytics() {
+export function useFilteredAnalytics({ respectStatuses = false }: { respectStatuses?: boolean } = {}) {
   const analytics = useAppStore((state) => state.analytics);
   const filters = useAppStore((state) => state.filters);
+  // Empty selections share the same cache identity in either mode. Statistics
+  // remain status-neutral; transaction drilldowns can opt into recorded status.
+  const effectiveStatuses = respectStatuses && filters.statuses.length > 0
+    ? filters.statuses : PRESENTATION_STATUSES;
   const granularitySetting = useAppStore((state) => state.granularity);
   const deferredSearch = useDeferredValue(filters.search);
   const deferredCommentSearch = useDeferredValue(filters.commentSearch);
@@ -55,7 +59,7 @@ export function useFilteredAnalytics() {
       periodMode: filters.periodMode,
       scope: filters.scope,
       search: deferredSearch,
-      statuses: PRESENTATION_STATUSES,
+      statuses: effectiveStatuses,
       tags: filters.tags,
       tagMode: filters.tagMode,
       payeeKeys: filters.payeeKeys,
@@ -71,6 +75,7 @@ export function useFilteredAnalytics() {
       deferredSearch,
       deferredCommentSearch,
       deferredReferenceSearch,
+      effectiveStatuses,
       filters.accountIds,
       filters.accountMode,
       filters.originAccountIds,
@@ -99,8 +104,8 @@ export function useFilteredAnalytics() {
     [analytics, deferredFilters],
   );
   const effectiveFilters = useMemo(
-    () => filters.statuses.length === 0 ? filters : { ...filters, statuses: PRESENTATION_STATUSES },
-    [filters],
+    () => filters.statuses === effectiveStatuses ? filters : { ...filters, statuses: effectiveStatuses },
+    [effectiveStatuses, filters],
   );
   const bounds = analytics === null ? null : datasetDateBounds(analytics, filters.dateBasis);
   const granularity = resolveTimeGranularity(

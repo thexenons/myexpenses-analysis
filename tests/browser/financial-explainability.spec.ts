@@ -2489,3 +2489,63 @@ test("accumulates filtered flow curves with exact tables and CSV at the selected
   }
   // oxlint-enable no-await-in-loop
 });
+
+
+test("overview review cautions preserve the effective cut and offer keyboard drilldowns", async ({ page }, testInfo) => {
+  await page.route("**/data/app-dataset.vault.json", async (route) => {
+    const variant = await route.fetch({ url: `${BASE}/data/s06-review.vault.json` });
+    await route.fulfill({ response: variant });
+  });
+  await page.reload();
+  await page.getByLabel("Frase de desbloqueo").fill(PASSPHRASE);
+  await page.getByRole("button", { name: "Abrir bóveda" }).click();
+  const panel = page.getByRole("region", { name: "Qué revisar" });
+  await expect(panel).toContainText("Sin categoría · 2 apuntes");
+  await expect(panel).toContainText("Sin conciliar · 2 apuntes");
+  await expect(panel.locator("li").first()).toContainText("Sin categoría");
+  await expect(panel).toContainText("volumen, no por riesgo");
+  await expectNoDocumentOverflow(page);
+  const targetSizes = await panel.getByRole("button").evaluateAll((buttons) => buttons.map((button) => {
+    const rect = button.getBoundingClientRect();
+    return { width: rect.width, height: rect.height };
+  }));
+  expect(targetSizes.every(({ width, height }) => width >= 44 && height >= 44)).toBe(true);
+  await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
+  const violations = await panel.evaluate(async (element) => {
+    const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
+    return (await axe.run(element, { runOnly: { type: "rule", values: ["button-name", "color-contrast", "aria-valid-attr-value"] } })).violations.map(({ id }) => id);
+  });
+  expect(violations).toEqual([]);
+  await panel.screenshot({ path: testInfo.outputPath("overview-review-cautions.png"), animations: "disabled",
+    style: '[aria-label="Filtros globales"] { visibility: hidden; }' });
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  await toolbar.getByRole("button", { name: /Abrir todos los filtros/ }).click();
+  const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });
+  await drawer.getByText("Criterios adicionales").click();
+  await drawer.getByRole("searchbox", { name: "Buscar en comentarios" }).fill("review-marker");
+  await drawer.getByRole("group", { name: "Moneda del movimiento" }).getByRole("checkbox", { name: "EUR" }).check();
+  await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  const before = await page.evaluate(() => JSON.parse(localStorage.getItem("myexpenses-analysis:filters:v1")!));
+  const action = panel.getByRole("button", { name: "Ver apuntes sin categoría" });
+  await expect(action).toBeEnabled();
+  await action.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "Transacciones", exact: true })).toBeVisible();
+  await expect(page.locator("main output")).toContainText("2 resultados.");
+  await expect(page.getByText("review-marker-1", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("review-marker-2", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("review-marker-5", { exact: true })).toHaveCount(0);
+  const after = await page.evaluate(() => JSON.parse(localStorage.getItem("myexpenses-analysis:filters:v1")!));
+  expect(after).toMatchObject({ ...before, filters: { ...before.filters,
+    categoryPrefixes: [[]], categoryDepth: "exact", categoryMode: "include", categoryMatch: "posting",
+    categoryTypes: ["EXPENSE", "INCOME", "NEUTRAL"], linked: "unlinked",
+    statuses: [], // Table-only statuses are intentionally not persisted.
+  } });
+  await page.getByRole("link", { name: /Resumen/ }).click();
+  await expect(panel).toContainText("Sin conciliar · 1 apunte");
+  await panel.getByRole("button", { name: "Ver apuntes sin conciliar" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("main output")).toContainText("1 resultado.");
+  await expect(page.getByText("review-marker-1", { exact: true }).first()).toBeVisible();
+  await expectNoDocumentOverflow(page);
+});

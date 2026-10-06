@@ -6,11 +6,12 @@ import { normalizeDataset } from "../../../../domain/analytics/normalize.ts";
 import type { AnalyticsDataset, NormalizedPosting } from "../../../../domain/analytics/types.ts";
 import { useTransactionsPage } from "./TransactionsPage.hooks.ts";
 
-const { downloadSpy, searchState, navigateSpy, filteredState } = vi.hoisted(() => ({
+const { downloadSpy, searchState, navigateSpy, filteredState, filteredSpy } = vi.hoisted(() => ({
   downloadSpy: vi.fn<(postings: readonly NormalizedPosting[], dataset?: AnalyticsDataset) => void>(),
   searchState: { direction: "desc" as const, page: 2, sort: "date" as const },
   navigateSpy: vi.fn<(...args: unknown[]) => void>(),
   filteredState: { current: null as unknown },
+  filteredSpy: vi.fn<(options?: { respectStatuses?: boolean }) => void>(),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -18,7 +19,10 @@ vi.mock("@tanstack/react-router", () => ({
   useSearch: () => searchState,
 }));
 vi.mock("../../../hooks/filtered-analytics/filtered-analytics.hooks.ts", () => ({
-  useFilteredAnalytics: () => ({ filtered: filteredState.current, searchPending: false }),
+  useFilteredAnalytics: (options?: { respectStatuses?: boolean }) => {
+    filteredSpy(options);
+    return { filtered: filteredState.current, searchPending: false };
+  },
 }));
 vi.mock("../TransactionsPage.helpers.ts", async (importOriginal) => ({
   ...await importOriginal<typeof import("../TransactionsPage.helpers.ts")>(),
@@ -41,6 +45,7 @@ describe("useTransactionsPage", () => {
     filteredState.current = applyFilters(analytics, createDefaultFilterState());
     const { result } = renderHook(() => useTransactionsPage());
     act(() => result.current.onPageSizeChange?.(25));
+    expect(filteredSpy).toHaveBeenLastCalledWith({ respectStatuses: true });
     expect(result.current.resultCount).toBe(27);
     expect(result.current.pageCount).toBe(2);
     expect(result.current.postings).toHaveLength(2);
@@ -51,4 +56,25 @@ describe("useTransactionsPage", () => {
     expect(downloaded.every((posting) => !posting.isVoid)).toBe(true);
     expect(analytics.postings).toHaveLength(28);
   });
+});
+
+
+it("uses the narrowed active population for status drilldown rows and CSV", () => {
+  const analytics = normalizeDataset({
+    accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+    categories: { Food: { categoryType: "EXPENSE" } },
+    parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions:
+      (["UNRECONCILED", "CLEARED", "VOID"] as const).map((status) => ({
+        uuid: status, sourceTransactionUuid: status, date: "2026-01-01", amount: -1,
+        category: ["Food"], sourceStatus: status, splitIndex: null, splitCount: null,
+      })),
+    }],
+  });
+  filteredState.current = applyFilters(analytics, { ...createDefaultFilterState(), statuses: ["UNRECONCILED"] });
+  const { result } = renderHook(() => useTransactionsPage());
+  expect(filteredSpy).toHaveBeenLastCalledWith({ respectStatuses: true });
+  expect(result.current.resultCount).toBe(1);
+  expect(result.current.postings.map(({ transactionId }) => transactionId)).toEqual(["UNRECONCILED"]);
+  act(() => result.current.onDownload());
+  expect(downloadSpy.mock.lastCall?.[0].map(({ transactionId }) => transactionId)).toEqual(["UNRECONCILED"]);
 });

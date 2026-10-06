@@ -58,6 +58,8 @@ async function main(): Promise<void> {
     const historyArchivePath = join(temporary, "u7-budget-history-backup.zip");
     const historyDatasetPath = join(temporary, "u7-budget-history-dataset.json");
     const historyVaultPath = join(temporary, "u7-budget-history.vault.json");
+  const reviewDatasetPath = join(temporary, "s06-review.json");
+  const reviewVaultPath = join(temporary, "s06-review.vault.json");
   const distPath = join(temporary, "dist");
   const performanceCount = process.env.MYEXPENSES_PERF_COUNT;
   if (performanceCount !== undefined && !["1000", "10000", "50000"].includes(performanceCount)) {
@@ -111,6 +113,30 @@ async function main(): Promise<void> {
         date: applyFilters(analytics, { ...filters, periodMode: "custom", dateRange: { from: "2026-07-01", to: "2026-08-31" } }).activePostings.length,
       };
     }
+    // Isolated review population; never change the shared financial fixture.
+    const reviewSource = JSON.parse(await readFile(datasetPath, "utf8")) as BackupDatasetV1;
+    const reviewSeed = reviewSource.postings.find((posting) => posting.categoryType === "EXPENSE" &&
+      posting.fxSource === "HOME_CURRENCY" && posting.split === null && posting.transferPeer === undefined);
+    if (reviewSeed === undefined) throw new Error("Missing synthetic review seed");
+    const reviewPostings = Array.from({ length: 5 }, (_, index) => {
+      const uuid = `60000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
+      return { ...reviewSeed, id: `${reviewSeed.accountUuid}:${uuid}`, sourceId: 600 + index,
+        transactionUuid: uuid, sourceTransactionUuid: uuid, comment: `review-marker-${index + 1}`,
+        amountNativeMinor: -100, amountHomeMinor: -100,
+        categoryUuid: index === 2 ? reviewSeed.categoryUuid : null,
+        categoryPath: index === 2 ? reviewSeed.categoryPath : [],
+        categoryType: index === 0 ? "NEUTRAL" : index === 3 ? "TRANSFER" : "EXPENSE",
+        bucket: index === 3 ? "transfer" : "expense",
+        status: index === 4 ? "VOID" : index === 0 || index === 2 ? "UNRECONCILED" : "CLEARED",
+        isVoid: index === 4,
+      };
+    });
+    await writeFile(reviewDatasetPath, JSON.stringify({ ...reviewSource,
+      accounts: reviewSource.accounts.map((account) => Object.assign({}, account, { balances: undefined })),
+      postings: reviewPostings,
+    }), { mode: 0o600 });
+    await encryptDataset({ inputPath: reviewDatasetPath, outputPath: reviewVaultPath, passphrase: PASSPHRASE });
+    await rm(reviewDatasetPath);
     const legacy = JSON.parse(await readFile(datasetPath, "utf8")) as { source: Record<string, unknown> };
     delete legacy.source.backupFilenameTimestamp;
     delete legacy.source.importedAt;
@@ -126,6 +152,8 @@ async function main(): Promise<void> {
     if (performanceMetadata !== undefined) {
       await writeFile(join(distPath, "data", "performance-meta.json"), JSON.stringify(performanceMetadata));
     }
+    await copyFile(reviewVaultPath, join(distPath, "data", "s06-review.vault.json"));
+    await rm(reviewVaultPath);
     await copyFile(legacyVaultPath, join(distPath, "data", "legacy.vault.json"));
     const noLimitDatabase = await createImportDatabaseFixture({ extraSql: [
       ...baseExtraSql,
@@ -223,11 +251,11 @@ async function main(): Promise<void> {
         if (/(?:\.\.|%2e)/iu.test(request.url ?? "")) { response.writeHead(400).end(); return; }
         const pathname = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
         if (!pathname.startsWith("/assets/") &&
-            pathname !== "/data/app-dataset.vault.json" && pathname !== "/data/legacy.vault.json" && pathname !== "/data/u3-budget.vault.json" && pathname !== "/data/u6-transactions.vault.json" && pathname !== "/data/u7-budget-history.vault.json" && !(performanceMetadata !== undefined && pathname === "/data/performance-meta.json") &&
+            pathname !== "/data/s06-review.vault.json" && pathname !== "/data/app-dataset.vault.json" && pathname !== "/data/legacy.vault.json" && pathname !== "/data/u3-budget.vault.json" && pathname !== "/data/u6-transactions.vault.json" && pathname !== "/data/u7-budget-history.vault.json" && !(performanceMetadata !== undefined && pathname === "/data/performance-meta.json") &&
             pathname !== "/index.html" && !APP_ROUTES.has(pathname)) {
           response.writeHead(404).end(); return;
         }
-        const file = pathname.startsWith("/assets/") || pathname === "/data/app-dataset.vault.json" || pathname === "/data/legacy.vault.json" || pathname === "/data/u3-budget.vault.json" || pathname === "/data/u6-transactions.vault.json" || (performanceMetadata !== undefined && pathname === "/data/performance-meta.json") || pathname === "/data/u7-budget-history.vault.json"
+        const file = pathname === "/data/s06-review.vault.json" || pathname.startsWith("/assets/") || pathname === "/data/app-dataset.vault.json" || pathname === "/data/legacy.vault.json" || pathname === "/data/u3-budget.vault.json" || pathname === "/data/u6-transactions.vault.json" || (performanceMetadata !== undefined && pathname === "/data/performance-meta.json") || pathname === "/data/u7-budget-history.vault.json"
           ? join(distReal, decodeURIComponent(pathname))
           : join(distReal, "index.html");
         const fileReal = await realpath(file);

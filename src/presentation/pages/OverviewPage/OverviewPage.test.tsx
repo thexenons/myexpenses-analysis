@@ -2,9 +2,9 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import type { KpiSummary } from "../../../domain/analytics/types.ts";
+import type { AnalyticsDataset, FilterState, KpiSummary, NormalizedPosting } from "../../../domain/analytics/types.ts";
 import { OverviewPageView } from "./OverviewPage.view.tsx";
-import { createOverviewPageModel } from "./OverviewPage.helpers.ts";
+import { createOverviewPageModel, createOverviewReviewPatch } from "./OverviewPage.helpers.ts";
 import { applyFilters, createDefaultFilterState } from "../../../domain/analytics/filters.ts";
 import { normalizeDataset } from "../../../domain/analytics/normalize.ts";
 import * as csvHelpers from "../../components/organisms/ChartDataTable/ChartDataTable.helpers.ts";
@@ -182,4 +182,107 @@ it("preserves safe accumulated minor units in the exact table and CSV at the dec
   await user.click(within(figure).getByRole("button", { name: /Descargar CSV/ }));
   const [header, columns, rows] = download.mock.calls[0]!;
   expect(csvHelpers.createChartCsv(header, columns, rows).split("\r\n").at(-1)).toContain(",80000000000000.01");
+});
+
+function reviewFixture(): AnalyticsDataset {
+  const base = normalizeDataset({
+    accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
+    categories: { Expense: { categoryType: "EXPENSE" } },
+    parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+      { uuid: "seed", date: "2026-01-02", amount: -1, category: ["Expense"], sourceTransactionUuid: "seed", sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+    ] }],
+  });
+  const row = (id: string, patch: Partial<NormalizedPosting>): NormalizedPosting => ({
+    ...base.postings[0]!, id, transactionId: id, valueDate: "2026-01-03", comment: "review", ...patch,
+  });
+  return { ...base, postings: [
+    row("neutral", { categoryPath: [], categoryType: "NEUTRAL", status: "UNRECONCILED" }),
+    row("refund", { categoryPath: [], amountEurMinor: 100, amountNativeMinor: 100, splitIndex: 0, splitCount: 2 }),
+    row("income", { categoryPath: [], categoryType: "INCOME", bucket: "income" }),
+    row("categorized", { status: "UNRECONCILED" }),
+    row("transfer", { categoryPath: [], categoryType: "TRANSFER", bucket: "transfer" }),
+    row("mirror", { categoryPath: [], linked: true }),
+    row("void", { categoryPath: [], status: "VOID", isVoid: true }),
+  ] };
+}
+
+it("ranks only eligible active review postings, including neutral types and refunds", () => {
+  const model = createOverviewPageModel(applyFilters(reviewFixture(), createDefaultFilterState()), "day", false);
+  expect(model.review?.signals.map(({ id, count }) => [id, count])).toEqual([["uncategorized", 3], ["unreconciled", 2]]);
+  const source = reviewFixture();
+  const malformedNeutralTransfer = { ...source.postings[0]!, bucket: "transfer" as const };
+  expect(createOverviewPageModel(applyFilters({ ...source, postings: [malformedNeutralTransfer] }, createDefaultFilterState()), "day", false).review?.signals.map(({ id }) => id)).toEqual(["unreconciled"]);
+});
+
+it("orders equal review volumes by stable ID and distinguishes empty from no selected signals", () => {
+  const source = reviewFixture();
+  const model = (ids: string[]) => createOverviewPageModel(applyFilters({ ...source, postings: source.postings.filter((row) => ids.includes(row.id)) }, createDefaultFilterState()), "day", false);
+  expect(model(["neutral"]).review?.signals.map(({ id }) => id)).toEqual(["uncategorized", "unreconciled"]);
+  expect(model([]).review?.hasData).toBe(false);
+  expect(model(["transfer"]).review).toMatchObject({ hasData: true, signals: [] });
+});
+
+it.each<Partial<FilterState>>([
+  {},
+  { categoryTypes: ["NEUTRAL"] },
+  { categoryTypes: ["EXPENSE", "TRANSFER"] },
+  { categoryTypes: ["TRANSFER"] },
+  { categoryPrefixes: [["Expense"]], categoryMode: "exclude", categoryMatch: "either" },
+  { categoryPrefixes: [[]], categoryMode: "exclude" },
+  { categoryPrefixes: [["Expense"]], categoryMode: "include" },
+  { linked: "linked" },
+  { accountIds: ["cash"], accountMode: "include", minAmountEurMinor: 100, maxAmountEurMinor: 100, commentSearch: "review", currencies: ["EUR"], periodMode: "month" },
+  { accountIds: ["cash"], accountMode: "exclude" },
+  { tags: ["missing"], tagMode: "exclude", payeeKeys: [], paymentMethodKeys: [], referenceSearch: "" },
+  { statuses: ["CLEARED"] },
+  { statuses: ["VOID"] },
+  { dateBasis: "value", dateRange: { from: "2026-01-03", to: "2026-01-03" }, search: "review", scope: "realCashFlow" },
+  { dateBasis: "operation", dateRange: { from: "2026-01-03", to: "2026-01-03" } },
+])("drilldown results exactly equal eligible evidence within the current cut: %j", (selection) => {
+  const source = reviewFixture();
+  const filters = { ...createDefaultFilterState(), ...selection };
+  const filtered = applyFilters(source, filters);
+  const model = createOverviewPageModel(filtered, "day", false);
+  for (const signal of model.review!.signals) {
+    const patch = createOverviewReviewPatch(filters, signal.id);
+    expect(patch).not.toBeNull();
+    const result = applyFilters(source, { ...filters, ...patch });
+    const evidence = filtered.activePostings.filter((row) => signal.id === "unreconciled"
+      ? row.status === "UNRECONCILED"
+      : row.categoryPath.length === 0 && !row.linked && (row.bucket === "expense" || row.bucket === "income"));
+    expect(result.postings.map(({ id }) => id)).toEqual(evidence.map(({ id }) => id));
+    const untouched = Object.fromEntries(Object.entries(filters).filter(([key]) => !Object.hasOwn(patch!, key)));
+    expect({ ...filters, ...patch }).toMatchObject(untouched);
+  }
+});
+
+it("replaces retained table-only statuses with active Overview evidence and keeps type restrictions", () => {
+  const effective = createDefaultFilterState();
+  const patch = createOverviewReviewPatch(effective, "uncategorized");
+  expect(patch?.statuses).toEqual(["UNRECONCILED", "CLEARED", "RECONCILED"]);
+  expect(applyFilters(reviewFixture(), { ...effective, statuses: ["VOID"], ...patch }).postings.map(({ id }) => id)).toEqual(["neutral", "refund", "income"]);
+  expect(createOverviewReviewPatch({ ...effective, categoryTypes: ["TRANSFER"] }, "uncategorized")).toBeNull();
+});
+
+it("shows factual context, keyboard actions and pending protection without an all-clear claim", async () => {
+  const filters = { ...createDefaultFilterState(), dateBasis: "value", scope: "realCashFlow" } as const;
+  const model = createOverviewPageModel(applyFilters(reviewFixture(), filters), "day", false);
+  const onViewReview = vi.fn<(id: "uncategorized" | "unreconciled") => void>();
+  const view = render(<OverviewPageView {...model} onViewReview={onViewReview} />);
+  const panel = screen.getByRole("region", { name: "Qué revisar" });
+  expect(panel).toHaveTextContent(/Fecha valor/);
+  expect(panel).toHaveTextContent(/Flujo real/);
+  expect(panel).toHaveTextContent(/volumen, no por riesgo/);
+  expect(panel).toHaveTextContent(/pueden coincidir/);
+  const action = within(panel).getByRole("button", { name: "Ver apuntes sin categoría" });
+  action.focus();
+  await userEvent.setup().keyboard("{Enter}");
+  expect(onViewReview).toHaveBeenCalledWith("uncategorized");
+  view.rerender(<OverviewPageView {...model} searchPending onViewReview={onViewReview} />);
+  expect(action).toBeDisabled();
+  view.rerender(<OverviewPageView {...model} review={{ ...model.review!, signals: [] }} />);
+  expect(panel).toHaveTextContent(/No aparecen estas dos señales/);
+  expect(panel).toHaveTextContent(/no certifica/);
+  view.rerender(<OverviewPageView {...model} review={{ ...model.review!, hasData: false, signals: [] }} />);
+  expect(panel).toHaveTextContent(/No hay apuntes activos/);
 });

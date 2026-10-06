@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { Button } from "../../components/atoms/Button/index.ts";
 import { Badge } from "../../components/atoms/Badge/index.ts";
 import { Icon } from "../../components/atoms/Icon/index.ts";
 import { FinancialFactList } from "../../components/molecules/FinancialFactList/index.ts";
@@ -31,6 +32,8 @@ export function OverviewPageView({
   expenseComposition,
   kpis,
   searchPending,
+  review,
+  onViewReview,
   status,
   topCategories,
   valuationBalanceEurMinor,
@@ -80,6 +83,26 @@ export function OverviewPageView({
       </AnalyticsPageGrid>
 
       <p className={styles.scopeNote}>El flujo usa los apuntes filtrados; los saldos de apertura, cierre y deuda incluyen todo el historial de las cuentas seleccionadas hasta el corte.</p>
+
+      {review ? <Panel title="Qué revisar" description={review.context} className={styles.reviewPanel}>
+        {review.signals.length > 0 ? <>
+          <ul className={styles.reviewList}>
+            {review.signals.map(({ id, count }) => <li key={id}>
+              <div>
+                <strong>{id === "uncategorized" ? "Sin categoría" : "Sin conciliar"} · {formatCount(count, "apunte", "apuntes")}</strong>
+                <p>{id === "uncategorized" ? "Ingresos o gastos sin categoría ni enlace de transferencia." : "Estado registrado UNRECONCILED; no indica un error de importe."}</p>
+              </div>
+              <Button disabled={searchPending || onViewReview === undefined} onClick={() => onViewReview?.(id)}>
+                {id === "uncategorized" ? "Ver apuntes sin categoría" : "Ver apuntes sin conciliar"}
+              </Button>
+            </li>)}
+          </ul>
+          <p className={styles.reviewNote}>Orden por volumen, no por riesgo. Los apuntes pueden coincidir entre señales; no se suman. Las partes de un desglose cuentan por separado.</p>
+        </> : <p className={styles.reviewNote}>{review.hasData
+          ? "No aparecen estas dos señales en la selección; no certifica que todo esté revisado."
+          : "No hay apuntes activos en la selección para evaluar estas señales."}</p>}
+        <p className={styles.reviewNote}>Selección estadística actual, sin VOID. El detalle conserva los filtros globales y sustituye el estado de la tabla por el de la señal.</p>
+      </Panel> : null}
 
       <Panel className={styles.chartPanel}>
         <SegmentedControl<"period" | "cumulative"> label="Vista del pulso financiero" value={flowMode} onChange={setFlowMode}
