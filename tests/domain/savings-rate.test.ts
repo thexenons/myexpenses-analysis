@@ -122,7 +122,7 @@ test("non-date subsets suppress the trend, including active zero amount bounds",
   const subsets: Partial<FilterState>[] = [
     { accountIds: ["cash"] },
     { originAccountIds: ["cash"] }, { destinationAccountIds: ["cash"] },
-    { categoryPrefixes: [["Expense"]] }, { statuses: ["RECONCILED"] },
+    { categoryPrefixes: [["Expense"]] },
     { tags: ["tag"] }, { search: "expense" }, { linked: "linked" },
     { payeeKeys: ['["missing"]'] }, { paymentMethodKeys: ['["missing"]'] },
     { categoryTypes: ["EXPENSE"] }, { currencies: ["EUR"] },
@@ -245,4 +245,14 @@ test("Real entries include refunds and recorded financing at converted EUR amoun
   const empty = analyze(noBase, { scope: "realCashFlow" });
   assert.equal(empty.status, "available");
   if (empty.status === "available") assert.equal(empty.months[0]?.ratePercent, null);
+});
+
+
+test("legacy transaction states do not change savings availability or monthly figures", () => {
+  const source = fixture();
+  const baseline = analyze(source);
+  assert.equal(baseline.status, "available");
+  for (const status of ["UNRECONCILED", "CLEARED", "RECONCILED", "VOID"] as const) {
+    assert.deepEqual(analyze(source, { statuses: [status] }), baseline);
+  }
 });

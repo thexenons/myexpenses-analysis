@@ -475,7 +475,6 @@ interface MatcherState {
   readonly originIds: ReadonlySet<string>;
   readonly destinationIds: ReadonlySet<string>;
   readonly searchTokens: readonly string[];
-  readonly statuses: ReadonlySet<TransactionStatus>;
   readonly tags: ReadonlySet<string>;
   readonly payeeKeys: ReadonlySet<string>;
   readonly paymentMethodKeys: ReadonlySet<string>;
@@ -500,7 +499,6 @@ function createMatcherState(
     originIds: new Set(filters.originAccountIds ?? []),
     destinationIds: new Set(filters.destinationAccountIds ?? []),
     searchTokens: search === "" ? [] : search.split(" "),
-    statuses: new Set(filters.statuses),
     tags: new Set(filters.tags),
     payeeKeys: new Set(filters.payeeKeys ?? []),
     paymentMethodKeys: new Set(filters.paymentMethodKeys ?? []),
@@ -518,9 +516,6 @@ function matchesPostingWithoutDate(
   dataset: AnalyticsDataset,
 ): boolean {
   if (!matcher.accountIds.has(posting.accountId)) {
-    return false;
-  }
-  if (matcher.statuses.size > 0 && !matcher.statuses.has(posting.status)) {
     return false;
   }
   if (matcher.payeeKeys.size > 0 && !matcher.payeeKeys.has(payeeIdentityKey(posting))) return false;
@@ -590,7 +585,6 @@ function postingSearchIndex(posting: NormalizedPosting): string {
       posting.payee ?? "",
       posting.paymentMethod ?? "",
       posting.transferAccount ?? "",
-      posting.backupStatus ?? posting.status,
       posting.parent?.comment ?? "",
       posting.parent?.payee ?? "",
       posting.parent?.paymentMethod ?? posting.parentPaymentMethod ?? "",
@@ -624,8 +618,8 @@ function addMinor(left: number, right: number, context: string): number {
 }
 
 /**
- * Applies every global filter in one pass. VOID postings remain in `postings`
- * so tables can audit them; all metric functions ignore them independently.
+ * Applies effective global filters in one pass; legacy statuses are inert.
+ * VOID rows remain in raw `postings` for provenance, never in active projections.
  */
 export function applyFilters(
   dataset: AnalyticsDataset,

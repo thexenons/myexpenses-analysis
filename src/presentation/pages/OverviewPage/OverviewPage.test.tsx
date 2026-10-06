@@ -43,12 +43,6 @@ describe("OverviewPageView", () => {
         expenseComposition={[{ amountEurMinor: 5_000, label: "Gasto bruto" }]}
         kpis={{ ...kpis, netEurMinor: -5_300, realCashFlowEurMinor: -7_800 }}
         searchPending={false}
-        status={{
-          CLEARED: { amountEurMinor: 0, count: 0 },
-          RECONCILED: { amountEurMinor: 0, count: 1 },
-          UNRECONCILED: { amountEurMinor: 0, count: 1 },
-          VOID: { amountEurMinor: 0, count: 1 },
-        }}
         topCategories={[]}
         valuationBalanceEurMinor={25_299}
       />,
@@ -63,14 +57,14 @@ describe("OverviewPageView", () => {
     const information = screen.getByText("Información del resumen");
     expect(information.closest("details")).not.toHaveAttribute("open");
     expect(screen.getByRole("heading", { name: "Pulso financiero" }).compareDocumentPosition(information) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
-    const details = screen.getByText("Saldos, deuda y conciliación");
+    const details = screen.getByText("Saldos y deuda");
     expect(details.closest("details")).not.toHaveAttribute("open");
     await user.click(details);
     expect(details.closest("details")).toHaveAttribute("open");
     expect(screen.getByText("Saldo en deudas")).toBeVisible();
     expect(screen.getByText("Apertura del periodo")).toBeVisible();
     expect(screen.queryByText("Anulados visibles")).not.toBeInTheDocument();
-    expect(screen.getByText("Sin conciliar")).toBeVisible();
+    expect(screen.queryAllByText(/Sin conciliar|Reconciliados|Compensados/)).toHaveLength(0);
     expect(screen.getByText("3 apuntes")).toBeVisible();
     await user.click(screen.getByText("Composición y categorías"));
     expect(screen.getByRole("heading", { name: "Composición del gasto" })).toBeVisible();
@@ -92,12 +86,6 @@ describe("OverviewPageView", () => {
         ]}
         kpis={kpis}
         searchPending
-        status={{
-          CLEARED: { amountEurMinor: 0, count: 0 },
-          RECONCILED: { amountEurMinor: 5_300, count: 3 },
-          UNRECONCILED: { amountEurMinor: 0, count: 0 },
-          VOID: { amountEurMinor: 0, count: 0 },
-        }}
         topCategories={[]}
         valuationBalanceEurMinor={25_299}
       />,
@@ -105,7 +93,7 @@ describe("OverviewPageView", () => {
 
     expect(screen.getByText("Flujo del periodo")).toBeVisible();
     expect(screen.getByText("Pulso financiero")).toBeVisible();
-    expect(screen.getByText("Compensados")).toBeInTheDocument();
+    expect(screen.queryByText("Compensados")).not.toBeInTheDocument();
     expect(screen.getByText("Actualizando resultados…")).toHaveAttribute(
       "aria-live",
       "polite",
@@ -206,18 +194,18 @@ function reviewFixture(): AnalyticsDataset {
   ] };
 }
 
-it("ranks only eligible active review postings, including neutral types and refunds", () => {
+it("counts only eligible active review postings, including neutral types and refunds", () => {
   const model = createOverviewPageModel(applyFilters(reviewFixture(), createDefaultFilterState()), "day", false);
-  expect(model.review?.signals.map(({ id, count }) => [id, count])).toEqual([["uncategorized", 3], ["unreconciled", 2]]);
+  expect(model.review?.signals.map(({ id, count }) => [id, count])).toEqual([["uncategorized", 3]]);
   const source = reviewFixture();
   const malformedNeutralTransfer = { ...source.postings[0]!, bucket: "transfer" as const };
-  expect(createOverviewPageModel(applyFilters({ ...source, postings: [malformedNeutralTransfer] }, createDefaultFilterState()), "day", false).review?.signals.map(({ id }) => id)).toEqual(["unreconciled"]);
+  expect(createOverviewPageModel(applyFilters({ ...source, postings: [malformedNeutralTransfer] }, createDefaultFilterState()), "day", false).review?.signals.map(({ id }) => id)).toEqual([]);
 });
 
-it("orders equal review volumes by stable ID and distinguishes empty from no selected signals", () => {
+it("distinguishes empty data from no eligible uncategorized postings", () => {
   const source = reviewFixture();
   const model = (ids: string[]) => createOverviewPageModel(applyFilters({ ...source, postings: source.postings.filter((row) => ids.includes(row.id)) }, createDefaultFilterState()), "day", false);
-  expect(model(["neutral"]).review?.signals.map(({ id }) => id)).toEqual(["uncategorized", "unreconciled"]);
+  expect(model(["neutral"]).review?.signals.map(({ id }) => id)).toEqual(["uncategorized"]);
   expect(model([]).review?.hasData).toBe(false);
   expect(model(["transfer"]).review).toMatchObject({ hasData: true, signals: [] });
 });
@@ -244,36 +232,34 @@ it.each<Partial<FilterState>>([
   const filtered = applyFilters(source, filters);
   const model = createOverviewPageModel(filtered, "day", false);
   for (const signal of model.review!.signals) {
-    const patch = createOverviewReviewPatch(filters, signal.id);
+    expect(signal.id).toBe("uncategorized");
+    const patch = createOverviewReviewPatch(filters);
     expect(patch).not.toBeNull();
     const result = applyFilters(source, { ...filters, ...patch });
-    const evidence = filtered.activePostings.filter((row) => signal.id === "unreconciled"
-      ? row.status === "UNRECONCILED"
-      : row.categoryPath.length === 0 && !row.linked && (row.bucket === "expense" || row.bucket === "income"));
-    expect(result.postings.map(({ id }) => id)).toEqual(evidence.map(({ id }) => id));
+    const evidence = filtered.activePostings.filter((row) => row.categoryPath.length === 0 && !row.linked && (row.bucket === "expense" || row.bucket === "income"));
+    expect(result.activePostings.map(({ id }) => id)).toEqual(evidence.map(({ id }) => id));
     const untouched = Object.fromEntries(Object.entries(filters).filter(([key]) => !Object.hasOwn(patch!, key)));
     expect({ ...filters, ...patch }).toMatchObject(untouched);
   }
 });
 
-it("replaces retained table-only statuses with active Overview evidence and keeps type restrictions", () => {
+it("leaves legacy status metadata inert and preserves type restrictions", () => {
   const effective = createDefaultFilterState();
-  const patch = createOverviewReviewPatch(effective, "uncategorized");
-  expect(patch?.statuses).toEqual(["UNRECONCILED", "CLEARED", "RECONCILED"]);
-  expect(applyFilters(reviewFixture(), { ...effective, statuses: ["VOID"], ...patch }).postings.map(({ id }) => id)).toEqual(["neutral", "refund", "income"]);
-  expect(createOverviewReviewPatch({ ...effective, categoryTypes: ["TRANSFER"] }, "uncategorized")).toBeNull();
+  const patch = createOverviewReviewPatch(effective);
+  expect(patch).not.toHaveProperty("statuses");
+  expect(applyFilters(reviewFixture(), { ...effective, statuses: ["VOID"], ...patch }).activePostings.map(({ id }) => id)).toEqual(["neutral", "refund", "income"]);
+  expect(createOverviewReviewPatch({ ...effective, categoryTypes: ["TRANSFER"] })).toBeNull();
 });
 
 it("shows factual context, keyboard actions and pending protection without an all-clear claim", async () => {
   const filters = { ...createDefaultFilterState(), dateBasis: "value", scope: "realCashFlow" } as const;
   const model = createOverviewPageModel(applyFilters(reviewFixture(), filters), "day", false);
-  const onViewReview = vi.fn<(id: "uncategorized" | "unreconciled") => void>();
+  const onViewReview = vi.fn<(id: "uncategorized") => void>();
   const view = render(<OverviewPageView {...model} onViewReview={onViewReview} />);
   const panel = screen.getByRole("region", { name: "Qué revisar" });
   expect(panel).toHaveTextContent(/Fecha valor/);
   expect(panel).toHaveTextContent(/Flujo real/);
-  expect(panel).toHaveTextContent(/volumen, no por riesgo/);
-  expect(panel).toHaveTextContent(/pueden coincidir/);
+  expect(panel).not.toHaveTextContent(/Sin conciliar|UNRECONCILED|riesgo/);
   const action = within(panel).getByRole("button", { name: "Ver apuntes sin categoría" });
   action.focus();
   await userEvent.setup().keyboard("{Enter}");
@@ -281,7 +267,7 @@ it("shows factual context, keyboard actions and pending protection without an al
   view.rerender(<OverviewPageView {...model} searchPending onViewReview={onViewReview} />);
   expect(action).toBeDisabled();
   view.rerender(<OverviewPageView {...model} review={{ ...model.review!, signals: [] }} />);
-  expect(panel).toHaveTextContent(/No aparecen estas dos señales/);
+  expect(panel).toHaveTextContent(/No hay ingresos o gastos sin categoría/);
   expect(panel).toHaveTextContent(/no certifica/);
   view.rerender(<OverviewPageView {...model} review={{ ...model.review!, hasData: false, signals: [] }} />);
   expect(panel).toHaveTextContent(/No hay apuntes activos/);

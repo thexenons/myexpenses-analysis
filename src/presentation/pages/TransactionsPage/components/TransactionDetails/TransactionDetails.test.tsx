@@ -92,7 +92,7 @@ describe("TransactionDetails", () => {
     expect(screen.getByText("Trabajo · Comida")).toBeVisible();
     expect(screen.getByText("Tienda del padre")).toBeVisible();
     expect(screen.getByText(/21 ago 2026 · 00:00:00/i)).toBeVisible();
-    expect(screen.getByText("Compensada (CLEARED)")).toBeVisible();
+    expect(screen.queryByText(/Estado MyExpenses|Compensada|CLEARED|RECONCILED/)).not.toBeInTheDocument();
     expect(screen.getByText("Tarjeta")).toBeVisible();
     expect(screen.getByText("REF-42")).toBeVisible();
     expect(screen.getByText("Método padre")).toBeVisible();

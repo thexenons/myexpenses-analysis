@@ -1133,3 +1133,18 @@ it("keeps preset read failures visible without modifying ordinary filter persist
   expect(store.getState().filters).toBe(filters);
   expect(window.localStorage.getItem("myexpenses-analysis:filters:v1")).toBe(ordinary);
 });
+
+
+it.each(["VOID", "RECONCILED"] as const)("ignores legacy %s selection when applying a saved full preset", async (status) => {
+  window.localStorage.clear();
+  const store = createSecureStore({ load: vi.fn<DatasetRepository["load"]>().mockResolvedValue(datasetFixture()) });
+  await store.getState().actions.unlock("synthetic");
+  const actions = store.getState().actions;
+  const baseline = applyFilters(store.getState().analytics!, store.getState().filters).activePostings;
+  actions.setStatuses([status]);
+  expect(await actions.saveFilterPreset("Legacy status")).toBe(true);
+  actions.clearFilters();
+  expect(await actions.applyFilterPreset("Legacy status")).toBe(true);
+  expect(store.getState().filters.statuses).toEqual([]);
+  expect(applyFilters(store.getState().analytics!, store.getState().filters).activePostings).toEqual(baseline);
+});

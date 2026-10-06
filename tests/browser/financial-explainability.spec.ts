@@ -622,7 +622,7 @@ test("keeps overview balances scoped visibly and method information secondary", 
   await expect(summary).toBeFocused();
   await summary.press("Space");
   await expect(information).not.toHaveAttribute("open");
-  await page.getByText("Saldos, deuda y conciliación", { exact: true }).click();
+  await page.getByText("Saldos y deuda", { exact: true }).click();
   await expect(information).not.toHaveAttribute("open");
   await expectNoDocumentOverflow(page);
 });
@@ -788,7 +788,7 @@ test("keeps comparison reconciliation and hierarchy caveats before methods", asy
 });
 
 test("keeps summary and cash-flow detail reachable without obscuring primary figures", async ({ page }) => {
-  const summary = page.getByText("Saldos, deuda y conciliación", { exact: true });
+  const summary = page.getByText("Saldos y deuda", { exact: true });
   await expect(page.getByText("Flujo del periodo", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Pulso financiero" })).toBeVisible();
   await expect(summary).toBeVisible();
@@ -1286,12 +1286,11 @@ test("uses consistent reconciliation and singular result copy in the rendered ro
   await page.reload();
   await page.getByLabel("Frase de desbloqueo").fill(PASSPHRASE);
   await page.getByRole("button", { name: "Abrir bóveda" }).click();
-  const details = page.getByText("Saldos, deuda y conciliación", { exact: true });
+  const details = page.getByText("Saldos y deuda", { exact: true });
   await details.focus();
   await page.keyboard.press("Enter");
-  const reconciliationLabel = page.locator("main").getByText("Sin conciliar", { exact: true });
-  await expect(reconciliationLabel).toBeVisible();
-  await reconciliationLabel.scrollIntoViewIfNeeded();
+  await expect(page.locator("main").getByText(/Sin conciliar|Reconciliados|Compensados/)).toHaveCount(0);
+  await details.scrollIntoViewIfNeeded();
   await mkdir("/tmp/myexpenses-u8-visual", { recursive: true });
   await page.screenshot({ path: `/tmp/myexpenses-u8-visual/overview-copy-${testInfo.project.name}.png` });
   const toolbar = page.getByRole("region", { name: "Filtros globales" });
@@ -1309,7 +1308,7 @@ test("uses consistent reconciliation and singular result copy in the rendered ro
   await expectNoDocumentOverflow(page);
 });
 
-test("keeps VOID out of scoped transaction counts, rows and CSV without changing its schema", async ({ page }) => {
+test("keeps VOID out of scoped transaction counts, rows and CSV without transaction-state columns", async ({ page }) => {
   await page.getByRole("link", { name: /^(Transacciones|Movimientos)$/ }).click();
   const toolbar = page.getByRole("region", { name: "Filtros globales" });
   const scope = toolbar.getByRole("group", { name: "Ámbito de las estadísticas" });
@@ -1336,13 +1335,16 @@ test("keeps VOID out of scoped transaction counts, rows and CSV without changing
     const download = await downloadPromise;
     // oxlint-disable-next-line no-await-in-loop -- The isolated browser runner owns this temporary artifact.
     const csv = await readFile(await download.path(), "utf8");
-    expect(csv).toContain("estado_myexpenses");
+    const headers = csv.split(/\r?\n/u)[0]!.split(",");
+    expect(headers).not.toContain("estado");
+    expect(headers).not.toContain("estado_myexpenses");
+    expect(csv).not.toMatch(/(?:^|,)(?:UNRECONCILED|CLEARED|RECONCILED)(?:,|$)/mu);
     expect(csv.split(/\r?\n/u)).toHaveLength(count + 1);
     expect(csv).not.toMatch(/(?:^|,)VOID(?:,|$)/mu);
   }
 });
 
-test("reveals complete transaction text and source status by keyboard at every viewport", async ({ page }, testInfo) => {
+test("reveals complete transaction text without transaction states by keyboard at every viewport", async ({ page }, testInfo) => {
   const visualDirectory = "/tmp/myexpenses-u6-visual";
   await mkdir(visualDirectory, { recursive: true });
   await page.route("**/data/app-dataset.vault.json", async (route) => {
@@ -1376,7 +1378,7 @@ test("reveals complete transaction text and source status by keyboard at every v
   const fullComment = "Synthetic food comment with complete context that extends beyond the compact row 987654321";
   await expect(row.getByText("Payee del apunte").locator("..")).toContainText(fullPayee);
   await expect(row.getByText("Comentario del apunte").locator("..")).toContainText(fullComment);
-  await expect(row.getByText("Estado MyExpenses").locator("..")).toContainText("Sin conciliar (UNRECONCILED)");
+  await expect(row.getByText(/Estado MyExpenses|UNRECONCILED|CLEARED|RECONCILED/)).toHaveCount(0);
   const textLayout = await row.getByText("Comentario del apunte").locator("..").locator("dd").evaluate((element) => ({
     visible: element.getBoundingClientRect().height > 0,
     scroll: element.scrollWidth,
@@ -1384,7 +1386,7 @@ test("reveals complete transaction text and source status by keyboard at every v
   }));
   expect(textLayout.visible).toBe(true);
   expect(textLayout.scroll, JSON.stringify(textLayout)).toBeLessThanOrEqual(textLayout.width + 1);
-  await page.screenshot({ path: join(visualDirectory, `transaction-row-open-${testInfo.project.name}.png`) });
+  await row.screenshot({ path: testInfo.outputPath("transaction-details-no-state.png"), animations: "disabled", style: '[aria-label="Filtros globales"] { visibility: hidden; }' });
   await page.addScriptTag({ path: join(process.cwd(), "node_modules/axe-core/axe.min.js") });
   const violations = await page.evaluate(async () => {
     const axe = (window as unknown as { axe: { run: (context: Element, options: object) => Promise<{ violations: { id: string }[] }> } }).axe;
@@ -2501,9 +2503,9 @@ test("overview review cautions preserve the effective cut and offer keyboard dri
   await page.getByRole("button", { name: "Abrir bóveda" }).click();
   const panel = page.getByRole("region", { name: "Qué revisar" });
   await expect(panel).toContainText("Sin categoría · 2 apuntes");
-  await expect(panel).toContainText("Sin conciliar · 2 apuntes");
   await expect(panel.locator("li").first()).toContainText("Sin categoría");
-  await expect(panel).toContainText("volumen, no por riesgo");
+  await expect(panel.getByRole("button")).toHaveCount(1);
+  await expect(panel).not.toContainText("Sin conciliar");
   await expectNoDocumentOverflow(page);
   const targetSizes = await panel.getByRole("button").evaluateAll((buttons) => buttons.map((button) => {
     const rect = button.getBoundingClientRect();
@@ -2539,13 +2541,76 @@ test("overview review cautions preserve the effective cut and offer keyboard dri
   expect(after).toMatchObject({ ...before, filters: { ...before.filters,
     categoryPrefixes: [[]], categoryDepth: "exact", categoryMode: "include", categoryMatch: "posting",
     categoryTypes: ["EXPENSE", "INCOME", "NEUTRAL"], linked: "unlinked",
-    statuses: [], // Table-only statuses are intentionally not persisted.
   } });
-  await page.getByRole("link", { name: /Resumen/ }).click();
-  await expect(panel).toContainText("Sin conciliar · 1 apunte");
-  await panel.getByRole("button", { name: "Ver apuntes sin conciliar" }).focus();
-  await page.keyboard.press("Enter");
-  await expect(page.locator("main output")).toContainText("1 resultado.");
-  await expect(page.getByText("review-marker-1", { exact: true }).first()).toBeVisible();
   await expectNoDocumentOverflow(page);
+});
+
+
+test("ignores legacy transaction statuses in saved filters and presets", async ({ page }) => {
+  await page.route("**/data/app-dataset.vault.json", async (route) => {
+    const variant = await route.fetch({ url: `${BASE}/data/s06-review.vault.json` });
+    await route.fulfill({ response: variant });
+  });
+  await page.reload();
+  await page.getByLabel("Frase de desbloqueo").fill(PASSPHRASE);
+  await page.getByRole("button", { name: "Abrir bóveda" }).click();
+  const flow = page.getByRole("article", { name: "Flujo del periodo" });
+  const baseline = await flow.textContent();
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });
+  await toolbar.getByRole("button", { name: /Abrir todos los filtros/ }).click();
+  await drawer.getByText("Filtros guardados", { exact: true }).click();
+  await drawer.getByRole("textbox", { name: "Nombre del filtro" }).fill("Legacy VOID");
+  await drawer.getByRole("button", { name: "Guardar filtro actual" }).click();
+  await expect(drawer.getByRole("option", { name: "Legacy VOID" })).toHaveCount(1);
+  await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await page.evaluate(() => {
+    const key = "myexpenses-analysis:filter-presets:v1";
+    const saved = JSON.parse(localStorage.getItem(key)!);
+    const preset = saved.presets[0];
+    preset.snapshot.filters.statuses = ["VOID"];
+    saved.presets.push({ ...preset, name: "Legacy RECONCILED", snapshot: { ...preset.snapshot,
+      filters: { ...preset.snapshot.filters, statuses: ["RECONCILED"] } } });
+    localStorage.setItem(key, JSON.stringify(saved));
+    const preferencesKey = "myexpenses-analysis:filters:v1";
+    const preferences = JSON.parse(localStorage.getItem(preferencesKey)!);
+    preferences.filters.statuses = ["VOID"];
+    localStorage.setItem(preferencesKey, JSON.stringify(preferences));
+  });
+  await page.reload();
+  await page.getByLabel("Frase de desbloqueo").fill(PASSPHRASE);
+  await page.getByRole("button", { name: "Abrir bóveda" }).click();
+  await expect(flow).toHaveText(baseline!);
+  for (const name of ["Legacy VOID", "Legacy RECONCILED"]) {
+    // oxlint-disable-next-line no-await-in-loop -- Each persisted legacy preset is restored and observed independently.
+    await test.step(name, async () => {
+      await toolbar.getByRole("button", { name: /Abrir todos los filtros/ }).click();
+      const savedFilters = drawer.locator("summary").filter({ hasText: /^Filtros guardados$/ });
+      if (!(await savedFilters.evaluate((summary) => summary.parentElement!.hasAttribute("open")))) {
+        await savedFilters.click();
+      }
+      await drawer.getByRole("combobox", { name: "Filtro guardado", exact: true }).selectOption(name);
+      await drawer.getByRole("button", { name: "Aplicar filtro guardado" }).click();
+      await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+      await expect(flow).toHaveText(baseline!);
+      await expect(page.getByRole("region", { name: "Qué revisar" })).toContainText("Sin categoría · 2 apuntes");
+      await page.getByRole("link", { name: /^(Transacciones|Movimientos)$/ }).click();
+      await expect(page.locator("main output")).toContainText("4 resultados.");
+      const table = page.getByRole("table", { name: "Transacciones que coinciden con los filtros globales" });
+      await expect(table.locator("tbody tr")).toHaveCount(4);
+      await expect(page.getByText("review-marker-5", { exact: true })).toHaveCount(0);
+      await table.getByText("Ver concepto completo y trazabilidad").first().click();
+      await expect(table.getByText(/Estado MyExpenses|UNRECONCILED|RECONCILED|CLEARED/)).toHaveCount(0);
+      const downloadPromise = page.waitForEvent("download");
+      await page.getByRole("button", { name: "Exportar CSV" }).click();
+      const csv = await readFile(await (await downloadPromise).path(), "utf8");
+      expect(csv.split(/\r?\n/u)).toHaveLength(5);
+      const headers = csv.split(/\r?\n/u)[0]!.split(",");
+      expect(headers).not.toContain("estado");
+      expect(headers).not.toContain("estado_myexpenses");
+      expect(csv).not.toMatch(/(?:^|,)(?:VOID|UNRECONCILED|RECONCILED|CLEARED)(?:,|$)/mu);
+      await expectNoDocumentOverflow(page);
+      await page.getByRole("link", { name: "Resumen", exact: true }).click();
+    });
+  }
 });

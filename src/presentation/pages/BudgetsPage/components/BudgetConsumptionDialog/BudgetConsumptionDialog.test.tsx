@@ -66,13 +66,12 @@ function datasetFor(postings: readonly NormalizedPosting[]): AnalyticsDataset {
 }
 
 describe("BudgetConsumptionDialog", () => {
-  it("keeps normalized status in closed details without changing signed amounts", async () => {
+  it("omits transaction states from details without changing signed amounts", async () => {
     installDialogStub();
     const user = userEvent.setup();
     const trigger = document.createElement("button");
     document.body.append(trigger);
     const statuses = ["RECONCILED", "CLEARED", "UNRECONCILED"] as const;
-    const labels = ["Conciliada", "Compensada", "Sin conciliar"];
     const contributions = statuses.map((status, index) => {
       const entry = contribution(index);
       return Object.assign({}, entry, {
@@ -93,12 +92,12 @@ describe("BudgetConsumptionDialog", () => {
       />,
     );
     const rows = screen.getAllByRole("listitem");
-    for (const row of rows) expect(within(row).getByText(/Conciliada|Compensada|Sin conciliar/)).not.toBeVisible();
+    for (const row of rows) expect(within(row).queryByText(/Conciliada|Compensada|Sin conciliar/)).not.toBeInTheDocument();
     await user.click(within(rows[0]!).getByText("Datos técnicos"));
-    for (const [index, label] of labels.entries()) {
+    for (const [index] of statuses.entries()) {
       // oxlint-disable-next-line no-await-in-loop -- Each native details disclosure is checked after its own interaction.
       if (index > 0) await user.click(within(rows[index]!).getByText("Datos técnicos"));
-      expect(within(rows[index]!).getByText(`${label} (${statuses[index]})`)).toBeVisible();
+      expect(within(rows[index]!).queryByText(/Estado normalizado|Conciliada|Compensada|Sin conciliar|RECONCILED|CLEARED/)).not.toBeInTheDocument();
     }
     expect(within(rows[1]!).getByText("-0,25 €")).toBeVisible();
     expect(screen.getByText(/3 apuntes/)).toHaveTextContent("1,75 €");
@@ -263,7 +262,7 @@ describe("BudgetConsumptionDialog", () => {
     expect(within(row).getByText("Destino", { selector: "dt" }).nextElementSibling).toHaveTextContent("Destino");
     expect(within(row).getByText("ID: outgoing")).not.toBeVisible();
     await user.click(within(row).getByText("Datos técnicos"));
-    expect(within(row).getByText("Compensada (CLEARED)")).toBeVisible();
+    expect(within(row).queryByText(/Estado normalizado|Compensada|CLEARED/)).not.toBeInTheDocument();
     expect(within(row).getByText(/-2,00.*US\$/u)).toBeVisible();
     expect(within(row).getByText("Parte de split").nextElementSibling).toHaveTextContent("1 de 2");
     expect(within(row).getByText("Card")).toBeVisible();
@@ -300,4 +299,18 @@ describe("BudgetConsumptionDialog", () => {
     unmount();
     trigger.remove();
   });
+});
+
+
+it("excludes VOID provenance contributions from dialog rows and totals", () => {
+  installDialogStub();
+  const active = contribution(0);
+  const voidEntry = { ...contribution(1), posting: { ...contribution(1).posting, isVoid: true, status: "VOID" as const } };
+  const trigger = document.createElement("button");
+  const { unmount } = render(<BudgetConsumptionDialog contributions={[active, voidEntry]} currency="EUR"
+    dataset={datasetFor([active.posting, voidEntry.posting])} dateBasis="operation" fractionDigits={2}
+    onDismiss={vi.fn<() => void>()} title="Gasto neto" trigger={trigger} />);
+  expect(screen.getAllByRole("listitem")).toHaveLength(1);
+  expect(screen.getByText(/1 apunte/)).toHaveTextContent("1,00 €");
+  unmount();
 });

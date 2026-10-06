@@ -224,7 +224,7 @@ export function createAppStore(
               const state = get();
               if (state.analytics === null) return false;
               const reconciled = reconcileSavedFilters(preset.snapshot, state.analytics);
-              set({ filterPresets: read.presets, filters: { ...reconciled, statuses: [...preset.snapshot.filters.statuses] },
+              set({ filterPresets: read.presets, filters: reconciled,
                 granularity: preset.granularity, filterResetRevision: state.filterResetRevision + 1 });
               return true;
             } catch (error) {

@@ -43,8 +43,8 @@ const EMPTY_ANALYTICS: AnalyticsDataset = {
   },
 };
 
-function FilteredAnalyticsProbe({ respectStatuses = false }: { respectStatuses?: boolean }) {
-  const { filtered, filters, granularity, searchPending } = useFilteredAnalytics({ respectStatuses });
+function FilteredAnalyticsProbe() {
+  const { filtered, filters, granularity, searchPending } = useFilteredAnalytics();
   return (
     <output data-ids={filtered?.activePostings.map(({ transactionId }) => transactionId).join(",")} data-testid="probe" data-count={filtered?.postings.length} data-source-count={filtered?.source.postings.length} data-source-max-date={filtered?.source.maxDate} data-statuses={filters.statuses.join(",")} data-budget-statuses={filtered?.filters.statuses.join(",")}>
       {searchPending ? "pending" : "ready"}:{filtered?.filters.search ?? "missing"}:
@@ -246,7 +246,7 @@ it("forwards tag mode and invalidates shared results on mode-only changes", () =
 });
 
 
-it("isolates status-aware cached results while default statistics stay active and status-neutral", () => {
+it("shares active status-neutral derivations across consumers and ignores legacy status changes", () => {
   const store = createAppStore({ load: vi.fn<DatasetRepository["load"]>() }, window.localStorage);
   const analytics = normalizeDataset({
     accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
@@ -262,19 +262,19 @@ it("isolates status-aware cached results while default statistics stay active an
   store.getState().actions.setStatuses(["UNRECONCILED"]);
   applyFiltersSpy.mockClear();
   const view = render(<AppStoreProvider store={store}>
-    <FilteredAnalyticsProbe /><FilteredAnalyticsProbe respectStatuses /><FilteredAnalyticsProbe respectStatuses />
+    <FilteredAnalyticsProbe /><FilteredAnalyticsProbe /><FilteredAnalyticsProbe />
   </AppStoreProvider>);
   const [statistics, table, duplicate] = screen.getAllByTestId("probe");
   expect(statistics).toHaveAttribute("data-ids", "UNRECONCILED,CLEARED");
-  expect(table).toHaveAttribute("data-ids", "UNRECONCILED");
-  expect(duplicate).toHaveAttribute("data-ids", "UNRECONCILED");
-  expect(applyFiltersSpy).toHaveBeenCalledTimes(2);
+  expect(table).toHaveAttribute("data-ids", "UNRECONCILED,CLEARED");
+  expect(duplicate).toHaveAttribute("data-ids", "UNRECONCILED,CLEARED");
+  expect(applyFiltersSpy).toHaveBeenCalledOnce();
   act(() => store.getState().actions.setStatuses(["CLEARED"]));
-  expect(table).toHaveAttribute("data-ids", "CLEARED");
+  expect(table).toHaveAttribute("data-ids", "UNRECONCILED,CLEARED");
   expect(statistics).toHaveAttribute("data-ids", "UNRECONCILED,CLEARED");
-  expect(applyFiltersSpy).toHaveBeenCalledTimes(3);
+  expect(applyFiltersSpy).toHaveBeenCalledOnce();
   act(() => store.getState().actions.setStatuses(["VOID"]));
-  expect(table).toHaveAttribute("data-count", "0");
+  expect(table).toHaveAttribute("data-count", "2");
   expect(statistics).toHaveAttribute("data-count", "2");
   expect(analytics.postings).toHaveLength(3);
   view.rerender(<AppStoreProvider store={store}><FilteredAnalyticsProbe /><FilteredAnalyticsProbe /></AppStoreProvider>);

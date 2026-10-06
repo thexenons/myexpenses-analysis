@@ -63,7 +63,6 @@ describe("createPostingsCsv", () => {
       "categoria",
       "payee",
       "comentario",
-      "estado",
       "enlazada",
       "importe_eur",
       "uuid_hoja",
@@ -87,7 +86,6 @@ describe("createPostingsCsv", () => {
       "hora",
       "fecha_valor",
       "hora_valor",
-      "estado_myexpenses",
       "metodo_pago",
       "fila_sqlite",
       "contenido_archivado",
@@ -112,7 +110,6 @@ describe("createPostingsCsv", () => {
       "'+CATEGORY",
       "'-PAYEE",
       "'@COMMENT",
-      "RECONCILED",
       "sí",
       "-11.5",
       "leaf-uuid",
@@ -136,7 +133,6 @@ describe("createPostingsCsv", () => {
       "18:30:00",
       "2026-08-21",
       "00:00:00",
-      "RECONCILED",
       "Tarjeta",
       "",
       "no",
@@ -154,12 +150,11 @@ describe("createPostingsCsv", () => {
       "",
       "",
     ]);
-    expect(row?.[8]?.startsWith("'")).toBe(false);
-    expect(row?.[11]?.startsWith("'")).toBe(false);
-    expect(row?.[12]?.startsWith("'")).toBe(false);
-    expect(row?.[14]?.startsWith("'")).toBe(false);
-    expect(row?.[20]?.startsWith("'")).toBe(false);
-    expect(row?.[23]?.startsWith("'")).toBe(false);
+    for (const field of ["importe_eur", "split_indice", "split_total", "importe_padre_original", "importe_original", "tasa_eur"]) {
+      expect(row?.[header!.indexOf(field)]?.startsWith("'")).toBe(false);
+    }
+    expect(header).not.toContain("estado");
+    expect(header).not.toContain("estado_myexpenses");
   });
 
   it("quotes carriage returns in text fields", () => {
@@ -318,4 +313,15 @@ describe("sortPostings", () => {
       sortPostings([afternoon, morning], "date", false).map(({ id }) => id),
     ).toEqual(["morning", "afternoon"]);
   });
+});
+
+
+it("excludes VOID and omits transaction states even when handed raw provenance rows", () => {
+  const csv = createPostingsCsv([
+    { ...TRANSACTION_POSTING_FIXTURE, transactionId: "active", status: "UNRECONCILED", backupStatus: "CLEARED" },
+    { ...TRANSACTION_POSTING_FIXTURE, transactionId: "void", status: "VOID", isVoid: true },
+  ]);
+  expect(csv.split("\n")).toHaveLength(2);
+  expect(csv).not.toMatch(/estado|UNRECONCILED|CLEARED|RECONCILED|VOID/);
+  expect(csv).toContain("active");
 });

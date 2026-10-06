@@ -4,15 +4,15 @@ import { useCallback, useMemo } from "react";
 import { useFilteredAnalytics } from "../../../hooks/filtered-analytics/filtered-analytics.hooks.ts";
 import { useAppStore } from "../../../providers/AppStoreProvider/index.ts";
 import { createOverviewPageModel, createOverviewReviewPatch } from "../OverviewPage.helpers.ts";
-import type { OverviewPageViewProps, OverviewReviewId } from "../OverviewPage.types.ts";
+import type { OverviewPageViewProps } from "../OverviewPage.types.ts";
 
 export function useOverviewPage(): OverviewPageViewProps | null {
   const { filtered, filters, granularity, searchPending } = useFilteredAnalytics();
   const navigate = useNavigate();
   const patchFilters = useAppStore((state) => state.actions.patchFilters);
-  const onViewReview = useCallback((id: OverviewReviewId) => {
+  const onViewReview = useCallback(() => {
     if (searchPending || filtered === null) return;
-    const patch = createOverviewReviewPatch(filters, id);
+    const patch = createOverviewReviewPatch(filters);
     if (patch === null) return;
     patchFilters(patch);
     void navigate({ to: "/transacciones", search: { page: 1, sort: "date", direction: "desc" } });

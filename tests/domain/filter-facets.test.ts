@@ -112,3 +112,26 @@ test("optional snapshots restore independently and reject malformed present rang
   }
   assert.throws(() => selected({ payeeKeys: ["bad-key"] }), /identity/i);
 });
+
+
+test("legacy transaction statuses never restrict otherwise matching postings", () => {
+  const baseline = selected({});
+  for (const statuses of [["UNRECONCILED"], ["CLEARED"], ["RECONCILED"], ["VOID"]] as const) {
+    assert.deepEqual(selected({ statuses }), baseline);
+    assert.deepEqual(selected({ statuses, categoryTypes: ["EXPENSE"] }), ["one"]);
+  }
+});
+
+
+test("source transaction states are not searchable in cached or fallback indexes", () => {
+  const fallback = { ...normalized, postings: normalized.postings.map((row) => {
+    const copy = { ...row };
+    Reflect.deleteProperty(copy, "searchIndex");
+    return copy;
+  }) };
+  for (const source of [normalized, fallback]) {
+    assert.equal(source.postings[0]?.status, "CLEARED");
+    assert.deepEqual(applyFilters(source, { ...createDefaultFilterState(), search: "CLEARED" }).activePostings, []);
+    assert.equal(applyFilters(source, { ...createDefaultFilterState(), search: "cafe" }).activePostings.length, 1);
+  }
+});

@@ -12,7 +12,6 @@ import {
   formatSplit,
   linkedAccountLabel,
   parentTransactionId,
-  reconciliationStatusLabel,
 } from "./TransactionDetails.helpers.ts";
 import styles from "./TransactionDetails.module.css";
 import type { TransactionDetailsProps } from "./TransactionDetails.types.ts";
@@ -61,12 +60,6 @@ export function TransactionDetails({ posting }: TransactionDetailsProps) {
             {posting.valueDate
               ? `${formatDate(posting.valueDate)}${posting.valueTime ? ` · ${posting.valueTime}` : ""}`
               : "No registrada"}
-          </dd>
-        </div>
-        <div className={styles.item}>
-          <dt className={styles.term}>Estado MyExpenses</dt>
-          <dd className={styles.description}>
-            {reconciliationStatusLabel(posting)}
           </dd>
         </div>
         <div className={styles.item}>

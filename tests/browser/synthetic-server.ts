@@ -127,7 +127,7 @@ async function main(): Promise<void> {
         categoryPath: index === 2 ? reviewSeed.categoryPath : [],
         categoryType: index === 0 ? "NEUTRAL" : index === 3 ? "TRANSFER" : "EXPENSE",
         bucket: index === 3 ? "transfer" : "expense",
-        status: index === 4 ? "VOID" : index === 0 || index === 2 ? "UNRECONCILED" : "CLEARED",
+        status: index === 4 ? "VOID" : index === 0 ? "UNRECONCILED" : index === 2 ? "RECONCILED" : "CLEARED",
         isVoid: index === 4,
       };
     });

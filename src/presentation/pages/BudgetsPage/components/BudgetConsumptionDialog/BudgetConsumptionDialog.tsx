@@ -1,20 +1,14 @@
 /* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- The named overflow region needs a durable Tab entry after the final batch removes its button. */
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { BudgetContribution } from "../../../../../domain/analytics/budgets.ts";
 import { resolvePostingAccounts } from "../../../../../domain/analytics/transfer-relations.ts";
-import type { AnalyticsDataset, TransactionStatus } from "../../../../../domain/analytics/types.ts";
+import type { AnalyticsDataset } from "../../../../../domain/analytics/types.ts";
 import { formatDate } from "../../../../utils/format.ts";
 import { formatBudgetMinor } from "../../BudgetsPage.helpers.ts";
 import styles from "./BudgetConsumptionDialog.module.css";
 
 const PAGE_SIZE = 25;
-const STATUS_LABELS: Readonly<Record<TransactionStatus, string>> = {
-  CLEARED: "Compensada",
-  RECONCILED: "Conciliada",
-  UNRECONCILED: "Sin conciliar",
-  VOID: "Anulada",
-};
 
 interface BudgetConsumptionDialogProps {
   readonly title: string;
@@ -29,7 +23,7 @@ interface BudgetConsumptionDialogProps {
 
 export function BudgetConsumptionDialog({
   title,
-  contributions,
+  contributions: rawContributions,
   currency,
   dataset,
   fractionDigits,
@@ -37,6 +31,7 @@ export function BudgetConsumptionDialog({
   trigger,
   onDismiss,
 }: BudgetConsumptionDialogProps) {
+  const contributions = useMemo(() => rawContributions.filter(({ posting }) => !posting.isVoid), [rawContributions]);
   const headingId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -121,7 +116,6 @@ export function BudgetConsumptionDialog({
                 <details className={styles.technicalDetails}>
                   <summary>Datos técnicos</summary>
                   <dl className={styles.technicalFacts}>
-                    <div><dt>Estado normalizado</dt><dd>{STATUS_LABELS[posting.status]} ({posting.status})</dd></div>
                     <div><dt>Importe en cuenta</dt><dd>{formatBudgetMinor(posting.amountNativeMinor, posting.currency, posting.fractionDigits)}</dd></div>
                     <div><dt>ID</dt><dd className={styles.identifier}>ID: {posting.id}</dd></div>
                     {posting.sourceRowId === undefined ? null : <div><dt>Fila SQLite</dt><dd>{posting.sourceRowId}</dd></div>}

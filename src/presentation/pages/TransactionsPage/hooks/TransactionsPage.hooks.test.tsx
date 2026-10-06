@@ -11,7 +11,7 @@ const { downloadSpy, searchState, navigateSpy, filteredState, filteredSpy } = vi
   searchState: { direction: "desc" as const, page: 2, sort: "date" as const },
   navigateSpy: vi.fn<(...args: unknown[]) => void>(),
   filteredState: { current: null as unknown },
-  filteredSpy: vi.fn<(options?: { respectStatuses?: boolean }) => void>(),
+  filteredSpy: vi.fn<() => void>(),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -19,8 +19,8 @@ vi.mock("@tanstack/react-router", () => ({
   useSearch: () => searchState,
 }));
 vi.mock("../../../hooks/filtered-analytics/filtered-analytics.hooks.ts", () => ({
-  useFilteredAnalytics: (options?: { respectStatuses?: boolean }) => {
-    filteredSpy(options);
+  useFilteredAnalytics: () => {
+    filteredSpy();
     return { filtered: filteredState.current, searchPending: false };
   },
 }));
@@ -45,7 +45,7 @@ describe("useTransactionsPage", () => {
     filteredState.current = applyFilters(analytics, createDefaultFilterState());
     const { result } = renderHook(() => useTransactionsPage());
     act(() => result.current.onPageSizeChange?.(25));
-    expect(filteredSpy).toHaveBeenLastCalledWith({ respectStatuses: true });
+    expect(filteredSpy).toHaveBeenLastCalledWith();
     expect(result.current.resultCount).toBe(27);
     expect(result.current.pageCount).toBe(2);
     expect(result.current.postings).toHaveLength(2);
@@ -59,7 +59,7 @@ describe("useTransactionsPage", () => {
 });
 
 
-it("uses the narrowed active population for status drilldown rows and CSV", () => {
+it("ignores legacy status selections in active transaction rows and CSV", () => {
   const analytics = normalizeDataset({
     accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } },
     categories: { Food: { categoryType: "EXPENSE" } },
@@ -72,9 +72,9 @@ it("uses the narrowed active population for status drilldown rows and CSV", () =
   });
   filteredState.current = applyFilters(analytics, { ...createDefaultFilterState(), statuses: ["UNRECONCILED"] });
   const { result } = renderHook(() => useTransactionsPage());
-  expect(filteredSpy).toHaveBeenLastCalledWith({ respectStatuses: true });
-  expect(result.current.resultCount).toBe(1);
-  expect(result.current.postings.map(({ transactionId }) => transactionId)).toEqual(["UNRECONCILED"]);
+  expect(filteredSpy).toHaveBeenLastCalledWith();
+  expect(result.current.resultCount).toBe(2);
+  expect(result.current.postings.map(({ transactionId }) => transactionId)).toEqual(["UNRECONCILED", "CLEARED"]);
   act(() => result.current.onDownload());
-  expect(downloadSpy.mock.lastCall?.[0].map(({ transactionId }) => transactionId)).toEqual(["UNRECONCILED"]);
+  expect(downloadSpy.mock.lastCall?.[0].map(({ transactionId }) => transactionId)).toEqual(["UNRECONCILED", "CLEARED"]);
 });

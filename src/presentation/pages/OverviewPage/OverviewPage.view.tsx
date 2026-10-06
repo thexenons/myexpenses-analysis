@@ -34,7 +34,6 @@ export function OverviewPageView({
   searchPending,
   review,
   onViewReview,
-  status,
   topCategories,
   valuationBalanceEurMinor,
 }: OverviewPageViewProps) {
@@ -89,19 +88,18 @@ export function OverviewPageView({
           <ul className={styles.reviewList}>
             {review.signals.map(({ id, count }) => <li key={id}>
               <div>
-                <strong>{id === "uncategorized" ? "Sin categoría" : "Sin conciliar"} · {formatCount(count, "apunte", "apuntes")}</strong>
-                <p>{id === "uncategorized" ? "Ingresos o gastos sin categoría ni enlace de transferencia." : "Estado registrado UNRECONCILED; no indica un error de importe."}</p>
+                <strong>Sin categoría · {formatCount(count, "apunte", "apuntes")}</strong>
+                <p>Ingresos o gastos sin categoría ni enlace de transferencia.</p>
               </div>
               <Button disabled={searchPending || onViewReview === undefined} onClick={() => onViewReview?.(id)}>
-                {id === "uncategorized" ? "Ver apuntes sin categoría" : "Ver apuntes sin conciliar"}
+                Ver apuntes sin categoría
               </Button>
             </li>)}
           </ul>
-          <p className={styles.reviewNote}>Orden por volumen, no por riesgo. Los apuntes pueden coincidir entre señales; no se suman. Las partes de un desglose cuentan por separado.</p>
         </> : <p className={styles.reviewNote}>{review.hasData
-          ? "No aparecen estas dos señales en la selección; no certifica que todo esté revisado."
-          : "No hay apuntes activos en la selección para evaluar estas señales."}</p>}
-        <p className={styles.reviewNote}>Selección estadística actual, sin VOID. El detalle conserva los filtros globales y sustituye el estado de la tabla por el de la señal.</p>
+          ? "No hay ingresos o gastos sin categoría en la selección; no certifica que todo esté revisado."
+          : "No hay apuntes activos en la selección para revisar categorías."}</p>}
+        <p className={styles.reviewNote}>Las partes de un desglose cuentan por separado. El detalle conserva los filtros globales; VOID no se cuenta.</p>
       </Panel> : null}
 
       <Panel className={styles.chartPanel}>
@@ -119,7 +117,7 @@ export function OverviewPageView({
       </Panel>
 
       <details className={styles.details}>
-        <summary>Saldos, deuda y conciliación</summary>
+        <summary>Saldos y deuda</summary>
         <div className={styles.detailsBody}>
           <FinancialFactList items={[
             { id: "Apertura del periodo", label: "Apertura del periodo", value: formatEuroMinor(kpis.periodOpeningBalanceEurMinor) },
@@ -129,9 +127,6 @@ export function OverviewPageView({
             { id: "Flujo real", label: "Flujo real", value: formatEuroMinor(kpis.realCashFlowEurMinor) },
             { id: "Flujo de deuda", label: "Flujo de deuda", value: formatEuroMinor(kpis.debtFlowEurMinor) },
             { id: "Transferencias", label: "Transferencias", value: formatEuroMinor(kpis.transfersEurMinor) },
-            { id: "Reconciliados", label: "Reconciliados", value: countFormatter.format(status.RECONCILED.count) },
-            { id: "Sin conciliar", label: "Sin conciliar", value: <Badge tone="warning">{countFormatter.format(status.UNRECONCILED.count)}</Badge> },
-            { id: "Compensados", label: "Compensados", value: <Badge tone="info">{countFormatter.format(status.CLEARED.count)}</Badge> },
             { id: "Cuentas activas", label: "Cuentas activas", value: <Badge tone="cash">{countFormatter.format(accounts.length)}</Badge> },
           ]} />
         </div>

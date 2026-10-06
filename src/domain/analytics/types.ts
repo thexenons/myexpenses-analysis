@@ -259,7 +259,7 @@ export interface FilterState {
   readonly categoryMode?: "include" | "exclude";
   /** Empty means no category restriction; an empty selected path matches uncategorized rows. */
   readonly categoryPrefixes: readonly (readonly string[])[];
-  /** Empty means every status. VOID can remain visible in tables. */
+  /** Legacy compatibility field; ignored by filtering. Only VOID is excluded from active rows. */
   readonly statuses: readonly TransactionStatus[];
   /** Empty means every tag; otherwise a transaction matching any selected tag. */
   readonly tags: readonly string[];
@@ -281,7 +281,7 @@ export interface FilteredAnalyticsDataset {
   readonly source: AnalyticsDataset;
   readonly filters: FilterState;
   readonly accounts: readonly NormalizedAccount[];
-  /** Includes matching VOID rows for transaction tables. */
+  /** Matching raw provenance, including VOID; UI and exports use activePostings. */
   readonly postings: readonly NormalizedPosting[];
   /** Matching non-VOID rows, retained once for every metric consumer. */
   readonly activePostings: readonly NormalizedPosting[];

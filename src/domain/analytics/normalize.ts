@@ -178,7 +178,6 @@ function createSearchIndex(
       transaction.comment ?? "",
       transaction.payee ?? "",
       transaction.transferAccount ?? "",
-      transaction.sourceStatus,
       transaction.parent?.comment ?? "",
       transaction.parent?.payee ?? "",
       ...(transaction.parent?.tags ?? []),

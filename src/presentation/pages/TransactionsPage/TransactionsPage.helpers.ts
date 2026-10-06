@@ -26,7 +26,6 @@ export function createPostingsCsv(
     "categoria",
     "payee",
     "comentario",
-    "estado",
     "enlazada",
     "importe_eur",
     "uuid_hoja",
@@ -50,7 +49,6 @@ export function createPostingsCsv(
     "hora",
     "fecha_valor",
     "hora_valor",
-    "estado_myexpenses",
     "metodo_pago",
     "fila_sqlite",
     "contenido_archivado",
@@ -68,7 +66,7 @@ export function createPostingsCsv(
     "cuenta_destino",
     "contrapartida_id",
   ];
-  const lines = postings.map((posting) => {
+  const lines = postings.filter((posting) => !posting.isVoid).map((posting) => {
     const relation = dataset === undefined ? undefined : resolvePostingAccounts(posting, dataset);
     return [
       posting.date,
@@ -77,7 +75,6 @@ export function createPostingsCsv(
       posting.categoryPath.join(" > "),
       posting.payee ?? "",
       posting.comment ?? "",
-      posting.status,
       posting.linked ? "sí" : "no",
       posting.amountEurMinor / 100,
       posting.transactionId,
@@ -101,7 +98,6 @@ export function createPostingsCsv(
       posting.localTime ?? "",
       posting.valueDate ?? "",
       posting.valueTime ?? "",
-      posting.backupStatus ?? posting.status,
       posting.paymentMethod ?? "",
       posting.sourceRowId ?? "",
       posting.isArchivedContent === true ? "sí" : "no",

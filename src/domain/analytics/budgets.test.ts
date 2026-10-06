@@ -875,7 +875,7 @@ describe("budget analysis", () => {
     expect(result.analysis.filteredPostingCount).toBe(4);
   });
 
-  it("respects global category/status filters before intersecting the period", () => {
+  it("respects category filters and ignores legacy statuses before intersecting the period", () => {
     const analytics = analyticsFixture();
     const categoryFiltered = applyFilters(analytics, {
       ...createDefaultFilterState(),
@@ -901,9 +901,18 @@ describe("budget analysis", () => {
       analytics.backup!.budgets[0]!,
     );
     if (voidResult.status !== "ready") throw new Error(voidResult.reason);
-    expect(voidResult.analysis.global.consumedMinor).toBe(0);
-    expect(voidResult.analysis.filteredPostingCount).toBe(0);
-    expect(voidResult.analysis.contributions).toEqual([]);
+    const baseline = analyzeBudgetPeriod(analytics, applyFilters(analytics, createDefaultFilterState()), analytics.backup!.budgets[0]!);
+    expect(voidResult).toEqual(baseline);
+  });
+
+  it.each(["UNRECONCILED", "CLEARED", "RECONCILED", "VOID"] as const)("keeps budget comparison and pace unchanged with legacy %s metadata", (status) => {
+    const analytics = analyticsFixture();
+    const baseline = analyzeBudgetPeriod(analytics, applyFilters(analytics, createDefaultFilterState()), analytics.backup!.budgets[0]!);
+    const result = analyzeBudgetPeriod(analytics, applyFilters(analytics, { ...createDefaultFilterState(), statuses: [status] }), analytics.backup!.budgets[0]!);
+    expect(result).toEqual(baseline);
+    if (result.status !== "ready" || baseline.status !== "ready") throw new Error("Expected synthetic budget analysis");
+    expect(analyzeBudgetPace(result.analysis, "2026-08-04")).toEqual(analyzeBudgetPace(baseline.analysis, "2026-08-04"));
+    expect(result.analysis.contributions.some(({ posting: row }) => row.isVoid)).toBe(false);
   });
 
   it("applies the budget's persisted account AND category filter on top of global filters", () => {

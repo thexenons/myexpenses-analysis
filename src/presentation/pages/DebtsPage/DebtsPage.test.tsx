@@ -91,7 +91,7 @@ describe("DebtsPageView", () => {
     expect(screen.getByRole("article", { name: "Movimiento neto" })).toHaveTextContent(/20,00\s*€/);
 
     rerender(<OverviewPageView {...createOverviewPageModel(filtered, "month", false)} />);
-    await userEvent.setup().click(screen.getByText("Saldos, deuda y conciliación"));
+    await userEvent.setup().click(screen.getByText("Saldos y deuda"));
     expect(screen.getByText("Saldo en deudas").nextElementSibling).toHaveTextContent(/120,00\s*€/);
     expect(screen.getByText("Saldo al cierre del periodo").nextElementSibling).toHaveTextContent(/150,00\s*€/);
   });

@@ -3,7 +3,6 @@ import type {
   AccountBreakdownItem,
   CategoryBreakdownNode,
   KpiSummary,
-  StatusCounts,
 } from "../../../domain/analytics/types.ts";
 
 export interface OverviewCategoryRank {
@@ -15,7 +14,7 @@ export interface OverviewAmountRow {
   readonly label: string;
 }
 
-export type OverviewReviewId = "uncategorized" | "unreconciled";
+export type OverviewReviewId = "uncategorized";
 
 export interface OverviewReviewSignal {
   readonly id: OverviewReviewId;
@@ -39,7 +38,6 @@ export interface OverviewPageViewProps {
   readonly expenseComposition: readonly OverviewAmountRow[];
   readonly kpis: KpiSummary;
   readonly searchPending: boolean;
-  readonly status: StatusCounts;
   readonly topCategories: readonly OverviewCategoryRank[];
   readonly valuationBalanceEurMinor: number;
 }

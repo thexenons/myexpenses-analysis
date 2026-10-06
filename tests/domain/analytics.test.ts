@@ -432,7 +432,7 @@ test("DYNAMIC accounts use historical equivalents and the static account fallbac
   assert.equal(openingWithStaticRate.accounts[0]?.openingBalanceEurMinor, 1_250);
 });
 
-test("global filters compose scope, period, category, status, tags, search and linkage", () => {
+test("global filters compose scope, period, category, tags, search and linkage with inert legacy statuses", () => {
   const dataset = normalizeDataset(fixtureSource());
   const filtered = applyFilters(
     dataset,
@@ -470,10 +470,11 @@ test("global filters compose scope, period, category, status, tags, search and l
   );
 
   const voidOnly = applyFilters(dataset, withFilters({ statuses: ["VOID"] }));
-  assert.equal(voidOnly.postings.length, 1);
-  assert.equal(voidOnly.activePostings.length, 0);
-  assert.equal(aggregateKpis(voidOnly).postingCount, 0);
-  assert.equal(aggregateKpis(voidOnly).netEurMinor, 0);
+  const baseline = applyFilters(dataset, withFilters({}));
+  assert.deepEqual(voidOnly.postings, baseline.postings);
+  assert.deepEqual(voidOnly.activePostings, baseline.activePostings);
+  assert.deepEqual(aggregateKpis(voidOnly), aggregateKpis(baseline));
+  assert.ok(voidOnly.activePostings.every((posting) => !posting.isVoid));
 
   const multipleCategories = applyFilters(
     dataset,
@@ -913,6 +914,10 @@ async function readOptionalJson(relativePath: string): Promise<unknown | undefin
 }
 
 test("reference backup dataset reproduces the official MyExpenses figures", async (context) => {
+  if (process.env.MYEXPENSES_ALLOW_PRIVATE_GOLDEN !== "1") {
+    context.skip("Private reference test requires explicit MYEXPENSES_ALLOW_PRIVATE_GOLDEN=1 opt-in");
+    return;
+  }
   const source = await readOptionalJson("../../data/app-dataset.json");
   if (source === undefined) {
     context.skip("Import a local backup to run the private-data golden test");

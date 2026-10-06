@@ -30,13 +30,6 @@ const exchangeRateFormatter = new Intl.NumberFormat("es-ES", {
   maximumFractionDigits: 8,
 });
 
-const reconciliationStatusLabels = {
-  CLEARED: "Compensada",
-  RECONCILED: "Conciliada",
-  UNRECONCILED: "Sin conciliar",
-  VOID: "Anulada",
-} as const;
-
 export function formatExchangeRate(posting: NormalizedPosting): string {
   return posting.exchangeRateToEur === null
     ? "No disponible"
@@ -71,11 +64,4 @@ export function linkedAccountLabel(posting: NormalizedPosting): string {
   return posting.linked
     ? `Sí${posting.transferAccount ? ` · ${posting.transferAccount}` : ""}`
     : "No";
-}
-
-export function reconciliationStatusLabel(
-  posting: NormalizedPosting,
-): string {
-  const status = posting.backupStatus ?? posting.status;
-  return `${reconciliationStatusLabels[status]} (${status})`;
 }

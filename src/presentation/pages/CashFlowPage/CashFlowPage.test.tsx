@@ -103,11 +103,25 @@ describe("CashFlowPageView", () => {
     expect(screen.getByText(/Las fechas observadas no garantizan/)).toBeVisible();
   });
 
-  it("suppresses the trend when requested status filters are present even though chart metrics ignore status", async () => {
+  it.each(["UNRECONCILED", "CLEARED", "RECONCILED", "VOID"] as const)("keeps monthly savings available with legacy %s metadata", async (status) => {
+    const source = normalizeDataset({
+      accounts: { version: 2, accounts: { cash: { label: "Bank", type: "DEFAULT" } } },
+      categories: { Income: { categoryType: "INCOME" }, Expense: { categoryType: "EXPENSE" } },
+      parsedData: [{ uuid: "cash", label: "Bank", currency: "EUR", openingBalance: 0, transactions: [
+        { uuid: "start", date: "2024-02-01", amount: 100, category: ["Income"], sourceTransactionUuid: "start", sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+        { uuid: "end", date: "2024-02-29", amount: -20, category: ["Expense"], sourceTransactionUuid: "end", sourceStatus: "UNRECONCILED", splitIndex: null, splitCount: null },
+        { uuid: "void", date: "2024-02-15", amount: -500, category: ["Expense"], sourceTransactionUuid: "void", sourceStatus: "VOID", splitIndex: null, splitCount: null },
+      ] }],
+    });
+    const filtered = applyFilters(source, { ...createDefaultFilterState(), statuses: [status] });
     const user = userEvent.setup();
-    render(<CashFlowPageView {...createCashFlowPageModel(emptyTrendFiltered, "month", ["RECONCILED"])} />);
+    render(<CashFlowPageView {...createCashFlowPageModel(filtered, "month")} />);
     await user.click(screen.getByText("Tendencia mensual"));
-    expect(screen.getByText(/No disponible con filtros de cuentas o contenido/)).toBeVisible();
+    const table = screen.getByRole("table", { name: "Detalle mensual del ahorro contable" });
+    expect(within(table).getByText(/80\s*%/)).toBeVisible();
+    expect(within(table).getByText(/100,00\s*€/)).toBeVisible();
+    expect(within(table).getByText(/-20,00\s*€/)).toBeVisible();
+    expect(screen.queryByText(/No disponible con filtros/)).toBeNull();
   });
 
   it("switches between Real cash retention, Yo accounting savings and Debt ledger variation while open", async () => {

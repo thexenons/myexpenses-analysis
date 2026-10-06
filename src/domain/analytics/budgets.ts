@@ -947,7 +947,7 @@ export function analyzeBudgetPeriod(
     ? filters.dateRange.to : period.endDate;
   const hasNonDateSubsetFilters = filters.scope !== "all" || filters.accountIds.length > 0 ||
     (filters.originAccountIds?.length ?? 0) > 0 || (filters.destinationAccountIds?.length ?? 0) > 0 ||
-    filters.categoryPrefixes.length > 0 || filters.statuses.length > 0 || filters.tags.length > 0 ||
+    filters.categoryPrefixes.length > 0 || filters.tags.length > 0 ||
     filters.search !== "" || filters.linked !== "all" ||
     (filters.payeeKeys?.length ?? 0) > 0 || (filters.paymentMethodKeys?.length ?? 0) > 0 ||
     (filters.categoryTypes?.length ?? 0) > 0 || (filters.currencies?.length ?? 0) > 0 ||

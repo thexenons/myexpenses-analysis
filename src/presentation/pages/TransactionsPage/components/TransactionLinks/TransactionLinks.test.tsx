@@ -26,7 +26,19 @@ describe("TransactionLinks", () => {
     details.open = true;
     fireEvent(details, new Event("toggle"));
     expect(screen.getByText(/Pareja/)).toBeVisible();
+    expect(screen.queryByText(/RECONCILED|CLEARED|UNRECONCILED|Sin conciliar|Conciliada/)).not.toBeInTheDocument();
     expect(screen.getByText(/puede incluir movimientos fuera de los filtros/)).toBeVisible();
     expect(screen.getByText(`Parte de la misma operación · ${own.id}`)).toBeVisible();
   });
+});
+
+
+it("does not render VOID siblings retained in the source operation", () => {
+  const voidSibling = { ...own, id: "void-sibling", isVoid: true, status: "VOID" as const };
+  render(<TransactionLinks dataset={{ ...dataset, postings: [...dataset.postings, voidSibling] }} posting={advance} />);
+  const details = screen.getByText("Ver operación y contrapartida").closest("details")!;
+  details.open = true;
+  fireEvent(details, new Event("toggle"));
+  expect(screen.queryByText(/void-sibling/)).not.toBeInTheDocument();
+  expect(screen.getByText(`Parte de la misma operación · ${own.id}`)).toBeVisible();
 });

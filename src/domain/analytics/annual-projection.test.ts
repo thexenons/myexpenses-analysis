@@ -277,6 +277,17 @@ describe("annual savings projection", () => {
     expect(project(dataset(rows, selected), { ...filters, categoryPrefixes: [["Expense"]] })).toEqual({ status: "unavailable", reason: "filtered-scope" });
   });
 
+  it.each(["UNRECONCILED", "CLEARED", "RECONCILED", "VOID"] as const)("ignores legacy %s metadata for projection availability and figures", (status) => {
+    const source = dataset([
+      coverage("2026-01-01"), coverage("2026-01-31"),
+      income("salary", "2026-01-10", 1_000), posting("cost", "2026-01-11", -200),
+      posting("void", "2026-01-15", -50_000, { status: "VOID", isVoid: true }),
+    ]);
+    const baseline = project(source);
+    expect(baseline.status).toBe("ready");
+    expect(project(source, { ...createDefaultFilterState(), statuses: [status] })).toEqual(baseline);
+  });
+
   it("rejects incompatible budget currency and content-filtered comparisons", () => {
     const rows = [coverage("2026-01-01"), coverage("2026-01-31")];
     expect(project(dataset(rows, budget({ currency: "GBP" })))).toEqual({ status: "unavailable", reason: "incompatible-currency" });
