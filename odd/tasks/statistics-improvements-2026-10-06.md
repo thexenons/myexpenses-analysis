@@ -47,7 +47,7 @@ S05 -> S02 (clarification) -> S04 (transparency) -> S01 -> S06 -> S03 -> S07.
 - Final local proof: component RED observed, GREEN 23/23; focused three-viewport browser 3/3; updated desktop/mobile CI smoke 8/8; lint/all three TypeScript projects/diff check passed; synthetic deployment 1/1 exercises actual tsc/Vite production builds. Private-data build remains unavailable and is not claimed passed. Work-unit commit: `dad3662217924c53392e59ad2066928eda9d41d4`. Native review: approved and acknowledged. Delivery target: `origin/main`; production check remains pending.
 
 ### 2. S02 — Reinforce scenario interpretation
-- [ ] Distinguish the budget-compliance annual scenario from observed overspend and actual money remaining.
+- [x] Clarify budget-conditioned estimated contributions versus recorded flow and available cash; calculations unchanged.
 - Preserve existing scenario calculations and their documented assumptions.
 - Acceptance: the user can identify what is actual versus conditional without implying a spend-sensitive forecast.
 - Checks: relevant scenario domain/component/browser regressions; no silent arithmetic-policy changes.
@@ -143,3 +143,17 @@ S05 changes only the shared period selector, its focused tests and the added CI 
 - Checks: component RED 2 failed/23 passed, final GREEN 25/25; browser RED 3 failed/3 passed, final 6/6; broader smoke 10/10; lint/type-check/diff passed; synthetic deployment 1/1. Parent component spot check 25/25 and desktop/mobile screenshot inspection passed. Portable screenshot cleanup rechecked browser 6/6 and lint/diff.
 - Work-unit commit: `d48a277`; 229 authored changed lines. Native committed assessment: medium, `review_due=false`, `under_budget`; no native review was run or approval claimed.
 - Status: local correction verified; main push follows this passive evidence record. S02 remains deferred until user production acceptance.
+
+## S02 active work unit — 2026-10-06
+- User accepted S05 correction and authorized S02; main1250fb6 was previously pushed and verified, automated deployment proof is not claimed.
+- Branch: `feat/scenario-interpretation-2026-10-06`; branch point: `1250fb6b197dd9910938a005b3039113065e758e`.
+- Route: delegated direct; preparation and component/browser changes require bounded writer.
+- Scope: clarify estimated annual contributions before the chart: expected income minus full budget allocation, unaffected by observed spending in estimated months, not available cash. Preserve actual closed-month semantics and distinguish linear reference from full-budget overspend.
+- Allowed source/test surfaces: AnnualProjection/AnnualProjection.Content.tsx, AnnualProjection/AnnualProjection.test.tsx under src/presentation/pages/BudgetsPage/components; tests/browser/financial-explainability.spec.ts. No domain/math or broader design changes.
+- Forecast: approximately 60–130 authored lines.
+- Acceptance: prominent concise Spanish clarification before chart; existing detailed assumptions retained; synthetic component/browser checks prove wording and responsive usability without numeric changes.
+- Checks: component RED/GREEN, relevant budget/projection tests, three-viewport annual trajectory browser scenario, lint/type-check/synthetic deployment/diff and parent spot check.
+- Implementation verified: pre-chart conditional note for estimated months; all-actual years identify recorded net flow, not available cash. Existing subtitle/assumptions and all calculations preserved.
+- Evidence: component RED 2 failed/40 passed; final UI/domain 42/42; browser desktop/390/320 3/3 with no tested accessibility violations or overflow; lint/type-check/diff exit0; synthetic production deployment1/1. Parent reran42/42 and inspected narrow screenshot.
+- Source/test authored count:72 across three files. Commit/assessment/main push pending; production acceptance pending.
+- Rollback: revert S02 three-file presentation/test work unit, not domain calculations or S05.

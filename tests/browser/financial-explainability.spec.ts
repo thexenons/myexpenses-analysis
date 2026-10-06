@@ -2294,6 +2294,19 @@ test("shows an accessible annual savings trajectory on Plans at desktop and mobi
   const projection = page.getByRole("region", { name: "Proyección anual de ahorro" });
   await expect(projection.getByRole("img", { name: "Ahorro acumulado en 2026" })).toBeVisible();
   await expect(projection.getByText(/Diciembre:/)).toBeVisible();
+  const interpretation = projection.locator("p").filter({ hasText: "Escenario condicionado al presupuesto" });
+  await expect(interpretation).toBeVisible();
+  await expect(interpretation).toContainText("ingresos previstos menos la asignación mensual completa");
+  await expect(interpretation).toContainText("El gasto observado en esos meses no modifica el aporte");
+  await expect(interpretation).toContainText("Los meses cerrados y cubiertos usan el flujo real registrado");
+  await expect(interpretation).toContainText("no es saldo actual ni dinero disponible");
+  const noteBounds = await interpretation.boundingBox();
+  const chartBounds = await projection.getByRole("img", { name: "Ahorro acumulado en 2026" }).boundingBox();
+  expect(noteBounds!.y + noteBounds!.height).toBeLessThanOrEqual(chartBounds!.y);
+  await projection.screenshot({
+    path: testInfo.outputPath("annual-projection-interpretation.png"), animations: "disabled",
+    style: '[aria-label="Filtros globales"] { visibility: hidden; }',
+  });
   await expect(projection.getByText(/Presupuesto anual:/)).toContainText("12 meses naturales");
   await projection.locator("summary").filter({ hasText: "Desglose mensual" }).press("Enter");
   const table = projection.getByRole("table", { name: "Aportes y acumulado por mes" });
@@ -2325,7 +2338,10 @@ test("shows an accessible annual savings trajectory on Plans at desktop and mobi
     return (await axe.run(element, { runOnly: { type: "rule", values: ["color-contrast", "scrollable-region-focusable", "button-name"] } })).violations.map(({ id }) => id);
   });
   expect(violations).toEqual([]);
-  await projection.screenshot({ path: `/tmp/myexpenses-annual-projection-${testInfo.project.name}.png`, animations: "disabled" });
+  await projection.screenshot({
+    path: testInfo.outputPath("annual-projection-details.png"), animations: "disabled",
+    style: '[aria-label="Filtros globales"] { visibility: hidden; }',
+  });
 });
 
 test("keeps keyboard focus on adjacent filter removals and stable fallbacks", async ({ page }) => {

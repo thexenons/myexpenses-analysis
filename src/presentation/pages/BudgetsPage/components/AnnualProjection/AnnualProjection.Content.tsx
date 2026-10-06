@@ -29,6 +29,19 @@ export function AnnualProjectionContent({ result }: { result: ReadyProjection })
     <div className={styles.content}>
       <p className={styles.total}>Diciembre: <strong>{formatEuroMinor(december!.cumulativeEurMinor)}</strong></p>
       <p className={styles.subtitle}>Ahorro o déficit neto acumulado desde enero; no es saldo inicial ni patrimonio.</p>
+      <p className={styles.subtitle}>
+        {allActual ? (
+          "Flujo neto real acumulado desde enero; no es saldo actual ni dinero disponible."
+        ) : (
+          <>
+            <strong>Escenario condicionado al presupuesto.</strong>{" "}
+            En los meses estimados: ingresos previstos menos la asignación mensual completa.
+            El gasto observado en esos meses no modifica el aporte.
+            Los meses cerrados y cubiertos usan el flujo real registrado.
+            El acumulado no es saldo actual ni dinero disponible.
+          </>
+        )}
+      </p>
       <LineChart
         description={allActual
           ? "Doce cierres mensuales de flujo real acumulado. Consulta la tabla de datos exactos y el desglose mensual."

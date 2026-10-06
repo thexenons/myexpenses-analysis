@@ -35,6 +35,10 @@ describe("AnnualProjection", () => {
     render(<AnnualProjection error={null} result={projection} />);
     const panel = screen.getByRole("region", { name: "Proyección anual de ahorro" });
     expect(panel).toHaveTextContent("Diciembre: 0,00");
+    expect(panel).toHaveTextContent("Flujo neto real acumulado desde enero");
+    expect(panel).toHaveTextContent("no es saldo actual ni dinero disponible");
+    expect(panel).not.toHaveTextContent("Escenario condicionado al presupuesto");
+    expect(panel).not.toHaveTextContent("El gasto observado en esos meses no modifica el aporte");
     expect(panel).toHaveTextContent("12 meses completos");
     expect(panel).toHaveTextContent("12 meses naturales");
     expect(panel).toHaveTextContent("flujo real y los ingresos son globales");
@@ -42,5 +46,42 @@ describe("AnnualProjection", () => {
     expect(panel).toHaveTextContent("asignación completa del presupuesto seleccionado");
     expect(panel).toHaveTextContent("céntimos restantes");
     expect(within(panel).getByRole("img", { name: "Ahorro acumulado en 2026" })).toBeVisible();
+  });
+  it("explains estimated contributions before the chart without changing the exact amounts", () => {
+    const points = Array.from({ length: 12 }, (_, index) => ({
+      key: `2026-${String(index + 1).padStart(2, "0")}`, month: index + 1,
+      startDate: `2026-${String(index + 1).padStart(2, "0")}-01` as IsoDate,
+      endDate: `2026-${String(index + 1).padStart(2, "0")}-28` as IsoDate,
+      kind: index === 0 ? "actual" as const : "estimated" as const,
+      incomeMinor: 1_000, observedIncomeEurMinor: index === 0 ? 1_000 : 0,
+      budgetMinor: 600, monthlyContributionEurMinor: index === 0 ? 200 : 400,
+      cumulativeEurMinor: 200 + index * 400,
+    }));
+    const projection = {
+      status: "ready", year: 2026, currency: "EUR", fractionDigits: 2,
+      dateScope: "full-budget-calendar-year", dateBasis: "operation",
+      coverage: { from: "2026-01-01", to: "2026-01-31" },
+      income: { basis: "same-year-complete-month-mean", completeMonthCount: 1,
+        completeMonthKeys: ["2026-01"], totalMinor: 1_000, expectedMonthlyMinor: 1_000 },
+      budget: { grouping: "MONTH", distribution: "per-calendar-month-label", annualBudgetMinor: 7_200 },
+      points,
+    } satisfies AnnualProjectionResult;
+    render(<AnnualProjection error={null} result={projection} />);
+    const panel = screen.getByRole("region", { name: "Proyección anual de ahorro" });
+    const note = within(panel).getByText("Escenario condicionado al presupuesto.").closest("p")!;
+    expect(note).toBeVisible();
+    expect(note).toHaveTextContent("ingresos previstos menos la asignación mensual completa");
+    expect(note).toHaveTextContent("El gasto observado en esos meses no modifica el aporte");
+    expect(note).toHaveTextContent("Los meses cerrados y cubiertos usan el flujo real registrado");
+    expect(note).toHaveTextContent("no es saldo actual ni dinero disponible");
+    const chart = within(panel).getByRole("img", { name: "Ahorro acumulado en 2026" });
+    expect(note.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(panel).toHaveTextContent("Diciembre: 46,00");
+    expect(panel).toHaveTextContent("10,00 € al mes");
+    const table = within(panel).getByRole("table", { name: "Aportes y acumulado por mes", hidden: true });
+    const rows = table.querySelectorAll("tbody tr");
+    expect(rows[0]).toHaveTextContent("2026-01Real2,00 €2,00 €");
+    expect(rows[1]).toHaveTextContent("2026-02Estimado4,00 €6,00 €");
+    expect(rows[11]).toHaveTextContent("2026-12Estimado4,00 €46,00 €");
   });
 });
