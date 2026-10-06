@@ -14,6 +14,9 @@
   .highlightValues > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto); gap: 0.45rem; align-items: baseline; }
   .highlightValues dt { color: var(--muted); font-size: 0.72rem; }
   .highlightValues dd { min-width: 0; margin: 0; font-family: var(--mono); font-size: 0.78rem; font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+  .categoryActions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.7rem; }
+  .categoryDetail .highlightTitle { overflow-wrap: anywhere; }
+  .categoryActions button { min-height: 2.75rem; max-width: 100%; }
   .allStatistics { min-width: 0; border-top: 1px solid var(--line); }
   .curveDisclosure { min-width: 0; border-top: 1px solid var(--line); }
   .curveSummary { display: list-item; min-height: 2.75rem; padding-block: 0.7rem; color: var(--ink-soft); font-size: 0.8rem; font-weight: 700; cursor: pointer; }

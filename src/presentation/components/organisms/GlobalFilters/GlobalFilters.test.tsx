@@ -1,7 +1,10 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { applyFilters, createDefaultFilterState } from "../../../../domain/analytics/filters.ts"
+import * as filteredHooks from "../../../hooks/filtered-analytics/filtered-analytics.hooks.ts"
+import type { PeriodComparisonProps } from "../PeriodComparison/PeriodComparison.types.ts"
 import { appStore } from "../../../../composition/app-store.ts"
 import { normalizeDataset } from "../../../../domain/analytics/normalize.ts"
 import { AppStoreProvider } from "../../../providers/AppStoreProvider/index.ts"
@@ -13,6 +16,8 @@ function resetAppStore() {
   window.localStorage.clear()
   appStore.setState(appStore.getInitialState(), true)
 }
+
+afterEach(() => vi.restoreAllMocks())
 
 describe("GlobalFilters", () => {
   beforeEach(resetAppStore)
@@ -295,4 +300,25 @@ it.each([
   } finally {
     unsubscribe()
   }
+})
+
+
+it("forwards pending search to category evidence instead of applying a stale cut", async () => {
+  resetAppStore()
+  const analytics = normalizeDataset({ accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } }, categories: { Home: { categoryType: "EXPENSE" } }, parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+    { uuid: "current", sourceTransactionUuid: "current", date: "2025-03-02", amount: -3, category: ["Home"], sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+  ] }] })
+  const filters = { ...createDefaultFilterState(), periodMode: "month" as const, dateRange: { from: "2025-03-01" as const, to: "2025-03-31" as const } }
+  appStore.setState({ analytics, filters })
+  vi.spyOn(filteredHooks, "useFilteredAnalytics").mockReturnValue({ analytics, filters, filtered: applyFilters(analytics, filters), granularity: "month", granularitySetting: "month", searchPending: true })
+  const onViewCategory = vi.fn<NonNullable<PeriodComparisonProps["onViewCategory"]>>()
+  const user = userEvent.setup()
+  render(<AppStoreProvider store={appStore}><GlobalFilters onViewCategory={onViewCategory} /></AppStoreProvider>)
+  await user.click(screen.getByText("Comparar periodos"))
+  await user.selectOptions(screen.getByLabelText("Comparar con"), "previousPeriod")
+  await user.click(screen.getByText("Contribuciones por categoría", { selector: "summary" }))
+  const action = screen.getByRole("button", { name: "Ver apuntes actuales de Home" })
+  expect(action).toBeDisabled()
+  await user.click(action)
+  expect(onViewCategory).not.toHaveBeenCalled()
 })

@@ -1,9 +1,11 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { applyFilters, createDefaultFilterState } from "../../../../domain/analytics/filters.ts";
 import { normalizeDataset } from "../../../../domain/analytics/normalize.ts";
+import * as aggregations from "../../../../domain/analytics/aggregations.ts";
+import type { PeriodComparisonProps } from "./PeriodComparison.types.ts";
 import { PeriodComparison } from "./PeriodComparison.tsx";
 
 function fixture() {
@@ -16,6 +18,8 @@ function fixture() {
   });
   return applyFilters(source, { ...createDefaultFilterState(), periodMode: "month", dateRange: { from: "2025-03-01", to: "2025-03-31" } });
 }
+
+afterEach(() => vi.restoreAllMocks());
 
 describe("PeriodComparison", () => {
   it("lets the user compare without hiding dates or inventing percentages from a zero base", async () => {
@@ -127,4 +131,46 @@ describe("PeriodComparison", () => {
     const endpoint = within(table).getByRole("row", { name: /Día 31/ });
     expect(within(endpoint).getAllByRole("cell")[0]).toHaveTextContent("0,00");
   });
+});
+
+
+it("loads category contributions only on expansion and offers evidence for both periods", async () => {
+  const user = userEvent.setup();
+  const onViewCategory = vi.fn<NonNullable<PeriodComparisonProps["onViewCategory"]>>();
+  const aggregate = vi.spyOn(aggregations, "aggregateCategoryBreakdown");
+  const filtered = fixture();
+  const view = render(<PeriodComparison filtered={filtered} onViewCategory={onViewCategory} />);
+  await user.click(screen.getByText("Comparar periodos"));
+  await user.selectOptions(screen.getByLabelText("Comparar con"), "previousPeriod");
+  expect(aggregate).not.toHaveBeenCalled();
+  const summary = screen.getByText("Contribuciones por categoría", { selector: "summary" });
+  expect(summary.closest("details")).not.toHaveAttribute("open");
+  expect(screen.queryByRole("region", { name: "Contribuciones por categoría" })).toBeNull();
+  await user.click(summary);
+  const detail = screen.getByRole("region", { name: "Contribuciones por categoría" });
+  expect(aggregate).toHaveBeenCalledTimes(2);
+  expect(within(detail).getByText("Sin apuntes")).toBeVisible();
+  expect(detail).toHaveTextContent(/cambia el periodo global y recalcula/);
+  await user.click(within(detail).getByRole("button", { name: "Ver apuntes actuales de Hogar" }));
+  expect(onViewCategory).toHaveBeenCalledWith(expect.objectContaining({ dateRange: filtered.filters.dateRange, categoryPrefixes: [["Hogar"]] }));
+  expect(within(detail).getByRole("button", { name: "Ver apuntes de referencia de Hogar" })).toBeDisabled();
+  view.rerender(<PeriodComparison filtered={filtered} searchPending onViewCategory={onViewCategory} />);
+  expect(within(detail).getByRole("button", { name: "Ver apuntes actuales de Hogar" })).toBeDisabled();
+  await user.click(summary);
+  aggregate.mockClear();
+  view.rerender(<PeriodComparison filtered={{ ...filtered }} onViewCategory={onViewCategory} />);
+  expect(aggregate).not.toHaveBeenCalled();
+  aggregate.mockRestore();
+});
+
+it.each([{ categoryMode: "exclude" as const }, { categoryMatch: "either" as const }])("explains unrepresentable category intersections for both periods: %j", async (selection) => {
+  const user = userEvent.setup();
+  const filtered = fixture();
+  render(<PeriodComparison filtered={{ ...filtered, filters: { ...filtered.filters, categoryPrefixes: [["Hogar"]], ...selection } }} onViewCategory={vi.fn<NonNullable<PeriodComparisonProps["onViewCategory"]>>()} />);
+  await user.click(screen.getByText("Comparar periodos"));
+  await user.selectOptions(screen.getByLabelText("Comparar con"), "previousPeriod");
+  await user.click(screen.getByText("Contribuciones por categoría", { selector: "summary" }));
+  const detail = screen.getByRole("region", { name: "Contribuciones por categoría" });
+  expect(within(detail).getByText(/sin ampliar la selección/)).toBeVisible();
+  expect(within(detail).getAllByRole("button").every((button) => button.hasAttribute("disabled"))).toBe(true);
 });

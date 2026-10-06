@@ -113,7 +113,7 @@ describe("perspective category comparison", () => {
     expect(categories.map((node) => node.id)).toEqual(expect.arrayContaining(["[]", '["Sin categoría"]']));
   });
 
-  it("preserves account, period, search, status, and exact/subtree category filters", () => {
+  it("preserves account, period, search and category filters with inert legacy statuses", () => {
     const filters: Partial<FilterState> = {
       accountIds: ["cash"],
       dateRange: { from: "2026-01-01", to: "2026-01-03" },
@@ -134,7 +134,7 @@ describe("perspective category comparison", () => {
     // Search also matches the category path, so both the expense and its refund remain.
     expect(findCategory(searched, ["Gastos"])?.amounts.all.netEurMinor).toBe(-300);
     expect(findCategory(searched, ["Gastos"])?.amounts.debtsOnly.netEurMinor).toBe(0);
-    expect(modelFor({ statuses: ["VOID"] }).categories).toEqual([]);
+    expect(modelFor({ statuses: ["VOID"] }).categories).toEqual(modelFor().categories);
   });
 
   it("shows every depth with non-selectable names and switches all four signed metrics locally", async () => {

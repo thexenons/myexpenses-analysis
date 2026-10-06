@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import * as comparisonModule from "../../src/domain/analytics/comparison.ts";
 import { buildPeriodComparison, comparisonCurrentRange, type PeriodComparisonMetric } from "../../src/domain/analytics/comparison.ts";
 import { buildCumulativeComparison } from "../../src/domain/analytics/comparison-cumulative.ts";
 import { applyFilters, createDefaultFilterState } from "../../src/domain/analytics/filters.ts";
@@ -110,8 +111,9 @@ test("compares sent money, attributed expenses and full closing balances for the
   });
   const source = { ...initial, postings: initial.postings.map((row) => Object.assign({}, row, { linked: true, transferPeerPostingId: initial.postings.find((candidate) => candidate.transactionId === row.transactionId && candidate.accountId !== row.accountId)!.id })) };
   const filtered = applyFilters(source, { ...createDefaultFilterState(), scope: "debtsOnly", accountIds: ["debt"], periodMode: "month", dateRange: { from: "2025-03-01", to: "2025-03-31" } });
-  const result = buildPeriodComparison(filtered, { mode: "previousPeriod" });
+  const result = buildPeriodComparison(filtered, { mode: "previousPeriod", includeCategories: true });
   assert.ok(result);
+  assert.equal(result.categoryContributions!.reduce((sum, row) => sum + row.deltaEurMinor, 0), result.metrics.find((row) => row.key === "expenses")!.deltaEurMinor);
   for (const key of ["debtSent", "debtNetExpense"]) {
     const metric: PeriodComparisonMetric = result.metrics.find((row) => row.key === key)!;
     assert.equal(metric.currentEurMinor, 500);
@@ -203,8 +205,9 @@ test("cumulative endpoints equal comparison metrics across all account scopes an
       ...createDefaultFilterState(), scope, dateBasis: "value", periodMode: "custom",
       dateRange: { from: "2025-03-01", to: "2025-03-04" }, categoryPrefixes: [["Hogar"]],
     });
-    const comparison = buildPeriodComparison(filtered, { mode: "custom", dateRange: { from: "2025-02-01", to: "2025-02-04" } });
+    const comparison = buildPeriodComparison(filtered, { mode: "custom", includeCategories: true, dateRange: { from: "2025-02-01", to: "2025-02-04" } });
     assert.ok(comparison);
+    assert.equal(comparison.categoryContributions!.reduce((sum, row) => sum + row.deltaEurMinor, 0), comparison.metrics.find((row) => row.key === "expenses")!.deltaEurMinor, scope);
     for (const key of ["expenses", "income", "net"] as const) {
       const curve = buildCumulativeComparison(filtered, comparison, key);
       const metric: PeriodComparisonMetric = comparison.metrics.find((row) => row.key === key)!;
@@ -237,4 +240,59 @@ test("cumulative comparison uses already converted EUR postings under currency a
   assert.equal(curve?.current.at(-1)?.eurMinor, 500);
   assert.equal(curve?.reference.at(-1)?.eurMinor, 400);
   assert.equal(curve?.current.at(-1)?.eurMinor, comparison.metrics.find((item) => item.key === "expenses")?.currentEurMinor);
+});
+
+
+test("root category contributions reconcile selected expense changes without counting descendants twice", () => {
+  const initial = fixture({ categoryPrefixes: [] });
+  const base = initial.source.postings[0]!;
+  const source = { ...initial.source, postings: [
+    ...initial.source.postings,
+    { ...base, id: "child", date: "2025-03-03" as IsoDate, categoryPath: ["Hogar", "Child"], amountEurMinor: -500 },
+    { ...base, id: "refund", date: "2025-03-04" as IsoDate, amountEurMinor: 500 },
+    { ...base, id: "uncategorized", date: "2025-03-05" as IsoDate, categoryPath: [], amountEurMinor: -100 },
+    { ...base, id: "equal", date: "2025-03-05" as IsoDate, categoryPath: ["Equal"], amountEurMinor: -100 },
+    { ...base, id: "zero-cost", date: "2025-03-06" as IsoDate, categoryPath: ["Zero"], amountEurMinor: -200 },
+    { ...base, id: "zero-refund", date: "2025-03-07" as IsoDate, categoryPath: ["Zero"], amountEurMinor: 200 },
+    { ...base, id: "void", date: "2025-03-08" as IsoDate, categoryPath: ["VOID only"], amountEurMinor: -90_000, isVoid: true },
+  ] };
+  const filtered = applyFilters(source, initial.filters);
+  const comparison = buildPeriodComparison(filtered, { mode: "previousPeriod", includeCategories: true })!;
+  const rows = comparison.categoryContributions!;
+  assert.ok(Array.isArray(rows));
+  assert.equal(rows.reduce((sum, row) => sum + row.deltaEurMinor, 0), comparison.metrics.find((metric) => metric.key === "expenses")!.deltaEurMinor);
+  assert.deepEqual(rows.map(({ id }) => id), ['["Ocio"]', '["Hogar"]', '["Equal"]', '[]', '["Zero"]']);
+  assert.deepEqual(rows.find(({ id }) => id === '["Hogar"]'), { id: '["Hogar"]', name: "Hogar", path: ["Hogar"], currentEurMinor: 3000, referenceEurMinor: 2000, deltaEurMinor: 1000, currentPostingCount: 3, referencePostingCount: 1 });
+  assert.equal(rows.find(({ id }) => id === '["Ocio"]')?.currentPostingCount, 0);
+  assert.equal(rows.find(({ id }) => id === '["Zero"]')?.currentEurMinor, 0);
+  assert.equal(rows.find(({ id }) => id === '["Zero"]')?.currentPostingCount, 2);
+  const none = applyFilters(source, { ...filtered.filters, search: "no matching synthetic text" });
+  assert.deepEqual(buildPeriodComparison(none, { mode: "previousPeriod", includeCategories: true })?.categoryContributions, []);
+  assert.equal(buildPeriodComparison(filtered, { mode: "previousPeriod" })?.categoryContributions, undefined);
+});
+
+test("category evidence intersects include posting predicates and preserves every other filter", () => {
+  assert.equal(typeof comparisonModule.categoryComparisonFilters, "function");
+  const initial = fixture({ dateBasis: "value", accountIds: ["cash"], search: "Hogar", commentSearch: "", currencies: ["EUR"], maxAmountEurMinor: 10_000 });
+  const range = { from: "2025-02-01", to: "2025-02-28" } as const;
+  const base = initial.source.postings.find((row) => row.transactionId === "previous")!;
+  const source = { ...initial.source, postings: [...initial.source.postings,
+    { ...base, id: "child", categoryPath: ["Hogar", "Child"] },
+    { ...base, id: "grandchild", categoryPath: ["Hogar", "Child", "Grandchild"] },
+    { ...base, id: "outside-value-date", categoryPath: ["Hogar", "Child"], valueDate: "2025-03-02" as IsoDate },
+  ] };
+  for (const categoryDepth of ["exact", "subtree"] as const) {
+    const filters = { ...initial.filters, categoryDepth, categoryPrefixes: [["Hogar", "Child"], ["Ocio"]] };
+    const next = comparisonModule.categoryComparisonFilters(filters, ["Hogar"], range)!;
+    assert.deepEqual(next, { ...filters, periodMode: "custom", dateRange: range, categoryPrefixes: [["Hogar", "Child"]], categoryDepth, categoryMode: "include", categoryMatch: "posting" });
+    const expected = applyFilters(source, { ...filters, dateRange: range }).activePostings.filter((row) => row.categoryPath[0] === "Hogar");
+    assert.deepEqual(expected.map(({ id }) => id), categoryDepth === "exact" ? ["child"] : ["child", "grandchild"]);
+    assert.deepEqual(applyFilters(source, next).activePostings.map(({ id }) => id), expected.map(({ id }) => id));
+  }
+  const noCategory = { ...initial.filters, categoryPrefixes: [] };
+  assert.deepEqual(comparisonModule.categoryComparisonFilters(noCategory, [], range)?.categoryPrefixes, [[]]);
+  for (const selection of [{ categoryMode: "exclude" as const }, { categoryMatch: "either" as const }]) {
+    assert.equal(comparisonModule.categoryComparisonFilters({ ...initial.filters, ...selection }, ["Hogar"], range), null);
+  }
+  assert.equal(comparisonModule.categoryComparisonFilters(initial.filters, ["Ocio"], range), null);
 });

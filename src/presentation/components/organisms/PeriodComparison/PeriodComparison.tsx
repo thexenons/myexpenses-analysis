@@ -2,11 +2,13 @@ import { useMemo, useState } from "react";
 
 import {
   buildPeriodComparison,
+  categoryComparisonFilters,
   type ComparisonMode,
   type PeriodComparisonMetric,
 } from "../../../../domain/analytics/comparison.ts";
 import type { IsoDate } from "../../../../domain/analytics/types.ts";
 import { formatDate, formatEuroMinor } from "../../../utils/format.ts";
+import { Button } from "../../atoms/Button/index.ts";
 import { DataTable } from "../DataTable/index.ts";
 import type { DataTableColumn } from "../DataTable/index.ts";
 import { CumulativeCurve } from "./PeriodComparison.curve.tsx";
@@ -25,22 +27,24 @@ const columns: readonly DataTableColumn<PeriodComparisonMetric>[] = [
   { key: "percent", header: "Variación", cell: (metric) => formatVariation(metric.deltaPercent), align: "end" },
 ];
 
-export function PeriodComparison({ filtered }: PeriodComparisonProps) {
+export function PeriodComparison({ filtered, searchPending = false, onViewCategory }: PeriodComparisonProps) {
   const [outerOpen, setOuterOpen] = useState(false);
   const [mode, setMode] = useState<ComparisonMode>("none");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [curveOpen, setCurveOpen] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const invalidRange = mode === "custom" && from !== "" && to !== "" && from > to;
   const comparison = useMemo(() => {
     if (invalidRange) return null;
     return buildPeriodComparison(filtered, {
       mode,
+      includeCategories: outerOpen && categoriesOpen,
       ...(mode === "custom" && from !== "" && to !== ""
         ? { dateRange: { from: from as IsoDate, to: to as IsoDate } }
         : {}),
     });
-  }, [filtered, from, invalidRange, mode, to]);
+  }, [categoriesOpen, filtered, from, invalidRange, mode, outerOpen, to]);
   const highlighted = comparison === null ? [] : highlightedKeys.flatMap((key) => {
     const metric = comparison.metrics.find((candidate) => candidate.key === key);
     return metric === undefined ? [] : [metric];
@@ -96,6 +100,37 @@ export function PeriodComparison({ filtered }: PeriodComparisonProps) {
             ))}
           </ul>
         </section>
+        <details className={styles.curveDisclosure} onToggle={(event) => setCategoriesOpen(event.currentTarget.open)} open={categoriesOpen}>
+          <summary className={styles.curveSummary}>Contribuciones por categoría</summary>
+          {outerOpen && categoriesOpen ? <section aria-label="Contribuciones por categoría" className={`${styles.curveContent} ${styles.categoryDetail}`}>
+            <p className={styles.description}>Desglose del gasto neto seleccionado por categoría principal, incluidas devoluciones y contrapartidas. Ver apuntes cambia el periodo global y recalcula la comparación.</p>
+            {filtered.filters.categoryPrefixes.length > 0 && (filtered.filters.categoryMode === "exclude" || filtered.filters.categoryMatch === "either")
+              ? <p className={styles.description}>La combinación actual de categorías no permite abrir este detalle sin ampliar la selección.</p> : null}
+            <ul className={styles.highlights}>
+              {comparison.categoryContributions?.map((row) => {
+                const label = row.path.length === 0 ? "Sin categoría (sin asignar)" : row.name;
+                const current = categoryComparisonFilters(filtered.filters, row.path, comparison.currentRange);
+                const reference = categoryComparisonFilters(filtered.filters, row.path, comparison.referenceRange);
+                return <li key={row.id} className={styles.highlight}>
+                  <h3 className={styles.highlightTitle}>{label}</h3>
+                  <dl className={styles.highlightValues}>
+                    <div><dt>Actual</dt><dd>{row.currentPostingCount === 0 ? "Sin apuntes" : formatEuroMinor(row.currentEurMinor)}</dd></div>
+                    <div><dt>Referencia</dt><dd>{row.referencePostingCount === 0 ? "Sin apuntes" : formatEuroMinor(row.referenceEurMinor)}</dd></div>
+                    <div><dt>Diferencia</dt><dd>{formatDelta(row.deltaEurMinor)}</dd></div>
+                  </dl>
+                  <div className={styles.categoryActions}>
+                    <Button aria-label={`Ver apuntes actuales de ${label}`} disabled={searchPending || !onViewCategory || current === null || row.currentPostingCount === 0}
+                      onClick={() => { if (!searchPending && current !== null) onViewCategory?.(current); }}>Ver actual</Button>
+                    <Button aria-label={`Ver apuntes de referencia de ${label}`} disabled={searchPending || !onViewCategory || reference === null || row.referencePostingCount === 0}
+                      onClick={() => { if (!searchPending && reference !== null) onViewCategory?.(reference); }}>Ver referencia</Button>
+                  </div>
+                </li>;
+              })}
+            </ul>
+            {comparison.categoryContributions?.length === 0 ? <p className={styles.description}>No hay apuntes en ninguno de los dos periodos con estos filtros.</p> : null}
+            <p className={styles.description}>Diferencia total: {formatDelta(comparison.metrics.find((metric) => metric.key === "expenses")!.deltaEurMinor)}. Sin apuntes no significa que el historial esté completo.</p>
+          </section> : null}
+        </details>
         <details className={styles.curveDisclosure} onToggle={(event) => setCurveOpen(event.currentTarget.open)} open={curveOpen}>
           <summary className={styles.curveSummary}>Actividad registrada acumulada</summary>
           {outerOpen && curveOpen ? <CumulativeCurve comparison={comparison} filtered={filtered} /> : null}
@@ -110,7 +145,7 @@ export function PeriodComparison({ filtered }: PeriodComparisonProps) {
             </p>
             <p className={styles.description}>
               Las estadísticas de deuda usan las cuentas de deuda incluidas en el ámbito y la selección.
-              {" "}El saldo final completo se mide al final de cada rango y conserva todo el historial de esas cuentas, aunque filtres categorías, origen, destino, estados, etiquetas o búsqueda.
+              {" "}El saldo final completo se mide al final de cada rango y conserva todo el historial de esas cuentas, aunque filtres categorías, origen, destino, etiquetas o búsqueda.
               {" "}Las contrapartidas muestran ajustes contables de transferencias verificadas; no son devoluciones cobradas.
             </p>
           </div>

@@ -5,6 +5,9 @@ import {
 import { act, render, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import userEvent from "@testing-library/user-event"
+import { normalizeDataset } from "../../../../domain/analytics/normalize.ts"
+import { createDefaultFilterState } from "../../../../domain/analytics/filters.ts"
 import { appStore } from "../../../../composition/app-store.ts"
 import { AppStoreProvider } from "../../../providers/AppStoreProvider/index.ts"
 import { createAppRouter } from "../../../router/app-router.ts"
@@ -153,4 +156,27 @@ describe("AppShell", () => {
     expect(appStore.getState().loadPhase).toBe("locked")
     unmount()
   })
+})
+
+
+it.each(["actuales", "de referencia"])("navigates category evidence for %s retaining the financial cut and granularity", async (period) => {
+  resetAppStore()
+  const source = normalizeDataset({ accounts: { version: 2, accounts: { cash: { label: "Cash", type: "DEFAULT" } } }, categories: { Home: { categoryType: "EXPENSE" } }, parsedData: [{ uuid: "cash", label: "Cash", currency: "EUR", openingBalance: 0, transactions: [
+    { uuid: "current", sourceTransactionUuid: "current", date: "2025-03-02", amount: -3, category: ["Home"], comment: "keep", sourceStatus: "CLEARED", splitIndex: null, splitCount: null },
+    { uuid: "reference", sourceTransactionUuid: "reference", date: "2025-02-02", amount: -2, category: ["Home"], comment: "keep", sourceStatus: "UNRECONCILED", splitIndex: null, splitCount: null },
+  ] }] })
+  const filters = { ...createDefaultFilterState(), accountIds: ["cash"], commentSearch: "keep", dateBasis: "value" as const, periodMode: "month" as const, dateRange: { from: "2025-03-01" as const, to: "2025-03-31" as const } }
+  appStore.setState({ analytics: source, filters, granularity: "week" })
+  const router = createAppRouter({ history: createMemoryHistory({ initialEntries: ["/resumen"] }) })
+  const navigate = vi.spyOn(router, "navigate").mockResolvedValue()
+  const user = userEvent.setup()
+  render(<RouterContextProvider router={router}><AppStoreProvider store={appStore}><AppShell><h1>Test</h1></AppShell></AppStoreProvider></RouterContextProvider>)
+  await user.click(screen.getByText("Comparar periodos"))
+  await user.selectOptions(screen.getByLabelText("Comparar con"), "previousPeriod")
+  await user.click(screen.getByText("Contribuciones por categoría", { selector: "summary" }))
+  await user.click(screen.getByRole("button", { name: `Ver apuntes ${period} de Home` }))
+  expect(navigate).toHaveBeenCalledWith({ to: "/transacciones", search: { page: 1, sort: "date", direction: "desc" } })
+  expect(appStore.getState().filters).toMatchObject({ ...filters, periodMode: "custom", categoryPrefixes: [["Home"]], dateRange: period === "actuales" ? filters.dateRange : { from: "2025-02-01", to: "2025-02-28" } })
+  expect(appStore.getState().granularity).toBe("week")
+  navigate.mockRestore()
 })

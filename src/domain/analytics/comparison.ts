@@ -1,9 +1,9 @@
-import { aggregateDebtBreakdown, aggregateKpis } from "./aggregations.ts";
+import { aggregateCategoryBreakdown, aggregateDebtBreakdown, aggregateKpis } from "./aggregations.ts";
 import { datasetDateBounds } from "./date-bounds.ts";
 import { applyFilters } from "./filters.ts";
 import { addIsoDays, monthPeriodForDate } from "./periods.ts";
 import { assertIsoDate } from "./validation.ts";
-import type { FilteredAnalyticsDataset, IsoDate } from "./types.ts";
+import type { FilteredAnalyticsDataset, FilterState, IsoDate } from "./types.ts";
 
 export type ComparisonMode = "none" | "previousPeriod" | "previousYear" | "custom";
 
@@ -15,6 +15,7 @@ export interface ComparisonDateRange {
 export interface PeriodComparisonOptions {
   readonly mode: ComparisonMode;
   readonly dateRange?: ComparisonDateRange;
+  readonly includeCategories?: boolean;
 }
 
 export interface PeriodComparisonMetric {
@@ -27,6 +28,17 @@ export interface PeriodComparisonMetric {
   readonly deltaPercent: number | null;
 }
 
+export interface PeriodCategoryContribution {
+  readonly id: string;
+  readonly name: string;
+  readonly path: readonly string[];
+  readonly currentEurMinor: number;
+  readonly referenceEurMinor: number;
+  readonly deltaEurMinor: number;
+  readonly currentPostingCount: number;
+  readonly referencePostingCount: number;
+}
+
 export interface PeriodComparisonResult {
   readonly currentRange: ComparisonDateRange;
   readonly referenceRange: ComparisonDateRange;
@@ -34,6 +46,7 @@ export interface PeriodComparisonResult {
   readonly referencePostingCount: number;
   readonly referenceOutsideHistory: boolean;
   readonly metrics: readonly PeriodComparisonMetric[];
+  readonly categoryContributions?: readonly PeriodCategoryContribution[];
 }
 
 function datasetDateRange(filtered: FilteredAnalyticsDataset): ComparisonDateRange | null {
@@ -142,6 +155,35 @@ function comparisonAmounts(filtered: FilteredAnalyticsDataset) {
   ];
 }
 
+function categoryContributions(current: FilteredAnalyticsDataset, reference: FilteredAnalyticsDataset): readonly PeriodCategoryContribution[] {
+  const currentRoots = new Map(aggregateCategoryBreakdown(current).map((node) => [node.id, node]));
+  const referenceRoots = new Map(aggregateCategoryBreakdown(reference).map((node) => [node.id, node]));
+  return [...new Set([...currentRoots.keys(), ...referenceRoots.keys()])].map((id) => {
+    const left = currentRoots.get(id);
+    const right = referenceRoots.get(id);
+    const root = left ?? right!;
+    // Root summaries already include descendants; summing children duplicates activity.
+    const currentEurMinor = -(left?.summary.expensesEurMinor ?? 0) || 0;
+    const referenceEurMinor = -(right?.summary.expensesEurMinor ?? 0) || 0;
+    return { id, name: root.name, path: root.path, currentEurMinor, referenceEurMinor,
+      deltaEurMinor: addMinor(currentEurMinor, -referenceEurMinor),
+      currentPostingCount: left?.summary.postingCount ?? 0, referencePostingCount: right?.summary.postingCount ?? 0 };
+  }).sort((left, right) => Math.abs(right.deltaEurMinor) - Math.abs(left.deltaEurMinor) || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
+}
+
+/** Intersects a disjoint root with the current predicate; null means not representable. */
+export function categoryComparisonFilters(filters: FilterState, path: readonly string[], dateRange: ComparisonDateRange): FilterState | null {
+  if (path.length > 1) return null;
+  const selected = filters.categoryPrefixes.length > 0;
+  if (selected && (filters.categoryMode === "exclude" || filters.categoryMatch === "either")) return null;
+  const categoryPrefixes = selected ? filters.categoryPrefixes.filter((prefix) =>
+    path.length === 0 ? prefix.length === 0 : prefix[0] === path[0]) : [path];
+  if (categoryPrefixes.length === 0) return null;
+  return { ...filters, periodMode: "custom", dateRange, categoryPrefixes,
+    categoryDepth: path.length === 0 ? "exact" : selected ? filters.categoryDepth ?? "subtree" : "subtree",
+    categoryMode: "include", categoryMatch: "posting" };
+}
+
 export function buildPeriodComparison(
   filtered: FilteredAnalyticsDataset,
   options: PeriodComparisonOptions,
@@ -161,6 +203,7 @@ export function buildPeriodComparison(
   return {
     currentRange,
     referenceRange,
+    ...(options.includeCategories ? { categoryContributions: categoryContributions(filtered, reference) } : {}),
     currentPostingCount: filtered.activePostings.length,
     referencePostingCount: reference.activePostings.length,
     referenceOutsideHistory: history === null || referenceRange.from < history.from || referenceRange.to > history.to,

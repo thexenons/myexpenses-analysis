@@ -1,3 +1,7 @@
+import { useNavigate } from "@tanstack/react-router"
+import { useCallback } from "react"
+import type { FilterState } from "../../../../domain/analytics/types.ts"
+import { useAppStore } from "../../../providers/AppStoreProvider/index.ts"
 import { FilterDrawer } from "../../organisms/FilterDrawer"
 import { GlobalFilters } from "../../organisms/GlobalFilters"
 import { Sidebar } from "../../organisms/Sidebar"
@@ -7,6 +11,12 @@ import type { AppShellProps } from "./AppShell.types"
 
 export function AppShell({ children }: AppShellProps) {
   const { mainRef, notice } = useAppShell()
+  const navigate = useNavigate()
+  const patchFilters = useAppStore((state) => state.actions.patchFilters)
+  const onViewCategory = useCallback((filters: FilterState) => {
+    patchFilters(filters)
+    void navigate({ to: "/transacciones", search: { page: 1, sort: "date", direction: "desc" } })
+  }, [navigate, patchFilters])
 
   return (
     <div className={styles.shell}>
@@ -15,7 +25,7 @@ export function AppShell({ children }: AppShellProps) {
       </a>
       <Sidebar />
       <div className={styles.workspace}>
-        <GlobalFilters />
+        <GlobalFilters onViewCategory={onViewCategory} />
         {notice ? <output className={styles.notice}>{notice}</output> : null}
         <main
           className={styles.main}

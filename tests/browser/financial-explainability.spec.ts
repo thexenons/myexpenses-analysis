@@ -2614,3 +2614,55 @@ test("ignores legacy transaction statuses in saved filters and presets", async (
     });
   }
 });
+
+
+test("period category contributions expose both evidence ranges without widening filters", async ({ page }, testInfo) => {
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  await toolbar.getByRole("combobox", { name: "Tipo de periodo" }).selectOption("month");
+  await toolbar.getByLabel("Mes seleccionado").fill("2026-08");
+  await toolbar.getByRole("group", { name: "Granularidad de estadísticas y gráficas" }).locator('input[value="week"]').check();
+  const outer = page.locator("summary").filter({ hasText: /^Comparar periodos/ });
+  await outer.focus();
+  await page.keyboard.press("Enter");
+  const comparison = page.getByRole("region", { name: "Comparación de periodos" });
+  await comparison.getByRole("combobox", { name: "Comparar con" }).selectOption("previousPeriod");
+  const summary = comparison.locator("summary").filter({ hasText: /^Contribuciones por categoría$/ });
+  await expect(summary.locator("..")).not.toHaveAttribute("open");
+  await summary.focus();
+  await page.keyboard.press("Space");
+  const detail = comparison.getByRole("region", { name: "Contribuciones por categoría" });
+  await expect(detail).toContainText("cambia el periodo global y recalcula");
+  const expense = detail.locator("li").filter({ has: page.getByRole("heading", { name: "Expense", exact: true }) });
+  const current = expense.getByRole("button", { name: "Ver apuntes actuales de Expense" });
+  const reference = expense.getByRole("button", { name: "Ver apuntes de referencia de Expense" });
+  await expect(current).toBeEnabled();
+  await expect(reference).toBeEnabled();
+  const sizes = await expense.getByRole("button").evaluateAll((buttons) => buttons.map((button) => ({ width: button.getBoundingClientRect().width, height: button.getBoundingClientRect().height })));
+  expect(sizes.every(({ width, height }) => width >= 44 && height >= 44)).toBe(true);
+  await expectNoDocumentOverflow(page);
+  await detail.screenshot({ path: testInfo.outputPath("period-category-contributions.png"), animations: "disabled",
+    style: '[aria-label="Filtros globales"], a[href="#main-content"] { visibility: hidden; }' });
+  const before = await page.evaluate(() => JSON.parse(localStorage.getItem("myexpenses-analysis:filters:v1")!));
+  await reference.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "Transacciones", exact: true })).toBeVisible();
+  await expect(page.getByText("July coverage", { exact: true }).first()).toBeVisible();
+  const afterReference = await page.evaluate(() => JSON.parse(localStorage.getItem("myexpenses-analysis:filters:v1")!));
+  expect(afterReference).toMatchObject({ ...before, filters: { ...before.filters, periodMode: "custom", dateRange: { from: "2026-07-01", to: "2026-07-31" }, categoryPrefixes: [["Expense"]], categoryMode: "include", categoryMatch: "posting", categoryDepth: "subtree" } });
+  await expect(comparison).toContainText("Actual: 01 jul 2026 – 31 jul 2026");
+  await toolbar.getByRole("combobox", { name: "Tipo de periodo" }).selectOption("month");
+  await toolbar.getByLabel("Mes seleccionado").fill("2026-08");
+  await current.focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByText("Synthetic food", { exact: true }).first()).toBeVisible();
+  const afterCurrent = await page.evaluate(() => JSON.parse(localStorage.getItem("myexpenses-analysis:filters:v1")!));
+  expect(afterCurrent).toMatchObject({ ...afterReference, filters: { ...afterReference.filters, dateRange: { from: "2026-08-01", to: "2026-08-31" } } });
+  await toolbar.getByRole("button", { name: /Abrir todos los filtros/ }).click();
+  const drawer = page.getByRole("dialog", { name: "Filtros del análisis" });
+  await drawer.getByRole("checkbox", { name: "También buscar la categoría en la contrapartida vinculada" }).check();
+  await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  await expect(detail).toContainText("sin ampliar la selección");
+  await expect(current).toBeDisabled();
+  await expect(reference).toBeDisabled();
+  await expectNoDocumentOverflow(page);
+});

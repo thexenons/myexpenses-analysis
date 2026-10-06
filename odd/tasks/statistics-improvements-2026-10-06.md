@@ -212,3 +212,20 @@ S05 changes only the shared period selector, its focused tests and the added CI 
 - Correction source/tests37files311add219del=530 authored lines. Retain user-approved single coherent S06 delivery (exception-ok), with native review before delivery; no artificial split.
 - Work-unit `a764e3e`:38files546 authored lines including tracking. User granted native medium-risk review; consolidated reliability review found no defects and exact acknowledgement burned `review-6dbafba29dd31629`.
 - Status: local implementation verified and reviewed; main push follows this passive record. S06 now has only uncategorized review, not reconciliation-state warnings. Production acceptance pending.
+
+
+## S07 active work unit — 2026-10-06
+- User authorized the audited recommendation: fix the obsolete legacy-status test and extend existing temporal comparison with category contributions to selected net expense and current/reference transaction evidence. No new screen or savings/causal advice.
+- Prior status simplification delivered and production-confirmed at e183af0c8bbae7470d9b29b770e6fa180ab3e966; this is the branch point and review boundary.
+- Branch: feat/period-category-contributions-2026-10-06. Route: delegated direct; multi-file domain/UI/navigation and deterministic tests.
+- Reconciled dispositions: S01 duplicate panel declined, existing Comparativa/Deudas covers requested personal/debt view; broad allocation model not implemented. S03 deferred by user because future items are ordinary future-dated transactions, not a separate commitments model.
+- Design: disjoint root category signed expense summaries, negated to match selected-net-expense KPI; union both ranges, including uncategorized and zero-net activity. Preserve VOID exclusion, date basis and all financial filters. No parent/child double counting or extra refund/debt sums.
+- Drilldowns must intersect the existing category predicate, never replace it with a broader cut. Disable unrepresentable exclude/either intersections with an explanation; both current/reference actions follow the same safety rule. Navigation changes the global period and recalculates comparison, clearly described.
+- UI: restrained collapsed category detail inside existing Comparar periodos; reuse components/styles. Remove remaining transaction-state wording in that touched comparator. No private inputs, dependencies or unrelated registry edits.
+- Forecast: 200–350 authored lines plus concise tracking; ask-on-risk strategy remains, reassess before commit if over roughly400. Single writer, no artificial line compression.
+- Acceptance: contributions sum to existing expense delta; reference-only/current-only/uncategorized/refund/debt/VOID cases; exact or safely disabled category intersections; date and independent-filter retention; accessible responsive disclosure and evidence actions.
+- Verification: test-first comparison domain/component/router tests and stale categories regression; synthetic browser existing core smoke; lint, type-check, synthetic test:deployment, diff check, parent focused repeat. No private-data build.
+- Progress: audit and parent spotcheck complete; source implementation pending. Preserve .atl modifications.
+- Verified implementation: lazy collapsed root contribution cards and both-period evidence navigation; exact/subtree intersections preserved, active exclude/either links explicitly disabled. Legacy status regression and remaining comparator state wording corrected.
+- Observed RED: domain3failed/14passed; UI6failed/35passed. Final domain17/17, four UI files42/42, synthetic desktop/390/320 browser3/3, core smoke10/10, lint/type-check/diff exit0, synthetic deployment1/1. Parent repeated domain17/17 and inspected320px screenshot. No private inputs/build or production verification.
+- Source/test diff:12files319add16del=335 authored lines; tracking separate, delivery remains below400. Native assessment and main delivery pending.
