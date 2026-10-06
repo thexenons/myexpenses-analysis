@@ -141,4 +141,5 @@ S05 changes only the shared period selector, its focused tests and the added CI 
 - Proof: observe layout-regression RED before correction, then focused component/browser tests, lint, type-check, synthetic deployment and parent spot check. No private data or remote production inspection.
 - Verified correction: 24px calendar icon grouped with the period mode, accessible Mes actual and tooltip, no calendar/filter changes. Layout RED measured +42.39px mobile height before correction; GREEN no action-induced width/height change across all/month/custom, compact/expanded, desktop/390/320.
 - Checks: component RED 2 failed/23 passed, final GREEN 25/25; browser RED 3 failed/3 passed, final 6/6; broader smoke 10/10; lint/type-check/diff passed; synthetic deployment 1/1. Parent component spot check 25/25 and desktop/mobile screenshot inspection passed. Portable screenshot cleanup rechecked browser 6/6 and lint/diff.
-- Status: commit/review/main push pending. S02 remains deferred until user production acceptance.
+- Work-unit commit: `d48a277`; 229 authored changed lines. Native committed assessment: medium, `review_due=false`, `under_budget`; no native review was run or approval claimed.
+- Status: local correction verified; main push follows this passive evidence record. S02 remains deferred until user production acceptance.
