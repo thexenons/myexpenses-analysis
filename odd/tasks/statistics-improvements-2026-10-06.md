@@ -155,5 +155,5 @@ S05 changes only the shared period selector, its focused tests and the added CI 
 - Checks: component RED/GREEN, relevant budget/projection tests, three-viewport annual trajectory browser scenario, lint/type-check/synthetic deployment/diff and parent spot check.
 - Implementation verified: pre-chart conditional note for estimated months; all-actual years identify recorded net flow, not available cash. Existing subtitle/assumptions and all calculations preserved.
 - Evidence: component RED 2 failed/40 passed; final UI/domain 42/42; browser desktop/390/320 3/3 with no tested accessibility violations or overflow; lint/type-check/diff exit0; synthetic production deployment1/1. Parent reran42/42 and inspected narrow screenshot.
-- Source/test authored count:72 across three files. Commit/assessment/main push pending; production acceptance pending.
+- Work-unit `007b2e5`:88 authored lines including tracking, source/test72. Native assessment medium, review_due=false, under_budget; no native review approval claimed. Main push follows passive closure record; production acceptance pending.
 - Rollback: revert S02 three-file presentation/test work unit, not domain calculations or S05.
