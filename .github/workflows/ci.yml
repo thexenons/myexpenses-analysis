@@ -51,9 +51,9 @@ jobs:
           require-lockfile: true
       - name: Install Chromium headless shell and system libraries
         run: pnpm exec playwright install --with-deps --only-shell chromium
-      - name: Synthetic vault, VOID and budget pace on desktop and mobile
+      - name: Synthetic vault, VOID, budget pace and current-month shortcut on desktop and mobile
         if: github.event_name == 'push' || github.event_name == 'pull_request'
-        run: pnpm exec tsx tests/browser/run-isolated.ts --project=desktop --project=mobile-390 --grep="unlocks a synthetic vault|keeps VOID out of scoped transaction counts|explains linear budget allowance"
+        run: pnpm exec tsx tests/browser/run-isolated.ts --project=desktop --project=mobile-390 --grep="unlocks a synthetic vault|keeps VOID out of scoped transaction counts|explains linear budget allowance|current month shortcut"
       - name: Full synthetic browser regression on all three viewports
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: pnpm test:browser

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DatasetRepository } from "../../../../application/ports/dataset-repository.ts";
 import { createAppStore } from "../../../../application/store/app-store/app-store.ts";
@@ -10,6 +10,7 @@ import { PeriodSelector } from "./PeriodSelector.tsx";
 
 describe("PeriodSelector", () => {
   beforeEach(() => window.localStorage.clear());
+  afterEach(() => vi.useRealTimers());
 
   it("offers years and custom boundaries from value dates even outside the operation history", async () => {
     const user = userEvent.setup();
@@ -60,6 +61,57 @@ describe("PeriodSelector", () => {
     expect(store.getState().filters).toMatchObject({
       periodMode: "all",
       dateRange: { from: null, to: null },
+    });
+  });
+
+  it("selects the timezone-aware month to date without changing other filters", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-04-30T22:30:00.000Z"));
+    const user = userEvent.setup();
+    const store = createAppStore(
+      { load: vi.fn<DatasetRepository["load"]>() },
+      window.localStorage,
+    );
+    store.getState().actions.patchFilters({
+      scope: "debtsOnly",
+      dateBasis: "value",
+      search: "keep this search",
+      accountIds: ["debt-account"],
+      categoryPrefixes: [["Expense", "Food"]],
+    });
+    store.getState().actions.setDatePeriod("custom", {
+      from: "2025-03-10",
+      to: "2025-03-20",
+    });
+    store.getState().actions.setGranularity("week");
+    render(
+      <AppStoreProvider store={store}>
+        <PeriodSelector />
+      </AppStoreProvider>,
+    );
+
+    const shortcut = screen.getByRole("button", { name: "Mes actual" });
+    shortcut.focus();
+    await user.keyboard("{Enter}");
+
+    expect(store.getState().filters).toMatchObject({
+      periodMode: "month",
+      dateRange: { from: "2026-05-01", to: "2026-05-01" },
+      scope: "debtsOnly",
+      dateBasis: "value",
+      search: "keep this search",
+      accountIds: ["debt-account"],
+      categoryPrefixes: [["Expense", "Food"]],
+    });
+    expect(store.getState().granularity).toBe("week");
+    expect(shortcut).toHaveFocus();
+
+    await user.click(screen.getByRole("radio", { name: "Todo" }));
+    expect(store.getState().filters).toMatchObject({
+      periodMode: "all",
+      dateRange: { from: null, to: null },
+      scope: "debtsOnly",
+      search: "keep this search",
     });
   });
 

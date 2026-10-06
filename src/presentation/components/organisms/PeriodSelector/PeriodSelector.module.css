@@ -36,6 +36,28 @@
     min-width: 0;
   }
 
+  .currentMonth {
+    justify-self: start;
+    min-height: 2.25rem;
+    padding: 0.42rem 0.65rem;
+    color: var(--ink);
+    background: var(--surface-bright);
+    border: 1px solid var(--line-dark);
+    border-radius: var(--radius-xs);
+    font-size: 0.72rem;
+    font-weight: 650;
+    cursor: pointer;
+  }
+
+  .currentMonth:hover {
+    background: var(--surface);
+  }
+
+  .currentMonth:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
   .root[data-variant="compact"] > .customFields {
     flex-basis: 18.5rem;
   }

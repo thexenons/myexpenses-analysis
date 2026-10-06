@@ -17,6 +17,7 @@ export function PeriodSelectorView({
   inputMin,
   inputValue,
   onCustomDateChange,
+  onCurrentMonthClick,
   onModeChange,
   onPeriodValueChange,
   periodMode,
@@ -26,6 +27,13 @@ export function PeriodSelectorView({
 }: PeriodSelectorViewProps) {
   return (
     <div className={cx(styles.root, className)} data-variant={variant}>
+      <button
+        className={styles.currentMonth}
+        onClick={onCurrentMonthClick}
+        type="button"
+      >
+        Mes actual
+      </button>
       {variant === "expanded" ? (
         <SegmentedControl
           className={styles.modeControl}

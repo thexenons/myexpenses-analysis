@@ -22,6 +22,7 @@ export interface PeriodSelectorViewProps extends PeriodSelectorProps {
     boundary: PeriodSelectorDateBoundary,
     value: string,
   ) => void;
+  readonly onCurrentMonthClick: () => void;
   readonly onModeChange: (mode: DatePeriodMode) => void;
   readonly onPeriodValueChange: (value: string) => void;
   readonly periodMode: DatePeriodMode;

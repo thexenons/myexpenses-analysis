@@ -92,6 +92,10 @@ export function usePeriodSelector({
     },
     [dateRange, setDatePeriod, today],
   );
+  const onCurrentMonthClick = useCallback(
+    () => setDatePeriod("month", dateRangeForPeriod("month", today, today)),
+    [setDatePeriod, today],
+  );
   const onPeriodValueChange = useCallback(
     (value: string) => {
       if (presetMode === null) return;
@@ -122,6 +126,7 @@ export function usePeriodSelector({
     inputMin,
     inputValue,
     onCustomDateChange,
+    onCurrentMonthClick,
     onModeChange,
     onPeriodValueChange,
     periodMode,

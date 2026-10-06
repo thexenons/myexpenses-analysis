@@ -120,6 +120,83 @@ test("filter persistence restores advanced controls and a fixture-backed result"
   await restored.screenshot({ path: testInfo.outputPath("restored-advanced.png"), animations: "disabled" });
 });
 
+test("current month shortcut uses keyboard activation and preserves saved filters across reload", async ({ page }) => {
+  const expectPeriodLayout = async (shortcut: Locator) => {
+    await expect(shortcut).toBeVisible();
+    const layout = await shortcut.evaluate((button) => {
+      const root = button.parentElement!;
+      const bounds = root.getBoundingClientRect();
+      const target = button.getBoundingClientRect();
+      return {
+        left: bounds.left,
+        right: bounds.right,
+        viewport: window.innerWidth,
+        overflow: root.scrollWidth - root.clientWidth,
+        targetWidth: target.width,
+        targetHeight: target.height,
+        controlsContained: [...root.querySelectorAll("select, input:not([type=radio])")].every((control) => {
+          const box = control.getBoundingClientRect();
+          return box.left >= bounds.left && box.right <= bounds.right
+            && (box.top >= target.bottom || box.bottom <= target.top
+              || box.left >= target.right || box.right <= target.left);
+        }),
+      };
+    });
+    expect(layout.left).toBeGreaterThanOrEqual(0);
+    expect(layout.right).toBeLessThanOrEqual(layout.viewport);
+    expect(layout.overflow).toBeLessThanOrEqual(1);
+    expect(layout.targetWidth).toBeGreaterThanOrEqual(24);
+    expect(layout.targetHeight).toBeGreaterThanOrEqual(24);
+    expect(layout.controlsContained).toBe(true);
+  };
+  await page.getByRole("link", { name: /^(Transacciones|Movimientos)$/ }).click();
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  const shortcut = toolbar.getByRole("button", { name: "Mes actual" });
+  await expectPeriodLayout(shortcut);
+  await expect(toolbar.getByRole("combobox", { name: "Tipo de periodo" })).toHaveValue("all");
+  const drawer = await openDrawer(page);
+  await expectPeriodLayout(drawer.getByRole("button", { name: "Mes actual" }));
+  await drawer.getByRole("searchbox", { name: "Buscar en movimientos" }).fill("Synthetic food");
+  await drawer.getByRole("group", { name: "Fecha utilizada" }).getByRole("radio", { name: "Valor" }).check();
+  await drawer.getByRole("group", { name: "Granularidad de estadísticas y gráficas" })
+    .locator('input[value="week"]').check();
+  await drawer.locator("summary").filter({ hasText: /^Filtros guardados$/ }).click();
+  await drawer.getByRole("textbox", { name: "Nombre del filtro" }).fill("Month shortcut baseline");
+  await drawer.getByRole("button", { name: "Guardar filtro actual" }).click();
+  const savedPreset = await page.evaluate((key) => localStorage.getItem(key), PRESET_KEY);
+  expect(savedPreset).toContain("Month shortcut baseline");
+  await drawer.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+
+  await shortcut.focus();
+  await page.keyboard.press("Enter");
+  await expect(toolbar.getByRole("combobox", { name: "Tipo de periodo" })).toHaveValue("month");
+  await expectPeriodLayout(shortcut);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+  const selected = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), PREFERENCE_KEY);
+  expect(selected.filters).toMatchObject({
+    periodMode: "month",
+    dateRange: { from: "2026-09-01", to: "2026-09-27" },
+    search: "Synthetic food",
+    dateBasis: "value",
+  });
+
+  await page.reload();
+  await unlock(page);
+  const restoredToolbar = page.getByRole("region", { name: "Filtros globales" });
+  await expect(restoredToolbar.getByRole("combobox", { name: "Tipo de periodo" })).toHaveValue("month");
+  await expect(restoredToolbar.getByLabel("Mes seleccionado")).toHaveValue("2026-09");
+  const restored = await openDrawer(page);
+  await expect(restored.getByRole("searchbox", { name: "Buscar en movimientos" })).toHaveValue("Synthetic food");
+  await expect(restored.getByRole("group", { name: "Fecha utilizada" }).getByRole("radio", { name: "Valor" })).toBeChecked();
+  await expect(restored.getByRole("group", { name: "Granularidad de estadísticas y gráficas" })
+    .locator('input[value="week"]')).toBeChecked();
+  await expectPeriodLayout(restored.getByRole("button", { name: "Mes actual" }));
+  await restored.locator("summary").filter({ hasText: /^Filtros guardados$/ }).click();
+  await expect(restored.getByRole("combobox", { name: "Filtro guardado", exact: true })
+    .getByRole("option", { name: "Month shortcut baseline", exact: true })).toHaveCount(1);
+  expect(await page.evaluate((key) => localStorage.getItem(key), PRESET_KEY)).toBe(savedPreset);
+});
+
 test("filter persistence prunes unavailable options without losing independent valid selections", async ({ page }) => {
   await page.evaluate(({ key, cash, debt }) => {
     const saved = JSON.parse(localStorage.getItem(key)!) as { filters: Record<string, unknown> };
