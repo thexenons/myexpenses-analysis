@@ -28,7 +28,7 @@ S05 -> S02 (clarification) -> S04 (transparency) -> S01 -> S06 -> S03 -> S07.
 - Record push and production outcomes separately: a push or local build does not prove successful deployment.
 - Delivery strategy: `ask-on-risk`; no PR or chain is currently planned because delivery is per-task main integration.
 - Forecast: S05 source/tests approximately 50–100 authored lines, plus this tracking document and CI smoke inclusion. Whole-roadmap forecast is unresolved until structural product scopes are defined; do not treat it as zero. Reassess before any delivery unit exceeds approximately 400 authored changed lines.
-- Running authored count: 0 committed lines for this feature.
+- S05 work-unit authored count: 299 lines (296 additions, 3 deletions), including this roadmap; below the 400-line planning heuristic. Passive closure documentation is recorded separately.
 - RDD read on 2026-10-06: on, decided by global. Preserve candidate consent and provider-issued lifecycle commands.
 - S05 route: delegated direct. Shared hook/view/types, behavioral tests and browser/CI surfaces trigger bounded writer delegation.
 - Remaining tasks: delegated direct anticipated; derive exact edit surfaces and applicable checks before each task rather than granting blanket source authority.
@@ -44,7 +44,7 @@ S05 -> S02 (clarification) -> S04 (transparency) -> S01 -> S06 -> S03 -> S07.
 - Acceptance: one action selects the current month, keyboard activation works, other filters survive, all-history remains accessible, and deliberate selection survives reload.
 - Required proof: observed component RED -> GREEN -> REFACTOR; focused component tests; synthetic isolated browser checks on desktop/mobile; lint, all TypeScript projects, build and diff checks.
 - Include the new synthetic scenario in push-time CI smoke without weakening existing cases.
-- Final local proof: component RED observed, GREEN 23/23; focused three-viewport browser 3/3; updated desktop/mobile CI smoke 8/8; lint/all three TypeScript projects/diff check passed; synthetic deployment 1/1 exercises actual tsc/Vite production builds. Private-data build remains unavailable and is not claimed passed. Commit/review/main push/production check pending.
+- Final local proof: component RED observed, GREEN 23/23; focused three-viewport browser 3/3; updated desktop/mobile CI smoke 8/8; lint/all three TypeScript projects/diff check passed; synthetic deployment 1/1 exercises actual tsc/Vite production builds. Private-data build remains unavailable and is not claimed passed. Work-unit commit: `dad3662217924c53392e59ad2066928eda9d41d4`. Native review: approved and acknowledged. Delivery target: `origin/main`; production check remains pending.
 
 ### 2. S02 — Reinforce scenario interpretation
 - [ ] Distinguish the budget-compliance annual scenario from observed overspend and actual money remaining.
@@ -121,8 +121,11 @@ S05 -> S02 (clarification) -> S04 (transparency) -> S01 -> S06 -> S03 -> S07.
 - Browser checks cover keyboard, filter/granularity/preset preservation, reload, month-to-date, all-history, viewport containment, target size and no control overlap/overflow.
 - Temporary public runtime archives were extracted without system installation; no private inputs or real network were used by synthetic deployment. Private-data build/deployed production remain unverified.
 - Parent final spot check re-ran the focused component command: 23/23 passed, exit 0, 4.74s.
-- Initial worktree assessment returned high/unassessable due undeclared untracked task documentation. Reassess the exact scoped committed candidate and follow its native continuation; never infer low risk from the failed attempt.
-- Next: close the scoped work-unit commit, follow applicable native checking, integrate/push main, then wait for the production-check boundary before S02.
+- Initial assessment limitations were resolved by assessing the exact committed candidate. Native risk was high because the CI workflow executes shell processes; eight files and 299 authored lines were reviewed.
+- The user granted candidate review. Risk, resilience, readability and reliability reviewers each returned no findings; exact native acknowledgement burned authority for lineage `review-8bad0e9f43648103`. No correction was required.
+- Final main push SHA and remote readback are recorded in Engram topic `odd/statistics-improvements-2026-10-06/delivery`; a pushed commit is not proof of deployment.
+- Delivery batch: verified work-unit `dad3662` plus this passive closure record, targeted to main by non-force push. Do not include unrelated registry modifications.
+- Next product step: confirm Mes actual in production before starting S02. The production URL and deployed outcome have not been verified.
 
 ## Rollback boundary
 S05 changes only the shared period selector, its focused tests and the added CI smoke scenario. Revert that coherent work unit without reverting prior financial features or unrelated local changes.
