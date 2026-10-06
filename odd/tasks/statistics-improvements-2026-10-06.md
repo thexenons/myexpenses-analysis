@@ -69,7 +69,7 @@ S05 -> S02 (clarification) -> S04 (transparency) -> S01 -> S06 -> S03 -> S07.
 - Commit / review / main push / production check: pending.
 
 ### 5. S06 — Consolidate evidenced cautions
-- [ ] Present existing supported signals in a prioritized view with dates, active filters, explanation and detail links.
+- [x] Present two evidenced active-posting cautions in Overview with volume ordering, selection context, explanation and exact transaction drilldowns.
 - Do not present linear budget allowance as a spending forecast.
 - Acceptance: every caution is traceable; priority rules and data limitations are visible.
 - Checks: deterministic ranking, filtered/insufficient-data scenarios and keyboard/mobile navigation.
@@ -193,4 +193,5 @@ S05 changes only the shared period selector, its focused tests and the added CI 
 - RED observed Overview16fail5pass, hook3fail11pass, browser three failures resolved without weakening assertions. NEUTRAL uncategorized rows and cache population isolation covered.
 - Actual worker diff:489 additions24 deletions=513 authored lines, including67-line audit, across13 authorized files; parent tracking separate. Coherent target-table root fix expanded forecast. Before commit, request single-delivery exception versus artificial splitting; no source compression.
 - User authorized exception-ok: one coherent S06 delivery and main push despite513 authored lines; no artificial split. Detailed user guide requested after delivery.
-- Status: verified locally; commit/native review/main push pending. No claim of production deployment.
+- Work-unit `c59f2d7`:14files533 authored lines including audit/tracking. Native risk medium, slice budget reached; user granted consolidated reliability review, no findings, exact acknowledgement burned authority for `review-8fff626404eabc02`.
+- Status: verified locally and reviewed; single main delivery follows this passive record, production acceptance pending. No automated deployment claim.
