@@ -8,7 +8,7 @@ const unavailableLabels: Record<Extract<AnnualProjectionResult, { status: "unava
   "incompatible-currency": "La moneda del presupuesto no se puede comparar de forma segura con el flujo real en euros.",
   "filtered-scope": "Los filtros de contenido recortan el historial. Restablécelos para consultar el año completo.",
   "invalid-period": "El periodo seleccionado no identifica un año válido para la proyección.",
-  "no-complete-months": "No hay ningún mes completo y cubierto de este año para estimar ingresos. No se inventa una media.",
+  "no-complete-months": "No hay meses cerrados dentro del intervalo observado de este año para estimar ingresos. La ausencia de registros no confirma ausencia de actividad.",
 };
 
 export function AnnualProjection({

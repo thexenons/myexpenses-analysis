@@ -2298,11 +2298,19 @@ test("shows an accessible annual savings trajectory on Plans at desktop and mobi
   await expect(interpretation).toBeVisible();
   await expect(interpretation).toContainText("ingresos previstos menos la asignación mensual completa");
   await expect(interpretation).toContainText("El gasto observado en esos meses no modifica el aporte");
-  await expect(interpretation).toContainText("Los meses cerrados y cubiertos usan el flujo real registrado");
-  await expect(interpretation).toContainText("no es saldo actual ni dinero disponible");
+  await expect(interpretation).toContainText("Los meses cerrados del intervalo observado usan el flujo registrado");
+  await expect(interpretation).toContainText("ni saldo actual ni dinero disponible");
+  const coverage = projection.locator("p").filter({ hasText: "Cobertura no verificada" });
+  await expect(coverage).toBeVisible();
+  await expect(coverage).toContainText("Las fechas observadas no garantizan un historial completo");
+  await expect(coverage).toContainText("Sin registros puede faltar información, no necesariamente actividad");
+  await expect(projection).not.toContainText("cobertura completa");
+  await expect(projection).not.toContainText("meses completos");
   const noteBounds = await interpretation.boundingBox();
+  const coverageBounds = await coverage.boundingBox();
   const chartBounds = await projection.getByRole("img", { name: "Ahorro acumulado en 2026" }).boundingBox();
-  expect(noteBounds!.y + noteBounds!.height).toBeLessThanOrEqual(chartBounds!.y);
+  expect(noteBounds!.y + noteBounds!.height).toBeLessThanOrEqual(coverageBounds!.y);
+  expect(coverageBounds!.y + coverageBounds!.height).toBeLessThanOrEqual(chartBounds!.y);
   await projection.screenshot({
     path: testInfo.outputPath("annual-projection-interpretation.png"), animations: "disabled",
     style: '[aria-label="Filtros globales"] { visibility: hidden; }',

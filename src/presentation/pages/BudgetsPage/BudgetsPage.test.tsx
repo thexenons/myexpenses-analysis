@@ -189,7 +189,7 @@ describe("BudgetsPageView", () => {
     const projection = screen.getByRole("region", { name: "Proyección anual de ahorro" });
     expect(within(projection).getByRole("img", { name: "Ahorro acumulado en 2026" })).toBeVisible();
     expect(projection).toHaveTextContent("Diciembre: 21,00");
-    expect(projection).toHaveTextContent("2 meses completos");
+    expect(projection).toHaveTextContent("2 meses cerrados dentro del intervalo observado");
     expect(projection).toHaveTextContent("no se suma dos veces");
     expect(projection).toHaveTextContent("mes natural");
     expect(projection).toHaveTextContent("no es saldo inicial");
@@ -210,7 +210,7 @@ describe("BudgetsPageView", () => {
       searchPending: false, selectedBudgetUuid: "budget", selectedPeriodKey: "MONTH:2026:7" };
     const { rerender } = render(<BudgetsPageView {...props} annualProjection={{ status: "unavailable", reason: "no-complete-months" }} />);
     const projection = screen.getByRole("region", { name: "Proyección anual de ahorro" });
-    expect(projection).toHaveTextContent("ningún mes completo");
+    expect(projection).toHaveTextContent("No hay meses cerrados dentro del intervalo observado");
     expect(within(projection).queryByRole("img", { name: /Ahorro acumulado/ })).not.toBeInTheDocument();
     rerender(<BudgetsPageView {...props} annualProjection={{ status: "unavailable", reason: "filtered-scope" }} />);
     expect(projection).toHaveTextContent("filtros de contenido");

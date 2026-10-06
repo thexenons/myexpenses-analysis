@@ -54,7 +54,7 @@ S05 -> S02 (clarification) -> S04 (transparency) -> S01 -> S06 -> S03 -> S07.
 - Commit / review / main push / production check: pending.
 
 ### 3. S04 — Expose coverage uncertainty
-- [ ] Consistently identify observed versus verified coverage and distinguish absent data from evidenced zero activity.
+- [x] Expose unverified annual-projection coverage and distinguish absent records from verified zero activity; existing savings-trend caveat retained.
 - Begin with honest unverified/unknown state, not automatic certification from date endpoints.
 - Acceptance: incomplete or unverified inputs do not acquire unsupported completeness claims.
 - Checks: synthetic sparse-history and empty-period cases plus affected summary/scenario UI.
@@ -157,3 +157,18 @@ S05 changes only the shared period selector, its focused tests and the added CI 
 - Evidence: component RED 2 failed/40 passed; final UI/domain 42/42; browser desktop/390/320 3/3 with no tested accessibility violations or overflow; lint/type-check/diff exit0; synthetic production deployment1/1. Parent reran42/42 and inspected narrow screenshot.
 - Work-unit `007b2e5`:88 authored lines including tracking, source/test72. Native assessment medium, review_due=false, under_budget; no native review approval claimed. Main push follows passive closure record; production acceptance pending.
 - Rollback: revert S02 three-file presentation/test work unit, not domain calculations or S05.
+
+## S04 active work unit — 2026-10-06
+- User confirmed S02 in production and authorized S04. S02 main delivery: `2d9f7673196d7d5135d5a655d129c442c0f82460`.
+- Branch: `fix/coverage-transparency-2026-10-06`; branch point: `2d9f7673196d7d5135d5a655d129c442c0f82460`. Pending accumulated review boundary remains `15974845b60a9a865d21b6513543488993e5b28e`.
+- Route: delegated direct; presentation wording and synthetic regression coverage span multiple files.
+- Evidence: savings trend already disclaims complete-history inference. Annual projection instead calls endpoint-inferred months complete/covered and uses zero for missing monthly flow.
+- Scope: annual-projection ready/all-actual/empty-state coverage transparency, not arithmetic or certification. Explain observed date endpoints do not verify history and no recorded transactions need not mean no activity.
+- Surfaces: AnnualProjection.Content.tsx, AnnualProjection.tsx, AnnualProjection.test.tsx under src/presentation/pages/BudgetsPage/components/AnnualProjection; tests/browser/financial-explainability.spec.ts.
+- Forecast: approximately100–180 authored lines for this delivery unit; accumulated pending review may become due. Per-task main delivery remains selected; no PR chain planned.
+- Acceptance: clearly visible unverified-coverage caveat, no unsupported completeness claims, retained S02 distinction and numeric outputs; sparse/empty records regression.
+- Checks: component RED/GREEN, relevant projection/page/domain tests, synthetic browser desktop/390/320, lint/type-check/synthetic deployment/diff and parent spot check.
+- User approved the exact additional BudgetsPage.test.tsx surface solely for two legacy copy expectations; those are the only edits there.
+- Verified: initial RED4fail40pass; final UI/domain44/44; browser desktop/390/3203/3; lint/type-check/diff exit0; synthetic deployment1/1. Sparse fixture retains February Real0 and December-2 with warning; empty state fabricates no chart. Parent spot check and mobile screenshot completed.
+- Source/test diff:81 additions18 deletions across five authorized files, no domain/calculation changes. Commit/assessment/main push pending.
+- Rollback: revert S04 presentation/copy tests, not S02 numeric semantics.

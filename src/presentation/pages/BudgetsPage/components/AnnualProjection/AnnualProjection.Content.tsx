@@ -28,23 +28,27 @@ export function AnnualProjectionContent({ result }: { result: ReadyProjection })
   return (
     <div className={styles.content}>
       <p className={styles.total}>Diciembre: <strong>{formatEuroMinor(december!.cumulativeEurMinor)}</strong></p>
-      <p className={styles.subtitle}>Ahorro o déficit neto acumulado desde enero; no es saldo inicial ni patrimonio.</p>
       <p className={styles.subtitle}>
         {allActual ? (
-          "Flujo neto real acumulado desde enero; no es saldo actual ni dinero disponible."
+          "Flujo neto real acumulado desde enero; no es saldo inicial ni patrimonio, ni saldo actual ni dinero disponible."
         ) : (
           <>
             <strong>Escenario condicionado al presupuesto.</strong>{" "}
             En los meses estimados: ingresos previstos menos la asignación mensual completa.
             El gasto observado en esos meses no modifica el aporte.
-            Los meses cerrados y cubiertos usan el flujo real registrado.
-            El acumulado no es saldo actual ni dinero disponible.
+            Los meses cerrados del intervalo observado usan el flujo registrado.
+            El acumulado no es saldo inicial ni patrimonio, ni saldo actual ni dinero disponible.
           </>
         )}
       </p>
+      <p className={styles.subtitle}>
+        <strong>Cobertura no verificada.</strong>{" "}
+        Las fechas observadas no garantizan un historial completo.
+        Sin registros puede faltar información, no necesariamente actividad.
+      </p>
       <LineChart
         description={allActual
-          ? "Doce cierres mensuales de flujo real acumulado. Consulta la tabla de datos exactos y el desglose mensual."
+          ? "Flujo registrado acumulado en los doce meses. Consulta la tabla de datos exactos y el desglose mensual."
           : "Trayectoria acumulada: el tramo verde identifica meses reales y el resto es estimado. Cada punto conserva su tipo, aporte y acumulado en el desglose mensual."}
         formatLabel={formatPeriodLabel}
         formatValue={formatEuroMinor}
@@ -53,11 +57,11 @@ export function AnnualProjectionContent({ result }: { result: ReadyProjection })
       />
       <div className={styles.assumptions}>
         <p>El flujo real y los ingresos son globales: no se recortan por las restricciones de cuentas o categorías del presupuesto. Para los meses estimados se usa la asignación completa del presupuesto seleccionado como referencia de gasto.</p>
-        <p>Año natural completo de {result.year}: sustituye el intervalo de fechas seleccionado. Los meses cerrados con cobertura completa usan el flujo real registrado. Fecha de {result.dateBasis === "value" ? "valor (operación si falta)" : "operación"}.</p>
+        <p>Año natural completo de {result.year}: sustituye el intervalo de fechas seleccionado. Los meses cerrados dentro del intervalo observado usan el flujo registrado. Fecha de {result.dateBasis === "value" ? "valor (operación si falta)" : "operación"}.</p>
         {allActual ? (
-          <p>{result.income.completeMonthCount} meses completos; todos los puntos son reales y no se necesita estimar ingresos.</p>
+          <p>{result.income.completeMonthCount} meses cerrados dentro del intervalo observado; todos los puntos son reales y no se necesita estimar ingresos.</p>
         ) : (
-          <p>Ingresos estimados: media de {result.income.completeMonthCount} {result.income.completeMonthCount === 1 ? "mes completo" : "meses completos"} del mismo año ({formatEuroMinor(result.income.expectedMonthlyMinor!)} al mes). En meses incompletos o futuros se resta el presupuesto mensual completo. Lo ya cobrado fija el mínimo del ingreso total estimado: no se suma dos veces.</p>
+          <p>Ingresos estimados: media de {result.income.completeMonthCount} {result.income.completeMonthCount === 1 ? "mes cerrado" : "meses cerrados"} dentro del intervalo observado del mismo año ({formatEuroMinor(result.income.expectedMonthlyMinor!)} al mes). En los demás meses se resta el presupuesto mensual completo. Lo ya cobrado fija el mínimo del ingreso total estimado: no se suma dos veces.</p>
         )}
         {result.budget.grouping === "MONTH" ? (
           <p>Presupuesto mensual: se resuelve la asignación global de cada mes natural según su etiqueta; las categorías no se suman de nuevo.</p>
