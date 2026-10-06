@@ -14,7 +14,7 @@ The accepted implementation slices are delivered to main and user-confirmed in p
 | S03 | Deferred by the user, who records future items as ordinary future-dated transactions. No commitments/recurrence model implemented. | Not applicable |
 | S07 | Delivered; production user-confirmed. Root-category contributions to selected net-expense differences with current/reference evidence. | `025d5098c76b276474285eeed478a2542b1c1852` |
 
-Delivery identities above exist locally and are ancestors of current main `025d509`. Production acceptance is the user's confirmation, not a fresh automated deployment or remote CI claim.
+Delivery identities above exist locally and are ancestors of the reviewed source boundary `025d509`. Production acceptance is the user's confirmation, not a fresh automated deployment or remote CI claim.
 
 ## Objective and scope decisions
 
@@ -41,8 +41,8 @@ Checked items mean the accepted slice was delivered, not the full original audit
 
 ## Delivery and routing — current
 
-- Current branch: main; delivered boundary `025d509`. Closure is a delegated, passive documentation correction only; the parent handles any closure commit/delivery.
-- No new source changes, feature task, private-data build, dependencies, remote operation or native review is authorized by this closure.
+- Current branch: main; product boundary `025d509`. Passive closure commit `bb671a2` was pushed to origin/main and its remote identity verified.
+- No new source changes, feature task, private-data build, dependencies or native review were introduced. Documentation delivery follows the previously authorized per-task main push workflow.
 - Earlier implementations used bounded delegated writers and per-task main delivery. Historical records below retain authored counts, test evidence, candidate consent and review outcomes.
 - S07 committed assessment was medium, `review_due=false`, `under_budget`; it was **not native-review approved**. Its pending slice review boundary remains `e183af0`; production acceptance does not change that assessment.
 - Source work units: S05 `dad3662` then `d48a277`; S02 `007b2e5`; S04 `343fe80`; S06 `c59f2d7` then status correction `a764e3e`; S07 `c067c8e`.
@@ -56,7 +56,7 @@ Checked items mean the accepted slice was delivered, not the full original audit
   - S06: `src/presentation/pages/OverviewPage/OverviewPage.helpers.ts:49–63` and `OverviewPage.view.tsx:86–103`; `src/domain/analytics/filters.ts:620–622,673` documents inert statuses and excludes active VOID.
   - S07: `src/domain/analytics/comparison.ts:158–184` and `src/presentation/components/organisms/PeriodComparison/PeriodComparison.tsx:103–131`.
 - Historical functional proof below is retained, not rerun or reclassified as closure proof. This passive closure uses document readback, local Git identity/ancestry checks and `git diff --check`; TDD and full builds are not applicable.
-- No next product task is authorized. Allocation, commitments, certification or prediction work would require a separate user decision. The remaining action is the parent's documentation delivery, not another feature implementation.
+- No next product task is authorized. Allocation, commitments, certification or prediction work would require a separate user decision. Closure documentation has been delivered; no implementation remains within the accepted scope.
 
 ## Historical chronology — not current pending work
 
