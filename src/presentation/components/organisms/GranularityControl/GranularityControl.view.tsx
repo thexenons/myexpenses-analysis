@@ -15,14 +15,29 @@ export function GranularityControlView({
   setting,
 }: GranularityControlViewProps) {
   return (
-    <div className={cx(styles.root, className)}>
+    <div className={cx(styles.root, compact && styles.compact, className)}>
       <SegmentedControl
+        className={styles.segmented}
         hideLabel={compact}
         label="Granularidad de estadísticas y gráficas"
         onChange={onChange}
         options={GRANULARITY_OPTIONS}
         value={setting}
       />
+      {compact ? (
+        <select
+          aria-label="Granularidad de estadísticas y gráficas"
+          className={styles.mobileSelect}
+          onChange={(event) => onChange(event.currentTarget.value as typeof setting)}
+          value={setting}
+        >
+          {GRANULARITY_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.value === "auto" ? option.shortLabel : option.label}
+            </option>
+          ))}
+        </select>
+      ) : null}
       {compact ? null : (
         <p aria-live="polite" className={styles.detail}>
           {setting === "auto"

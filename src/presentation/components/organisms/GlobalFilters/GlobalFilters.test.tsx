@@ -31,11 +31,12 @@ describe("GlobalFilters", () => {
     expect(tablet).toMatch(/\.search\s*\{\s*display:\s*none;/)
     expect(tablet).not.toMatch(/\.(?:period|granularity)[^{]*\{[^}]*display:\s*none;/)
     expect(phone).toMatch(/\.period\s*\{[^}]*grid-column:\s*1\s*\/\s*-1;/)
-    expect(phone).toMatch(/\.granularity\s*\{[^}]*grid-column:\s*1\s*\/\s*-1;/)
-    expect(phone).toMatch(/\.scope\s*\{[^}]*grid-row:\s*3;/)
-    expect(phone).toMatch(/\.drawerButton\s*\{[^}]*grid-row:\s*3;/)
-    expect(narrowPeriod).toMatch(/\.root\[data-variant="compact"\]\s*>\s*\.customFields\s*,/)
-    expect(narrowPeriod).toMatch(/flex-basis:\s*100%;/)
+    expect(phone).toMatch(/\.granularity\s*\{[^}]*grid-column:\s*1;[^}]*grid-row:\s*2;/)
+    expect(phone).toMatch(/\.scope\s*\{[^}]*grid-column:\s*2;[^}]*grid-row:\s*2;/)
+    expect(phone).toMatch(/\.drawerButton\s*\{[^}]*grid-column:\s*3;[^}]*grid-row:\s*2;/)
+    expect(narrowPeriod).toMatch(/\.root\[data-variant="compact"\]\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)\s*minmax\(0, 1fr\);/)
+    expect(narrowPeriod).toMatch(/\.root\[data-variant="compact"\]\s*>\s*\.customFields\s*\{/)
+    expect(narrowPeriod).toMatch(/grid-column:\s*1\s*\/\s*-1;/)
   })
 
   it("orders perspectives, defaults to cash flow, and removes a manual Yo selection", async () => {
@@ -125,7 +126,7 @@ describe("GlobalFilters", () => {
     await user.selectOptions(screen.getByRole("combobox", { name: "Tipo de periodo" }), "custom")
     expect(screen.getByLabelText("Desde")).toHaveAttribute("type", "date")
     expect(screen.getByLabelText("Hasta")).toHaveAttribute("type", "date")
-    await user.click(screen.getByRole("radio", { name: "Semana" }))
+    await user.selectOptions(screen.getByRole("combobox", { name: "Granularidad de estadísticas y gráficas" }), "week")
 
     expect(appStore.getState().filters.periodMode).toBe("custom")
     expect(appStore.getState().granularity).toBe("week")

@@ -9,4 +9,34 @@
     color: var(--muted);
     font-size: 0.67rem;
   }
+
+  .mobileSelect {
+    display: none;
+    width: 100%;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: 0.35rem 0.4rem;
+    color: var(--ink);
+    background: var(--paper-deep);
+    border: 1px solid var(--line-dark);
+    border-radius: var(--radius-md);
+    font: inherit;
+    font-size: 0.7rem;
+    font-weight: 760;
+  }
+
+  .mobileSelect:focus-visible {
+    outline: 3px solid currentcolor;
+    outline-offset: 2px;
+  }
+}
+
+@media (width <= 42rem) {
+  .compact .segmented {
+    display: none;
+  }
+
+  .compact .mobileSelect {
+    display: block;
+  }
 }

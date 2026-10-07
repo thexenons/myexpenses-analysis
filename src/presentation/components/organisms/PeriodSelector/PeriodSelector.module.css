@@ -184,11 +184,24 @@
 }
 
 @media (width <= 32rem) {
-  .root[data-variant="compact"] > .modeGroup,
-  .root[data-variant="compact"] > .field,
-  .root[data-variant="compact"] > .customFields,
-  .root[data-variant="compact"] > .allPeriod {
-    flex-basis: 100%;
+  .root[data-variant="compact"] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .root[data-variant="compact"] > .customFields {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .root[data-variant="compact"]:has(.customFields) > .modeGroup {
+    grid-column: 1 / -1;
+  }
+
+  .root[data-variant="compact"] .compactMode select,
+  .root[data-variant="compact"] .field input,
+  .root[data-variant="compact"] .field select {
+    min-height: 1.5rem;
   }
 
   .customFields {

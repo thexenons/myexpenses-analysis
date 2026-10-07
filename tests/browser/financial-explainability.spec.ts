@@ -6,6 +6,17 @@ const BASE = "http://127.0.0.1:41789";
 const PASSPHRASE = "synthetic-browser-only-passphrase";
 const outboundByPage = new WeakMap<Page, string[]>();
 
+function toolbarGranularity(toolbar: Locator): Locator {
+  return toolbar.getByRole("group", { name: "Granularidad de estadísticas y gráficas" })
+    .or(toolbar.getByRole("combobox", { name: "Granularidad de estadísticas y gráficas" }));
+}
+
+async function selectToolbarGranularity(toolbar: Locator, value: string): Promise<void> {
+  const select = toolbar.getByRole("combobox", { name: "Granularidad de estadísticas y gráficas" });
+  if (await select.isVisible()) await select.selectOption(value);
+  else await toolbarGranularity(toolbar).locator(`input[value="${value}"]`).check();
+}
+
 async function setAppTime(page: Page, date: string): Promise<void> {
   await page.clock.setFixedTime(new Date(date));
   // Mounted calendar snapshots refresh on focus, not arbitrary re-renders.
@@ -61,6 +72,77 @@ test.beforeEach(async ({ context, page }) => {
 
 test.afterEach(async ({ page }) => {
   expect(outboundByPage.get(page)).toEqual([]);
+});
+
+test("compacts the mobile toolbar into two rows while preserving desktop and custom dates", async ({ page }, testInfo) => {
+  const toolbar = page.getByRole("region", { name: "Filtros globales" });
+  const mode = toolbar.getByRole("combobox", { name: "Tipo de periodo" });
+  const month = toolbar.getByLabel("Mes seleccionado");
+  const perspective = toolbar.getByRole("group", { name: "Ámbito de las estadísticas" });
+  const filter = toolbar.getByRole("button", { name: /Abrir todos los filtros/ });
+  const select = toolbar.getByRole("combobox", { name: "Granularidad de estadísticas y gráficas", includeHidden: true });
+  const segmented = toolbar.getByRole("group", { name: "Granularidad de estadísticas y gráficas", includeHidden: true });
+  await mode.selectOption("month");
+  const mobile = page.viewportSize()!.width <= 672;
+  const boxes = await Promise.all([toolbar, mode, month, perspective, filter].map((control) => control.boundingBox()));
+  if (mobile) {
+    await expect(select).toBeVisible();
+    await expect(segmented).toBeHidden();
+    const granularityBox = (await select.boundingBox())!;
+    const [toolbarBox, modeBox, monthBox, perspectiveBox, filterBox] = boxes;
+    expect(Math.abs(modeBox!.y - monthBox!.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(granularityBox.y - perspectiveBox!.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(filterBox!.y - perspectiveBox!.y)).toBeLessThanOrEqual(1);
+    expect(granularityBox.y).toBeGreaterThan(modeBox!.y + modeBox!.height);
+    expect(granularityBox.x + granularityBox.width).toBeLessThanOrEqual(perspectiveBox!.x);
+    expect(perspectiveBox!.x + perspectiveBox!.width).toBeLessThanOrEqual(filterBox!.x);
+    expect(filterBox!.y + filterBox!.height - toolbarBox!.y).toBeLessThan(130);
+    for (const control of [mode, month, select, perspective]) {
+      // oxlint-disable-next-line no-await-in-loop -- Inspect each rendered control independently.
+      const dimensions = await control.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        return { label: element.getAttribute("aria-label") ?? "month value", left: box.left, right: box.right, width: element.clientWidth, content: element.scrollWidth };
+      });
+      expect(dimensions.left).toBeGreaterThanOrEqual(0);
+      expect(dimensions.right).toBeLessThanOrEqual(page.viewportSize()!.width);
+      expect(dimensions.content, dimensions.label).toBeLessThanOrEqual(dimensions.width + 1);
+    }
+    const targets = await toolbar.locator('label:has(input[type="radio"]):visible, select:visible, button:visible').evaluateAll((elements) =>
+      elements.map((element) => ({ label: element.getAttribute("aria-label") ?? element.textContent, height: element.getBoundingClientRect().height })));
+    expect(targets.every((target) => target.height >= 24), JSON.stringify(targets)).toBe(true);
+    await select.focus();
+    const outline = await select.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { width: Number.parseFloat(style.outlineWidth), style: style.outlineStyle };
+    });
+    expect(outline.style).toBe("solid");
+    expect(outline.width).toBeGreaterThanOrEqual(2);
+  } else {
+    await expect(segmented).toBeVisible();
+    await expect(select).toBeHidden();
+  }
+  await selectToolbarGranularity(toolbar, "year");
+  await page.setViewportSize({ width: mobile ? 1280 : 390, height: 844 });
+  const otherControl = toolbarGranularity(toolbar);
+  if (mobile) await expect(otherControl.getByRole("radio", { checked: true })).toHaveValue("year");
+  else await expect(otherControl).toHaveValue("year");
+  await page.setViewportSize(testInfo.project.use.viewport!);
+  await mode.selectOption("custom");
+  await toolbar.getByLabel("Desde", { exact: true }).fill("2026-07-01");
+  await toolbar.getByLabel("Hasta", { exact: true }).fill("2026-08-31");
+  await expect(toolbar.getByLabel("Desde", { exact: true })).toHaveValue("2026-07-01");
+  await expect(toolbar.getByLabel("Hasta", { exact: true })).toHaveValue("2026-08-31");
+  await selectToolbarGranularity(toolbar, "week");
+  await perspective.getByRole("radio", { name: "Yo" }).check();
+  await expect(toolbar.getByRole("button", { name: "Quitar filtro Yo" })).toBeVisible();
+  await toolbar.getByRole("button", { name: "Quitar filtro Yo" }).click();
+  await expect(perspective.locator('input[value="realCashFlow"]')).toBeChecked();
+  await filter.click();
+  await expect(page.getByRole("dialog", { name: "Filtros del análisis" }).getByRole("group", { name: "Granularidad de estadísticas y gráficas" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByText("Comparar periodos", { exact: true }).click();
+  await expect(page.getByRole("region", { name: "Comparación de periodos" })).toBeVisible();
+  await expectNoDocumentOverflow(page);
 });
 
 test("prioritizes selected period highlights while keeping warnings and full statistics keyboard-accessible", async ({ page }, testInfo) => {
@@ -262,9 +344,9 @@ test("keeps shared control geometry coherent without flattening semantic variant
     expect(shape.width).toBeCloseTo(shape.height, 0);
   };
   const scope = toolbar.getByRole("group", { name: "Ámbito de las estadísticas" });
-  const granularity = toolbar.getByRole("group", { name: "Granularidad de estadísticas y gráficas" });
+  const granularity = toolbarGranularity(toolbar);
   await expectSharedRadius(scope.locator(":scope > div"));
-  await expectSharedRadius(granularity.locator(":scope > div"));
+  await expectSharedRadius(page.viewportSize()!.width <= 672 ? granularity : granularity.locator(":scope > div"));
   const search = toolbar.getByRole("searchbox");
   if (await search.isVisible()) await expectSharedRadius(search.locator(".."));
   const drawerButton = toolbar.getByRole("button", { name: /Abrir todos los filtros/ });
@@ -436,6 +518,12 @@ test("keeps period selector values readable and keyboard focus visible", async (
       await modeControl.selectOption(mode);
       const sizes = await selector.locator("input, select").evaluateAll((controls) => controls.map((control) => {
         const clone = control.cloneNode(true) as HTMLElement;
+        // A closed native select only needs room for its selected label, not its longest option.
+        if (control instanceof HTMLSelectElement && clone instanceof HTMLSelectElement) {
+          [...clone.options].forEach((option, index) => {
+            if (index !== control.selectedIndex) option.remove();
+          });
+        }
         clone.removeAttribute("id");
         clone.setAttribute("aria-hidden", "true");
         clone.style.cssText = "position:absolute;visibility:hidden;width:max-content;min-width:0;max-width:none";
@@ -456,6 +544,8 @@ test("keeps period selector values readable and keyboard focus visible", async (
       expect(outline).toMatchObject({ visible: true, style: "solid" });
       expect(outline.width).toBeGreaterThanOrEqual(2);
       if (mode === "custom") {
+        await page.keyboard.press("Tab");
+        await expect(selector.getByRole("button", { name: "Mes actual" })).toBeFocused();
         await page.keyboard.press("Tab");
         await expect(selector.getByLabel("Desde")).toBeFocused();
         await selector.getByLabel("Desde").fill("2026-08-01");
@@ -977,7 +1067,7 @@ test("shows unavailable source and import provenance for a legacy encrypted data
 test("keeps mobile time controls outside the filter drawer and search inside it", async ({ page }) => {
   const toolbar = page.getByRole("region", { name: "Filtros globales" });
   await expect(toolbar.getByRole("combobox", { name: "Tipo de periodo" })).toBeVisible();
-  await expect(toolbar.getByRole("group", { name: "Granularidad de estadísticas y gráficas" })).toBeVisible();
+  await expect(toolbarGranularity(toolbar)).toBeVisible();
   const toolbarSearch = toolbar.getByRole("searchbox", { name: "Buscar en todos los movimientos" });
   if (page.viewportSize()!.width <= 832) await expect(toolbarSearch).toBeHidden();
   else await expect(toolbarSearch).toBeVisible();
@@ -1171,7 +1261,7 @@ for (const scopeValue of ["realCashFlow", "all", "debtsOnly"] as const) {
     const scope = toolbar.getByRole("group", { name: "Ámbito de las estadísticas" })
       .locator(`input[value="${scopeValue}"]`);
     const period = toolbar.getByRole("combobox", { name: "Tipo de periodo" });
-    const granularity = toolbar.getByRole("group", { name: "Granularidad de estadísticas y gráficas" });
+    const granularity = toolbarGranularity(toolbar);
     const navigation = page.getByRole("navigation", { name: "Secciones principales" });
     const routes = [
       "/resumen", "/flujo-de-caja", "/comparativa", "/deudas", "/presupuestos",
@@ -1192,7 +1282,8 @@ for (const scopeValue of ["realCashFlow", "all", "debtsOnly"] as const) {
         await expect(period).toBeVisible();
         await expect(period).toHaveValue("all");
         await expect(granularity).toBeVisible();
-        await expect(granularity.getByRole("radio", { checked: true })).toHaveCount(1);
+        if (page.viewportSize()!.width <= 672) await expect(granularity).toHaveValue("auto");
+        else await expect(granularity.getByRole("radio", { checked: true })).toHaveCount(1);
         await period.focus();
         await expect(period).toBeFocused();
         await page.keyboard.press("Tab");
@@ -1224,7 +1315,7 @@ test("keeps shared navigation, controls and serious accessibility checks consist
     // oxlint-disable-next-line no-await-in-loop -- shared controls must remain available after every transition.
     await expect(toolbar.getByRole("combobox", { name: "Tipo de periodo" })).toBeVisible();
     // oxlint-disable-next-line no-await-in-loop -- granularity must remain reachable on mobile.
-    await expect(toolbar.getByRole("group", { name: "Granularidad de estadísticas y gráficas" })).toBeVisible();
+    await expect(toolbarGranularity(toolbar)).toBeVisible();
     // oxlint-disable-next-line no-await-in-loop -- each route needs an independent rendered accessibility result.
     const violations = await page.evaluate(async () => {
       const axe = (window as unknown as { axe: { run: (context: Element) => Promise<{ violations: { id: string; impact: string | null }[] }> } }).axe;
@@ -1445,7 +1536,7 @@ test("opens the shared average disclosure by keyboard and keeps accordion action
   const toolbar = page.getByRole("region", { name: "Filtros globales" });
   await toolbar.getByRole("combobox", { name: "Tipo de periodo" }).selectOption("month");
   await toolbar.getByLabel("Mes seleccionado").fill("2026-08");
-  await toolbar.getByRole("group", { name: "Granularidad de estadísticas y gráficas" }).getByRole("radio", { name: "Mes" }).check();
+  await selectToolbarGranularity(toolbar, "month");
   const summary = page.getByText("Cómo se calcula el promedio", { exact: true });
   await summary.focus();
   await page.keyboard.press("Enter");
@@ -2459,8 +2550,7 @@ test("accumulates filtered flow curves with exact tables and CSV at the selected
     await expect(mode.getByRole("radio", { name: "Por período" })).toBeChecked();
     for (const resolution of ["month", "day"]) {
       await mode.getByRole("radio", { name: "Por período" }).check();
-      await toolbar.getByRole("group", { name: "Granularidad de estadísticas y gráficas" })
-        .locator(`input[value="${resolution}"]`).check();
+      await selectToolbarGranularity(toolbar, resolution);
       const periodFigure = page.locator("figure").filter({ has: page.getByRole("heading", { name: scenario.period, exact: true }) });
       const periodRows = await downloadRows(periodFigure);
       expect(periodRows).toHaveLength(resolution === "month" ? 2 : 62);
@@ -2620,7 +2710,7 @@ test("period category contributions expose both evidence ranges without widening
   const toolbar = page.getByRole("region", { name: "Filtros globales" });
   await toolbar.getByRole("combobox", { name: "Tipo de periodo" }).selectOption("month");
   await toolbar.getByLabel("Mes seleccionado").fill("2026-08");
-  await toolbar.getByRole("group", { name: "Granularidad de estadísticas y gráficas" }).locator('input[value="week"]').check();
+  await selectToolbarGranularity(toolbar, "week");
   const outer = page.locator("summary").filter({ hasText: /^Comparar periodos/ });
   await outer.focus();
   await page.keyboard.press("Enter");
