@@ -7,6 +7,34 @@ evolución temporal y desglose por cuenta y categoría.
 
 ## Aplicación
 
+### Contexto JSON para otros chats de IA
+
+En **Instantánea local → Exportar contexto JSON** (en móvil, abre **Datos**),
+elige **Filtros activos** o **Todos los datos**, pulsa **Generar JSON** y revisa
+el texto antes de usar **Copiar JSON**. Si el navegador impide copiar, puedes
+seleccionar el texto manualmente.
+
+El JSON incluye alcance, filtros, fechas, divisas y unidades, resúmenes por
+cuenta y categoría, series temporales, patrones disponibles y todos los
+movimientos incluidos, sin paginación ni movimientos anulados. Los importes
+`EurMinor` son céntimos de euro; los importes nativos indican su divisa y
+decimales. No es una copia de seguridad restaurable.
+
+**Filtros activos** es la opción inicial: no incorpora histórico fuera de la
+selección ni saldos acumulados. Los presupuestos y análisis que requieren
+referencias externas al filtro aparecen como no disponibles, no como cero.
+**Todos los datos** ignora los filtros sin modificar la vista e incluye saldos,
+presupuestos con sus periodos configurados, comparativas y proyecciones
+disponibles. No depende de la paginación ni de selecciones locales de cada página.
+
+La generación es local y no envía información a ninguna IA. Puede contener
+nombres, comentarios y referencias sensibles. La vista previa se elimina al
+cerrar o bloquear la bóveda y se invalida al cambiar los filtros; las copias
+del portapapeles o compartidas con otros servicios no se pueden retirar desde
+la aplicación.
+
+### Desarrollo local
+
 Requiere Node `^22.22.2`, `^24.15.0` o `>=26` y pnpm `12.9.1`.
 La actualización de dependencias se validó con Node `24.19.0` LTS.
 Consulta las migraciones y el parche temporal de React Compiler en la

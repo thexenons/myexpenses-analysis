@@ -63,6 +63,7 @@ export function SidebarView({
   accountCount,
   appRevision,
   currentPath,
+  exportAction,
   maxDate,
   minDate,
   onLock,
@@ -183,6 +184,7 @@ export function SidebarView({
               <dd>{appRevision ?? "No disponible"}</dd>
             </div>
           </dl>
+          {exportAction}
         </div>
       </details>
       <button

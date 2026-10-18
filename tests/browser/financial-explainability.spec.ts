@@ -74,6 +74,47 @@ test.afterEach(async ({ page }) => {
   expect(outboundByPage.get(page)).toEqual([]);
 });
 
+test("exports explicit financial JSON scopes locally without changing the active filters", async ({ page, context }) => {
+  // The compact mobile toolbar hides search; the drawer is available at every width.
+  await page.getByRole("button", { name: /^Abrir todos los filtros/ }).click();
+  await page.getByRole("searchbox", { name: "Buscar en movimientos", exact: true }).fill("no-matching-json-export-record");
+  await page.getByRole("button", { name: "Cerrar filtros", exact: true }).click();
+  const trigger = page.getByRole("button", { name: "Exportar contexto JSON" });
+  if (!await trigger.isVisible()) await page.getByLabel("Datos de la instantánea local").click();
+  await trigger.click();
+  const dialog = page.getByRole("dialog", { name: "Contexto financiero para IA" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("combobox", { name: "Datos que incluir" })).toHaveValue("filtered");
+  await dialog.getByRole("button", { name: "Generar JSON" }).click();
+  await expect(dialog.getByRole("status")).toContainText("JSON generado: 0 movimientos");
+  const preview = dialog.getByRole("textbox", { name: "Contexto financiero JSON" });
+  const filtered = JSON.parse(await preview.inputValue());
+  expect(filtered.scope.mode).toBe("filtered");
+  expect(filtered.transactions).toEqual([]);
+  expect(filtered.historicalAnalysis.status).toBe("unavailable");
+  await dialog.getByRole("combobox", { name: "Datos que incluir" }).selectOption("all");
+  await expect(preview).toHaveValue("");
+  await dialog.getByRole("button", { name: "Generar JSON" }).click();
+  await expect(dialog.getByRole("status")).toContainText("JSON generado");
+  const fullText = await preview.inputValue();
+  const full = JSON.parse(fullText);
+  expect(full.scope.mode).toBe("all");
+  expect(full.transactions.length).toBeGreaterThan(0);
+  expect(full.budgets.status).toBe("available");
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: BASE });
+  await dialog.getByRole("button", { name: "Copiar JSON" }).click();
+  await expect(dialog.getByRole("status")).toContainText("JSON copiado");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(fullText);
+  await expectNoDocumentOverflow(page);
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+  await expect(page.getByLabel("Buscar en todos los movimientos")).toHaveValue("no-matching-json-export-record");
+  await trigger.click();
+  await expect(preview).toHaveValue("");
+  await expect(dialog.getByRole("combobox", { name: "Datos que incluir" })).toHaveValue("filtered");
+});
+
 test("compacts the mobile toolbar into two rows while preserving desktop and custom dates", async ({ page }, testInfo) => {
   const toolbar = page.getByRole("region", { name: "Filtros globales" });
   const mode = toolbar.getByRole("combobox", { name: "Tipo de periodo" });
