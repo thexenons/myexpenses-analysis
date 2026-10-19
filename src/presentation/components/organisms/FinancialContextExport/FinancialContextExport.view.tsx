@@ -4,7 +4,7 @@ import type { useFinancialContextExport } from "./hooks/FinancialContextExport.h
 import styles from "./FinancialContextExport.module.css";
 
 export function FinancialContextExportView({
-  available, open, mode, text, notice, busy, onOpen, onClose, onModeChange, onGenerate, onCopy,
+  available, open, mode, text, notice, busy, onOpen, onClose, onModeChange, onGenerate, onCopy, onDownload,
 }: ReturnType<typeof useFinancialContextExport>) {
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -43,6 +43,7 @@ export function FinancialContextExportView({
           : "Incluye todos los movimientos, cuentas, saldos y análisis disponibles, sin aplicar los filtros actuales. No modifica tu vista."}</p>
         <div className={styles.actions}>
           <Button variant="primary" disabled={busy} onClick={() => { void onGenerate(); }}>{busy ? "Procesando…" : "Generar JSON"}</Button>
+          <Button disabled={!text || busy} onClick={onDownload}>Descargar JSON</Button>
           <Button disabled={!text || busy} onClick={() => { void onCopy(); }}>Copiar JSON</Button>
         </div>
         <output aria-live="polite" className={styles.notice}>{notice}</output>
@@ -50,7 +51,7 @@ export function FinancialContextExportView({
           Contexto financiero JSON
           <textarea readOnly spellCheck={false} value={text} rows={12} placeholder="Genera el JSON para revisarlo o copiarlo manualmente." />
         </label>
-        <small>Cerrar elimina esta vista previa. Las copias que hayas compartido o guardado en el portapapeles no se eliminan al bloquear la bóveda.</small>
+        <small>Cerrar elimina esta vista previa. El archivo descargado no está cifrado. Las descargas y las copias compartidas o guardadas en el portapapeles no se eliminan al bloquear la bóveda.</small>
       </div> : null}
     </dialog>
   </>;

@@ -11,8 +11,20 @@ evolución temporal y desglose por cuenta y categoría.
 
 En **Instantánea local → Exportar contexto JSON** (en móvil, abre **Datos**),
 elige **Filtros activos** o **Todos los datos**, pulsa **Generar JSON** y revisa
-el texto antes de usar **Copiar JSON**. Si el navegador impide copiar, puedes
-seleccionar el texto manualmente.
+el texto antes de usar **Descargar JSON** o **Copiar JSON**. La descarga guarda
+exactamente el JSON generado, sin pasar por el portapapeles ni regenerar los
+datos; es la alternativa recomendada para archivos grandes. Si el navegador
+impide copiar, puedes seleccionar el texto manualmente.
+
+El formato compacto (`schemaVersion: 2`) conserva la información del JSON
+original sin repetir las claves en cada movimiento. `encoding` explica cómo
+leerlo: `transactions.columns` define las columnas de `transactions.rows`;
+`defaults` contiene valores literales comunes. Las columnas indicadas en
+`dictionaries` o `identifiers.columns` usan índices desde cero para recuperar
+sus valores originales. `missing` distingue los campos ausentes de los nulos.
+Los resúmenes, unidades y filtros siguen siendo objetos descriptivos. No se
+redondean importes ni se recortan movimientos. Vista previa, copia y descarga
+contienen exactamente el mismo JSON compacto, sin compresión binaria.
 
 El JSON incluye alcance, filtros, fechas, divisas y unidades, resúmenes por
 cuenta y categoría, series temporales, patrones disponibles y todos los
@@ -30,8 +42,8 @@ disponibles. No depende de la paginación ni de selecciones locales de cada pág
 La generación es local y no envía información a ninguna IA. Puede contener
 nombres, comentarios y referencias sensibles. La vista previa se elimina al
 cerrar o bloquear la bóveda y se invalida al cambiar los filtros; las copias
-del portapapeles o compartidas con otros servicios no se pueden retirar desde
-la aplicación.
+del portapapeles, descargadas o compartidas con otros servicios no se pueden
+retirar desde la aplicación. El archivo JSON descargado no está cifrado.
 
 ### Desarrollo local
 

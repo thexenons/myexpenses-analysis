@@ -48,10 +48,13 @@ export function useFinancialContextExport() {
     setNotice("");
     try {
       // Budget/history calculators are loaded only when an export is requested.
-      const { createFinancialContext } = await import("../../../../../domain/analytics/financial-context.ts");
+      const [{ createFinancialContext }, { serializeFinancialContext }] = await Promise.all([
+        import("../../../../../domain/analytics/financial-context.ts"),
+        import("../../../../../domain/analytics/financial-context-format.ts"),
+      ]);
       if (request !== revision.current || currentInput.current !== input) return;
       const context = createFinancialContext(analytics, { mode, filters, granularity, exportedAt: new Date().toISOString() });
-      setSnapshot({ key, text: JSON.stringify(context, null, 2) });
+      setSnapshot({ key, text: serializeFinancialContext(context) });
       setNotice(`JSON generado: ${context.transactions.length} movimientos. Revisa el contenido antes de compartirlo.`);
     } catch {
       if (request === revision.current && currentInput.current === input) setNotice("No se pudo generar el JSON. Los datos y filtros no se han modificado.");
@@ -74,9 +77,30 @@ export function useFinancialContextExport() {
     }
   }
 
+  function onDownload() {
+    if (!text || busy) return;
+    let url: string | undefined;
+    let anchor: HTMLAnchorElement | undefined;
+    try {
+      url = URL.createObjectURL(new Blob([text], { type: "application/json;charset=utf-8" }));
+      anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `contexto-financiero-${mode}.json`;
+      anchor.hidden = true;
+      document.body.append(anchor);
+      anchor.click();
+      setNotice("Descarga iniciada. El archivo contiene datos financieros sin cifrar.");
+    } catch {
+      setNotice("No se pudo iniciar la descarga. Puedes copiar el JSON o seleccionar el texto.");
+    } finally {
+      anchor?.remove();
+      if (url !== undefined) URL.revokeObjectURL(url);
+    }
+  }
+
   return {
     available, open: open && available, mode, text, notice, busy,
     onOpen: () => { setMode("filtered"); setOpen(true); },
-    onClose, onModeChange: setMode, onGenerate, onCopy,
+    onClose, onModeChange: setMode, onGenerate, onCopy, onDownload,
   };
 }
