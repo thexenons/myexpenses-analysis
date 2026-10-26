@@ -13,8 +13,9 @@ export async function runSyncPCloudWorkerMain(): Promise<number> {
             signal: controller.signal,
         });
         return 0;
-    } catch {
+    } catch (error) {
         process.stderr.write("pCloud worker failed to start or bootstrap.\n");
+        process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);
         return 1;
     } finally {
         process.off("SIGTERM", stop);
