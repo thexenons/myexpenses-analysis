@@ -174,9 +174,9 @@ export async function runSyncPCloudWorker(
         signal.throwIfAborted();
         try {
             await cycle(true);
-        } catch {
+        } catch (error) {
             if (signal.aborted) return;
-            throw new SyncWorkerError("Worker bootstrap failed");
+            throw error; // Propagar el error real
         }
         if (signal.aborted) return;
         await writeReadiness(readyPath);
