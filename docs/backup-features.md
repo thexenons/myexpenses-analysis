@@ -146,6 +146,8 @@ riesgo de perder procedencia. Con el volumen y las medidas actuales no es un
 hallazgo accionable; debe reconsiderarse sólo si crecen sustancialmente el
 dataset o el tiempo de desbloqueo.
 
-El soporte de lectura cubre los esquemas SQLite 189 y 190. Un cambio de
-`PRAGMA user_version` debe introducir un adaptador nuevo antes de habilitar
+El soporte de lectura cubre los esquemas SQLite 189, 190 y 191. La migración
+191 sólo completa `currency.fraction_digits` para monedas usadas por cuentas,
+por lo que conserva las tablas y consultas del adaptador existente. Un cambio
+posterior de `PRAGMA user_version` debe revisar su migración antes de habilitar
 nuevas filas o pantallas.

@@ -1063,8 +1063,12 @@ function assertCanonicalMetadata(
     canonical: V189CanonicalDataset,
     options: CreateAppDatasetOptions,
 ): void {
-    if (canonical.metadata.schemaVersion !== 189 && canonical.metadata.schemaVersion !== 190) {
-        fail("Canonical dataset", "expected schema 189 or 190");
+    if (
+        canonical.metadata.schemaVersion !== 189 &&
+        canonical.metadata.schemaVersion !== 190 &&
+        canonical.metadata.schemaVersion !== 191
+    ) {
+        fail("Canonical dataset", "expected schema 189, 190, or 191");
     }
     const preferences = canonical.metadata.preferences;
     if (
@@ -1126,7 +1130,7 @@ function validateTimeZone(value: string): string {
     return value;
 }
 
-/** Strictly maps the private schema-189/190 canonical model to the app dataset. */
+/** Strictly maps the private schema-189/190/191 canonical model to the app dataset. */
 export function createAppDataset(
     options: CreateAppDatasetOptions,
 ): BackupDatasetV1 {

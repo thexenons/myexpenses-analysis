@@ -27,7 +27,7 @@ export type BackupFxSource =
 
 export interface BackupDatasetSourceV1 {
   readonly format: "myexpenses-backup";
-  readonly schemaVersion: 189 | 190;
+  readonly schemaVersion: 189 | 190 | 191;
   readonly backupSha256: string;
   readonly databaseSha256: string;
   /** Date and time indicated by the source filename, with no known time zone. */

@@ -3,7 +3,7 @@
 ## Fuente y unidades
 
 La SQLite `BACKUP` de la copia de seguridad de MyExpenses es la fuente canónica.
-El importador valida los esquemas 189 y 190 y genera apuntes auditables en el artefacto
+El importador valida los esquemas 189, 190 y 191 y genera apuntes auditables en el artefacto
 versionado `data/app-dataset.json`:
 
 - una transacción directa produce un apunte;
@@ -17,8 +17,9 @@ versionado `data/app-dataset.json`:
   valor-fecha, tasa almacenada, presupuestos y flags útiles de cuenta.
 
 La versión de SQLite se conserva en `source.schemaVersion`. El esquema 190
-añade la clasificación `COMMODITY` para metales y conserva las tablas y reglas
-financieras de 189; véase [el contrato de importación](backup-import.md).
+añade la clasificación `COMMODITY` para metales y el 191 rellena la precisión
+pendiente de monedas usadas por cuentas; ambos conservan las tablas y reglas
+financieras de 189. Véase [el contrato de importación](backup-import.md).
 
 ## Paridad con My Expenses
 
@@ -226,14 +227,15 @@ pasaron, incluidas las identidades de composición, el cierre real y las series
 filtradas. La comprobación sólo emitió conteos, sin nombres ni importes privados.
 
 Las pruebas sintéticas cubren importación de XAU con tipo `COMMODITY`,
-procedencia, importes, conservación de 189 y rechazo de 191. La migración
+procedencia, importes, conservación de 189, aceptación de 191 y rechazo de
+192. La migración
 verificada está documentada con referencias oficiales en
 [backup-import.md](backup-import.md).
 
 ## Límites conocidos
 
-El adaptador soporta únicamente los esquemas 189 y 190. Otra actualización de
-`PRAGMA user_version` requiere revisar la migración y verificar la paridad
+El adaptador soporta únicamente los esquemas 189, 190 y 191. Otra actualización
+de `PRAGMA user_version` requiere revisar la migración y verificar la paridad
 antes de aceptarse; no se supone compatibilidad futura. La zona horaria no está guardada en
 el backup y debe proporcionarse expresamente. Los backups cifrados tampoco se
 descifran todavía.

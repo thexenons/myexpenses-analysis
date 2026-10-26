@@ -43,7 +43,7 @@ test("rejects non-SQLite bytes and unknown schema versions", async () => {
         withBackupDatabase(new Uint8Array([1, 2, 3]), () => undefined),
         hasDatabaseErrorCode("INVALID_DATABASE"),
     );
-    await Promise.all([188, 191].map(async (schemaVersion) => {
+    await Promise.all([188, 192].map(async (schemaVersion) => {
         const wrongVersion = await createSchema189DatabaseFixture({ schemaVersion });
         await assert.rejects(
             withBackupDatabase(wrongVersion, () => undefined),
@@ -57,6 +57,15 @@ test("schema 190 retains its original version and the query-only boundary", asyn
     await withBackupDatabase(bytes, (database, metadata) => {
         assert.equal(metadata.schemaVersion, 190);
         assert.equal(database.exec("PRAGMA user_version")[0]?.values[0]?.[0], 190);
+        assert.throws(() => database.run("PRAGMA user_version = 189"), /read-?only/iu);
+    });
+});
+
+test("schema 191 retains its original version and the query-only boundary", async () => {
+    const bytes = await createSchema189DatabaseFixture({ schemaVersion: 191 });
+    await withBackupDatabase(bytes, (database, metadata) => {
+        assert.equal(metadata.schemaVersion, 191);
+        assert.equal(database.exec("PRAGMA user_version")[0]?.values[0]?.[0], 191);
         assert.throws(() => database.run("PRAGMA user_version = 189"), /read-?only/iu);
     });
 });

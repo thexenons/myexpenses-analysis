@@ -7,18 +7,22 @@ válido más reciente en su nombre y genera un único `data/app-dataset.json`. L
 copia original, la base SQLite y las preferencias no se publican ni se extraen
 al disco.
 
-La implementación admite los esquemas SQLite `189` y `190`, conservando la
-versión real de la copia en `source.schemaVersion`. El esquema `189` se verificó
-con MyExpenses `4.1.0.2` (`versionCode 871`) y el `190` con `4.1.2`
-(`versionCode 880`). Cualquier otra versión, incluida `191`, falla antes de
-consultar datos financieros; las tablas y columnas requeridas se validan para
-ambas versiones.
+La implementación admite los esquemas SQLite `189`, `190` y `191`, conservando
+la versión real de la copia en `source.schemaVersion`. El esquema `189` se
+verificó con MyExpenses `4.1.0.2` (`versionCode 871`) y el `190` con `4.1.2`
+(`versionCode 880`). El `191` se contrastó contra la migración oficial y la
+suite sintética. Cualquier otra versión falla antes de consultar datos
+financieros; las tablas y columnas requeridas se validan para las tres
+versiones.
 
 La migración oficial `189 → 190` únicamente reclasifica `XAU`, `XAG`, `XPT` y
 `XPD` como `COMMODITY` en `currency.commodity_type`. No cambia las tablas ni las
 consultas financieras usadas. Se reutiliza el adaptador de `v189`, aceptando el
 nuevo tipo de materia prima sin alterar importes, categorías, splits ni
-transferencias. No se migra ni se modifica la base original.
+transferencias. La migración `190 → 191` tampoco altera tablas ni consultas:
+rellena `currency.fraction_digits` sólo para monedas usadas por cuentas que aún
+no lo tenían. El importador ya exige de forma explícita una precisión válida
+para cada moneda usada. No se migra ni se modifica la base original.
 
 ```sh
 pnpm data:import-backup -- \
@@ -54,6 +58,8 @@ La relación entre la versión y el esquema está declarada en el código oficia
 
 - [BaseTransactionDatabase.kt, esquema 189](https://github.com/mtotschnig/MyExpenses/blob/2552049968fd00c3d52f92cb78b39e899cd0f059/myExpenses/src/main/java/org/totschnig/myexpenses/provider/BaseTransactionDatabase.kt#L25-L37)
 - [Migración oficial al esquema 190](https://github.com/mtotschnig/MyExpenses/commit/ca26771f8a0dd42e846b10995a0cdd2cf9d8e4cc)
+- [Versión 191 y migración oficial](https://github.com/mtotschnig/MyExpenses/blob/31246c3576ac0668d2e00f7a5fc69f05306c941a/myExpenses/src/main/java/org/totschnig/myexpenses/provider/BaseTransactionDatabase.kt#L36)
+- [Despacho de la migración 191](https://github.com/mtotschnig/MyExpenses/blob/31246c3576ac0668d2e00f7a5fc69f05306c941a/myExpenses/src/main/java/org/totschnig/myexpenses/provider/TransactionDatabase.java#L2129-L2135)
 - [Versión 4.1.2 verificada el 9 de septiembre de 2026](https://github.com/mtotschnig/MyExpenses/blob/da6bec0ec9db140a49c7b386d19f60cf1bd98e4d/build.gradle#L15-L16)
 - [Tipos de moneda, incluido COMMODITY](https://github.com/mtotschnig/MyExpenses/blob/da6bec0ec9db140a49c7b386d19f60cf1bd98e4d/myExpenses/src/main/java/org/totschnig/myexpenses/model/CurrencyUnit.kt#L14-L21)
 - [BackupUtils.kt, nombres de las entradas](https://github.com/mtotschnig/MyExpenses/blob/2552049968fd00c3d52f92cb78b39e899cd0f059/myExpenses/src/main/java/org/totschnig/myexpenses/provider/BackupUtils.kt#L22-L43)
@@ -70,7 +76,7 @@ Antes de consultar datos se comprueba:
 - que la entrada `BACKUP` sea una SQLite válida y que `PRAGMA quick_check`
   devuelva `ok`;
 - que no existan violaciones de claves foráneas;
-- que `PRAGMA user_version` sea `189` o `190` y estén presentes las tablas
+- que `PRAGMA user_version` sea `189`, `190` o `191` y estén presentes las tablas
   y columnas usadas;
 - que el ZIP no contenga cifrado, enlaces simbólicos, rutas atravesables,
   duplicados, métodos de compresión inesperados o tamaños/ratios superiores a

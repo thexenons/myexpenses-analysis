@@ -845,8 +845,12 @@ export function parseBackupDataset(value: unknown): BackupDatasetV1 {
   if (source.format !== "myexpenses-backup") {
     fail(`${context} source.format`, "expected myexpenses-backup");
   }
-  if (source.schemaVersion !== 189 && source.schemaVersion !== 190) {
-    fail(`${context} source.schemaVersion`, "expected schema 189 or 190");
+  if (
+    source.schemaVersion !== 189 &&
+    source.schemaVersion !== 190 &&
+    source.schemaVersion !== 191
+  ) {
+    fail(`${context} source.schemaVersion`, "expected schema 189, 190, or 191");
   }
   for (const key of ["backupSha256", "databaseSha256"] as const) {
     if (typeof source[key] !== "string" || !SHA256_PATTERN.test(source[key])) {

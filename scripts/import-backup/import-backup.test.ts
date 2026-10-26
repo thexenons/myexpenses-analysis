@@ -184,8 +184,28 @@ test("imports schema 190 with precious-metal commodities and unchanged financial
         assert.equal((await lstat(outputPath)).mode & 0o777, 0o600);
         assert.throws(() => parseBackupDataset({
             ...parsed,
-            source: { ...parsed.source, schemaVersion: 191 },
-        }), /expected schema 189 or 190/u);
+            source: { ...parsed.source, schemaVersion: 192 },
+        }), /expected schema 189, 190, or 191/u);
+    } finally {
+        await rm(directoryPath, { force: true, recursive: true });
+    }
+});
+
+test("imports schema 191 after the currency fraction-digit backfill", async () => {
+    const directoryPath = await mkdtemp(join(tmpdir(), "myexpenses-import-v191-test-"));
+    const inputPath = join(directoryPath, "backup.zip");
+    const outputPath = join(directoryPath, "dataset.json");
+    try {
+        const database = await createImportDatabaseFixture({ schemaVersion: 191 });
+        const archive = await createBackupZipFixture({ database });
+        await writeFile(inputPath, archive);
+
+        const result = await importBackup({ inputPath, outputPath, timeZone: "Europe/Madrid" });
+        const parsed = parseBackupDataset(JSON.parse(await readFile(outputPath, "utf8")) as unknown);
+        assert.equal(parsed.source.schemaVersion, 191);
+        assert.equal(parsed.currencies.find((currency) => currency.code === "EUR")?.fractionDigits, 2);
+        assert.equal(result.postingCount, 11);
+        assert.equal(sha256(await readFile(inputPath)), sha256(archive));
     } finally {
         await rm(directoryPath, { force: true, recursive: true });
     }

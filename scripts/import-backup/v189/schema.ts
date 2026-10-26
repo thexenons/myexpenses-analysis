@@ -3,7 +3,7 @@ import type initSqlJs from "sql.js";
 import { V189_SCHEMA_VERSION } from "./models.ts";
 
 export interface V189SchemaInfo {
-    schemaVersion: typeof V189_SCHEMA_VERSION | 190;
+    schemaVersion: typeof V189_SCHEMA_VERSION | 190 | 191;
     tables: readonly string[];
 }
 
@@ -144,11 +144,16 @@ export function validateV189Database(
     database: initSqlJs.Database,
 ): V189SchemaInfo {
     const schemaVersion = singleValue(database, "PRAGMA user_version");
-    // Upstream upgradeTo190 only reclassifies precious metals as COMMODITY;
-    // tables and financial queries retain the schema-189 contract.
-    if (schemaVersion !== V189_SCHEMA_VERSION && schemaVersion !== 190) {
+    // Upstream upgradeTo190 only reclassifies precious metals as COMMODITY and
+    // upgradeTo191 only backfills currency fraction digits. Tables and financial
+    // queries retain the schema-189 contract.
+    if (
+        schemaVersion !== V189_SCHEMA_VERSION &&
+        schemaVersion !== 190 &&
+        schemaVersion !== 191
+    ) {
         throw new V189SchemaError(
-            `Unsupported MyExpenses schema: expected 189 or 190, received ${String(schemaVersion)}`,
+            `Unsupported MyExpenses schema: expected 189, 190, or 191, received ${String(schemaVersion)}`,
         );
     }
 

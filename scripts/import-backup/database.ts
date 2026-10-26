@@ -121,7 +121,7 @@ export class BackupDatabaseError extends Error {
 }
 
 export interface BackupDatabaseMetadata {
-    schemaVersion: 189 | 190;
+    schemaVersion: 189 | 190 | 191;
 }
 
 let sqlJsPromise: Promise<SqlJsStatic> | undefined;
@@ -169,7 +169,7 @@ function validateRequiredSchema(database: Database): void {
         if (existingTables.get(tableName) !== "table") {
             throw databaseError(
                 "SCHEMA_MISMATCH",
-                "The schema 189/190 backup is missing a required base table",
+                "The schema 189, 190, or 191 backup is missing a required base table",
             );
         }
         const columns = new Set<string>();
@@ -186,7 +186,7 @@ function validateRequiredSchema(database: Database): void {
             if (!columns.has(columnName)) {
                 throw databaseError(
                     "SCHEMA_MISMATCH",
-                    "The schema 189/190 backup is missing a required column",
+                    "The schema 189, 190, or 191 backup is missing a required column",
                 );
             }
         }
@@ -207,10 +207,10 @@ function validateDatabase(database: Database): BackupDatabaseMetadata {
     }
 
     const schemaVersion = firstScalar(database, "PRAGMA user_version");
-    if (schemaVersion !== 189 && schemaVersion !== 190) {
+    if (schemaVersion !== 189 && schemaVersion !== 190 && schemaVersion !== 191) {
         throw databaseError(
             "SCHEMA_MISMATCH",
-            "Expected MyExpenses schema 189 or 190",
+            "Expected MyExpenses schema 189, 190, or 191",
         );
     }
     validateRequiredSchema(database);

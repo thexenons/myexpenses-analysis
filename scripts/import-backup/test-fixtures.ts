@@ -81,9 +81,9 @@ export async function createSchema189DatabaseFixture(
     }
 }
 
-/** Anonymous relational fixture; schema 190 preserves these tables. */
+/** Anonymous relational fixture; schemas 190 and 191 preserve these tables. */
 export async function createImportDatabaseFixture(
-    options: { schemaVersion?: 189 | 190; extraSql?: readonly string[] } = {},
+    options: { schemaVersion?: 189 | 190 | 191; extraSql?: readonly string[] } = {},
 ): Promise<Uint8Array> {
     return createSchema189DatabaseFixture({
         schemaVersion: options.schemaVersion ?? 189,
